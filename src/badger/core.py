@@ -1,10 +1,9 @@
 import logging
+import numpy as np
 from typing import Callable
-
-from pandas import DataFrame
+from pandas import DataFrame, concat
 from pydantic import BaseModel
 from xopt import Generator
-
 from .environment import Environment
 
 logger = logging.getLogger(__name__)
@@ -14,10 +13,16 @@ class Routine(BaseModel):
     environment: Environment
     generator: Generator
     initial_points: DataFrame
-
-    # convenience properties
+    
+    # convenience properties    
     @property
     def vocs(self):
+        """
+        A property that returns the vocs of the generator attribute.
+
+        Returns:
+            self.generator.vocs : VOCS
+        """
         return self.generator.vocs
 
 
@@ -26,7 +31,7 @@ def run_routine(
         active_callback: Callable,
         generate_callback: Callable,
         evaluate_callback: Callable
-):
+        ) -> None:
     """
     Run the provided routine object using Xopt.
 
@@ -57,10 +62,6 @@ def run_routine(
     active_callback : Callable
         Callback function that returns a boolean denoting if optimization/evaluation
         should proceed.
-
-    Returns
-    -------
-
     """
 
     # initialize routine
@@ -96,33 +97,35 @@ def run_routine(
         else:
             break
 
-
-def evaluate_points(points: DataFrame, environment: Environment, callback: Callable) \
+def evaluate_points(points: DataFrame, routine: Routine, callback: Callable) \
         -> DataFrame:
     """
     Evaluates points using the environment
 
     Parameters
     ----------
-    environment
-    points
-
+    points : DataFrame
+    routine : Routine
+    callback : Callable
+    
     Returns
     -------
-
+    evaluated_points : DataFrame
     """
+    Routine.environment.set_variables(points)
+    observables_points = Routine.environment.get_observables(Routine.vocs)    
+    evaluated_points = concat(points, observables_points)
+    
+    callback() # make optional 
 
+    return evaluated_points
 
-def initialize_routine(routine) -> None:
+def initialize_routine(routine: Routine) -> None:
     """
     Initializes the routine, including the environment
 
     Parameters
     ----------
-    routine
-
-    Returns
-    -------
-
+    routine: Routine
     """
     routine.environment.initialize()
