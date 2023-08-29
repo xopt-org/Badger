@@ -6,7 +6,7 @@ import pandas as pd
 from coolname import generate_slug
 from ....factory import list_algo, list_env, get_algo, get_env
 from ....utils import ystring, load_config, config_list_to_dict
-from ....core import normalize_routine, instantiate_env, list_scaling_func, get_scaling_default_params
+from ....core import instantiate_env, list_scaling_func, get_scaling_default_params, Routine
 from ....db import save_routine, remove_routine
 from .constraint_item import constraint_item
 from .state_item import state_item
@@ -558,6 +558,10 @@ class BadgerRoutinePage(QWidget):
             'env_vranges': config_list_to_dict(variables),
             'config': configs,
         }
+
+
+        
+        Routine(env, )
 
         # Sanity check and config normalization
         try:

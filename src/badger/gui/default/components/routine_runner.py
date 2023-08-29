@@ -20,7 +20,6 @@ class BadgerRoutineSignals(QObject):
 
 
 class BadgerRoutineRunner(QRunnable):
-
     def __init__(self, routine, save, verbose=2, use_full_ts=False):
         super().__init__()
 
@@ -56,9 +55,13 @@ class BadgerRoutineRunner(QRunnable):
         self.directions = []
 
     def set_termination_condition(self, termination_condition):
+        """
+        """
         self.termination_condition = termination_condition
 
     def run(self):
+        """
+        """
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
@@ -83,6 +86,11 @@ class BadgerRoutineRunner(QRunnable):
     def before_evaluate(self, generator: Generator, candidates: pd.DataFrame):
         """
         Callback method 
+
+        Parameters
+        ----------
+        generator: Generator
+        candidates: pd.DataFrame
         """
         self.generator = generator 
         while self.is_paused:
@@ -93,9 +101,13 @@ class BadgerRoutineRunner(QRunnable):
         if self.is_killed:
             raise Exception('Optimization run has been terminated!')
 
-    def after_evaluate(self, data: pd.Dataframe):
+    def after_evaluate(self, data: pd.DataFrame):
         """
         Callback method 
+
+        Parameters
+        ----------
+        data: pd.Dataframe
         """
         # vars: ndarray
         # obses: ndarray
@@ -115,7 +127,6 @@ class BadgerRoutineRunner(QRunnable):
         for item, key in enumerate(variables_dict):
             vars.append((data[key] -  item[0])/ item[1] - item[0])             
         
-
         for item, key in enumerate(obj_dict):
             if item is 'maximize':
                 obses.append(-data[key])
@@ -171,6 +182,10 @@ class BadgerRoutineRunner(QRunnable):
     def env_ready(self, env):
         """
         Callback method 
+
+        Parameters
+        ----------
+        env : 
         """
         self.env = env
         var_dict = env._get_variables(self.var_names)
@@ -183,6 +198,11 @@ class BadgerRoutineRunner(QRunnable):
     def states_ready(self, states):
         """
         Callback method 
+
+        Parameters
+        ----------
+        states : 
+
         """
         self.states = states
 
