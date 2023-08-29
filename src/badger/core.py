@@ -30,42 +30,39 @@ def run_routine(
         routine: Routine,
         active_callback: Callable,
         generate_callback: Callable,
-        evaluate_callback: Callable
+        evaluate_callback: Callable,
+        environment_callback: Callable, 
+        states_callback: Callable
         ) -> None:
     """
     Run the provided routine object using Xopt.
-
-    Pseudo code:
-    Initialize environment
-    Evaluate initial point(s)
-    while(active_callback()):
-        generate candidates to run
-        if active_callback():
-            evaluate candidates
-            save data
-        else:
-            break
 
     Parameters
     ----------
     routine : Routine
         Routine object created by Badger GUI to run optimization.
 
-    evaluate_callback : Callable
-        Callback function called after evaluating points that takes the form `f(data:
-        DataFrame)`.
+    active_callback : Callable
+        Callback function that returns a boolean denoting if optimization/evaluation
+        should proceed.
 
     generate_callback : Callable
         Callback function called after generating candidate points that takes the form
         `f(generator: Generator, candidates: DataFrame)`.
 
-    active_callback : Callable
-        Callback function that returns a boolean denoting if optimization/evaluation
-        should proceed.
+    evaluate_callback : Callable
+        Callback function called after evaluating points that takes the form `f(data:
+        DataFrame)`.
+
+    environment_callback : Callable
+        Callback function called after 
+
+    states_callback : Callable
+        Callback function called after 
     """
 
     # initialize routine
-    initialize_routine(routine)
+    initialize_routine(routine, environment_callback)
 
     # get objects from routine
     initial_points = routine.initial_points
@@ -120,7 +117,7 @@ def evaluate_points(points: DataFrame, routine: Routine, callback: Callable) \
 
     return evaluated_points
 
-def initialize_routine(routine: Routine) -> None:
+def initialize_routine(routine: Routine, callback: Callable) -> None:
     """
     Initializes the routine, including the environment
 
@@ -128,4 +125,6 @@ def initialize_routine(routine: Routine) -> None:
     ----------
     routine: Routine
     """
+
     routine.environment.initialize()
+    callback(routine.environment) # check this line 

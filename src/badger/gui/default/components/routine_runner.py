@@ -3,12 +3,13 @@ logger = logging.getLogger(__name__)
 import os
 import time
 import pandas as pd
+from xopt import Generator
+
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable
 from ....utils import curr_ts, ts_to_str
 from ....core import run_routine
 from ....settings import read_value
 from ....archive import archive_run
-
 
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
@@ -51,6 +52,9 @@ class BadgerRoutineRunner(QRunnable):
         self.is_paused = False
         self.is_killed = False
 
+        self.generator = None # xopt generator 
+        self.directions = []
+
     def set_termination_condition(self, termination_condition):
         self.termination_condition = termination_condition
 
@@ -60,9 +64,9 @@ class BadgerRoutineRunner(QRunnable):
 
         error = None
         try:
-            run_routine(self.routine, True, self.save, self.verbose,
-                        self.before_evaluate, self.after_evaluate,
-                        self.env_ready, self.pf_ready, self.states_ready)
+            run_routine(self.routine, self.before_evaluate, self.after_evaluate,
+                        self.env_ready, self.states_ready)
+
         except Exception as e:
             if 'Optimization run has been terminated!' not in str(e):
                 logger.exception(e)
@@ -76,8 +80,11 @@ class BadgerRoutineRunner(QRunnable):
 
             self.signals.error.emit(error)
 
-    def before_evaluate(self, vars):
-        # vars: ndarray
+    def before_evaluate(self, generator: Generator, candidates: pd.DataFrame):
+        """
+        Callback method 
+        """
+        self.generator = generator 
         while self.is_paused:
             time.sleep(0)
             if self.is_killed:
@@ -86,11 +93,37 @@ class BadgerRoutineRunner(QRunnable):
         if self.is_killed:
             raise Exception('Optimization run has been terminated!')
 
-    def after_evaluate(self, vars, obses, cons, stas):
+    def after_evaluate(self, data: pd.Dataframe):
+        """
+        Callback method 
+        """
         # vars: ndarray
         # obses: ndarray
         # cons: ndarray
         # stas: list
+
+        data_variable_names = list(data.columns)
+ 
+        variables_dict = self.generator.vocs['variable'] 
+        obj_dict = self.generator.vocs['objectives'] 
+
+        vars = []
+        obses = []
+        cons = []
+        stas = []
+
+        for item, key in enumerate(variables_dict):
+            vars.append((data[key] -  item[0])/ item[1] - item[0])             
+        
+
+        for item, key in enumerate(obj_dict):
+            if item is 'maximize':
+                obses.append(-data[key])
+            else:
+                obses.append(data[key])    
+            
+            self.directions.append(item)
+
         ts = curr_ts()
         ts_float = ts.timestamp()
         self.signals.progress.emit(list(vars), list(obses), list(cons), list(stas), ts_float)
@@ -136,6 +169,9 @@ class BadgerRoutineRunner(QRunnable):
         #     # Do something
 
     def env_ready(self, env):
+        """
+        Callback method 
+        """
         self.env = env
         var_dict = env._get_variables(self.var_names)
         init_vars = [var_dict[v] for v in self.var_names]
@@ -145,6 +181,9 @@ class BadgerRoutineRunner(QRunnable):
         self.pf = pf
 
     def states_ready(self, states):
+        """
+        Callback method 
+        """
         self.states = states
 
     def ctrl_routine(self, pause):
