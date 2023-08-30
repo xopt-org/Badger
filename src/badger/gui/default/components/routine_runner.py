@@ -127,7 +127,7 @@ class BadgerRoutineRunner(QRunnable):
             vars.append((data[key] -  item[0])/ item[1] - item[0])             
         
         for item, key in enumerate(obj_dict):
-            if item is 'maximize':
+            if item == 'maximize':
                 obses.append(-data[key])
             else:
                 obses.append(data[key])    

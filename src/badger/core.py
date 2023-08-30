@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 class Routine(BaseModel):
     environment: Environment
     generator: Generator
-    #initial_points: DataFrame
+    initial_points: DataFrame
+    
+    class Config:
+        arbitrary_types_allowed = True
     
     # convenience properties    
     @property
@@ -117,7 +120,7 @@ def evaluate_points(points: DataFrame, routine: Routine, callback: Callable) \
     observables_points = Routine.environment.get_observables(Routine.vocs)    
     evaluated_points = concat(points, observables_points)
     
-    callback() # make optional 
+    callback() # make optional? 
 
     return evaluated_points
 
@@ -130,8 +133,7 @@ def initialize_routine(routine: Routine, callback: Callable) -> None:
     routine: Routine
     """
 
-    routine.environment.initialize()
-
+    routine.environment.initialize() # sudo code 
     callback(routine.environment) # check this line 
 
 def instantiate_env(env_class, configs, manager=None):
@@ -143,7 +145,7 @@ def instantiate_env(env_class, configs, manager=None):
     env_class :
     configs :
     manager : 
-    
+
     Returns
     -------
     environment :
