@@ -69,7 +69,6 @@ class BadgerRoutineRunner(QRunnable):
         try:
             run_routine(self.routine, self.before_evaluate, self.after_evaluate,
                         self.env_ready, self.states_ready)
-
         except Exception as e:
             if 'Optimization run has been terminated!' not in str(e):
                 logger.exception(e)

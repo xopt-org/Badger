@@ -10,7 +10,7 @@ class BadgerAlgoBox(CollapsibleBox):
         super().__init__(parent, ' Algorithm')
 
         self.algos = algos
-        self.scaling_functions = scaling_functions
+        # self.scaling_functions = scaling_functions
 
         self.init_ui()
 
@@ -86,11 +86,11 @@ class BadgerAlgoBox(CollapsibleBox):
         vbox_lbl_scaling.addWidget(lbl_scaling)
         vbox_lbl_scaling.addStretch(1)
         hbox_scaling.addWidget(lbl_scaling_col)
-        self.cb_scaling = cb_scaling = QComboBox()
-        cb_scaling.setItemDelegate(QStyledItemDelegate())
-        cb_scaling.addItems(self.scaling_functions)
-        cb_scaling.setCurrentIndex(-1)
-        hbox_scaling.addWidget(cb_scaling, 1)
+        # self.cb_scaling = cb_scaling = QComboBox()
+        # cb_scaling.setItemDelegate(QStyledItemDelegate())
+        # cb_scaling.addItems(self.scaling_functions)
+        # cb_scaling.setCurrentIndex(-1)
+        # hbox_scaling.addWidget(cb_scaling, 1)
         vbox_misc.addWidget(scaling)
 
         params_s = QWidget()

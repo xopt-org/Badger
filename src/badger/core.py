@@ -5,7 +5,7 @@ from pandas import DataFrame, concat
 from pydantic import BaseModel
 from xopt import Generator
 from .environment import Environment
-
+from .factory import get_intf 
 from operator import itemgetter 
 from .utils import range_to_str, yprint, merge_params, ParetoFront, norm, denorm, \
      parse_rule
@@ -134,15 +134,21 @@ def initialize_routine(routine: Routine, callback: Callable) -> None:
 
     callback(routine.environment) # check this line 
 
-
-
 def instantiate_env(env_class, configs, manager=None):
-    from .factory import get_intf  # have to put here to avoid circular dependencies
+    """
+    Instatiate the environment as defined by the user.
 
-    # Configure interface
-    # TODO: figure out the correct logic
-    # It seems that the interface should be given rather than
-    # initialized here
+    Parameters
+    ----------
+    env_class :
+    configs :
+    manager : 
+    
+    Returns
+    -------
+    environment :
+
+    """
     try:
         intf_name = configs['interface'][0]
     except KeyError:
@@ -160,73 +166,6 @@ def instantiate_env(env_class, configs, manager=None):
     else:
         intf = None
 
-    env = env_class(interface=intf, **configs['params'])
+    environment = env_class(interface=intf, **configs['params'])
 
-    return env
-
-
-
-# __________________________Will be cut ________________________________
-
-# The following functions are related to domain scaling
-# TODO: consider combine them into a class and make it extensible
-def list_scaling_func():
-    return ['semi-linear', 'sinusoid', 'sigmoid']
-
-
-def get_scaling_default_params(name):
-    if name == 'semi-linear':
-        default_params = {
-            'center': 0.5,
-            'range': 1,
-        }
-    elif name == 'sinusoid':
-        default_params = {
-            'center': 0.5,
-            'period': 2,
-        }
-    elif name == 'sigmoid':
-        default_params = {
-            'center': 0.5,
-            'lambda': 8,
-        }
-    else:
-        raise Exception(f'scaling function {name} is not supported')
-
-    return default_params
-
-
-def get_scaling_func(configs):
-    if not configs:  # fallback to default
-        configs = {'func': 'semi-linear'}
-
-    name = configs['func']
-    params = configs.copy()
-    del params['func']
-
-    default_params = get_scaling_default_params(name)
-    params = merge_params(default_params, params)
-
-    if name == 'semi-linear':
-        center, range = itemgetter('center', 'range')(params)
-
-        def func(X):
-            return np.clip((X - center) / range + 0.5, 0, 1)
-
-    elif name == 'sinusoid':
-        center, period = itemgetter('center', 'period')(params)
-
-        def func(X):
-            return 0.5 * np.sin(2 * np.pi / period * (X - center)) + 0.5
-
-    elif name == 'sigmoid':
-        center, lamb = itemgetter('center', 'lambda')(params)
-
-        def func(X):
-            return 1 / (1 + np.exp(-lamb * (X - center)))
-
-    # TODO: consider remove this branch since it's useless
-    else:
-        raise Exception(f'scaling function {name} is not supported')
-
-    return func
+    return environment
