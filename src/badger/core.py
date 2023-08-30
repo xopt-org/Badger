@@ -1,20 +1,17 @@
 import logging
 import numpy as np
-from typing import Callable
+from typing import Callable, Optional
 from pandas import DataFrame, concat
 from pydantic import BaseModel
 from xopt import Generator
 from .environment import Environment
 from .factory import get_intf 
-from operator import itemgetter 
-from .utils import range_to_str, yprint, merge_params, ParetoFront, norm, denorm, \
-     parse_rule
 
 logger = logging.getLogger(__name__)
 
 
 class Routine(BaseModel):
-    environment: Environment
+    environment: Optional[Environment] = None 
     generator: Generator
     initial_points: DataFrame
     
@@ -31,6 +28,42 @@ class Routine(BaseModel):
             self.generator.vocs : VOCS
         """
         return self.generator.vocs
+
+    def instantiate_env(self, env_class, configs, manager=None) -> Environment:
+        """
+        Instatiate the environment as defined by the user.
+
+        Parameters
+        ----------
+        env_class :
+        configs :
+        manager : 
+
+        Returns
+        -------
+        environment :
+
+        """
+        try:
+            intf_name = configs['interface'][0]
+        except KeyError:
+            intf_name = None
+        except Exception as e:
+            logger.warning(e)
+            intf_name = None
+
+        if intf_name is not None:
+            if manager is None:
+                Interface, _ = get_intf(intf_name)
+                intf = Interface()
+            else:
+                intf = manager.Interface()
+        else:
+            intf = None
+
+        self.environment = env_class(interface=intf, **configs['params'])
+
+        return self.environment
 
 
 def run_routine(
@@ -136,38 +169,4 @@ def initialize_routine(routine: Routine, callback: Callable) -> None:
     routine.environment.initialize() # sudo code 
     callback(routine.environment) # check this line 
 
-def instantiate_env(env_class, configs, manager=None):
-    """
-    Instatiate the environment as defined by the user.
 
-    Parameters
-    ----------
-    env_class :
-    configs :
-    manager : 
-
-    Returns
-    -------
-    environment :
-
-    """
-    try:
-        intf_name = configs['interface'][0]
-    except KeyError:
-        intf_name = None
-    except Exception as e:
-        logger.warning(e)
-        intf_name = None
-
-    if intf_name is not None:
-        if manager is None:
-            Interface, _ = get_intf(intf_name)
-            intf = Interface()
-        else:
-            intf = manager.Interface()
-    else:
-        intf = None
-
-    environment = env_class(interface=intf, **configs['params'])
-
-    return environment
