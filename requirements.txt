@@ -6,6 +6,6 @@ qdarkstyle
 pillow
 requests
 tqdm
-xopt>=2.0.0
+xopt>=2.1.0
 pytest
 pytest-qt
