@@ -8,3 +8,4 @@ requests
 tqdm
 pytest
 pytest-qt
+pytest-mock
