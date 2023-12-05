@@ -10,7 +10,7 @@ import sys
 import os
 import importlib
 import yaml
-from xopt.generators import generators, get_generator, try_load_all_generators
+from xopt.generators import generators, get_generator
 
 import logging
 logger = logging.getLogger(__name__)
@@ -189,7 +189,12 @@ def get_env(name):
 
 
 def list_generators():
-    try_load_all_generators()
+    try:
+        from xopt.generators import try_load_all_generators
+
+        try_load_all_generators()
+    except ImportError:  # this API changed somehow
+        pass  # there is nothing we can do...
     generator_names = list(generators.keys())
     # Filter the names
     generator_names = [n for n in generator_names if n not in ALGO_EXCLUDED]
