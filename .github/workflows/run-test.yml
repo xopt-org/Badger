@@ -44,6 +44,10 @@ jobs:
         else
           mamba install flake8 zipp $(cat requirements.txt dev-requirements.txt)
         fi
+    - name: Install Badger
+      shell: bash -el {0}
+      run: |
+          pip install --no-dependencies .
     - name: Install xopt 
       shell: bash -el {0}
       run: |
@@ -62,10 +66,6 @@ jobs:
           sudo /sbin/start-stop-daemon --start --pidfile /tmp/custom_herbstluftwm_99.pid --make-pidfile --background --exec /usr/bin/herbstluftwm
           sleep 1
         fi
-    - name: Install Badger
-      shell: bash -l {0}
-      run: |
-          pip install --no-dependencies .
     - name: Test with pytest
       shell: bash -el {0}
       run: |
