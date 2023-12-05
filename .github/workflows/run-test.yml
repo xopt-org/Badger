@@ -44,6 +44,10 @@ jobs:
         else
           mamba install flake8 zipp $(cat requirements.txt dev-requirements.txt)
         fi
+    - name: Install xopt 
+      shell: bash -el {0}
+      run: |
+        pip install xopt
     - name: Install pyqt5
       shell: bash -el {0}
       run: |
