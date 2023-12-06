@@ -35,6 +35,10 @@ jobs:
         miniforge-version: latest
         activate-environment: badger-env
         environment-file: environment-dev.yml
+    - name: Install xopt 
+      shell: bash -el {0}
+      run: |
+        pip install --user xopt
     - name: Install python packages
       shell: bash -el {0}
       run: |
@@ -48,10 +52,6 @@ jobs:
       shell: bash -el {0}
       run: |
           pip install --no-dependencies .
-    - name: Install xopt 
-      shell: bash -el {0}
-      run: |
-        pip install --user xopt
     - name: Install pyqt5
       shell: bash -el {0}
       run: |
