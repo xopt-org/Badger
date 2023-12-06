@@ -116,7 +116,7 @@ def test_click_graph(qtbot, mocker):
     new_variable_value = monitor.inspector_variable.value()
 
     assert new_variable_value != orginal_value
-    #assert len(sig_inspect_spy) == 1
+    assert len(sig_inspect_spy) == 1
 
     # TODO: make asserts for other changes when the graph is clicked on by the user.
 
@@ -170,7 +170,7 @@ def test_x_axis_specification(qtbot, mocker):
     monitor.on_mouse_click(mock_event)
 
     # Check type of value
-    #assert isinstance(monitor.inspector_objective.value(), float)
+    assert isinstance(monitor.inspector_objective.value(), float)
     assert isinstance(monitor.inspector_variable.value(), float)
     if monitor.vocs.constraint_names:
         assert isinstance(monitor.inspector_constraint.value(), float)
