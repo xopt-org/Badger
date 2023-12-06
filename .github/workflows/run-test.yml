@@ -49,7 +49,7 @@ jobs:
       run: |
           pip install --no-dependencies .
     - name: Install xopt 
-      shell: bash -el {0}
+      shell: bash
       run: |
         pip install xopt
     - name: Install pyqt5
