@@ -1,9 +1,10 @@
 import json
 import logging
 import os
+import sys
+import pathlib
 from datetime import datetime
 
-import numpy as np
 import yaml
 
 from .errors import BadgerLoadConfigError
@@ -18,7 +19,7 @@ class Dumper(yaml.Dumper):
         return super(Dumper, self).increase_indent(flow, False)
 
 
-def ystring(content):
+def get_yaml_string(content):
     if content is None:
         return ""
 
@@ -27,7 +28,7 @@ def ystring(content):
 
 
 def yprint(content):
-    print(ystring(content), end="")
+    print(get_yaml_string(content), end="")
 
 
 def norm(x, lb, ub):
@@ -106,35 +107,6 @@ def range_to_str(vranges):
     return vranges_str
 
 
-class ParetoFront:
-    def __init__(self, rules):
-        # rules: ['MAXIMIZE', 'MINIMIZE', ...]
-        self.rules = (np.array(rules) == "MINIMIZE") * 2 - 1
-        self.dimension = len(rules)
-        self.pareto_set = None
-        self.pareto_front = None
-
-    def is_dominated(self, candidate):
-        # candidate: (x: array-like, y: array-like)
-        # First candidate
-        if self.pareto_front is None:
-            self.pareto_set = np.array(candidate[0]).reshape(1, -1)
-            self.pareto_front = np.array(candidate[1]).reshape(1, -1)
-            return False
-
-        dmat = (self.pareto_front - candidate[1]) * self.rules > 0
-        scores = np.sum(dmat, axis=1)
-        if np.sum(scores == 0):  # candidate is dominated
-            return True
-
-        # Drop points that are dominated by candidate
-        idx_keep = scores != self.dimension
-        self.pareto_front = np.vstack((self.pareto_front[idx_keep],
-                                       candidate[1]))
-        self.pareto_set = np.vstack((self.pareto_set[idx_keep], candidate[0]))
-        return False
-
-
 def ts_to_str(ts, format="lcls-log"):
     if format == "lcls-log":
         return ts.strftime("%d-%b-%Y %H:%M:%S")
@@ -172,23 +144,19 @@ def curr_ts_to_str(format="lcls-log"):
 
 def get_header(routine):
     try:
-        obj_names = [next(iter(d)) for d in routine["config"]["objectives"]]
+        obj_names = routine.vocs.objective_names
     except Exception:
         obj_names = []
     try:
-        var_names = [next(iter(d)) for d in routine["config"]["variables"]]
+        var_names = routine.vocs.variable_names
     except Exception:
         var_names = []
     try:
-        if routine["config"]["constraints"]:
-            con_names = [next(iter(d)) for d in
-                         routine["config"]["constraints"]]
-        else:
-            con_names = []
+        con_names = routine.vocs.constraint_names
     except Exception:
         con_names = []
     try:
-        sta_names = routine["config"]["states"] or []
+        sta_names = routine.vocs.constant_names
     except KeyError:
         sta_names = []
 
@@ -324,3 +292,25 @@ def strtobool(val):
         return False
     else:
         raise ValueError("invalid truth value %r" % (val,))
+
+
+# https://stackoverflow.com/a/61901696/4263605
+def get_datadir() -> pathlib.Path:
+
+    """
+    Returns a parent directory path
+    where persistent application data can be stored.
+
+    # linux: ~/.local/share
+    # macOS: ~/Library/Application Support
+    # windows: C:/Users/<USER>/AppData/Roaming
+    """
+
+    home = pathlib.Path.home()
+
+    if sys.platform == "win32":
+        return home / "AppData/Roaming"
+    elif sys.platform == "linux":
+        return home / ".local/share"
+    elif sys.platform == "darwin":
+        return home / "Library/Application Support"

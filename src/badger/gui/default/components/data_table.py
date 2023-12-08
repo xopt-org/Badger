@@ -1,5 +1,19 @@
+from pandas import DataFrame
 from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt5.QtCore import Qt
+
+
+stylesheet = '''
+    QTableWidget
+    {
+        alternate-background-color: #262E38;
+    }
+    QTableWidget::item::selected
+    {
+        background-color: #B3E5FC;
+        color: #000000;
+    }
+'''
 
 
 # https://stackoverflow.com/questions/60715462/how-to-copy-and-paste-multiple-cells-in-qtablewidget-in-pyqt5
@@ -38,19 +52,17 @@ def update_table(table, data=None):
     if data is None:
         return table
 
-    _data = data.copy()
-    m = len(_data['timestamp_raw'])
-    del _data['timestamp_raw']
-    del _data['timestamp']
-    n = len(_data)
+    _data = data.drop(columns=['timestamp', 'xopt_error', 'xopt_runtime'])
 
+    m, n = _data.shape
     table.setRowCount(m)
     table.setColumnCount(n)
-    for i, key in enumerate(_data.keys()):
-        for j, v in enumerate(_data[key]):
-            table.setItem(j, i, QTableWidgetItem(f'{v:g}'))
-    table.setHorizontalHeaderLabels(list(_data.keys()))
-    table.setVerticalHeaderLabels([str(i) for i in range(m)])  # row index starts from 0
+    for i in range(m):
+        for j in range(n):
+            v = _data.iloc[i, j]
+            table.setItem(i, j, QTableWidgetItem(f'{v:g}'))
+    table.setHorizontalHeaderLabels(list(_data.columns))
+    table.setVerticalHeaderLabels(list(map(str, _data.index)))  # row index starts from 0
     table.horizontalHeader().setVisible(True)
 
     return table
@@ -81,7 +93,7 @@ def add_row(table, row):
 def data_table(data=None):
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
-    table.setStyleSheet('alternate-background-color: #262E38;')
+    table.setStyleSheet(stylesheet)
     table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
     return update_table(table, data)
 
@@ -89,7 +101,7 @@ def data_table(data=None):
 def init_data_table(variable_names=None):
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
-    table.setStyleSheet('alternate-background-color: #262E38;')
+    table.setStyleSheet(stylesheet)
     table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     table.setRowCount(10)
@@ -147,8 +159,12 @@ def update_init_data_table(table, variable_names):
                 table.setItem(row, col, QTableWidgetItem(''))
 
 
-def set_init_data_table(table, data_dict):
+def set_init_data_table(table, data: DataFrame):
     variable_names = get_horizontal_header_as_list(table)
+    try:
+        data_dict = data.to_dict('list')
+    except AttributeError:
+        data_dict = None
 
     # Clear the table
     for col, name in enumerate(variable_names):

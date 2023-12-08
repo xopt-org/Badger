@@ -28,7 +28,8 @@ setup(
     extras_require={
         'dev': [
             'pytest',
-            'pytest-qt'
+            'pytest-qt',
+            'pytest-mock'
         ]
     },
     python_requires='>=3.9',

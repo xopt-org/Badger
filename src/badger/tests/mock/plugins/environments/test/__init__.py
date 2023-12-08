@@ -1,5 +1,4 @@
 import torch
-from typing import Dict
 from badger import environment
 from badger.errors import BadgerNoInterfaceError
 
@@ -8,11 +7,11 @@ class Environment(environment.Environment):
 
     name = 'test'
     variables = {f'x{i}': [-1, 1] for i in range(20)}
-    observables = ['f']
+    observables = ['f', "c"]
 
     flag: int = 0
 
-    def set_variables(self, variable_inputs: Dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]):
         if not self.interface:
             raise BadgerNoInterfaceError
 
@@ -21,4 +20,5 @@ class Environment(environment.Environment):
 
         # Filling up the observations
         x = torch.tensor([full_outputs[f'x{i}'] for i in range(20)])
-        self.interface.set_value('f', (x ** 2).sum().numpy())
+        self.interface.set_value('f', float((x ** 2).sum().numpy()))
+        self.interface.set_value('c', float((x ** 2).sum().numpy()))

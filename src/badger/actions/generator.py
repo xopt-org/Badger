@@ -3,19 +3,19 @@ logger = logging.getLogger(__name__)
 from ..utils import yprint
 
 
-def show_algo(args):
+def show_generator(args):
     try:
-        from ..factory import list_algo, get_algo
+        from ..factory import list_generators, get_generator
     except Exception as e:
         logger.error(e)
         return
 
-    if args.algo_name is None:
-        yprint(list_algo())
+    if args.generator_name is None:
+        yprint(list_generators())
         return
 
     try:
-        _, configs = get_algo(args.algo_name)
+        _, configs = get_generator(args.generator_name)
         yprint(configs)
     except Exception as e:
         logger.error(e)

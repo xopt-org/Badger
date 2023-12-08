@@ -12,7 +12,7 @@ def plugin_remove(args):
 		return
 
 	hist = {
-		'algo': 'algorithms',
+		'generator': 'generators',
 		'env': 'environments',
 		'ext': 'extensions',
 		'intf': 'interfaces'

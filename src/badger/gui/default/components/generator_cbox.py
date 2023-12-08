@@ -7,10 +7,10 @@ from ....utils import strtobool
 
 class BadgerAlgoBox(CollapsibleBox):
 
-    def __init__(self, parent=None, algos=[], scaling_functions=[]):
+    def __init__(self, parent=None, generators=[], scaling_functions=[]):
         super().__init__(parent, ' Algorithm')
 
-        self.algos = algos
+        self.generators = generators
         self.scaling_functions = scaling_functions
 
         self.init_ui()
@@ -26,7 +26,7 @@ class BadgerAlgoBox(CollapsibleBox):
         lbl.setFixedWidth(64)
         self.cb = cb = QComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
-        cb.addItems(self.algos)
+        cb.addItems(self.generators)
         cb.setCurrentIndex(-1)
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)

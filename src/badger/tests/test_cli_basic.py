@@ -19,7 +19,7 @@ def test_cli_main():
 
     # Check output lines
     outlines = out.split('\n')
-    assert len(outlines) == 8
+    assert len(outlines) == 7
 
     # Check name
     assert outlines[0] == 'name: Badger the optimizer'
@@ -27,6 +27,17 @@ def test_cli_main():
     # Check version
     version = metadata.version('badger-opt')
     assert outlines[1] == f'version: {version}'
+
+
+def test_list_algo():
+    command = ['badger', 'generator']
+    out, err, exitcode = capture(command)
+
+    assert exitcode == 0
+
+    # Check output lines
+    outlines = out.split('\n')
+    assert '- upper_confidence_bound' in outlines
 
 
 # def test_cli_run(mock_config_root):

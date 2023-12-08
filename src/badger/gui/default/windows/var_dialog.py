@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QLineEdit, QPushButton, QVBoxLayout
 from PyQt5.QtWidgets import QGroupBox, QMessageBox
 from ..components.labeled_lineedit import labeled_lineedit
-from ....core import instantiate_env
+from ....environment import instantiate_env
 
 
 class BadgerVariableDialog(QDialog):

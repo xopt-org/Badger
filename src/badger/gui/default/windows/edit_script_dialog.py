@@ -5,10 +5,10 @@ from ..components.syntax import PythonHighlighter
 
 
 class BadgerEditScriptDialog(QDialog):
-    def __init__(self, parent, algo, script, callback):
+    def __init__(self, parent, generator, script, callback):
         super().__init__(parent)
 
-        self.algo = algo
+        self.generator = generator
         self.script = script
         self.callback = callback
 
@@ -16,7 +16,7 @@ class BadgerEditScriptDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
-        self.setWindowTitle(f'Edit Script for {self.algo}')
+        self.setWindowTitle(f'Edit Script for {self.generator}')
         self.resize(640, 640)
 
         vbox = QVBoxLayout(self)

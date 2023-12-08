@@ -2,7 +2,6 @@ from pkg_resources import get_distribution
 from .doctor import check_n_config_paths
 from ..utils import yprint
 from ..log import set_log_level
-from ..settings import read_value
 
 
 def show_info(args):
@@ -10,51 +9,40 @@ def show_info(args):
     set_log_level(args.log)
 
     if args.gui:
-        from ..gui.default import launch_gui
+        if check_n_config_paths():
+            from ..gui.default import launch_gui
 
-        launch_gui()
-    elif args.gui_acr:
-        from ..gui.default import launch_gui
+            launch_gui()
 
-        launch_gui()
-    else:
-        try:
-            from ..factory import BADGER_PLUGIN_ROOT, BADGER_EXTENSIONS
-        except:
-            BADGER_PLUGIN_ROOT = None
-            BADGER_EXTENSIONS = None
-        try:
-            from ..db import BADGER_DB_ROOT
-        except:
-            BADGER_DB_ROOT = None
-        try:
-            from ..logbook import BADGER_LOGBOOK_ROOT
-        except:
-            BADGER_LOGBOOK_ROOT = None
-        try:
-            from ..archive import BADGER_ARCHIVE_ROOT
-        except:
-            BADGER_ARCHIVE_ROOT = None
+        return
 
-        info = {
-            'name': 'Badger the optimizer',
-            'version': get_distribution('badger-opt').version,
-            'plugin root': BADGER_PLUGIN_ROOT,
-            'database root': BADGER_DB_ROOT,
-            'logbook root': BADGER_LOGBOOK_ROOT,
-            'archive root': BADGER_ARCHIVE_ROOT,
-            'plugin installation url': read_value('BADGER_PLUGINS_URL')
-        }
+    if args.gui_acr:
+        if check_n_config_paths():
+            from ..gui.default import launch_gui
 
-        if BADGER_EXTENSIONS:
-            extensions = list(BADGER_EXTENSIONS.keys())
-            if extensions:
-                info['extensions'] = extensions
+            launch_gui()
 
-        yprint(info)
+        return
 
-        check_n_config_paths()
-        # print(f'Badger the optimizer')
-        # print('====================')
-        # print(f'version      : {version}')
-        # print(f'plugins root : {BADGER_PLUGIN_ROOT}')
+    if not check_n_config_paths():
+        return
+
+    from ..settings import read_value
+
+    BADGER_PLUGIN_ROOT = read_value("BADGER_PLUGIN_ROOT")
+    BADGER_DB_ROOT = read_value("BADGER_DB_ROOT")
+    BADGER_LOGBOOK_ROOT = read_value("BADGER_LOGBOOK_ROOT")
+    BADGER_ARCHIVE_ROOT = read_value("BADGER_ARCHIVE_ROOT")
+
+    info = {
+        'name': 'Badger the optimizer',
+        'version': get_distribution('badger-opt').version,
+        'plugin root': BADGER_PLUGIN_ROOT,
+        'database root': BADGER_DB_ROOT,
+        'logbook root': BADGER_LOGBOOK_ROOT,
+        'archive root': BADGER_ARCHIVE_ROOT,
+        # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
+    }
+
+    # print()  # put one blank line before the printout
+    yprint(info)

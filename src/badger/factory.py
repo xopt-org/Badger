@@ -10,14 +10,19 @@ import sys
 import os
 import importlib
 import yaml
-import json
-from xopt.generators import generators
+from xopt.generators import generators, get_generator
+
 import logging
 logger = logging.getLogger(__name__)
 
-
 LOAD_LOCAL_ALGO = False
-
+ALGO_EXCLUDED = [
+    'bayesian_exploration',
+    'cnsga',
+    'mggpo',
+    'time_dependent_upper_confidence_bound',
+    'multi_fidelity'
+]
 
 # Check badger plugin root
 BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
@@ -37,12 +42,12 @@ sys.path.append(BADGER_PLUGIN_ROOT)
 def scan_plugins(root):
     factory = {}
 
-    # Do not scan local algorithms if option disabled
+    # Do not scan local generators if option disabled
     if LOAD_LOCAL_ALGO:
-        ptype_list = ['algorithm', 'interface', 'environment']
+        ptype_list = ['generator', 'interface', 'environment']
     else:
         ptype_list = ['interface', 'environment']
-        factory['algorithm'] = {}
+        factory['generator'] = {}
 
     for ptype in ptype_list:
         factory[ptype] = {}
@@ -64,7 +69,7 @@ def scan_plugins(root):
 
 
 def load_plugin(root, pname, ptype):
-    assert ptype in ['algorithm', 'interface',
+    assert ptype in ['generator', 'interface',
                      'environment'], f'Invalid plugin type {ptype}'
 
     proot = os.path.join(root, f'{ptype}s')
@@ -87,7 +92,7 @@ def load_plugin(root, pname, ptype):
         _e.configs = configs  # attach information to the exception
         raise _e
 
-    if ptype == 'algorithm':
+    if ptype == 'generator':
         plugin = [module.optimize, configs]
     elif ptype == 'interface':
         params = module.Interface.model_json_schema()['properties']
@@ -134,7 +139,7 @@ def load_plugin(root, pname, ptype):
 
 
 def load_docs(root, pname, ptype):
-    assert ptype in ['algorithm', 'interface',
+    assert ptype in ['generator', 'interface',
                      'environment'], f'Invalid plugin type {ptype}'
 
     proot = os.path.join(root, f'{ptype}s')
@@ -146,7 +151,8 @@ def load_docs(root, pname, ptype):
             readme = f.read()
         return readme
     except:
-        raise BadgerInvalidDocsError(f'Error loading docs for {ptype} {pname}: docs not found')
+        raise BadgerInvalidDocsError(
+            f'Error loading docs for {ptype} {pname}: docs not found')
 
 
 def get_plug(root, name, ptype):
@@ -170,63 +176,7 @@ def scan_extensions(root):
     return extensions
 
 
-def get_algo_params(cls):
-    params = {}
-    for k in cls.__fields__:
-        if k in ['vocs', 'data']:
-            continue
-
-        v = cls.__fields__[k]
-        try:
-            _ = v.default
-        except AttributeError:
-            params[k] = get_algo_params(v)
-            continue
-
-        try:
-            params[k] = json.loads(v.default.json())
-        except AttributeError:
-            params[k] = v.default
-
-    return params
-
-
-def get_algo(name):
-    from xopt import __version__
-
-    try:
-        from xopt.generators import generator_default_options
-
-        params = generator_default_options[name].dict()
-    except ImportError:  # Xopt v2.0+
-        from xopt.generators import get_generator
-
-        params = get_algo_params(get_generator(name))
-
-    try:
-        _ = params["start_from_current"]
-    except KeyError:
-        params["start_from_current"] = True
-    try:  # remove custom GP kernel to avoid yaml parsing error for now
-        del params["model"]["function"]
-    except KeyError:
-        pass
-    except TypeError:
-        pass
-
-    try:
-        return [None, {
-            "name": name,
-            "version": __version__,
-            "dependencies": ["xopt"],
-            "params": params,
-        }]
-    except Exception as e:
-        raise e
-        # raise Exception(f'Algorithm {name} is not supported')
-
-
-def get_algo_docs(name):
+def get_generator_docs(name):
     return generators[name].__doc__
 
 
@@ -238,10 +188,20 @@ def get_env(name):
     return get_plug(BADGER_PLUGIN_ROOT, name, 'environment')
 
 
-def list_algo():
-    algos = list(generators.keys())
+def list_generators():
+    try:
+        from xopt.generators import try_load_all_generators
 
-    return sorted(algos)
+        try_load_all_generators()
+    except ImportError:  # this API changed somehow
+        pass  # there is nothing we can do...
+    generator_names = list(generators.keys())
+    # Filter the names
+    generator_names = [n for n in generator_names if n not in ALGO_EXCLUDED]
+    return sorted(generator_names)
+
+
+get_generator = get_generator
 
 
 def list_intf():

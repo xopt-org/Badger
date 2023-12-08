@@ -1,382 +1,106 @@
-# Badger: The Ocelot Optimizer Rebirth
+<div align="center">
+  <h1 align="center">
+    Badger: The Missing Optimizer in ACR
+    <br />
+    <br />
+    <a href="https://slac-ml.github.io/Badger">
+      <img src="pics/badger.png" alt="Badger" height=128>
+    </a>
+  </h1>
+</div>
+
+![Badger main GUI](pics/main.png)
+
+<div align="center">
+
+| Documentation | Package | Downloads | Version | Platforms |
+| --- | --- | --- | --- | --- |
+| [![Documentation](https://img.shields.io/badge/Badger-documentation-blue.svg)](https://slac-ml.github.io/Badger/) | [![Conda Recipe](https://img.shields.io/badge/recipe-badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) |
+
+</div>
+
+## Introduction
+
+Badger is an optimization interface tailored for the Accelerator Control Room (ACR)[^1]. It places a strong emphasis on extensibility, easily expandable through the plugin system, and flexibility, offering complete GUI, CLI, and API support.
+
+The primary goal of Badger is to establish a user-friendly interface (GUI, CLI, and API) bridging the gap between users and the machines undergoing optimization. Users only need to define an environment for each machine or simulation, allowing Badger to take charge of tasks such as connecting the problem and optimization algorithm, implementing control logic, visualizing progress, and archiving data.
+
+Internally, Badger leverages the [Xopt](https://github.com/ChristopherMayes/Xopt/tree/main) optimization library to drive the optimization process. This grants users the advantage of utilizing [a variety of optimization algorithms](https://christophermayes.github.io/Xopt/index.html) available through Xopt.
+
+Badger boasts a range of features designed to enhance your optimization experience:
+
+- **Plugin System:** Easily add your optimization problem in just a few minutes.
+- **Versatile Modes:** Enjoy full support for three modes: GUI, CLI, and API, allowing you to use Badger according to your preferences.
+- **Efficient Rerun:** With a single click or command, rerun optimization tasks swiftly -- ideal for daily machine operation routines.
+- **History Exploration:** Browse through past runs effortlessly.
+- **Optimal Solution Navigation:** Jump to or set optimal solutions.
+- **State Recovery:** Easily recover machine states after an optimization run.
+- **Constraint Support:** Accommodate both soft and hard constraints.
+- **Data Preservation:** Preserve all raw data for comprehensive analysis.
+- **Advanced Extensions:** Benefit from extensions for sophisticated optimization data analysis and visualization.
+
+For additional details about Badger and its capabilities, please refer to [Badger's online documentation](https://slac-ml.github.io/Badger/).
 
 ## Installation
 
-### Install the Badger core
+Using `conda`
 
-Using `pip`: `pip install badger-opt`
+```shell
+conda install -c conda-forge badger-opt
+```
 
-Or using `conda`: `conda install -c conda-forge badger-opt`
+or `pip`
 
-### Get the Badger plugins
+```shell
+pip install badger-opt
+```
 
-Clone the [badger plugins repo](https://github.com/SLAC-ML/Badger-Plugins) to some directory on your computer.
+Currently Badger only officially support Linux. Badger on MacOS and Windows could be potentially unstable.
 
-### Set up Badger
+## Run an optimization
 
-Once `badger-opt` is installed and you have the badger plugins cloned, run the following command:
+Once Badger is installed, launch the GUI by running the following command in the terminal:
 
 ```bash
-badger
-```
-
-Follow the instructions and configure several paths that are needed by Badger.
-
-## Usage
-
-For all the implemented and planned CLI usage, please refer to [these slides](https://docs.google.com/presentation/d/1APlLgaRik2VPGL7FuxEUmwHvx6egTeIRaxBKGS1TnsE/edit#slide=id.ge68b2a5657_0_5). We'll highlight several common CLI use cases of Badger in the following sections.
-
-### Get help
-
-```bash
-badger -h
-```
-
-Or [shoot me an email](mailto:zhezhang@slac.stanford.edu)!
-
-### Show metadata of Badger
-
-To show the version number and some other metadata such as plugin directory:
-
-```bash
-badger
-```
-
-### Get information of the algorithms
-
-List all the available algorithms:
-
-```bash
-badger algo
-```
-
-Get the configs of a specific algorithm:
-
-```bash
-badger algo ALGO_NAME
-```
-
-You'll get something like:
-
-```yaml
-name: silly
-version: '0.1'
-dependencies:
-  - numpy
-params:
-  dimension: 1
-  max_iter: 42
-```
-
-Note that in order to use this plugin, you'll need to install the dependencies listed in the command output. This dependency installation will be handled automatically if the plugin was installed through the `badger install` command, but that command is not available yet (it is coming soon).
-
-The `params` part shows all the intrinsic parameters that can be tuned when doing optimization with this algorithm.
-
-### Get information of the environments
-
-List all the available environments:
-
-```bash
-badger env
-```
-
-Get the configs of a specific environment:
-
-```bash
-badger env ENV_NAME
-```
-
-The command will print out something like:
-
-```yaml
-name: dumb
-version: '0.1'
-dependencies:
-  - numpy
-  - badger-opt
-interface:
-  - silly
-environments:
-  - silly
-  - naive
-params: null
-variables:
-  - q1: 0 -> 1
-  - q2: 0 -> 1
-  - q3: 0 -> 1
-  - q4: 0 -> 1
-  - s1: 0 -> 1
-  - s2: 0 -> 1
-observations:
-  - l2
-  - mean
-  - l2_x_mean
-```
-
-There are several important properties here:
-
-- `variables`: The tunable variables provided by this environment. You could choose a subset of the variables as the desicion variables for the optimization in the routine config. The allowed ranges (in this case, 0 to 1) are shown behind the corresponding variable names
-- `observations`: The measurements provided by this environment. You could choose some observations as the objectives, and some other observations as the constraints in the routine config
-
-### Run and save an optimization
-
-```bash
-badger run [-h] -a ALGO_NAME [-ap ALGO_PARAMS] -e ENV_NAME [-ep ENV_PARAMS] -c ROUTINE_CONFIG [-s [SAVE_NAME]] [-y] [-v [{0,1,2}]]
-```
-
-The `-ap` and `-ep` optional arguments, and the `-c` argument accept either a `.yaml` file path or a yaml string. The configs set to `-ap` and `-ep` optional arguments should be treated as "patch" on the default algorithm and environment parameters, respectively, which means that you only need to specify the paramters that you'd like to change on top of the default configs, rather than pass in a full config. The content of the `ROUTINE_CONFIG` (aka routine configs) should look like this:
-
-```yaml
-variables:
-  - x1: [-1, 0.5]
-  - x2
-objectives:
-  - c1
-  - y2: MINIMIZE
-constraints:
-  - y1:
-      - GREATER_THAN
-      - 0
-  - c2:
-      - LESS_THAN
-      - 0.5
-```
-
-The `variables` and `objectives` properties are required, while the `constraints` property is optional. Just omit the `constraints` property if there are no constraints for your optimization problem. The names listed in `variables` should come from `variables` of the env specified by the `-e` argument, while the names listed in `objectives` and `constraints` should come from `observations` of that env.
-
-All optimization runs will be archived in the `$BADGER_ARCHIVE_ROOT` folder that you initially set up when running `badger` the first time.
-
-Several example routine configs can be found in the `examples` folder.
-
-Below are some example `badger run` commands. They are assumed to run under the parent directory of the `examples` folder (you'll need to clone the `examples` folder from this repo to your computer first). You could run them from any directory, just remember to change the routine config path accordingly.
-
-#### A simplest run command
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml
-```
-
-#### Run without confirmation
-
-Badger will let you confirm the routine before running it. You could skip the confirmation by adding the `-y` option:
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml -y
-```
-
-#### Change verbose level
-
-By default, Badger will print out a table contains all the evaluated solutions along the optimization run (with the optimal ones highlighted), you could alter the default behavior by setting the `-v` option.
-
-The default verbose level 2 will print out all the solutions:
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml -v 2
-```
-
-The table would look like:
-
-```
-|    iter    |     c1     |     x2     |
-----------------------------------------
-|  1         |  3.73      |  2.198     |
-|  2         | -0.9861    |  0.3375    |
-|  3         |  1.888     |  1.729     |
-|  4         |  2.723     |  1.955     |
-|  5         | -1.092     |  0.08923   |
-|  6         |  1.357     |  1.568     |
-|  7         |  4.559     |  2.379     |
-|  8         |  8.757     |  3.14      |
-|  9         |  2.957     |  2.014     |
-|  10        |  0.1204    |  1.105     |
-|  11        |  2.516     |  1.902     |
-|  12        | -0.01194   |  1.043     |
-|  13        |  7.953     |  3.009     |
-|  14        | -1.095     |  0.07362   |
-|  15        | -0.3229    |  0.8815    |
-|  16        | -1.096     |  0.06666   |
-|  17        |  2.662     |  1.94      |
-|  18        |  6.987     |  2.844     |
-|  19        | -0.9734    |  0.3558    |
-|  20        |  3.694     |  2.19      |
-|  21        | -1.032     |  0.2613    |
-|  22        |  2.441     |  1.882     |
-|  23        |  7.042     |  2.853     |
-|  24        |  4.682     |  2.405     |
-|  25        |  0.5964    |  1.302     |
-|  26        |  0.3664    |  1.211     |
-|  27        |  1.966     |  1.751     |
-|  28        |  0.2181    |  1.148     |
-|  29        |  7.954     |  3.009     |
-|  30        | -0.8986    |  0.4488    |
-|  31        | -0.7536    |  0.5885    |
-|  32        |  3.602     |  2.168     |
-|  33        |  0.5527    |  1.286     |
-|  34        | -0.6969    |  0.6349    |
-|  35        | -1.094     |  0.07974   |
-|  36        | -0.8758    |  0.4735    |
-|  37        |  5.995     |  2.664     |
-|  38        |  3.638     |  2.177     |
-|  39        |  2.489     |  1.895     |
-|  40        |  0.8434    |  1.394     |
-|  41        |  0.4919    |  1.262     |
-|  42        | -0.4929    |  0.7792    |
-========================================
-```
-
-Verbose level 1 only prints out the optimal solutions along the run:
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml -v 1
-```
-
-The table would look like:
-
-```
-|    iter    |     c1     |     x2     |
-----------------------------------------
-|  1         |  1.96      |  1.749     |
-|  2         | -1.037     |  0.2518    |
-|  18        | -1.1       |  0.01942   |
-========================================
-```
-
-Verbose level 0 turns off the printing feature completely:
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml -v 0
-```
-
-The table would not be printed.
-
-#### Configure algorithm/environment parameters
-
-The following two commands show how to config parameters of the algorithm/environment.
-
-```bash
-badger run -a silly -ap "dimension: 4" -e dumb -c examples/silly_dumb.yaml
-```
-
-```bash
-badger run -a silly -ap "{dimension: 4, max_iter: 10}" -e dumb -c examples/silly_dumb.yaml
-```
-
-#### Run with algorithms provided by extensions
-
-In order to run the following command, you'll need to [set up xopt](https://github.com/ChristopherMayes/Xopt#installing-xopt) on your computer (since the algorithms are provided by xopt).
-
-```bash
-badger run -a cnsga -ap "max_generations: 10" -e TNK -c examples/cnsga_tnk.yaml
-```
-
-#### Save a run
-
-To save a routine to database in `$BADGER_DB_ROOT`, just add the `-s [SAVE_NAME]` option. This command will run and save the routine with a randomly generated two-word name:
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml -s
-```
-
-The following command will run the routine and save it as `test_routine`:
-
-```bash
-badger run -a silly -e TNK -c examples/silly_tnk.yaml -s test_routine
-```
-
-### Rerun a saved optimization routine
-
-Say we have the routine `test_routine` saved. List all the saved routines by:
-
-```bash
-badger routine
-```
-
-To get the details of some specific routine (say, `test_routine`):
-
-```bash
-badger routine test_routine
-```
-
-To rerun it, do:
-
-```bash
-badger routine test_routine -r
-```
-
-`badger routine` also supports the `-y` and `-v` options, as `badger run` does.
-
-### Configure Badger
-
-If you would like to change some setting that you configured during the first time you run `badger`, you could do so with `badger config`.
-
-List all the configurations:
-
-```bash
-badger config
-```
-
-To config a property:
-
-```bash
-badger config KEY
-```
-
-Where `KEY` is one of the keys in the configuration list.
-
-### Launch the Badger GUI
-
-Badger supports a GUI mode. You can launch the GUI by:
-
-```
 badger -g
 ```
 
-## Development
+Then following [this simple GUI tutorial](https://slac-ml.github.io/Badger/docs/next/getting-started/tutorial_0) to run your first optimizaion in Badger within a couple of minutes!
 
-### Install the Badger core in editable mode
+## Citation
 
-Clone this repo and `cd` to the project root, then install badger in dev mode:
-
-```bash
-pip install -e .
-```
-
-#### Uninstall Badger
-
-To uninstall badger, run the following command under the project root:
-
-```bash
-python setup.py develop -u
-```
-
-### Develop algorithm plugins for Badger
-
-Algorithm in Badger is just a function has the following signature:
+If you use Badger for your research, please consider adding the following citation to your publications.
 
 ```
-result = optimize(evaluate, params)
+Zhang, Z., et al. "Badger: The missing optimizer in ACR",
+in Proc. IPAC'22, Bangkok. doi:10.18429/JACoW-IPAC2022-TUPOST058
 ```
 
-Where `evaluate` is an evaluation function for the problem to be optimized, with the signature below:
-
+BibTex entry:
+```bibtex
+@inproceedings{Badger,
+    author       = {Z. Zhang and M. Böse and A.L. Edelen and J.R. Garrahan and Y. Hidaka and C.E. Mayes and S.A. Miskovich and D.F. Ratner and R.J. Roussel and J. Shtalenkova and S. Tomin and G.M. Wang},
+    title        = {{Badger: The Missing Optimizer in ACR}},
+    booktitle    = {Proc. IPAC'22},
+    pages        = {999--1002},
+    eid          = {TUPOST058},
+    language     = {english},
+    keywords     = {interface, controls, GUI, operation, framework},
+    venue        = {Bangkok, Thailand},
+    series       = {International Particle Accelerator Conference},
+    number       = {13},
+    publisher    = {JACoW Publishing, Geneva, Switzerland},
+    month        = {07},
+    year         = {2022},
+    issn         = {2673-5490},
+    isbn         = {978-3-95450-227-1},
+    doi          = {10.18429/JACoW-IPAC2022-TUPOST058},
+    url          = {https://jacow.org/ipac2022/papers/tupost058.pdf},
+}
 ```
-Y, I, E = evaluate(X)
-```
 
-Here `X`, `Y` are the decision vectors and the objectives, respectively. `I` is the inequality constraints, `E` the equality constraints. `X` and `Y` are 2D arrays, and `I` and `E` are either 2D arrays or `None`, depends on whether the optimization problem has the corresponding constraints or not.
+## Issues or questions?
 
-To see an example of a Badger algorithm plugin, please have a look at the algorithms in the [official Badger algo registry](https://github.com/SLAC-ML/Badger-Plugins/tree/master/algorithms).
+Please check out current Badger issues [here](https://github.com/slaclab/Badger/issues) before [opening a new one](https://github.com/slaclab/Badger/issues/new/). Alternatively, you are welcome to [shoot us an email](mailto:zhezhang@slac.stanford.edu), or join our [Slack channel](https://join.slack.com/share/enQtNjI3NjY0NDk0MzUxMC0zNThjYTdmNmZlOTA3MzM2NjFjZTVmNDY5MDk4NmQ2NmQxMjE1NjBjN2VhNzYxNjBjYjgxYzMwY2ExZTIxYzkw).
 
-For now, you could simply create a folder named after your algorithm under the `$BADGER_PLUGIN_ROOT/algorithms` directory, where `$BADGER_PLUGIN_ROOT` is the value for key `BADGER_PLUGIN_ROOT` when you run `badger config`, and put the `__init__.py`, `configs.yaml`, and an optional `README.md` into your algorithm folder.
-
-You can then `badger algo` to see if your algorithm is there.
-
-### Develop environment plugins for Badger
-
-Before developing new environments for Badger, please have a look at the [available environments](https://github.com/SLAC-ML/Badger-Plugins/tree/master/environments) in the official Badger plugins repo.
-
-The existing envs could boost up your new env development process since Badger supports **nested environments**, which means that you could use environments in other environment, to reuse the observations/variables in the existing environments. To see an example of a nested environment, please check out the code of `silly`, `naive`, and `dumb` envs in the official Badger env registry. Note `dumb = silly + naive`.
-
-For now, you could simply create a folder named after your env under the `$BADGER_PLUGIN_ROOT/environments` directory, where `$BADGER_PLUGIN_ROOT` is the value for key `BADGER_PLUGIN_ROOT` when you run `badger config`, and put the `__init__.py`, `configs.yaml`, and an optional `README.md` into your env folder.
-
-You can then `badger env` to see if your environment is there.
+[^1]: Draws limited inspiration from [Ocelot the optimizer](https://github.com/ocelot-collab/optimizer).

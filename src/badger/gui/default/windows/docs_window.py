@@ -1,12 +1,12 @@
 from PyQt5.QtWidgets import QTextEdit, QHBoxLayout, QVBoxLayout, QCheckBox, QWidget, QMainWindow
-from ....factory import get_algo_docs
+from ....factory import get_generator_docs
 
 
 class BadgerDocsWindow(QMainWindow):
-    def __init__(self, parent, algo):
+    def __init__(self, parent, generator):
         super().__init__(parent=parent)
 
-        self.algo = algo
+        self.generator = generator
         self.render_md = True
         self.docs = None
 
@@ -15,7 +15,7 @@ class BadgerDocsWindow(QMainWindow):
         self.load_docs()
 
     def init_ui(self):
-        self.setWindowTitle(f'Docs for algorithm {self.algo}')
+        self.setWindowTitle(f'Docs for generator {self.generator}')
         self.resize(640, 640)
 
         doc_panel = QWidget(self)
@@ -42,7 +42,7 @@ class BadgerDocsWindow(QMainWindow):
 
     def load_docs(self):
         try:
-            self.docs = docs = get_algo_docs(self.algo)
+            self.docs = docs = get_generator_docs(self.generator)
         except Exception as e:
             self.docs = docs = str(e)
 
@@ -51,9 +51,9 @@ class BadgerDocsWindow(QMainWindow):
         else:
             self.markdown_viewer.setText(docs)
 
-    def update_docs(self, algo):
-        self.algo = algo
-        self.setWindowTitle(f'Docs for algorithm {algo}')
+    def update_docs(self, generator):
+        self.generator = generator
+        self.setWindowTitle(f'Docs for generator {generator}')
         self.load_docs()
 
     def switch_render_mode(self):

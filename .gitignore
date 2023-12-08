@@ -4,5 +4,8 @@ __pycache__
 /dist
 /build
 /local
-/environment*.yml
 /requirements*.txt
+.idea/
+/examples/*.yaml
+*.pickle
+*.db

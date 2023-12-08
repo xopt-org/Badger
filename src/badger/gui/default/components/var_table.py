@@ -79,10 +79,9 @@ class VariableTable(QTableWidget):
             sb_upper = self.cellWidget(i, 3)
             self.bounds[name] = [sb_lower.value(), sb_upper.value()]
 
-    def set_bounds(self, variables):
-        for var in variables:
-            name = next(iter(var))
-            self.bounds[name] = var[name]
+    def set_bounds(self, variables: dict):
+        for name in variables:
+            self.bounds[name] = variables[name]
 
         self.update_variables(self.variables, 2)
 
@@ -202,13 +201,11 @@ class VariableTable(QTableWidget):
         self.all_variables.append(var)
         self.bounds[name] = [lb, ub]
 
-    def export_variables(self):
-        variables_exported = []
+    def export_variables(self) -> dict:
+        variables_exported = {}
         for var in self.all_variables:
             name = next(iter(var))
-            _var = {}
-            _var[name] = self.bounds[name]
             if self.is_checked(name):
-                variables_exported.append(_var)
+                variables_exported[name] = self.bounds[name]
 
         return variables_exported

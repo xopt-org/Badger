@@ -1,0 +1,8 @@
+# Formatting
+flake8
+zipp
+# Qt related packages after pyqt5 is installed
+pyqtgraph
+qdarkstyle
+pytest-qt
+pytest-mock

@@ -1,0 +1,11 @@
+# conda env create -f environment.yml
+name: badger-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - coolname
+  - pillow
+  - requests
+# Dev
+  - pytest

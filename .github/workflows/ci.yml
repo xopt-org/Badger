@@ -1,0 +1,75 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'  # every day at midnight
+
+jobs:
+  build:
+    if: ${{ github.repository == 'slaclab/Badger' }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.9", "3.11"]
+    env:
+      DISPLAY: ':99.0'
+      QT_MAC_WANTS_LAYER: 1  # PyQT gui tests involving qtbot interaction on macOS will fail without this
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          activate-environment: badger-dev
+          use-mamba: true
+          python-version: ${{ matrix.python-version }}
+          environment-file: env/environment.yml
+
+      # Have to install pyqt5 with pip
+      - name: Install pyqt5
+        shell: bash -el {0}
+        run: |
+            pip install PyQt5
+
+      # TODO: Have to install xopt with pip for now
+      # should put xopt>=2.1 in the environment.yml later
+      # to install xopt with conda
+      - name: Install Xopt v2.1+
+        shell: bash -el {0}
+        run: |
+            pip install xopt
+
+      - name: Install python packages
+        shell: bash -el {0}
+        run: |
+          mamba install --file env/requirements.txt
+
+      - name: Install libs for testing a pyqt app on linux
+        shell: bash -el {0}
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt install xvfb herbstluftwm libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils
+            sudo /sbin/start-stop-daemon --start --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset
+            sleep 3
+            sudo /sbin/start-stop-daemon --start --pidfile /tmp/custom_herbstluftwm_99.pid --make-pidfile --background --exec /usr/bin/herbstluftwm
+            sleep 1
+          fi
+
+      - name: Install Badger
+        shell: bash -l {0}
+        run: |
+          pip install --no-dependencies .
+
+      - name: Run Tests
+        shell: bash -l {0}
+        run: |
+          python scripts/run_tests.py

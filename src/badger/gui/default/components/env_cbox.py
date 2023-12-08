@@ -8,6 +8,7 @@ from .data_table import init_data_table, update_init_data_table
 from ....settings import read_value
 from ....utils import strtobool
 
+LABEL_WIDTH = 80
 
 class BadgerEnvBox(CollapsibleBox):
     def __init__(self, parent=None, envs=[]):
@@ -25,7 +26,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel('Name')
-        lbl.setFixedWidth(64)
+        lbl.setFixedWidth(LABEL_WIDTH)
         self.cb = cb = QComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.envs)
@@ -46,7 +47,7 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_lbl_params = QVBoxLayout(lbl_params_col)
         vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
         lbl_params = QLabel('Params')
-        lbl_params.setFixedWidth(64)
+        lbl_params.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_params.addWidget(lbl_params)
         vbox_lbl_params.addStretch(1)
         hbox_params.addWidget(lbl_params_col)
@@ -76,8 +77,8 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_var_col = QWidget()
         vbox_lbl_var = QVBoxLayout(lbl_var_col)
         vbox_lbl_var.setContentsMargins(0, 0, 0, 0)
-        lbl_var = QLabel('Vars')
-        lbl_var.setFixedWidth(64)
+        lbl_var = QLabel('Variables')
+        lbl_var.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_var.addWidget(lbl_var)
         vbox_lbl_var.addStretch(1)
         hbox_var.addWidget(lbl_var_col)
@@ -112,7 +113,7 @@ class BadgerEnvBox(CollapsibleBox):
         self.var_table = VariableTable()
         vbox_var_edit.addWidget(self.var_table)
 
-        cbox_init = CollapsibleBox(self, ' Initial Points', tooltip='If set, it takes precedence over the start from current setting in algorithm configuration.')
+        cbox_init = CollapsibleBox(self, ' Initial Points', tooltip='If set, it takes precedence over the start from current setting in generator configuration.')
         vbox_var_edit.addWidget(cbox_init)
         vbox_init = QVBoxLayout()
         vbox_init.setContentsMargins(8, 8, 8, 8)
@@ -145,8 +146,8 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_obj_col = QWidget()
         vbox_lbl_obj = QVBoxLayout(lbl_obj_col)
         vbox_lbl_obj.setContentsMargins(0, 0, 0, 0)
-        lbl_obj = QLabel('Objs')
-        lbl_obj.setFixedWidth(64)
+        lbl_obj = QLabel('Objectives')
+        lbl_obj.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_obj.addWidget(lbl_obj)
         vbox_lbl_obj.addStretch(1)
         hbox_obj.addWidget(lbl_obj_col)
@@ -184,8 +185,8 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_con_col = QWidget()
         vbox_lbl_con = QVBoxLayout(lbl_con_col)
         vbox_lbl_con.setContentsMargins(0, 0, 0, 0)
-        lbl_con = QLabel('Cons')
-        lbl_con.setFixedWidth(64)
+        lbl_con = QLabel('Constraints')
+        lbl_con.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_con.addWidget(lbl_con)
         vbox_lbl_con.addStretch(1)
         hbox_con.addWidget(lbl_con_col)
@@ -218,8 +219,8 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_sta_col = QWidget()
         vbox_lbl_sta = QVBoxLayout(lbl_sta_col)
         vbox_lbl_sta.setContentsMargins(0, 0, 0, 0)
-        lbl_sta = QLabel('States')
-        lbl_sta.setFixedWidth(64)
+        lbl_sta = QLabel('Constants')
+        lbl_sta.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_sta.addWidget(lbl_sta)
         vbox_lbl_sta.addStretch(1)
         hbox_sta.addWidget(lbl_sta_col)

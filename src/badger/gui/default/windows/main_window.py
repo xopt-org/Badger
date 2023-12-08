@@ -1,5 +1,8 @@
+import os
+import time
 from importlib import metadata
 from PyQt5.QtWidgets import QMainWindow, QStackedWidget, QDesktopWidget
+from PyQt5.QtWidgets import QMessageBox
 # from PyQt5.QtWidgets import QMenuBar, QMenu
 from ..pages.home_page import BadgerHomePage
 
@@ -15,7 +18,10 @@ class BadgerMainWindow(QMainWindow):
         version = metadata.version('badger-opt')
         version_xopt = metadata.version('xopt')
         self.setWindowTitle(f'Badger v{version} (Xopt v{version_xopt})')
-        self.resize(960, 720)
+        if os.getenv('DEMO'):
+            self.resize(1280, 720)
+        else:
+            self.resize(960, 720)
         self.center()
 
         # Add menu bar
@@ -42,3 +48,27 @@ class BadgerMainWindow(QMainWindow):
 
     def config_logic(self):
         pass
+
+    def closeEvent(self, event):
+        monitor = self.home_page.run_monitor
+        if not monitor.running:
+            monitor.destroy_unused_env()
+            return
+
+        reply = QMessageBox.question(
+            self, 'Window Close',
+            'Closing this window will terminate the current run, '
+            'and the run data would be archived.\n\nProceed?',
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            def close_window():
+                monitor.destroy_unused_env()
+                self.close()
+
+            monitor.register_post_run_action(close_window)
+            monitor.testing = True  # suppress the archive pop-ups
+            monitor.btn_stop.click()
+            event.ignore()
+        else:
+            event.ignore()

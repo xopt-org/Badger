@@ -73,9 +73,8 @@ class ObjectiveTable(QTableWidget):
             self.rules[name] = rule.currentText()
 
     def set_rules(self, objectives):
-        for obj in objectives:
-            name = next(iter(obj))
-            self.rules[name] = obj[name]
+        for name in objectives:
+            self.rules[name] = objectives[name]
 
         self.update_objectives(self.objectives, 2)
 
@@ -179,12 +178,10 @@ class ObjectiveTable(QTableWidget):
         header.setVisible(True)
 
     def export_objectives(self):
-        objectives_exported = []
+        objectives_exported = {}
         for obj in self.all_objectives:
             name = next(iter(obj))
-            _obj = {}
-            _obj[name] = self.rules[name]
             if self.is_checked(name):
-                objectives_exported.append(_obj)
+                objectives_exported[name] = self.rules[name]
 
         return objectives_exported

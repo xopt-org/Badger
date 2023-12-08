@@ -84,7 +84,7 @@ def launch_gui():
     window.show()
 
     # Show the saving SCORE heads-up
-    QMessageBox.information(
-            window, 'Heads-up!', 'This might be a good time to save a SCORE.')
+    # QMessageBox.information(
+    #        window, 'Heads-up!', 'This might be a good time to save a SCORE.')
 
     sys.exit(app.exec())

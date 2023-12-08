@@ -4,8 +4,9 @@ import logging
 logger = logging.getLogger(__name__)
 import yaml
 import sqlite3
+from .routine import Routine
 from .settings import read_value
-from .utils import ystring
+from .utils import get_yaml_string
 from .errors import BadgerConfigError, BadgerDBError
 
 
@@ -68,24 +69,57 @@ def filter_routines(records, tags):
     return records_filtered
 
 
+def extract_descriptions(records):
+    descr_list = []
+    for record in records:
+        try:
+            descr = yaml.safe_load(record[1])['description']
+            descr_list.append(descr)
+        except Exception:
+            descr_list.append('')
+
+    return descr_list
+
+
 @maybe_create_routines_db
-def save_routine(routine):
+def save_routine(routine: Routine):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute('select * from routine where name=:name', {'name': routine['name']})
+    cur.execute('select * from routine where name=:name',
+                {'name': routine.name})
     record = cur.fetchone()
 
-    runs = get_runs_by_routine(routine['name'])
+    runs = get_runs_by_routine(routine.name)
 
     if record and len(runs) == 0:  # update the record
         cur.execute('update routine set config = ?, savedAt = ? where name = ?',
-                    (yaml.dump(routine, sort_keys=False), datetime.now(), routine['name']))
+                    (routine.yaml(), datetime.now(), routine.name))
     else:  # insert a record
         cur.execute('insert into routine values (?, ?, ?)',
-                    (routine['name'], yaml.dump(routine, sort_keys=False), datetime.now()))
+                    (routine.name, routine.yaml(), datetime.now()))
+
+    con.commit()
+    con.close()
+
+
+# This function is not safe and might break database! Use with caution!
+@maybe_create_routines_db
+def update_routine(routine: Routine):
+    db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
+
+    con = sqlite3.connect(db_routine)
+    cur = con.cursor()
+
+    cur.execute('select * from routine where name=:name',
+                {'name': routine.name})
+    record = cur.fetchone()
+
+    if record:  # update the record
+        cur.execute('update routine set config = ?, savedAt = ? where name = ?',
+                    (routine.yaml(), datetime.now(), routine.name))
 
     con.commit()
     con.close()
@@ -118,7 +152,7 @@ def remove_routine(name, remove_runs=False):
 
 
 @maybe_create_routines_db
-def load_routine(name):
+def load_routine(name: str):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
@@ -129,7 +163,10 @@ def load_routine(name):
     con.close()
 
     if len(records) == 1:
-        return yaml.safe_load(records[0][1]), records[0][2]
+        # return yaml.safe_load(records[0][1]), records[0][2]
+        routine_dict = yaml.safe_load(records[0][1])
+        # routine_dict['evaluator'] = None
+        return Routine(**routine_dict), records[0][2]
     elif len(records) == 0:
         # logger.warning(f'Routine {name} not found in the database!')
         return None, None
@@ -144,23 +181,16 @@ def list_routine(keyword='', tags={}):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    if not tags:
-        cur.execute(f'select name, savedAt from routine where name like "%{keyword}%" order by savedAt desc')
-
-        records = cur.fetchall()
-        names = [record[0] for record in records]
-        timestamps = [record[1] for record in records]
-        con.close()
-    else:
-        cur.execute(f'select name, config, savedAt from routine where name like "%{keyword}%" order by savedAt desc')
-
-        records = cur.fetchall()
+    cur.execute(f'select name, config, savedAt from routine where name like "%{keyword}%" order by savedAt desc')
+    records = cur.fetchall()
+    if tags:
         records = filter_routines(records, tags)
-        names = [record[0] for record in records]
-        timestamps = [record[2] for record in records]
-        con.close()
+    names = [record[0] for record in records]
+    timestamps = [record[2] for record in records]
+    descriptions = extract_descriptions(records)
+    con.close()
 
-    return names, timestamps
+    return names, timestamps, descriptions
 
 
 @maybe_create_runs_db
@@ -171,9 +201,9 @@ def save_run(run):
     cur = con.cursor()
 
     # Insert or update a record
-    routine_name = run['routine']['name']
+    routine_name = run['routine'].name
     run_filename = run['filename']
-    timestamps = run['data']['timestamp_raw']
+    timestamps = run['data']['timestamp']
     time_start = datetime.fromtimestamp(timestamps[0])
     time_finish = datetime.fromtimestamp(timestamps[-1])
 
@@ -282,7 +312,7 @@ def import_routines(filename):
     con.close()
 
     if failed_list:
-        raise BadgerDBError(ystring(failed_list))
+        raise BadgerDBError(get_yaml_string(failed_list))
 
 
 def export_routines(filename, routine_name_list):

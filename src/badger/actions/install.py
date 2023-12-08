@@ -23,14 +23,14 @@ def plugin_install(args):
     from conda.cli.python_api import run_command, Commands
 
     hist = {
-        'algo': 'algorithms',
+        'generator': 'generators',
         'env': 'environments',
         'ext': 'extensions',
         'intf': 'interfaces'
     }
 
     identify = {
-        'optimize': 'algorithms',
+        'optimize': 'generators',
         'Environment': 'environments',
         'Extension': 'extensions',
         'Interface': 'interfaces'
@@ -41,7 +41,7 @@ def plugin_install(args):
         return
 
     if args.plugin_type != 'local' and args.plugin_type not in hist:
-        print(f"{args.plugin_type} is an invalid option. Choose one of the following:  algo, env, ext, intf, local")
+        print(f"{args.plugin_type} is an invalid option. Choose one of the following:  generator, env, ext, intf, local")
         return
 
     plugins_url = read_value('BADGER_PLUGINS_URL')

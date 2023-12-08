@@ -1,6 +1,8 @@
 import logging
 logger = logging.getLogger(__name__)
-from ..utils import range_to_str, yprint
+import pandas as pd
+import yaml
+from ..utils import yprint
 
 
 def show_routine(args):
@@ -31,8 +33,19 @@ def show_routine(args):
 
     # Print the routine
     if not args.run:
-        routine['config']['variables'] = range_to_str(routine['config']['variables'])
-        yprint(routine)
+        info = yaml.safe_load(routine.yaml())
+        output = {}
+        output['name'] = info['name']
+        output['environment'] = info['environment']
+        output['algorithm'] = info['generator']
+        output['vocs'] = info['vocs']
+        output['initial_points'] = pd.DataFrame(
+            info['initial_points']).to_dict('list')
+        output['critical_constraint_names'] = info['critical_constraint_names']
+        output['tags'] = info['tags']
+        output['script'] = info['script']
+
+        yprint(output)
         return
 
     run_n_archive(routine, args.yes, False, args.verbose)

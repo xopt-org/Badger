@@ -2,8 +2,9 @@ import os
 import logging
 logger = logging.getLogger(__name__)
 from .db import save_run, remove_run_by_filename
-from .utils import ts_float_to_str, ystring, load_config
+from .utils import ts_float_to_str
 from .settings import read_value
+from .routine import Routine
 from .errors import BadgerConfigError
 
 
@@ -17,12 +18,12 @@ elif not os.path.exists(BADGER_ARCHIVE_ROOT):
         f'Badger run root {BADGER_ARCHIVE_ROOT} created')
 
 
-def archive_run(routine, data, states=None):
-    # routine: dict
-    # data: pandas dataframe
+def archive_run(routine, states=None):
+    # routine: Routine
 
+    data = routine.sorted_data
     data_dict = data.to_dict('list')
-    ts_float = data_dict['timestamp_raw'][0]  # time of the first evaluated point
+    ts_float = data_dict['timestamp'][0]  # time of the first evaluated point
     suffix = ts_float_to_str(ts_float, "lcls-fname")
     tokens = suffix.split('-')
     first_level = tokens[0]
@@ -42,8 +43,7 @@ def archive_run(routine, data, states=None):
         run['system_states'] = states
 
     os.makedirs(path, exist_ok=True)
-    with open(os.path.join(path, fname), 'w') as f:
-        f.write(ystring(run))
+    routine.dump(os.path.join(path, fname))
 
     # Temporarily add path information
     # Do not save this info in database or on disk
@@ -84,7 +84,15 @@ def load_run(run_fname):
     second_level = f'{tokens[1]}-{tokens[2]}'
     third_level = f'{tokens[1]}-{tokens[2]}-{tokens[3]}'
 
-    return load_config(os.path.join(BADGER_ARCHIVE_ROOT, first_level, second_level, third_level, run_fname))
+    filename = os.path.join(BADGER_ARCHIVE_ROOT,
+                            first_level,
+                            second_level,
+                            third_level,
+                            run_fname)
+
+    routine = Routine.from_file(filename)
+
+    return routine
 
 
 def delete_run(run_fname):
@@ -96,4 +104,15 @@ def delete_run(run_fname):
     # Remove record from the database
     remove_run_by_filename(run_fname)
 
-    return os.remove(os.path.join(BADGER_ARCHIVE_ROOT, first_level, second_level, third_level, run_fname))
+    prefix = os.path.join(BADGER_ARCHIVE_ROOT, first_level,
+                          second_level, third_level)
+
+    # Try remove the pickle file (could exist or not)
+    pickle_fname = os.path.splitext(run_fname)[0] + '.pickle'
+    try:
+        os.remove(os.path.join(prefix, pickle_fname))
+    except FileNotFoundError:
+        pass
+
+    # Remove the yaml data file
+    os.remove(os.path.join(prefix, run_fname))

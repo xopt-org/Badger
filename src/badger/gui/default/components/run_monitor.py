@@ -1,18 +1,27 @@
 import os
+import traceback
 from importlib import resources
 import numpy as np
+import pandas as pd
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox
 from PyQt5.QtWidgets import QMessageBox, QComboBox, QLabel, QStyledItemDelegate
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
 from PyQt5.QtCore import pyqtSignal, QThreadPool, QSize
 from PyQt5.QtGui import QFont, QIcon
 import pyqtgraph as pg
+from xopt import VOCS
+
+from .extensions_palette import ExtensionsPalette
 from .routine_runner import BadgerRoutineRunner
+from ..utils import create_button
 from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
+from ....routine import Routine
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
-from ....utils import norm, ParetoFront
 from ....logbook import send_to_logbook, BADGER_LOGBOOK_ROOT
 from ....archive import archive_run, BADGER_ARCHIVE_ROOT
+
+# disable chained assignment warning from pydantic
+pd.options.mode.chained_assignment = None  # default='warn'
 
 
 stylesheet_del = '''
@@ -33,7 +42,7 @@ QPushButton
 stylesheet_log = '''
 QPushButton:hover:pressed
 {
-    background-color: #5C8899;
+    background-color: #88C0D0;
 }
 QPushButton:hover
 {
@@ -41,8 +50,23 @@ QPushButton:hover
 }
 QPushButton
 {
-    background-color: #88C0D0;
+    background-color: #5C8899;
     color: #000000;
+}
+'''
+
+stylesheet_ext = '''
+QPushButton:hover:pressed
+{
+    background-color: #4DB6AC;
+}
+QPushButton:hover
+{
+    background-color: #26A69A;
+}
+QPushButton
+{
+    background-color: #00897B;
 }
 '''
 
@@ -85,7 +109,7 @@ class BadgerOptMonitor(QWidget):
     sig_new_run = pyqtSignal()
     sig_run_name = pyqtSignal(str)  # filename of the new run
     sig_inspect = pyqtSignal(int)  # index of the inspector
-    sig_progress = pyqtSignal(list, list, list, list)  # new evaluated solution
+    sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
     sig_del = pyqtSignal()
 
     def __init__(self):
@@ -98,35 +122,36 @@ class BadgerOptMonitor(QWidget):
         self.x_plot_relative = True
         # Routine info
         self.routine = None
-        self.var_names = []
-        self.obj_names = []
-        self.con_names = []
-        self.sta_names = []
-        self.vranges = []
+
         # Curves in the monitor
-        self.curves_var = []
-        self.curves_obj = []
-        self.curves_con = []
-        self.curves_sta = []
-        # Data to be visualized
-        self.vars = []
-        self.objs = []
-        self.cons = []
-        self.stas = []
-        self.ts = []
+        self.curves_variable = {}
+        self.curves_objective = {}
+        self.curves_constraint = {}
+        self.curves_sta = {}
+
         # Run optimization
         self.thread_pool = None
         self.routine_runner = None
         self.running = False
-        # Analysis tool for history runs
-        self.pf = None
         # Fix the auto range issue
         self.eval_count = 0
         # Termination condition for the run
         self.termination_condition = None
 
+        self.extensions_palette = ExtensionsPalette(self)
+        self.active_extensions = []
+
+        self.testing = False
+        self.tc_dialog = None
+
+        self.post_run_actions = []
+
         self.init_ui()
         self.config_logic()
+
+    @property
+    def vocs(self) -> VOCS:
+        return self.routine.vocs
 
     def init_ui(self):
         # Load all icons
@@ -139,27 +164,6 @@ class BadgerOptMonitor(QWidget):
         icon_ref = resources.files(__package__) / '../images/stop.png'
         with resources.as_file(icon_ref) as icon_path:
             self.icon_stop = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/undo.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_reset = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/set.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_set = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/book.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_log = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/trash.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_del = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/star.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_opt = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/tools.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_config = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/info.png'
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_info = QIcon(str(icon_path))
 
         # self.main_panel = main_panel = QWidget(self)
         # main_panel.setStyleSheet('background-color: #19232D;')
@@ -196,57 +200,29 @@ class BadgerOptMonitor(QWidget):
         # monitor.ci.setBorder((50, 50, 100))
         # monitor.resize(1000, 600)
 
-        self.plot_obj = plot_obj = monitor.addPlot(
-            title='Evaluation History (Y)')
-        plot_obj.setLabel('left', 'objectives')
-        plot_obj.setLabel('bottom', 'iterations')
-        plot_obj.showGrid(x=True, y=True)
-        leg_obj = plot_obj.addLegend()
-        leg_obj.setBrush((50, 50, 100, 200))
+        # create vertical cursor lines
+        self.inspector_objective = create_cursor_line()
+        self.inspector_constraint = create_cursor_line()
+        self.inspector_state = create_cursor_line()
+        self.inspector_variable = create_cursor_line()
+
+        # add axes
+        self.plot_obj = plot_obj = add_axes(
+            monitor, "objectives", 'Evaluation History (Y)', self.inspector_objective
+        )
 
         monitor.nextRow()  # leave space for the cons plot
         monitor.nextRow()  # leave space for the stas plot
         monitor.nextRow()
 
-        self.plot_var = plot_var = monitor.addPlot(
-            title='Evaluation History (X)')
-        plot_var.setLabel('left', 'variables')
-        plot_var.setLabel('bottom', 'iterations')
-        plot_var.showGrid(x=True, y=True)
-        leg_var = plot_var.addLegend()
-        leg_var.setBrush((50, 50, 100, 200))
+        self.plot_var = plot_var = add_axes(
+            monitor, "variables", "Evaluation History (X)", self.inspector_variable
+        )
 
         plot_var.setXLink(plot_obj)
 
         self.colors = ['c', 'g', 'm', 'y', 'b', 'r', 'w']
         self.symbols = ['o', 't', 't1', 's', 'p', 'h', 'd']
-
-        self.ins_obj = pg.InfiniteLine(movable=True, angle=90, label=None,
-                                       labelOpts={
-                                           'position': 0.1,
-                                           'color': (200, 200, 100),
-                                           'fill': (200, 200, 200, 50),
-                                           'movable': True})
-        self.ins_con = pg.InfiniteLine(movable=True, angle=90, label=None,
-                                       labelOpts={
-                                           'position': 0.1,
-                                           'color': (200, 200, 100),
-                                           'fill': (200, 200, 200, 50),
-                                           'movable': True})
-        self.ins_sta = pg.InfiniteLine(movable=True, angle=90, label=None,
-                                       labelOpts={
-                                           'position': 0.1,
-                                           'color': (200, 200, 100),
-                                           'fill': (200, 200, 200, 50),
-                                           'movable': True})
-        self.ins_var = pg.InfiniteLine(movable=True, angle=90, label=None,
-                                       labelOpts={
-                                           'position': 0.1,
-                                           'color': (200, 200, 100),
-                                           'fill': (200, 200, 200, 50),
-                                           'movable': True})
-        plot_obj.addItem(self.ins_obj)
-        plot_var.addItem(self.ins_var)
 
         # Action bar
         action_bar = QWidget()
@@ -258,46 +234,24 @@ class BadgerOptMonitor(QWidget):
         cool_font.setWeight(QFont.DemiBold)
         cool_font.setPixelSize(13)
 
-        self.btn_del = btn_del = QPushButton()
-        btn_del.setFixedSize(32, 32)
-        btn_del.setIcon(self.icon_del)
-        btn_del.setToolTip('Delete run')
-        btn_del.setStyleSheet(stylesheet_del)
-        # self.btn_edit = btn_edit = QPushButton('Edit')
-        # btn_edit.setFixedSize(64, 32)
-        # btn_edit.setFont(cool_font)
-        self.btn_log = btn_log = QPushButton()
-        btn_log.setFixedSize(32, 32)
-        btn_log.setIcon(self.icon_log)
-        btn_log.setToolTip('Logbook')
-        btn_log.setStyleSheet(stylesheet_log)
-        self.btn_reset = btn_reset = QPushButton()
-        btn_reset.setDisabled(True)
-        btn_reset.setFixedSize(32, 32)
-        btn_reset.setIcon(self.icon_reset)
-        btn_reset.setToolTip('Reset environment')
-        self.btn_opt = btn_opt = QPushButton()
-        btn_opt.setFixedSize(32, 32)
-        btn_opt.setIcon(self.icon_opt)
-        btn_opt.setToolTip('Jump to optimum')
-        self.btn_set = btn_set = QPushButton()
-        btn_set.setDisabled(True)
-        btn_set.setFixedSize(32, 32)
-        btn_set.setIcon(self.icon_set)
-        btn_set.setToolTip('Dial in solution')
-        self.btn_ctrl = btn_ctrl = QPushButton()
-        btn_ctrl.setDisabled(True)
-        btn_ctrl.setFixedSize(32, 32)
-        btn_ctrl.setIcon(self.icon_pause)
-        btn_ctrl.setToolTip('Pause')
-        btn_ctrl._status = 'pause'
+        self.btn_del = create_button("trash.png", "Delete run", stylesheet_del)
+        self.btn_log = create_button("book.png", "Logbook", stylesheet_log)
+        self.btn_reset = create_button("undo.png", "Reset environment")
+        self.btn_opt = create_button("star.png", "Jump to optimum")
+        self.btn_set = create_button("set.png", "Dial in solution")
+        self.btn_ctrl = create_button("pause.png", "Pause")
+        self.btn_ctrl._status = 'pause'
+        self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
-        self.btn_stop = btn_stop = QToolButton()
-        btn_stop.setDisabled(True)
-        btn_stop.setFixedSize(96, 32)
-        btn_stop.setFont(cool_font)
-        btn_stop.setStyleSheet(stylesheet_run)
+        self.btn_stop = QToolButton()
+        self.btn_stop.setFixedSize(96, 32)
+        self.btn_stop.setFont(cool_font)
+        self.btn_stop.setStyleSheet(stylesheet_run)
+
+        # add button for extensions
+        self.btn_open_extensions_palette = btn_extensions = create_button(
+            "extension.png", "Open extensions", stylesheet_ext)
 
         # Create a menu and add options
         self.run_menu = menu = QMenu(self)
@@ -310,34 +264,31 @@ class BadgerOptMonitor(QWidget):
         menu.addAction(run_until_action)
 
         # Set the menu as the run button's dropdown menu
-        btn_stop.setMenu(menu)
-        btn_stop.setDefaultAction(run_action)
-        btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
+        self.btn_stop.setMenu(menu)
+        self.btn_stop.setDefaultAction(run_action)
+        self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
+        self.btn_stop.setDisabled(True)
         # btn_stop.setToolTip('')
 
         # Config button
-        self.btn_config = btn_config = QPushButton()
-        btn_config.setFixedSize(32, 32)
-        btn_config.setIcon(self.icon_config)
-        btn_config.setToolTip('Configure run')
-        # btn_config.setIconSize(QSize(24, 24))
-
+        self.btn_config = btn_config = create_button("tools.png", "Configure run")
+        btn_config.hide()
         # Run info button
-        self.btn_info = btn_info = QPushButton()
-        btn_info.setFixedSize(32, 32)
-        btn_info.setIcon(self.icon_info)
-        btn_info.setToolTip('Run information')
+        self.btn_info = btn_info = create_button("info.png", "Run information")
+        btn_info.hide()
 
-        hbox_action.addWidget(btn_del)
+        hbox_action.addWidget(self.btn_del)
         # hbox_action.addWidget(btn_edit)
-        hbox_action.addWidget(btn_log)
+        hbox_action.addWidget(self.btn_log)
         hbox_action.addStretch(1)
-        hbox_action.addWidget(btn_reset)
-        hbox_action.addWidget(btn_ctrl)
-        hbox_action.addWidget(btn_stop)
-        hbox_action.addWidget(btn_opt)
-        hbox_action.addWidget(btn_set)
+        hbox_action.addWidget(self.btn_opt)
+        hbox_action.addWidget(self.btn_reset)
+        hbox_action.addWidget(self.btn_ctrl)
+        hbox_action.addWidget(self.btn_stop)
+        hbox_action.addWidget(self.btn_opt)
+        hbox_action.addWidget(self.btn_set)
         hbox_action.addStretch(1)
+        hbox_action.addWidget(btn_extensions)
         hbox_action.addWidget(btn_config)
         hbox_action.addWidget(btn_info)
 
@@ -345,16 +296,41 @@ class BadgerOptMonitor(QWidget):
         vbox.addWidget(monitor)
         vbox.addWidget(action_bar)
 
+    # noinspection PyUnresolvedReferences
     def config_logic(self):
+        """
+        Configure the logic and connections for various interactive elements in the
+        application.
+
+        This method sets up event connections and handlers for different interactive
+        elements in the application, such as the inspector lines, buttons,
+        and visualizations. It establishes connections between signals and slots to
+        enable user interaction and control of the application's functionality.
+
+        Notes
+        -----
+        - The `config_logic` method is intended to be called once during
+        the initialization of the application or a specific class. It sets up various
+        event handlers and connections for interactive elements.
+
+        - The signals and slots established in this method determine how the
+        application responds to user actions, such as button clicks, inspector line
+        drags, and selection changes in visualization controls.
+
+        - Ensure that the necessary attributes and dependencies are properly
+        initialized before calling this method.
+
+        """
+
         # Sync the inspector lines
-        self.ins_obj.sigDragged.connect(self.ins_obj_dragged)
-        self.ins_obj.sigPositionChangeFinished.connect(self.ins_drag_done)
-        self.ins_con.sigDragged.connect(self.ins_con_dragged)
-        self.ins_con.sigPositionChangeFinished.connect(self.ins_drag_done)
-        self.ins_sta.sigDragged.connect(self.ins_sta_dragged)
-        self.ins_sta.sigPositionChangeFinished.connect(self.ins_drag_done)
-        self.ins_var.sigDragged.connect(self.ins_var_dragged)
-        self.ins_var.sigPositionChangeFinished.connect(self.ins_drag_done)
+        self.inspector_objective.sigDragged.connect(self.ins_obj_dragged)
+        self.inspector_objective.sigPositionChangeFinished.connect(self.ins_drag_done)
+        self.inspector_constraint.sigDragged.connect(self.ins_con_dragged)
+        self.inspector_constraint.sigPositionChangeFinished.connect(self.ins_drag_done)
+        self.inspector_state.sigDragged.connect(self.ins_sta_dragged)
+        self.inspector_state.sigPositionChangeFinished.connect(self.ins_drag_done)
+        self.inspector_variable.sigDragged.connect(self.ins_var_dragged)
+        self.inspector_variable.sigPositionChangeFinished.connect(self.ins_drag_done)
         self.plot_obj.scene().sigMouseClicked.connect(self.on_mouse_click)
         # sigMouseReleased.connect(self.on_mouse_click)
 
@@ -369,6 +345,7 @@ class BadgerOptMonitor(QWidget):
         self.btn_ctrl.clicked.connect(self.ctrl_routine)
         self.run_action.triggered.connect(self.set_run_action)
         self.run_until_action.triggered.connect(self.set_run_until_action)
+        self.btn_open_extensions_palette.clicked.connect(self.open_extensions_palette)
 
         # Visualization
         self.cb_plot_x.currentIndexChanged.connect(self.select_x_axis)
@@ -382,193 +359,196 @@ class BadgerOptMonitor(QWidget):
     #         print('Yo')
     #         self.sender().showMenu()
 
-    def init_plots(self, routine, data=None, run_filename=None):
-        # Parse routine
+    def init_plots(self, routine: Routine = None, run_filename: str = None):
+        """
+        Initialize and configure the plots and related components in the application.
+
+        This method initializes and configures the plot areas, curves, and inspectors
+        used for visualizing data in the application. It also manages the state of
+        various UI elements based on the provided routine and run information.
+
+        Parameters
+        ----------
+        routine : Routine,
+            The routine to use for configuring the plots. If
+            not provided, the method will use the previously set routine.
+
+        run_filename : str, optional
+            The filename of the run, used to determine the state of the application's UI
+            elements.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        - The `init_plots` method is typically called during the application's
+        initialization or when a new routine is selected. It sets up
+        the plots, curves, and inspectors for visualizing data.
+
+        - The method relies on the `self.routine`, `self.vocs`, `self.monitor`,
+        `self.colors`, `self.symbols`, and other attributes of the class to configure
+        the plots and manage UI elements.
+
+        - The `routine` parameter allows you to provide a specific routine for
+        configuring the plots. If not provided, it will use the previously set routine.
+
+        - The `run_filename` parameter is used to determine the state of UI elements,
+        such as enabling or disabling certain buttons based on whether the run data
+        is available.
+
+        """
+        if routine is None:
+            # if no routines are specified, clear the current plots
+            self.plot_var.clear()
+            self.plot_obj.clear()
+
+            # if constraints are active clear them
+            try:
+                self.plot_con.clear()
+                self.plot_con.addItem(self.inspector_constraint)
+            except AttributeError:
+                pass
+
+            # if statics exist clear that plot
+            try:
+                self.plot_sta.clear()
+                self.plot_sta.addItem(self.inspector_state)
+            except AttributeError:
+                pass
+
+            # if no routine is loaded set button to disabled
+            self.btn_del.setDisabled(True)
+            self.btn_log.setDisabled(True)
+            self.btn_reset.setDisabled(True)
+            self.btn_ctrl.setDisabled(True)
+            self.btn_stop.setDisabled(True)
+            self.btn_opt.setDisabled(True)
+            self.btn_set.setDisabled(True)
+
+            return
+
         self.routine = routine
-        try:
-            self.obj_names = [next(iter(d))
-                              for d in self.routine['config']['objectives']]
-        except:
-            self.obj_names = []
-        try:
-            self.var_names = [next(iter(d))
-                              for d in self.routine['config']['variables']]
-        except:
-            self.var_names = []
-        try:
-            self.vranges = np.array([d[next(iter(d))]
-                                    for d in routine['config']['variables']])
-        except:
-            self.vranges = []
-        try:
-            if self.routine['config']['constraints']:
-                self.con_names = [next(iter(d))
-                                  for d in self.routine['config']['constraints']]
-            else:
-                self.con_names = []
-        except:
-            self.con_names = []
-        try:
-            self.sta_names = self.routine['config']['states'] or []
-        except KeyError:  # this would happen when rerun an old version routine
-            self.sta_names = []
 
-        # Configure plots
-        # Clear current plots
-        self.plot_obj.clear()
-        self.plot_obj.addItem(self.ins_obj)
-        try:
-            self.plot_con.clear()
-            self.plot_con.addItem(self.ins_con)
-        except:
-            pass
-        try:
-            self.plot_sta.clear()
-            self.plot_sta.addItem(self.ins_sta)
-        except:
-            pass
-        self.plot_var.clear()
-        self.plot_var.addItem(self.ins_var)
-        # Put in the empty curves
-        self.curves_var = []
-        self.curves_obj = []
-        self.curves_con = []
-        self.curves_sta = []
+        # Retrieve data information
+        objective_names = self.vocs.objective_names
+        variable_names = self.vocs.variable_names
+        constraint_names = self.vocs.constraint_names
+        sta_names = self.vocs.constant_names
 
-        for i, obj_name in enumerate(self.obj_names):
-            color = self.colors[i % len(self.colors)]
-            symbol = self.symbols[i % len(self.colors)]
-            _curve = self.plot_obj.plot(pen=pg.mkPen(color, width=3),
-                                        # symbol=symbol,
-                                        name=obj_name)
-            self.curves_obj.append(_curve)
+        # Configure variable plots
+        self.curves_variable = self._configure_plot(
+            self.plot_var, self.inspector_variable, variable_names
+        )
 
-        for i, var_name in enumerate(self.var_names):
-            color = self.colors[i % len(self.colors)]
-            symbol = self.symbols[i % len(self.colors)]
-            _curve = self.plot_var.plot(pen=pg.mkPen(color, width=3),
-                                        # symbol=symbol,
-                                        name=var_name)
-            self.curves_var.append(_curve)
+        # Configure objective plots
+        self.curves_objective = self._configure_plot(
+            self.plot_obj, self.inspector_objective, objective_names
+        )
 
-        if self.con_names:
+        # Configure constraint plots
+        if constraint_names:
             try:
                 self.plot_con
             except:
-                self.plot_con = plot_con = self.monitor.addPlot(
-                    row=1, col=0, title='Evaluation History (C)')
-                plot_con.setLabel('left', 'constraints')
-                plot_con.setLabel('bottom', 'iterations')
-                plot_con.showGrid(x=True, y=True)
-                leg_con = plot_con.addLegend()
-                leg_con.setBrush((50, 50, 100, 200))
-                plot_con.addItem(self.ins_con)
+                self.plot_con = plot_con = add_axes(
+                    self.monitor, "Constraints", 'Evaluation History (C)',
+                    self.inspector_constraint, row=1, col=0
+                )
                 plot_con.setXLink(self.plot_obj)
 
-            for i, con_name in enumerate(self.con_names):
-                color = self.colors[i % len(self.colors)]
-                symbol = self.symbols[i % len(self.colors)]
-                _curve = self.plot_con.plot(pen=pg.mkPen(color, width=3),
-                                            # symbol=symbol,
-                                            name=con_name)
-                self.curves_con.append(_curve)
+            # Configure objective plots
+            self.curves_constraint = self._configure_plot(
+                self.plot_con, self.inspector_constraint, constraint_names
+            )
+
         else:
             try:
                 self.monitor.removeItem(self.plot_con)
-                self.plot_con.removeItem(self.ins_con)
+                self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
             except:
                 pass
 
-        if self.sta_names:
+        # Configure state plots
+        if sta_names:
             try:
                 self.plot_sta
             except:
-                self.plot_sta = plot_sta = self.monitor.addPlot(
-                    row=2, col=0, title='Evaluation History (S)')
-                plot_sta.setLabel('left', 'states')
-                plot_sta.setLabel('bottom', 'iterations')
-                plot_sta.showGrid(x=True, y=True)
-                leg_sta = plot_sta.addLegend()
-                leg_sta.setBrush((50, 50, 100, 200))
-                plot_sta.addItem(self.ins_sta)
+                self.plot_sta = plot_sta = add_axes(
+                    self.monitor, "Constants", 'Evaluation History (S)',
+                    self.inspector_state, row=1, col=0
+                )
                 plot_sta.setXLink(self.plot_obj)
 
-            for i, sta_name in enumerate(self.sta_names):
+            self.curves_sta = []
+            for i, sta_name in enumerate(sta_names):
                 color = self.colors[i % len(self.colors)]
                 symbol = self.symbols[i % len(self.colors)]
                 _curve = self.plot_sta.plot(pen=pg.mkPen(color, width=3),
-                                            # symbol=symbol,
                                             name=sta_name)
                 self.curves_sta.append(_curve)
         else:
             try:
                 self.monitor.removeItem(self.plot_sta)
-                self.plot_sta.removeItem(self.ins_sta)
+                self.plot_sta.removeItem(self.inspector_state)
                 del self.plot_sta
             except:
                 pass
 
         # Reset inspectors
-        self.ins_obj.setValue(0)
-        self.ins_var.setValue(0)
-        self.ins_con.setValue(0)
-        self.ins_sta.setValue(0)
+        self.inspector_objective.setValue(0)
+        self.inspector_variable.setValue(0)
+        self.inspector_constraint.setValue(0)
+        self.inspector_state.setValue(0)
 
         # Switch run button state
-        if self.routine:
-            self.btn_stop.setDisabled(False)
-        else:
-            self.btn_stop.setDisabled(True)
+        self.btn_stop.setDisabled(False)
 
         self.eval_count = 0  # reset the evaluation count
         self.enable_auto_range()
 
-        # Fill in data
-        self.data = data
-        self.vars = []
-        self.objs = []
-        self.cons = []
-        self.stas = []
-        self.ts = []
-        if self.routine_runner and self.routine_runner.run_filename == run_filename:
+        # Reset button should only be available if it's the current run
+        if self.routine_runner and \
+                self.routine_runner.run_filename == run_filename:
             self.btn_reset.setDisabled(False)
-            self.btn_set.setDisabled(False)
         else:
             self.btn_reset.setDisabled(True)
-            self.btn_set.setDisabled(True)
-        if data is None:
+
+        if routine.data is None:
             self.btn_del.setDisabled(True)
             self.btn_log.setDisabled(True)
             self.btn_opt.setDisabled(True)
-            return
+            self.btn_set.setDisabled(True)
 
-        for var in self.var_names:
-            self.vars.append(data[var])
-        self.vars = np.array(self.vars).T.tolist()
-        for obj in self.obj_names:
-            self.objs.append(data[obj])
-        self.objs = np.array(self.objs).T.tolist()
-        for con in self.con_names:
-            self.cons.append(data[con])
-        self.cons = np.array(self.cons).T.tolist()
-        for sta in self.sta_names:
-            self.stas.append(data[sta])
-        self.stas = np.array(self.stas).T.tolist()
-        self.ts = data['timestamp_raw']
+            return
 
         self.update_curves()
 
-        self.calc_optimals()
         self.btn_del.setDisabled(False)
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
+        self.btn_set.setDisabled(False)
+
+    def _configure_plot(self, plot_object, inspector, names):
+        plot_object.clear()
+        plot_object.addItem(inspector)
+        curves = {}
+        for i, name in enumerate(names):
+            color = self.colors[i % len(self.colors)]
+            # symbol = self.symbols[i % len(self.colors)]
+            _curve = plot_object.plot(pen=pg.mkPen(color, width=3), name=name)
+            curves[name] = _curve
+
+        return curves
 
     def init_routine_runner(self):
         self.reset_routine_runner()
 
         self.routine_runner = routine_runner = BadgerRoutineRunner(
-            self.routine, False)
+            self.routine, False
+        )
         routine_runner.signals.env_ready.connect(self.env_ready)
         routine_runner.signals.finished.connect(self.routine_finished)
         routine_runner.signals.progress.connect(self.update)
@@ -584,20 +564,11 @@ class BadgerOptMonitor(QWidget):
             self.sig_stop.disconnect()
             self.routine_runner = None
 
-    def calc_optimals(self):
-        rules = [d[next(iter(d))] for d in self.routine['config']['objectives']]
-        self.pf = pf = ParetoFront(rules)
-
-        for i, v in enumerate(self.vars):
-            o = self.objs[i]
-            idx = [i,] + v
-            pf.is_dominated((idx, o))
-
-    def start(self, use_tc=False):
+    def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
         self.init_plots(self.routine)
         self.init_routine_runner()
-        if use_tc:
+        if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
         self.thread_pool.start(self.routine_runner)
@@ -611,114 +582,127 @@ class BadgerOptMonitor(QWidget):
         # self.btn_stop.setToolTip('')
 
         self.btn_ctrl.setDisabled(False)
+        self.btn_set.setDisabled(True)
         self.sig_lock.emit(True)
 
     def save_termination_condition(self, tc):
         self.termination_condition = tc
 
-    def is_critical(self, cons):
-        if not self.con_names:
-            return False, None
-
-        constraints = self.routine['config']['constraints']
-        for i, con_dict in enumerate(constraints):
-            name = self.con_names[i]
-            if len(con_dict[name]) != 3:
-                continue
-
-            value = cons[i]
-            relation, thres = con_dict[name][:2]
-            if relation == 'GREATER_THAN':
-                if value <= thres:
-                    return True, f'{name} (current value: {value:.4f}) is less than {thres}!'
-            elif relation == 'LESS_THAN':
-                if value >= thres:
-                    return True, f'{name} (current value: {value:.4f}) is greater than {thres}!'
-            else:
-                if value != thres:
-                    return True, f'{name} (current value: {value:.4f}) is not equal to {thres}!'
-
-        return False, None
-
     def enable_auto_range(self):
         # Enable autorange
         self.plot_obj.enableAutoRange()
         self.plot_var.enableAutoRange()
-        if self.con_names:
+        if self.vocs.constraint_names:
             self.plot_con.enableAutoRange()
-        if self.sta_names:
-            self.plot_sta.enableAutoRange()
 
-    def update_curves(self):
-        type_x = self.plot_x_axis
-        type_y = self.x_plot_y_axis
-        relative = self.x_plot_relative
+        # if self.sta_names:
+        #    self.plot_sta.enableAutoRange()
 
-        if type_y:
-            _vars = norm(np.array(self.vars),
-                         self.vranges[:, 0], self.vranges[:, 1])
-        else:
-            _vars = np.array(self.vars)
+    def open_extensions_palette(self):
+        self.extensions_palette.show()
 
-        if relative:
-            _vars = _vars - _vars[0]
+    def extension_window_closed(self, child_window):
+        self.active_extensions.remove(child_window)
+        self.extensions_palette.update_palette()
 
-        if type_x:
-            ts = np.array(self.ts)
-            ts -= ts[0]
+    def extract_timestamp(self, data=None):
+        if data is None:
+            data = self.routine.sorted_data
 
-        for i in range(len(self.var_names)):
-            if type_x:
-                self.curves_var[i].setData(ts, _vars[:, i])
-            else:
-                self.curves_var[i].setData(_vars[:, i])
+        return data["timestamp"].to_numpy(copy=True)
 
-        for i in range(len(self.obj_names)):
-            if type_x:
-                self.curves_obj[i].setData(ts, np.array(self.objs)[:, i])
-            else:
-                self.curves_obj[i].setData(np.array(self.objs)[:, i])
-
-        if self.con_names:
-            for i in range(len(self.con_names)):
-                if type_x:
-                    self.curves_con[i].setData(ts, np.array(self.cons)[:, i])
-                else:
-                    self.curves_con[i].setData(np.array(self.cons)[:, i])
-
-        if self.sta_names:
-            for i in range(len(self.sta_names)):
-                if type_x:
-                    self.curves_sta[i].setData(ts, np.array(self.stas)[:, i])
-                else:
-                    self.curves_sta[i].setData(np.array(self.stas)[:, i])
-
-    def update(self, vars, objs, cons, stas, ts):
-        self.vars.append(vars)
-        self.objs.append(objs)
-        self.cons.append(cons)
-        self.stas.append(stas)
-        self.ts.append(ts)
-
+    def update(self):
+        # update plots in main window as well as any active extensions and the
+        # extensions palette
         self.update_curves()
+        self.update_analysis_extensions()
+        self.extensions_palette.update_palette()
 
         # Quick-n-dirty fix to the auto range issue
         self.eval_count += 1
         if self.eval_count < 5:
             self.enable_auto_range()
 
-        self.sig_progress.emit(vars, objs, cons, stas)
+        self.sig_progress.emit(self.routine.data.tail(1))
 
         # Check critical condition
-        critical, msg = self.is_critical(cons)
-        if not critical:
-            return
+        self.check_critical()
 
+    def update_curves(self):
+        use_time_axis = self.plot_x_axis == 1
+        normalize_inputs = self.x_plot_y_axis == 1
+
+        data_copy = self.routine.sorted_data
+
+        # Get timestamps
+        if use_time_axis:
+            ts = self.extract_timestamp(data_copy)
+            ts -= ts[0]
+        else:
+            ts = None
+
+        variable_names = self.vocs.variable_names
+
+        # if normalize x, normalize using vocs
+        if normalize_inputs:
+            input_data = self.vocs.normalize_inputs(data_copy)
+        else:
+            input_data = data_copy[variable_names]
+
+        # if plot relative, subtract the first value from the dict
+        if self.x_plot_relative:
+            input_data[variable_names] = input_data[variable_names] - \
+                                        input_data[variable_names].iloc[0]
+
+        set_data(variable_names, self.curves_variable, input_data, ts)
+        set_data(self.vocs.objective_names, self.curves_objective, data_copy, ts)
+        set_data(self.vocs.constraint_names, self.curves_constraint, data_copy, ts)
+
+        # TODO: add tracking of observables
+
+    def check_critical(self):
+        """
+        Check if a critical constraint has been violated in the last data point,
+        and take appropriate actions if so.
+
+        If there are no critical constraints, the function will return without taking
+        any action. If a critical constraint has been violated, it will pause the
+        run, open a dialog to inform the user about the violation, and provide
+        options to terminate or resume the run.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        The critical constraints are determined by the
+        `self.routine.critical_constraint_names` attribute. If no critical
+        constraints are defined, this function will have no effect.
+
+        The function emits signals `self.sig_pause` and `self.sig_stop` to handle the
+        pause and stop actions.
+
+        """
+
+        # if there are no critical constraints then skip
+        if len(self.routine.critical_constraint_names) == 0:
+            return
+        else:
+            feas = self.vocs.feasibility_data(self.routine.data.iloc[-1])
+            violated_critical = ~feas[self.routine.critical_constraint_names].any()
+
+            if not violated_critical:
+                return
+
+        # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
         self.btn_ctrl.setIcon(self.icon_play)
         self.btn_ctrl.setToolTip('Resume')
         self.btn_ctrl._status = 'play'
 
+        msg = str(feas)
         reply = QMessageBox.warning(self,
                                     'Run Paused',
                                     f'Critical constraint was violated: {msg}\nTerminate the run?',
@@ -726,8 +710,14 @@ class BadgerOptMonitor(QWidget):
         if reply == QMessageBox.Yes:
             self.sig_stop.emit()
 
+    def update_analysis_extensions(self):
+        for ele in self.active_extensions:
+            try:
+                ele.update_window(self.routine)
+            except ValueError:
+                traceback.print_exc()
+
     def env_ready(self, init_vars):
-        self.env = self.routine_runner.env
         self.init_vars = init_vars
 
         self.btn_log.setDisabled(False)
@@ -757,24 +747,38 @@ class BadgerOptMonitor(QWidget):
         self.sig_lock.emit(False)
 
         try:
-            run = archive_run(self.routine_runner.routine, self.routine_runner.data,
-                self.routine_runner.states)
+            # TODO: fill in the states
+            run = archive_run(self.routine, states=None)
             self.routine_runner.run_filename = run['filename']
+            env = self.routine.environment
+            path = run['path']
+            filename = run['filename'][:-4] + 'pickle'
             try:
-                path = run['path']
-                filename = run['filename'][:-4] + 'pickle'
-                self.env.interface.stop_recording(os.path.join(path, filename))
-            except:
+                env.interface.stop_recording(os.path.join(path, filename))
+            except AttributeError:  # recording was not enabled
                 pass
-            self.sig_run_name.emit(run['filename'])
 
-            QMessageBox.information(
-                self, 'Success!', f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            self.sig_run_name.emit(run['filename'])
+            if not self.testing:
+                QMessageBox.information(
+                    self, 'Success!',
+                    f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
         except Exception as e:
             self.sig_run_name.emit(None)
+            if not self.testing:
+                QMessageBox.critical(self, 'Archive failed!',
+                                     f'Archive failed: {str(e)}')
+        finally:
+            for action in self.post_run_actions:
+                action()
 
-            QMessageBox.critical(self, 'Archive failed!', f'Archive failed: {str(e)}')
+    def destroy_unused_env(self):
+        if not self.running:
+            try:
+                del self.routine.environment
+            except AttributeError:  # env already destroyed
+                pass
 
     def on_error(self, error):
         QMessageBox.critical(self, 'Error!', str(error))
@@ -787,7 +791,7 @@ class BadgerOptMonitor(QWidget):
     def logbook(self):
         try:
             if self.routine_runner:
-                routine = self.routine_runner.routine
+                routine = self.routine_runner.name
                 data = self.routine_runner.data.to_dict('list')
             else:
                 routine = self.routine
@@ -812,30 +816,30 @@ class BadgerOptMonitor(QWidget):
             self.btn_ctrl._status = 'pause'
 
     def ins_obj_dragged(self, ins_obj):
-        self.ins_var.setValue(ins_obj.value())
-        if self.con_names:
-            self.ins_con.setValue(ins_obj.value())
-        if self.sta_names:
-            self.ins_sta.setValue(ins_obj.value())
+        self.inspector_variable.setValue(ins_obj.value())
+        if self.vocs.constraint_names:
+            self.inspector_constraint.setValue(ins_obj.value())
+        # if self.sta_names:
+        #    self.inspector_state.setValue(ins_obj.value())
 
     def ins_con_dragged(self, ins_con):
-        self.ins_var.setValue(ins_con.value())
-        self.ins_obj.setValue(ins_con.value())
-        if self.sta_names:
-            self.ins_sta.setValue(ins_con.value())
+        self.inspector_variable.setValue(ins_con.value())
+        self.inspector_objective.setValue(ins_con.value())
+        # if self.sta_names:
+        #    self.inspector_state.setValue(ins_con.value())
 
     def ins_sta_dragged(self, ins_sta):
-        self.ins_var.setValue(ins_sta.value())
-        self.ins_obj.setValue(ins_sta.value())
-        if self.con_names:
-            self.ins_con.setValue(ins_sta.value())
+        self.inspector_variable.setValue(ins_sta.value())
+        self.inspector_objective.setValue(ins_sta.value())
+        # if self.vocs.constraint_names:
+        #    self.inspector_constraint.setValue(ins_sta.value())
 
     def ins_var_dragged(self, ins_var):
-        self.ins_obj.setValue(ins_var.value())
-        if self.con_names:
-            self.ins_con.setValue(ins_var.value())
-        if self.sta_names:
-            self.ins_sta.setValue(ins_var.value())
+        self.inspector_objective.setValue(ins_var.value())
+        if self.vocs.constraint_names:
+            self.inspector_constraint.setValue(ins_var.value())
+        # if self.sta_names:
+        #    self.inspector_state.setValue(ins_var.value())
 
     def ins_drag_done(self, ins):
         self.sync_ins(ins.value())
@@ -844,19 +848,20 @@ class BadgerOptMonitor(QWidget):
         if self.plot_x_axis:  # x-axis is time
             value, idx = self.closest_ts(pos)
         else:
-            value = idx = np.clip(np.round(pos), 0, len(self.ts) - 1)
-        self.ins_obj.setValue(value)
-        if self.con_names:
-            self.ins_con.setValue(value)
-        if self.sta_names:
-            self.ins_sta.setValue(value)
-        self.ins_var.setValue(value)
+            ts = self.extract_timestamp()
+            value = idx = np.clip(np.round(pos), 0, len(ts) - 1)
+        self.inspector_objective.setValue(value)
+        if self.vocs.constraint_names:
+            self.inspector_constraint.setValue(value)
+        # if self.sta_names:
+        #    self.inspector_state.setValue(value)
+        self.inspector_variable.setValue(value)
 
         self.sig_inspect.emit(idx)
 
     def closest_ts(self, t):
-        # Get the closest timestamp in self.ts regarding t
-        ts = np.array(self.ts)
+        # Get the closest timestamp in data regarding t
+        ts = self.extract_timestamp()
         ts -= ts[0]
         idx = np.argmin(np.abs(ts - t))
 
@@ -865,57 +870,62 @@ class BadgerOptMonitor(QWidget):
     def reset_env(self):
         reply = QMessageBox.question(self,
                                      'Reset Environment',
-                                     f'Are you sure you want to reset the env vars back to {self.init_vars}?',
+                                     f'Are you sure you want to reset the env vars '
+                                     f'back to {self.init_vars}?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
 
-        _var_dict = self.env._get_variables(self.var_names)
-        current_vars = [_var_dict[v] for v in self.var_names]
-        self.env._set_variables(dict(zip(self.var_names, self.init_vars)))
-        _var_dict = self.env._get_variables(self.var_names)
-        after_vars = [_var_dict[v] for v in self.var_names]
-        QMessageBox.information(
-            self, 'Reset Environment', f'Env vars {current_vars} -> {after_vars}')
+        # TODO: Should just get vars from env! Current values are not always
+        # ones in the latest solution
+        # current_vars = self.routine.data.iloc[-1].to_dict(orient="records")
+        current_vars = self.routine.sorted_data[
+            self.vocs.variable_names].iloc[-1].to_numpy().tolist()
+
+        # evaluate the initial variables -- do not store the result
+        # self.routine.evaluate(self.init_vars)
+        self.routine.environment._set_variables(
+            dict(zip(self.vocs.variable_names, self.init_vars)))
+
+        QMessageBox.information(self, 'Reset Environment',
+                                f'Env vars {current_vars} -> {self.init_vars}')
 
     def jump_to_optimal(self):
         try:
-            in_a_run = not self.routine_runner.is_killed
-        except:
-            in_a_run = False
+            best_idx, _ = self.routine.vocs.select_best(
+                self.routine.sorted_data, n=1)
+            best_idx = int(best_idx[0])
 
-        if in_a_run:
-            pf = self.routine_runner.pf
-        else:
-            pf = self.pf
-
-        if pf is None:
-            return
-
-        idx = pf.pareto_set[0][0]
-        self.jump_to_solution(int(idx))
-        self.sig_inspect.emit(idx)
+            self.jump_to_solution(best_idx)
+            self.sig_inspect.emit(best_idx)
+        except NotImplementedError:
+            QMessageBox.warning(
+                self, 'Jump to optimum',
+                'Jump to optimum is not supported for '
+                'multi-objective optimization yet')
 
     def jump_to_solution(self, idx):
         if self.plot_x_axis:  # x-axis is time
-            value = self.ts[idx] - self.ts[0]
+            ts = self.extract_timestamp()
+            value = ts[idx] - ts[0]
         else:
             value = idx
 
-        self.ins_obj.setValue(value)
-        if self.con_names:
-            self.ins_con.setValue(value)
-        if self.sta_names:
-            self.ins_sta.setValue(value)
-        self.ins_var.setValue(value)
+        self.inspector_objective.setValue(value)
+        if self.vocs.constraint_names:
+            self.inspector_constraint.setValue(value)
+        # if self.sta_names:
+        #    self.inspector_state.setValue(value)
+        self.inspector_variable.setValue(value)
 
     def set_vars(self):
-        df = self.routine_runner.data
+        df = self.routine.sorted_data
         if self.plot_x_axis:  # x-axis is time
-            pos, idx = self.closest_ts(self.ins_obj.value())
+            pos, idx = self.closest_ts(self.inspector_objective.value())
         else:
-            pos = idx = int(self.ins_obj.value())
-        solution = df.loc[idx, self.var_names].to_numpy()
+            pos = idx = int(self.inspector_objective.value())
+        variable_names = self.vocs.variable_names
+        solution = df[variable_names].to_numpy()[idx]
 
         reply = QMessageBox.question(self,
                                      'Apply Solution',
@@ -924,7 +934,8 @@ class BadgerOptMonitor(QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        self.env._set_variables(dict(zip(self.var_names, solution)))
+        self.routine.environment._set_variables(
+            dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2
@@ -939,29 +950,30 @@ class BadgerOptMonitor(QWidget):
         if i:
             self.plot_var.setLabel('bottom', 'time (s)')
             self.plot_obj.setLabel('bottom', 'time (s)')
-            if self.con_names:
+            if self.vocs.constraint_names:
                 self.plot_con.setLabel('bottom', 'time (s)')
-            if self.sta_names:
-                self.plot_sta.setLabel('bottom', 'time (s)')
+            # if self.sta_names:
+            #    self.plot_sta.setLabel('bottom', 'time (s)')
         else:
             self.plot_var.setLabel('bottom', 'iterations')
             self.plot_obj.setLabel('bottom', 'iterations')
-            if self.con_names:
+            if self.vocs.constraint_names:
                 self.plot_con.setLabel('bottom', 'iterations')
-            if self.sta_names:
-                self.plot_sta.setLabel('bottom', 'iterations')
+            # if self.sta_names:
+            #     self.plot_sta.setLabel('bottom', 'iterations')
 
         # Update inspector line position
         if i:
-            value = self.ts[int(self.ins_obj.value())] - self.ts[0]
+            ts = self.extract_timestamp()
+            value = ts[int(self.inspector_objective.value())] - ts[0]
         else:
-            _, value = self.closest_ts(self.ins_obj.value())
-        self.ins_obj.setValue(value)
-        if self.con_names:
-            self.ins_con.setValue(value)
-        if self.sta_names:
-            self.ins_sta.setValue(value)
-        self.ins_var.setValue(value)
+            _, value = self.closest_ts(self.inspector_objective.value())
+        self.inspector_objective.setValue(value)
+        if self.vocs.constraint_names:
+            self.inspector_constraint.setValue(value)
+        # if self.sta_names:
+        #    self.inspector_state.setValue(value)
+        self.inspector_variable.setValue(value)
 
         self.update_curves()
         self.enable_auto_range()
@@ -977,18 +989,18 @@ class BadgerOptMonitor(QWidget):
     def on_mouse_click(self, event):
         # https://stackoverflow.com/a/64081483
         coor_obj = self.plot_obj.vb.mapSceneToView(event._scenePos)
-        if self.con_names:
+        if self.vocs.constraint_names:
             coor_con = self.plot_con.vb.mapSceneToView(event._scenePos)
-        if self.sta_names:
-            coor_sta = self.plot_sta.vb.mapSceneToView(event._scenePos)
+        # if self.sta_names:
+        #    coor_sta = self.plot_sta.vb.mapSceneToView(event._scenePos)
         coor_var = self.plot_var.vb.mapSceneToView(event._scenePos)
 
         flag = self.plot_obj.viewRect().contains(coor_obj) or \
-            self.plot_var.viewRect().contains(coor_var)
-        if self.con_names:
+               self.plot_var.viewRect().contains(coor_var)
+        if self.vocs.constraint_names:
             flag = flag or self.plot_con.viewRect().contains(coor_con)
-        if self.sta_names:
-            flag = flag or self.plot_sta.viewRect().contains(coor_sta)
+        # if self.sta_names:
+        #    flag = flag or self.plot_sta.viewRect().contains(coor_sta)
 
         if flag:
             self.sync_ins(coor_obj.x())
@@ -1015,22 +1027,45 @@ class BadgerOptMonitor(QWidget):
                 self, self.start,
                 self.save_termination_condition, self.termination_condition,
             )
-            dlg.exec()
+            self.tc_dialog = dlg
+            try:
+                dlg.exec()
+            finally:
+                self.tc_dialog = None
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
 
-    # def closeEvent(self, event):
-    #     if not self.running:
-    #         return
+    def register_post_run_action(self, action):
+        self.post_run_actions.append(action)
 
-    #     reply = QMessageBox.question(self,
-    #                                  'Window Close',
-    #                                  'Closing this window will terminate the run, and the run data would NOT be archived! Proceed?',
-    #                                  QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
-    #     if reply == QMessageBox.Yes:
-    #         self.sig_stop.emit()
-    #         event.accept()
-    #     else:
-    #         event.ignore()
+def add_axes(monitor, ylabel, title, cursor_line, **kwargs):
+    plot_obj = monitor.addPlot(title=title, **kwargs)
+    plot_obj.setLabel('left', ylabel)
+    plot_obj.setLabel('bottom', 'iterations')
+    plot_obj.showGrid(x=True, y=True)
+    leg_obj = plot_obj.addLegend()
+    leg_obj.setBrush((50, 50, 100, 200))
+
+    plot_obj.addItem(cursor_line)
+
+    return plot_obj
+
+
+def create_cursor_line():
+    return pg.InfiniteLine(movable=True, angle=90, label=None,
+                           labelOpts={
+                               'position': 0.1,
+                               'color': (200, 200, 100),
+                               'fill': (200, 200, 200, 50),
+                               'movable': True})
+
+
+def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None):
+
+    for name in names:
+        if ts is not None:
+            curves[name].setData(ts, data[name].to_numpy(dtype=np.double))
+        else:
+            curves[name].setData(data[name].to_numpy(dtype=np.double))
