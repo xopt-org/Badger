@@ -103,12 +103,12 @@ def test_plotting(qtbot):
     monitor.update_curves()
 
 
-def test_click_graph(qtbot):
+def test_click_graph(qtbot, mocker):
     monitor = create_test_run_monitor()
     sig_inspect_spy = QSignalSpy(monitor.sig_inspect)
     monitor.plot_x_axis = True
 
-    mock_event = QMouseEvent(QMouseEvent.MouseButtonPress, QPointF(350, 240), Qt.LeftButton, Qt.NoButton, Qt.NoModifier)
+    mock_event = mocker.MagicMock(spec=QMouseEvent)
     mock_event._scenePos = QPointF(350, 240)
 
     orginal_value = monitor.inspector_variable.value()
@@ -121,7 +121,7 @@ def test_click_graph(qtbot):
     # TODO: make asserts for other changes when the graph is clicked on by the user.
 
 
-def test_x_axis_specification(qtbot):
+def test_x_axis_specification(qtbot, mocker):
     # check iteration/time drop down menu
     monitor = create_test_run_monitor()
 
@@ -164,7 +164,7 @@ def test_x_axis_specification(qtbot):
         plot_con_axis_time = monitor.plot_con.getAxis("bottom")
         assert plot_con_axis_time.label.toPlainText().strip() == "time (s)"
 
-    mock_event = QMouseEvent(QMouseEvent.MouseButtonPress, QPointF(550, 250), Qt.LeftButton, Qt.NoButton, Qt.NoModifier)
+    mock_event = mocker.MagicMock(spec=QMouseEvent)
     mock_event._scenePos = QPointF(550, 250)
 
     monitor.on_mouse_click(mock_event)
