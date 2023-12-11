@@ -165,11 +165,12 @@ def test_x_axis_specification(qtbot, mocker):
         assert plot_con_axis_time.label.toPlainText().strip() == "time (s)"
 
     mock_event = mocker.MagicMock(spec=QMouseEvent)
-    mock_event._scenePos = QPointF(350, 240)
+    mock_event._scenePos = QPointF(550, 250)
 
     monitor.on_mouse_click(mock_event)
 
     # Check type of value
+    print(monitor.inspector_objective.value())
     assert isinstance(monitor.inspector_objective.value(), float)
     assert isinstance(monitor.inspector_variable.value(), float)
     if monitor.vocs.constraint_names:
