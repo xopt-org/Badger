@@ -65,7 +65,7 @@ jobs:
     - name: Install Badger
       shell: bash -el {0}
       run: |
-          pip install --no-dependencies .
+          pip install .
     - name: Test with pytest
       shell: bash -el {0}
       run: |
