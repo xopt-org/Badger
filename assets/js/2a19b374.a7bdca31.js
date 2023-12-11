@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkbadger_home=self.webpackChunkbadger_home||[]).push([[489],{9053:function(a){a.exports=JSON.parse('{"allTagsPath":"/Badger/blog/tags","slug":"/Badger/blog/tags/slac","name":"SLAC","count":1,"permalink":"/Badger/blog/tags/slac"}')}}]);

@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkbadger_home=self.webpackChunkbadger_home||[]).push([[965],{4756:function(e){e.exports=JSON.parse('{"allTagsPath":"/Badger/blog/tags","slug":"/Badger/blog/tags/hello","name":"hello","count":1,"permalink":"/Badger/blog/tags/hello"}')}}]);
