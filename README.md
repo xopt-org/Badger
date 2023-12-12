@@ -3,7 +3,7 @@
     Badger: The Missing Optimizer in ACR
     <br />
     <br />
-    <a href="https://slac-ml.github.io/Badger">
+    <a href="https://slaclab.github.io/Badger">
       <img src="pics/badger.png" alt="Badger" height=128>
     </a>
   </h1>
@@ -15,7 +15,7 @@
 
 | Documentation | Package | Downloads | Version | Platforms |
 | --- | --- | --- | --- | --- |
-| [![Documentation](https://img.shields.io/badge/Badger-documentation-blue.svg)](https://slac-ml.github.io/Badger/) | [![Conda Recipe](https://img.shields.io/badge/recipe-badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) |
+| [![Documentation](https://img.shields.io/badge/Badger-documentation-blue.svg)](https://slaclab.github.io/Badger/) | [![Conda Recipe](https://img.shields.io/badge/recipe-badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) |
 
 </div>
 
@@ -39,7 +39,7 @@ Badger boasts a range of features designed to enhance your optimization experien
 - **Data Preservation:** Preserve all raw data for comprehensive analysis.
 - **Advanced Extensions:** Benefit from extensions for sophisticated optimization data analysis and visualization.
 
-For additional details about Badger and its capabilities, please refer to [Badger's online documentation](https://slac-ml.github.io/Badger/).
+For additional details about Badger and its capabilities, please refer to [Badger's online documentation](https://slaclab.github.io/Badger/).
 
 ## Installation
 
@@ -65,7 +65,7 @@ Once Badger is installed, launch the GUI by running the following command in the
 badger -g
 ```
 
-Then following [this simple GUI tutorial](https://slac-ml.github.io/Badger/docs/next/getting-started/tutorial_0) to run your first optimizaion in Badger within a couple of minutes!
+Then following [this simple GUI tutorial](https://slaclab.github.io/Badger/docs/next/getting-started/tutorial_0) to run your first optimizaion in Badger within a couple of minutes!
 
 ## Citation
 
