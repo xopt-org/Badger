@@ -18,15 +18,19 @@ def test_cli_main():
     assert exitcode == 0
 
     # Check output lines
-    outlines = out.split('\n')
-    assert len(outlines) == 7
+    outlines = out.splitlines()
+    assert len(outlines) == 6
 
     # Check name
     assert outlines[0] == 'name: Badger the optimizer'
 
     # Check version
     version = metadata.version('badger-opt')
-    assert outlines[1] == f'version: {version}'
+    try:  # yaml encoding number-like string differently
+        _ = float(version)
+        assert outlines[1] == f"version: '{version}'"
+    except ValueError:
+        assert outlines[1] == f'version: {version}'
 
 
 def test_list_algo():
@@ -36,7 +40,7 @@ def test_list_algo():
     assert exitcode == 0
 
     # Check output lines
-    outlines = out.split('\n')
+    outlines = out.splitlines()
     assert '- upper_confidence_bound' in outlines
 
 
@@ -49,7 +53,7 @@ def test_list_algo():
 #     assert exitcode == 0
 
 #     # Check output lines
-#     outlines = out.split('\n')
+#     outlines = out.splitlines()
 #     assert len(outlines) == 15
 
 #     # Check table header

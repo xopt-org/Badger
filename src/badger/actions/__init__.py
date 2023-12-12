@@ -1,4 +1,4 @@
-from pkg_resources import get_distribution
+from importlib import metadata
 from .doctor import check_n_config_paths
 from ..utils import yprint
 from ..log import set_log_level
@@ -36,7 +36,7 @@ def show_info(args):
 
     info = {
         'name': 'Badger the optimizer',
-        'version': get_distribution('badger-opt').version,
+        'version': metadata.version('badger-opt'),
         'plugin root': BADGER_PLUGIN_ROOT,
         'database root': BADGER_DB_ROOT,
         'logbook root': BADGER_LOGBOOK_ROOT,
