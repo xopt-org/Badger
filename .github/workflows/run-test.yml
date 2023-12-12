@@ -46,7 +46,7 @@ jobs:
           mamba install flake8 zipp 
           mamba install --file requirements.txt --file windows-dev-requirements.txt
         else
-          mamba install flake8 zipp $(cat requirements.txt dev-requirements.txt)
+          mamba install flake8 zipp $(cat requirements.txt)
         fi
     - name: Install pyqt5
       shell: bash -el {0}
