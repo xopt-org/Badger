@@ -1,7 +1,7 @@
 import os
 from importlib import resources
 from pandas import DataFrame
-
+from typing import List
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox
 from PyQt5.QtWidgets import QPushButton, QSplitter, QTabWidget, QShortcut
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QLabel, QFileDialog
@@ -16,7 +16,7 @@ from ..components.routine_editor import BadgerRoutineEditor
 from ..components.status_bar import BadgerStatusBar
 from ..components.filter_cbox import BadgerFilterBox
 from ..utils import create_button
-from ....db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
+from ....db import list_routine, load_routine_data, remove_routine, get_runs_by_routine, get_runs
 from ....db import import_routines, export_routines
 from ....archive import load_run, delete_run
 from ....utils import get_header, strtobool
@@ -64,17 +64,12 @@ class BadgerHomePage(QWidget):
         with resources.as_file(icon_ref) as icon_path:
             self.icon_export = QIcon(str(icon_path))
 
-        # cool_font = QFont()
-        # cool_font.setWeight(QFont.DemiBold)
-        # cool_font.setPixelSize(13)
-
         # Set up the layout
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(0, 0, 0, 0)
         splitter = QSplitter(Qt.Horizontal)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        # splitter.setSizes([100, 200])
         vbox.addWidget(splitter, 1)
 
         # Routine panel
@@ -86,7 +81,6 @@ class BadgerHomePage(QWidget):
         panel_search = QWidget()
         hbox_search = QHBoxLayout(panel_search)
         hbox_search.setContentsMargins(0, 0, 0, 0)
-        # hbox_search.setSpacing(8)
 
         self.sbar = sbar = search_bar()
         sbar.setFixedHeight(36)
@@ -271,6 +265,7 @@ class BadgerHomePage(QWidget):
                 self.current_routine = None
                 self.load_all_runs()
                 if not self.cb_history.count():
+                    print("called here")
                     self.go_run(-1)  # sometimes we need to trigger this manually
                 self.sig_routine_activated.emit(False)
                 return
@@ -278,23 +273,25 @@ class BadgerHomePage(QWidget):
         self.prev_routine_item = routine_item  # note that prev_routine is an item!
         self.sig_routine_activated.emit(True)
 
-        routine, timestamp = load_routine(routine_item.routine_name)
-        self.current_routine = routine
-        self.routine_editor.set_routine(routine)
-        runs = get_runs_by_routine(routine.name)
+        # routine, timestamp = load_routine(routine_item.routine_name)
+        routineData = load_routine_data(routine_item.routine_name)
+        self.run_monitor.build_user_data(routineData)
+        self.current_routine = routineData
+        self.routine_editor.set_routine(routineData)
+        runs = get_runs_by_routine(routineData["name"])
         self.cb_history.updateItems(runs)
         if not self.cb_history.count():
             self.go_run(-1)  # sometimes we need to trigger this manually
 
         if not runs:  # auto plot will not be triggered
-            self.run_monitor.init_plots(routine)
+            self.run_monitor.init_plots(routineData)
 
         self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(self,
-                           routines: list[str],
-                           timestamps: list[str],
-                           descriptions: list[str]):
+                           routines: List[str],
+                           timestamps: List[str],
+                           descriptions: List[str]):
         try:
             selected_routine = self.prev_routine_item.routine_name
         except Exception:
@@ -337,13 +334,15 @@ class BadgerHomePage(QWidget):
     def go_run(self, i: int):
         if self.cb_history.itemText(0) == 'Optimization in progress...':
             return
-        # if self.cb_history.currentText() == 'Optimization in progress...':
-        #     return
 
         self.btn_prev.setDisabled(self.cb_history.currentIsFirst())
         self.btn_next.setDisabled(self.cb_history.currentIsLast())
 
         if i == -1:
+            # routineData = load_routine_data(self.prev_routine_item.routine_name)
+            # print(routineData)
+            # self.run_monitor.build_user_data(routineData)
+            # print("here as well")
             update_table(self.run_table)
             self.run_monitor.init_plots(self.current_routine)
             if not self.current_routine:
@@ -356,16 +355,20 @@ class BadgerHomePage(QWidget):
         run_filename = self.cb_history.currentText()
         try:
             _routine = load_run(run_filename)
-            routine, _ = load_routine(_routine.name)  # get the initial routine
-            routine.data = _routine.data
+            routineData = load_routine_data(_routine.name)  # get the initial routine
+            # routine.data = _routine.data
+            print(_routine.data)
         except (IndexError, AttributeError):
             return
-        self.current_routine = routine  # update the current routine
-        update_table(self.run_table, routine.sorted_data)
-        self.run_monitor.init_plots(routine, run_filename)
-        self.routine_editor.set_routine(routine)
-        self.status_bar.set_summary(f'current routine: {self.current_routine.name}')
+        self.current_routine = routineData  # update the current routine
+        self.run_monitor.build_user_data(routineData, _routine.data)
+        update_table(self.run_table, self.run_monitor.sorted_data)
+        self.run_monitor.init_plots(routineData, run_filename)
+        self.routine_editor.set_routine(_routine)
+        self.status_bar.set_summary(f'current routine: {self.current_routine['name']}')
 
+    
+    
     def go_prev_run(self):
         self.cb_history.selectPreviousItem()
 

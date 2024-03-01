@@ -8,11 +8,14 @@ from PyQt5.QtCore import pyqtSignal, QObject, QRunnable, QTimer
 from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
 from ....core_subprocess import run_routine_subprocess
+from xopt import VOCS
+from typing import Any
 
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
     finished = pyqtSignal()
-    progress = pyqtSignal()
+    progress = pyqtSignal(Any)
+    routine_data = pyqtSignal(VOCS)
     error = pyqtSignal(Exception)
     info = pyqtSignal(str)
 
@@ -41,7 +44,7 @@ class BadgerRoutineRunner(QRunnable):
         """
         super().__init__()
 
-        # Signals should belong to instance rather than class
+        # Signals should belong to instance rather thaself.after_evaluaten class
         # Since there could be multiple runners running in parallel
         self.signals = BadgerRoutineSignals()
 
@@ -211,19 +214,23 @@ class BadgerRoutineSubprocess():
                 self.stop_event = Event()
                 self.pause_event = Event()
                 self.data_queue = Queue()
+                self.routine_queue = Queue()
                 self.evaluate_queue = Queue()
 
                 arg_dict = {
-                    'routine': self.routine,
+                    'routine_name': self.routine.name,
+                    'evaluate': True,
                     'termination_condition': self.termination_condition}
 
                 self.routine_process = Process(target=run_routine_subprocess, 
-                                               args=(self.data_queue, self.evaluate_queue, self.stop_event, self.pause_event,))
+                                               args=(self.data_queue, 
+                                                     self.evaluate_queue, 
+                                                     self.routine_queue,
+                                                     self.stop_event, 
+                                                     self.pause_event,))
                 self.routine_process.start()
 
-                print("about to")
                 self.data_queue.put(arg_dict)
-                print("done")
 
                 self.setup_timer()
                 #self.routine.data = None # reset data
@@ -240,14 +247,20 @@ class BadgerRoutineSubprocess():
     def setup_timer(self):
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_queue)
-
+        self.timer.setInterval(200)  
+        self.timer.start() 
+        
     def check_queue(self):
+        if not self.routine_queue.empty():
+            data = self.routine_queue.get()
+            self.signals.routine_data.emit(data)
+
         if not self.evaluate_queue.empty():
             results = self.evaluate_queue.get()
-            self.after_evaluate()
+            self.after_evaluate(results)
 
-    def after_evaluate(self):
-        self.signals.progress.emit()
+    def after_evaluate(self, results):
+        self.signals.progress.emit(results)
         time.sleep(0.1)
 
     def save_init_vars(self):

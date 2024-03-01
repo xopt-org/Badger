@@ -1,5 +1,6 @@
 import typing
 import time
+from .db import load_routine
 from pandas import concat, DataFrame
 import logging
 from badger.errors import (
@@ -73,7 +74,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
     return solution
 
-def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process) -> None:
+def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, pause_process) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
     Parameters
@@ -83,12 +84,6 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process) -
     stop_process : 
     pause_process : 
     """
-    #logger = logging.getLogger()
-    #handler = logging.FileHandler('subprocess.log')
-    #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    #handler.setFormatter(formatter)
-    #logger.addHandler(handler)
-    #logger.setLevel(logging.DEBUG)
 
     try:
         args = queue.get(timeout=1)
@@ -96,10 +91,9 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process) -
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 
     # set required arguments 
-    routine = args['routine']
-    print(type(routine), routine)
-    #logger.info(f"type {type(routine)}")
-    #logger.info(f"data {routine}")
+    routine, _ = load_routine(args['routine_name'])
+
+    data_queue.put(routine.vocs)
 
     # set optional arguments 
     try:
@@ -152,14 +146,13 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process) -
     # wait or consider timeout/retry
     # TODO: need to evaluate a single point at the time
 
-    print("reached here")
-
     for _, ele in initial_points.iterrows():
+        print(ele.to_dict(), "DATA IN")
         result = routine.evaluate_data(ele.to_dict())
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
         if evaluate:
-            queue.put(result)
+            evaluate_queue.put(result)
 
     # Prepare for dumping file
     if dump_file_callback:
@@ -169,7 +162,6 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process) -
         if not dump_file:
             dump_file = f"xopt_states_{ts_start}.yaml"
 
-    print("reached optimization")
     # perform optimization
     try:
         while True:
@@ -197,7 +189,7 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process) -
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
             if evaluate:
-                queue.put(result)
+                evaluate_queue.put(result)
 
             # Dump Xopt state after each step
             if dump_file_callback:

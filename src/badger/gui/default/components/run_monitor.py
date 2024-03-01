@@ -3,6 +3,7 @@ import traceback
 from importlib import resources
 import numpy as np
 import pandas as pd
+from typing import List
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox
 from PyQt5.QtWidgets import QMessageBox, QComboBox, QLabel, QStyledItemDelegate
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
@@ -10,6 +11,8 @@ from PyQt5.QtCore import pyqtSignal, QThreadPool, QSize
 from PyQt5.QtGui import QFont, QIcon
 import pyqtgraph as pg
 from xopt import VOCS
+import time
+from copy import deepcopy
 
 from .extensions_palette import ExtensionsPalette
 from .routine_runner import BadgerRoutineRunner, BadgerRoutineSubprocess
@@ -101,7 +104,6 @@ QToolButton
 }
 '''
 
-
 class BadgerOptMonitor(QWidget):
     sig_pause = pyqtSignal(bool)  # True: pause, False: resume
     sig_stop = pyqtSignal()
@@ -122,6 +124,11 @@ class BadgerOptMonitor(QWidget):
         self.x_plot_relative = True
         # Routine info
         self.routine = None
+        self.routine_selected = False
+        self.routine_name = None
+        
+        self._vocs = None
+        self.criticalConstraintNames = None 
 
         # Curves in the monitor
         self.curves_variable = {}
@@ -143,7 +150,7 @@ class BadgerOptMonitor(QWidget):
 
         self.testing = False
         self.tc_dialog = None
-
+        self.sorted_data = None
         self.post_run_actions = []
 
         self.init_ui()
@@ -151,8 +158,39 @@ class BadgerOptMonitor(QWidget):
 
     @property
     def vocs(self) -> VOCS:
-        return self.routine.vocs
+        return self._vocs
+    
+    @vocs.setter
+    def vocs(self, new_value: VOCS): 
+        self._vocs = new_value
 
+    def update_vocs(self, new_vocs_value):
+        self.vocs = new_vocs_value
+
+    def build_user_data(self, data, historicalData=None):
+        """
+        takes user given data 
+        """ 
+        vocsData = data["vocs"]
+        vocs = VOCS(variables=vocsData["variables"],
+                    constraints=vocsData["constraints"],
+                    objectives=vocsData["objectives"],
+                    constants=vocsData["constants"], 
+                    observables=vocsData["observables"])
+        self.vocs = vocs 
+        self.criticalConstraintNames = data['critical_constraint_names']
+
+        if historicalData is not None:
+            self.sorted_data = BadgerOptMonitor.routine_data_sorted(historicalData)  
+
+    @staticmethod
+    def routine_data_sorted(data):
+        data_copy = deepcopy(data)
+        data_copy.index = data_copy.index.astype(int)
+        data_copy.sort_index(inplace=True)
+
+        return data_copy
+    
     def init_ui(self):
         # Load all icons
         icon_ref = resources.files(__package__) / '../images/play.png'
@@ -352,14 +390,7 @@ class BadgerOptMonitor(QWidget):
         self.cb_plot_y.currentIndexChanged.connect(self.select_x_plot_y_axis)
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
 
-    # def mousePressEvent(self, event):
-    #     print('Ho')
-    #     # Override the mousePressEvent to show the dropdown menu
-    #     if event.button() == Qt.RightButton:
-    #         print('Yo')
-    #         self.sender().showMenu()
-
-    def init_plots(self, routine: Routine = None, run_filename: str = None):
+    def init_plots(self, routine_selected: bool, run_filename: str = None):
         """
         Initialize and configure the plots and related components in the application.
 
@@ -399,7 +430,7 @@ class BadgerOptMonitor(QWidget):
         is available.
 
         """
-        if routine is None:
+        if not routine_selected:
             # if no routines are specified, clear the current plots
             self.plot_var.clear()
             self.plot_obj.clear()
@@ -428,8 +459,6 @@ class BadgerOptMonitor(QWidget):
             self.btn_set.setDisabled(True)
 
             return
-
-        self.routine = routine
 
         # Retrieve data information
         objective_names = self.vocs.objective_names
@@ -516,6 +545,7 @@ class BadgerOptMonitor(QWidget):
         else:
             self.btn_reset.setDisabled(True)
 
+        '''
         if routine.data is None:
             self.btn_del.setDisabled(True)
             self.btn_log.setDisabled(True)
@@ -523,6 +553,7 @@ class BadgerOptMonitor(QWidget):
             self.btn_set.setDisabled(True)
 
             return
+        '''
 
         self.update_curves()
 
@@ -546,20 +577,15 @@ class BadgerOptMonitor(QWidget):
     def init_routine_runner(self):
         self.reset_routine_runner()
 
-        test = True 
-
-        if test:
-            print(self.routine)
-            self.routine_runner = routine_runner = BadgerRoutineSubprocess(self.routine, False)
-        else:
-            self.routine_runner = routine_runner = BadgerRoutineRunner(self.routine, False)
+        self.routine_runner = routine_runner = BadgerRoutineSubprocess(self.routine, False)
 
         routine_runner.signals.env_ready.connect(self.env_ready)
         routine_runner.signals.finished.connect(self.routine_finished)
         routine_runner.signals.progress.connect(self.update)
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
-
+        routine_runner.signals.routine_data.connect(self.update_vocs)
+        
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
 
@@ -571,23 +597,18 @@ class BadgerOptMonitor(QWidget):
 
     def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
-        self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        
-        #self.thread_pool.start(self.routine_runner)
         self.routine_runner.run()
-
+        self.init_plots(self.routine_selected)
         self.btn_stop.setStyleSheet(stylesheet_stop)
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.run_action.setText('Stop')
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText('Stop')
         self.run_until_action.setIcon(self.icon_stop)
-        # self.btn_stop.setToolTip('')
-
         self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
         self.sig_lock.emit(True)
@@ -614,13 +635,15 @@ class BadgerOptMonitor(QWidget):
 
     def extract_timestamp(self, data=None):
         if data is None:
-            data = self.routine.sorted_data
+            data = self.sorted_data
 
         return data["timestamp"].to_numpy(copy=True)
 
-    def update(self):
+    def update(self, results, errorMessage=None):
         # update plots in main window as well as any active extensions and the
         # extensions palette
+
+        self.sorted_data = results
         self.update_curves()
         self.update_analysis_extensions()
         self.extensions_palette.update_palette()
@@ -633,14 +656,15 @@ class BadgerOptMonitor(QWidget):
         self.sig_progress.emit(self.routine.data.tail(1))
 
         # Check critical condition
-        self.check_critical()
+        if errorMessage is not None:
+            self.check_critical(errorMessage)
 
     def update_curves(self):
         use_time_axis = self.plot_x_axis == 1
         normalize_inputs = self.x_plot_y_axis == 1
 
-        data_copy = self.routine.sorted_data
-
+        data_copy = self.sorted_data 
+        
         # Get timestamps
         if use_time_axis:
             ts = self.extract_timestamp(data_copy)
@@ -667,7 +691,7 @@ class BadgerOptMonitor(QWidget):
 
         # TODO: add tracking of observables
 
-    def check_critical(self):
+    def check_critical(self, errorMessage):
         """
         Check if a critical constraint has been violated in the last data point,
         and take appropriate actions if so.
@@ -692,24 +716,13 @@ class BadgerOptMonitor(QWidget):
         pause and stop actions.
 
         """
-
-        # if there are no critical constraints then skip
-        if len(self.routine.critical_constraint_names) == 0:
-            return
-        else:
-            feas = self.vocs.feasibility_data(self.routine.data.iloc[-1])
-            violated_critical = ~feas[self.routine.critical_constraint_names].any()
-
-            if not violated_critical:
-                return
-
         # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
         self.btn_ctrl.setIcon(self.icon_play)
         self.btn_ctrl.setToolTip('Resume')
         self.btn_ctrl._status = 'play'
 
-        msg = str(feas)
+        msg = errorMessage
         reply = QMessageBox.warning(self,
                                     'Run Paused',
                                     f'Critical constraint was violated: {msg}\nTerminate the run?',
@@ -899,8 +912,8 @@ class BadgerOptMonitor(QWidget):
 
     def jump_to_optimal(self):
         try:
-            best_idx, _ = self.routine.vocs.select_best(
-                self.routine.sorted_data, n=1)
+            best_idx, _ = self.vocs.select_best(
+                self.sorted_data, n=1)
             best_idx = int(best_idx[0])
 
             self.jump_to_solution(best_idx)
@@ -1069,10 +1082,14 @@ def create_cursor_line():
                                'movable': True})
 
 
-def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None):
+def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
 
     for name in names:
         if ts is not None:
             curves[name].setData(ts, data[name].to_numpy(dtype=np.double))
         else:
             curves[name].setData(data[name].to_numpy(dtype=np.double))
+
+
+
+    
