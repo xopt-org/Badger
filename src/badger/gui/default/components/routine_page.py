@@ -179,7 +179,6 @@ class BadgerRoutinePage(QWidget):
         # Enable description edition
         self.btn_descr_update.setDisabled(False)
         # Fill in the generator and env configs
-        #name_generator = routine["generator"]["name"]
         name_generator = routine.generator.name
         idx_generator = self.generators.index(name_generator)
         self.generator_box.cb.setCurrentIndex(idx_generator)

@@ -13,7 +13,6 @@ from badger.environment import Environment, instantiate_env
 
 
 class Routine(Xopt):
-
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[Environment]
@@ -139,11 +138,3 @@ class Routine(Xopt):
             pass
 
         return json.dumps(dict_result)
-
-    def __getstate__(self):
-        return self.name 
-
-    def __setstate__(self, data):
-        from .db import load_routine
-        routine,_ = load_routine(data)
-        self.__dict__.update(routine)

@@ -16,11 +16,46 @@ from badger.utils import (
 #from db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
 from multiprocessing import Queue, Process, Event
 
-'''
-def build_routine(routine_data):
-    routine, timestamp = load_routine(routine_data)
-    return routine
-'''
+
+def check_critical(self, queue):
+        """
+        Check if a critical constraint has been violated in the last data point,
+        and take appropriate actions if so.
+
+        If there are no critical constraints, the function will return without taking
+        any action. If a critical constraint has been violated, it will pause the
+        run, open a dialog to inform the user about the violation, and provide
+        options to terminate or resume the run.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+
+        The critical constraints are determined by the
+        `self.routine.critical_constraint_names` attribute. If no critical
+        constraints are defined, this function will have no effect.
+
+        The function emits signals `self.sig_pause` and `self.sig_stop` to handle the
+        pause and stop actions.
+
+        """
+
+        # if there are no critical constraints then skip
+        if len(self.criticalConstraintNames) == 0:
+            return False
+        else:
+            feas = self.vocs.feasibility_data(self.routine.data.iloc[-1])
+            violated_critical = ~feas[self.criticalConstraintNames].any()
+
+            if not violated_critical:
+                return False
+
+        queue.put(str(feas))
+        return True 
+
 
 def check_run_status(self, routine, stop_process, pause_process, termination_condition = None):
         """
@@ -74,7 +109,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
     return solution
 
-def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, pause_process) -> None:
+def run_routine_subprocess(queue, evaluate_queue, routine_queue, stop_process, pause_process) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
     Parameters
@@ -83,7 +118,7 @@ def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, paus
         
     stop_process : 
     pause_process : 
-    """
+    """    
 
     try:
         args = queue.get(timeout=1)
@@ -93,7 +128,7 @@ def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, paus
     # set required arguments 
     routine, _ = load_routine(args['routine_name'])
 
-    data_queue.put(routine.vocs)
+    # routine_queue.put(routine.vocs)
 
     # set optional arguments 
     try:
@@ -133,7 +168,7 @@ def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, paus
         queue.put(states) # might need to change queue here 
 
     # Optimization starts
-    print('')
+    #print('')
     solution_meta = (None, None, None, None, None,
                      routine.vocs.variable_names,
                      routine.vocs.objective_names,
@@ -147,7 +182,7 @@ def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, paus
     # TODO: need to evaluate a single point at the time
 
     for _, ele in initial_points.iterrows():
-        print(ele.to_dict(), "DATA IN")
+        #print(ele.to_dict(), "DATA IN")
         result = routine.evaluate_data(ele.to_dict())
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
@@ -189,7 +224,7 @@ def run_routine_subprocess(queue, evaluate_queue, data_queue, stop_process, paus
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
             if evaluate:
-                evaluate_queue.put(result)
+                evaluate_queue.put(routine.data)
 
             # Dump Xopt state after each step
             if dump_file_callback:

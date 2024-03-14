@@ -174,22 +174,6 @@ def load_routine(name: str):
         raise BadgerDBError(
             f'Multiple routines with name {name} found in the database!')
 
-def load_routine_data(name: str) -> dict:
-    db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
-    con = sqlite3.connect(db_routine)
-    cur = con.cursor()
-    cur.execute('select * from routine where name=:name', {'name': name})
-    records = cur.fetchall()
-    con.close()
-
-    if len(records) == 1:
-        # return yaml.safe_load(records[0][1]), records[0][2]
-        routine_dict = yaml.safe_load(records[0][1])
-        return routine_dict
-    elif len(records) == 0:
-        return None
-    else:
-        raise BadgerDBError(f'Multiple routines with name {name} found in the database!')
 
 @maybe_create_routines_db
 def list_routine(keyword='', tags={}):

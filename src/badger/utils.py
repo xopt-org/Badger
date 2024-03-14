@@ -144,7 +144,7 @@ def curr_ts_to_str(format="lcls-log"):
 
 def get_header(routine):
     try:
-        obj_names = routine["vocs"]["objective_names"]
+        obj_names = routine.vocs.objective_names
     except Exception:
         obj_names = []
     try:
@@ -152,11 +152,11 @@ def get_header(routine):
     except Exception:
         var_names = []
     try:
-        con_names = routine["vocs"]["constraint_names"]
+        con_names = routine.vocs.constraint_names
     except Exception:
         con_names = []
     try:
-        sta_names = routine["vocs"]["constant_names"]
+        sta_names = routine.vocs.constant_names
     except KeyError:
         sta_names = []
 
