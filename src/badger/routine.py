@@ -104,8 +104,9 @@ class Routine(Xopt):
     @property
     def sorted_data(self):
         data_copy = deepcopy(self.data)
-        data_copy.index = data_copy.index.astype(int)
-        data_copy.sort_index(inplace=True)
+        if data_copy is not None:
+            data_copy.index = data_copy.index.astype(int)
+            data_copy.sort_index(inplace=True)
 
         return data_copy
 

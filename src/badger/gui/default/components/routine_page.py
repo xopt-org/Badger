@@ -222,9 +222,9 @@ class BadgerRoutinePage(QWidget):
                             'EQUAL_TO'].index(relation)
                 self.add_constraint(name, relation, thres, critical)
 
-        constants = routine.vocs.constants
-        if len(constants):
-            for name_sta, val in constants.items():
+        observables = routine.vocs.observable_names
+        if len(observables):
+            for name_sta in observables:
                 self.add_state(name_sta)
 
         # Config the metadata
@@ -547,19 +547,19 @@ class BadgerRoutinePage(QWidget):
             if critical:
                 critical_constraints.append(con_name)
 
-        states = {}
+        states = []
         for i in range(self.env_box.list_sta.count()):
-            raise NotImplementedError("constants/states has not been implemented yet!")
-            #item = self.env_box.list_sta.item(i)
-            #item_widget = self.env_box.list_sta.itemWidget(item)
-            #sta_name = item_widget.cb_sta.currentText()
-            #states[sta_name] =
+            item = self.env_box.list_sta.item(i)
+            item_widget = self.env_box.list_sta.itemWidget(item)
+            sta_name = item_widget.cb_sta.currentText()
+            states.append(sta_name)
 
         vocs = VOCS(
             variables=variables,
             objectives=objectives,
-            constraints={},
-            constants={}
+            constraints=constraints,
+            constants={},
+            observables=states,
         )
 
         return vocs, critical_constraints
