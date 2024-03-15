@@ -345,6 +345,10 @@ class BadgerHomePage(QWidget):
 
         if i == -1:
             update_table(self.run_table)
+            try:
+                self.current_routine.data = None  # reset the data
+            except AttributeError:  # current routine is None
+                pass
             self.run_monitor.init_plots(self.current_routine)
             if not self.current_routine:
                 self.routine_editor.clear()
