@@ -690,13 +690,11 @@ class BadgerOptMonitor(QWidget):
         # if there are no critical constraints then skip
         if len(self.routine.critical_constraint_names) == 0:
             return
-        else:
-            feas = self.vocs.feasibility_data(self.routine.data.iloc[-1], prefix='')
-            # print(feas[self.routine.critical_constraint_names], self.vocs)
-            violated_critical = ~feas[self.routine.critical_constraint_names].any()
 
-            if not violated_critical.item():
-                return
+        feas = self.vocs.feasibility_data(self.routine.data.tail(1), prefix='')
+        feasible = feas['feasible'].iloc[0].item()
+        if feasible:
+            return
 
         # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
@@ -704,10 +702,13 @@ class BadgerOptMonitor(QWidget):
         self.btn_ctrl.setToolTip('Resume')
         self.btn_ctrl._status = 'play'
 
-        msg = str(feas)
+        # Show the list of critical violated constraints
+        feas_crit = feas[self.routine.critical_constraint_names]
+        violated_crit = feas_crit.columns[~feas_crit.iloc[0]].tolist()
+        msg = '\n'.join(violated_crit)
         reply = QMessageBox.warning(self,
                                     'Run Paused',
-                                    f'Critical constraint was violated: {msg}\nTerminate the run?',
+                                    f'The following critical constraints were violated:\n\n{msg}\n\nTerminate the run?',
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             self.sig_stop.emit()
