@@ -417,9 +417,9 @@ class BadgerOptMonitor(QWidget):
 
             # if statics exist delete that plot
             try:
-                self.monitor.removeItem(self.plot_sta)
-                self.plot_sta.removeItem(self.inspector_state)
-                del self.plot_sta
+                self.monitor.removeItem(self.plot_obs)
+                self.plot_obs.removeItem(self.inspector_state)
+                del self.plot_obs
             except:
                 pass
 
@@ -480,22 +480,22 @@ class BadgerOptMonitor(QWidget):
         # Configure state plots
         if sta_names:
             try:
-                self.plot_sta
+                self.plot_obs
             except:
-                self.plot_sta = plot_sta = add_axes(
-                    self.monitor, "states", 'Evaluation History (S)',
+                self.plot_obs = plot_obs = add_axes(
+                    self.monitor, "observables", 'Evaluation History (S)',
                     self.inspector_state, row=2, col=0
                 )
-                plot_sta.setXLink(self.plot_obj)
+                plot_obs.setXLink(self.plot_obj)
 
             self.curves_sta = self._configure_plot(
-                self.plot_sta, self.inspector_state, sta_names
+                self.plot_obs, self.inspector_state, sta_names
             )
         else:
             try:
-                self.monitor.removeItem(self.plot_sta)
-                self.plot_sta.removeItem(self.inspector_state)
-                del self.plot_sta
+                self.monitor.removeItem(self.plot_obs)
+                self.plot_obs.removeItem(self.inspector_state)
+                del self.plot_obs
             except:
                 pass
 
@@ -598,7 +598,7 @@ class BadgerOptMonitor(QWidget):
             self.plot_con.enableAutoRange()
 
         if self.vocs.observable_names:
-           self.plot_sta.enableAutoRange()
+           self.plot_obs.enableAutoRange()
 
     def open_extensions_palette(self):
         self.extensions_palette.show()
@@ -960,14 +960,14 @@ class BadgerOptMonitor(QWidget):
             if self.vocs.constraint_names:
                 self.plot_con.setLabel('bottom', 'time (s)')
             if self.vocs.observable_names:
-                self.plot_sta.setLabel('bottom', 'time (s)')
+                self.plot_obs.setLabel('bottom', 'time (s)')
         else:
             self.plot_var.setLabel('bottom', 'iterations')
             self.plot_obj.setLabel('bottom', 'iterations')
             if self.vocs.constraint_names:
                 self.plot_con.setLabel('bottom', 'iterations')
             if self.vocs.observable_names:
-                self.plot_sta.setLabel('bottom', 'iterations')
+                self.plot_obs.setLabel('bottom', 'iterations')
 
         # Update inspector line position
         if i:
@@ -999,7 +999,7 @@ class BadgerOptMonitor(QWidget):
         if self.vocs and self.vocs.constraint_names:
             coor_con = self.plot_con.vb.mapSceneToView(event._scenePos)
         if self.vocs and self.vocs.observable_names:
-            coor_sta = self.plot_sta.vb.mapSceneToView(event._scenePos)
+            coor_sta = self.plot_obs.vb.mapSceneToView(event._scenePos)
         coor_var = self.plot_var.vb.mapSceneToView(event._scenePos)
 
         flag = self.plot_obj.viewRect().contains(coor_obj) or \
@@ -1007,7 +1007,7 @@ class BadgerOptMonitor(QWidget):
         if self.vocs and self.vocs.constraint_names:
             flag = flag or self.plot_con.viewRect().contains(coor_con)
         if self.vocs and self.vocs.observable_names:
-            flag = flag or self.plot_sta.viewRect().contains(coor_sta)
+            flag = flag or self.plot_obs.viewRect().contains(coor_sta)
 
         if flag:
             self.sync_ins(coor_obj.x())

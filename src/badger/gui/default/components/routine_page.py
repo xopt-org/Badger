@@ -154,9 +154,9 @@ class BadgerRoutinePage(QWidget):
 
         self.generators = list_generators()
         self.envs = list_env()
-        # Clean up the constraints/states list
+        # Clean up the constraints/observables list
         self.env_box.list_con.clear()
-        self.env_box.list_sta.clear()
+        self.env_box.list_obs.clear()
 
         if routine is None:
             # Reset the generator and env configs
@@ -370,7 +370,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.obj_table.update_objectives(objs_env)
 
         self.env_box.list_con.clear()
-        self.env_box.list_sta.clear()
+        self.env_box.list_obs.clear()
         self.env_box.fit_content()
         # self.routine = None
 
@@ -520,13 +520,13 @@ class BadgerRoutinePage(QWidget):
 
         var_names = [next(iter(d)) for d in self.configs['variables']]
         options = self.configs['observations'] + var_names
-        item = QListWidgetItem(self.env_box.list_sta)
+        item = QListWidgetItem(self.env_box.list_obs)
         sta_item = state_item(options,
-                              lambda: self.env_box.list_sta.takeItem(
-                                  self.env_box.list_sta.row(item)), name)
+                              lambda: self.env_box.list_obs.takeItem(
+                                  self.env_box.list_obs.row(item)), name)
         item.setSizeHint(sta_item.sizeHint())
-        self.env_box.list_sta.addItem(item)
-        self.env_box.list_sta.setItemWidget(item, sta_item)
+        self.env_box.list_obs.addItem(item)
+        self.env_box.list_obs.setItemWidget(item, sta_item)
         self.env_box.fit_content()
 
     def _compose_vocs(self) -> (VOCS, List[str]):
@@ -547,19 +547,19 @@ class BadgerRoutinePage(QWidget):
             if critical:
                 critical_constraints.append(con_name)
 
-        states = []
-        for i in range(self.env_box.list_sta.count()):
-            item = self.env_box.list_sta.item(i)
-            item_widget = self.env_box.list_sta.itemWidget(item)
-            sta_name = item_widget.cb_sta.currentText()
-            states.append(sta_name)
+        observables = []
+        for i in range(self.env_box.list_obs.count()):
+            item = self.env_box.list_obs.item(i)
+            item_widget = self.env_box.list_obs.itemWidget(item)
+            obs_name = item_widget.cb_sta.currentText()
+            observables.append(obs_name)
 
         vocs = VOCS(
             variables=variables,
             objectives=objectives,
             constraints=constraints,
             constants={},
-            observables=states,
+            observables=observables,
         )
 
         return vocs, critical_constraints
