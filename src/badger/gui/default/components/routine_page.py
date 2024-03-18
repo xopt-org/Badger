@@ -1,3 +1,4 @@
+import warnings
 import sqlite3
 import traceback
 from typing import List
@@ -600,19 +601,29 @@ class BadgerRoutinePage(QWidget):
         else:
             script = None
 
-        return Routine(
-            # Xopt part
-            vocs=vocs,
-            generator={"name": generator_name} | generator_params,
-            # Badger part
-            name=name,
-            description=description,
-            environment={"name": env_name} | env_params,
-            initial_points=init_points_df.astype("double"),
-            critical_constraint_names=critical_constraints,
-            tags=None,
-            script=script,
-        )
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            routine = Routine(
+                # Xopt part
+                vocs=vocs,
+                generator={"name": generator_name} | generator_params,
+                # Badger part
+                name=name,
+                description=description,
+                environment={"name": env_name} | env_params,
+                initial_points=init_points_df.astype("double"),
+                critical_constraint_names=critical_constraints,
+                tags=None,
+                script=script,
+            )
+
+            # Check if any user warnings were caught
+            for warning in caught_warnings:
+                if warning.category == UserWarning:
+                    pass
+                else:
+                    print(f"Caught user warning: {warning.message}")
+
+            return routine
 
     def review(self):
         try:
