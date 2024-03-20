@@ -170,6 +170,54 @@ def create_routine_critical():
     )
 
 
+def create_routine_constrained_ucb():
+    from badger.routine import Routine
+
+    test_routine = {
+        "name": "routine-for-ucb-cons-test",
+        "generator": "upper_confidence_bound",
+        "env": "test",
+        "generator_params": {
+            "turbo_controller": "optimize",
+            "gp_constructor": {
+                "name": "standard",
+                "use_low_noise_prior": True,
+            },
+            "beta": 2.0,
+        },
+        "env_params": {},
+        "vocs": {
+            "variables": {
+                "x0": [-1, 1],
+                "x1": [-1, 1],
+                "x2": [-1, 1],
+                "x3": [-1, 1]
+            },
+            "objectives": {"f": "MAXIMIZE"},
+            "constraints": {"c": ["GREATER_THAN", 0]}
+        },
+        "init_points": {
+            "x0": [0.5],
+            "x1": [0.5],
+            "x2": [0.5],
+            "x3": [0.5]
+        },
+    }
+
+    vocs = VOCS(**test_routine["vocs"])
+
+    generator = UpperConfidenceBoundGenerator(
+        vocs=vocs, **test_routine["generator_params"])
+
+    return Routine(
+        name="test",
+        vocs=vocs,
+        generator=generator,
+        environment={"name": "test"},
+        initial_points=pd.DataFrame(test_routine["init_points"])
+    )
+
+
 def fix_db_path_issue():
     from badger.db import BADGER_DB_ROOT
 

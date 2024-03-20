@@ -1,4 +1,5 @@
 import time
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -445,3 +446,14 @@ def test_critical_constraints(qtbot):
             qtbot.wait(100)
 
     assert len(monitor.routine.data) == 1  # early-termination due to violation
+
+
+def test_ucb_user_warning():
+    from badger.tests.utils import create_routine_constrained_ucb
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        _ = create_routine_constrained_ucb()
+
+        # Check if the user warning is caught
+        assert len(caught_warnings) == 1
+        assert caught_warnings[0].category == UserWarning
