@@ -91,6 +91,8 @@ def load_run(run_fname):
                             third_level,
                             run_fname)
 
+    # TODO: create utility function to catch warnings to remove code
+    # duplication
     with warnings.catch_warnings(record=True) as caught_warnings:
         routine = Routine.from_file(filename)
 
