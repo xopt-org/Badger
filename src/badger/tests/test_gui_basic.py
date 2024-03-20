@@ -1,8 +1,5 @@
 import pytest
-from unittest.mock import patch
-from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import Qt
-from PyQt5.QtTest import QSignalSpy
 
 
 def test_gui_main(qtbot):
@@ -49,49 +46,38 @@ def test_close_main(qtbot):
         routine.environment
 
 
-def test_del_run(qtbot):
+def test_auto_select_updated_routine(qtbot):
     from badger.gui.default.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import fix_db_path_issue, create_routine
+    from badger.tests.utils import fix_db_path_issue
 
     fix_db_path_issue()
 
     window = BadgerMainWindow()
     qtbot.addWidget(window)
 
-    # Run a routine
-    routine = create_routine()
-    home_page = window.home_page
-    home_page.current_routine = routine
-    monitor = home_page.run_monitor
-    monitor.testing = True
-    monitor.termination_condition = {
-        "tc_idx": 0,
-        "max_eval": 3,
-    }
-    home_page.go_run(-1)
-    monitor.start(True)
-    while monitor.running:
-        qtbot.wait(100)
+    # Create and save a routine
+    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
+    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
-    # Variables/objectives/constraints monitor should contain some data
-    assert len(monitor.plot_var.items) > 0
-    assert len(monitor.plot_obj.items) > 0
-    assert len(monitor.plot_con.items) > 0
+    editor = window.home_page.routine_editor
+    qtbot.keyClicks(editor.routine_page.generator_box.cb,
+                    "upper_confidence_bound")
+    qtbot.keyClicks(editor.routine_page.env_box.cb, "test")
+    editor.routine_page.env_box.var_table.cellWidget(0, 0).setChecked(True)
+    editor.routine_page.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+    qtbot.mouseClick(editor.btn_save, Qt.MouseButton.LeftButton)
+    assert window.home_page.tabs.currentIndex() == 0  # jump back to monitor
 
-    # Delete the run and check if the monitors have been cleared
-    spy = QSignalSpy(monitor.btn_del.clicked)
-    with patch("PyQt5.QtWidgets.QMessageBox.question",
-               return_value=QMessageBox.Yes):
-        qtbot.mouseClick(monitor.btn_del, Qt.MouseButton.LeftButton)
-    assert len(spy) == 1
+    # The routine just created should be activated
+    routine_item = window.home_page.routine_list.item(0)
+    routine_widget = window.home_page.routine_list.itemWidget(routine_item)
+    assert routine_widget.activated
 
-    # Should have no constraints/observables monitor
-    # TODO: the following test is not stable, sometimes it passes sometimes not
-    # figure out what is going on and fix it
-    # with pytest.raises(AttributeError):
-    #     _ = monitor.plot_con
-    with pytest.raises(AttributeError):
-        _ = monitor.plot_obs
-    # Variables/objectives monitor should be cleared
-    assert len(monitor.plot_var.items) == 0
-    assert len(monitor.plot_obj.items) == 0
+    # Update the routine
+    qtbot.keyClicks(editor.routine_page.generator_box.cb, "random")
+    qtbot.mouseClick(editor.btn_save, Qt.MouseButton.LeftButton)
+
+    # The updated routine should still be activated
+    routine_item = window.home_page.routine_list.item(0)
+    routine_widget = window.home_page.routine_list.itemWidget(routine_item)
+    assert routine_widget.activated
