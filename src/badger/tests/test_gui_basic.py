@@ -84,6 +84,9 @@ def test_del_run(qtbot):
         qtbot.mouseClick(monitor.btn_del, Qt.MouseButton.LeftButton)
     assert len(spy) == 1
 
+    # Wait for 1s
+    qtbot.wait(1000)
+
     # Should have no constraints/observables monitor
     with pytest.raises(AttributeError):
         _ = monitor.plot_con
