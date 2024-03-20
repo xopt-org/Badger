@@ -219,7 +219,7 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_sta_col = QWidget()
         vbox_lbl_sta = QVBoxLayout(lbl_sta_col)
         vbox_lbl_sta.setContentsMargins(0, 0, 0, 0)
-        lbl_sta = QLabel('Constants')
+        lbl_sta = QLabel('Observables')
         lbl_sta.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_sta.addWidget(lbl_sta)
         vbox_lbl_sta.addStretch(1)
