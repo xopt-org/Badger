@@ -29,6 +29,21 @@ def create_test_run_monitor(add_data=True):
     return monitor
 
 
+def create_test_run_monitor_critical():
+    from badger.gui.default.components.run_monitor import BadgerOptMonitor
+    from badger.tests.utils import create_routine_critical, fix_db_path_issue
+
+    fix_db_path_issue()
+
+    monitor = BadgerOptMonitor()
+    monitor.testing = True
+
+    routine = create_routine_critical()
+    monitor.init_plots(routine)
+
+    return monitor
+
+
 def test_run_monitor(qtbot):
     from badger.gui.default.components.run_monitor import BadgerOptMonitor
     from badger.tests.utils import create_routine, fix_db_path_issue
@@ -406,3 +421,27 @@ def test_add_extensions(qtbot):
     # monitor.active_extensions[0].close()
     # assert len(monitor.active_extensions) == 0
     # assert monitor.extensions_palette.n_active_extensions == 0
+
+
+def test_critical_constraints(qtbot):
+    monitor = create_test_run_monitor_critical()
+
+    def handle_dialog():
+        while monitor.tc_dialog is None:
+            QApplication.processEvents()
+
+        # Set max evaluation to 5, then run the optimization
+        monitor.tc_dialog.sb_max_eval.setValue(5)
+
+        qtbot.mouseClick(monitor.tc_dialog.btn_run, Qt.MouseButton.LeftButton)
+
+    QTimer.singleShot(0, handle_dialog)
+    monitor.run_until_action.trigger()
+
+    # Check if critical violation alert being triggered
+    with patch("PyQt5.QtWidgets.QMessageBox.warning", return_value=QMessageBox.Yes):
+        # Have to keep it run to correctly trigger/dismiss the dialog
+        while monitor.running:
+            qtbot.wait(100)
+
+    assert len(monitor.routine.data) == 1  # early-termination due to violation
