@@ -1,4 +1,6 @@
+import pytest
 import time
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -25,6 +27,21 @@ def create_test_run_monitor(add_data=True):
 
     if add_data:
         assert len(routine.data) == 10
+
+    return monitor
+
+
+def create_test_run_monitor_critical():
+    from badger.gui.default.components.run_monitor import BadgerOptMonitor
+    from badger.tests.utils import create_routine_critical, fix_db_path_issue
+
+    fix_db_path_issue()
+
+    monitor = BadgerOptMonitor()
+    monitor.testing = True
+
+    routine = create_routine_critical()
+    monitor.init_plots(routine)
 
     return monitor
 
@@ -406,3 +423,85 @@ def test_add_extensions(qtbot):
     # monitor.active_extensions[0].close()
     # assert len(monitor.active_extensions) == 0
     # assert monitor.extensions_palette.n_active_extensions == 0
+
+
+def test_critical_constraints(qtbot):
+    monitor = create_test_run_monitor_critical()
+
+    def handle_dialog():
+        while monitor.tc_dialog is None:
+            QApplication.processEvents()
+
+        # Set max evaluation to 5, then run the optimization
+        monitor.tc_dialog.sb_max_eval.setValue(5)
+
+        qtbot.mouseClick(monitor.tc_dialog.btn_run, Qt.MouseButton.LeftButton)
+
+    QTimer.singleShot(0, handle_dialog)
+    monitor.run_until_action.trigger()
+
+    # Check if critical violation alert being triggered
+    with patch("PyQt5.QtWidgets.QMessageBox.warning", return_value=QMessageBox.Yes):
+        # Have to keep it run to correctly trigger/dismiss the dialog
+        while monitor.running:
+            qtbot.wait(100)
+
+    assert len(monitor.routine.data) == 1  # early-termination due to violation
+
+
+def test_ucb_user_warning():
+    from badger.tests.utils import create_routine_constrained_ucb
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        _ = create_routine_constrained_ucb()
+
+        # Check if the user warning is caught
+        assert len(caught_warnings) == 1
+        assert caught_warnings[0].category == UserWarning
+
+
+# Note: this test will delete all the previous runs
+# you might want to run this test last
+def test_del_last_run(qtbot):
+    from badger.gui.default.windows.main_window import BadgerMainWindow
+    from badger.tests.utils import fix_db_path_issue, create_routine
+
+    fix_db_path_issue()
+
+    window = BadgerMainWindow()
+    qtbot.addWidget(window)
+
+    # Run a routine
+    routine = create_routine()
+    home_page = window.home_page
+    home_page.current_routine = routine
+    monitor = home_page.run_monitor
+    monitor.testing = True
+    monitor.termination_condition = {
+        "tc_idx": 0,
+        "max_eval": 3,
+    }
+    home_page.go_run(-1)
+    monitor.start(True)
+    while monitor.running:
+        qtbot.wait(100)
+
+    # Variables/objectives/constraints monitor should contain some data
+    assert len(monitor.plot_var.items) > 0
+    assert len(monitor.plot_obj.items) > 0
+    assert len(monitor.plot_con.items) > 0
+
+    # Delete all the runs and check if the monitors have been cleared
+    with patch("PyQt5.QtWidgets.QMessageBox.question",
+               return_value=QMessageBox.Yes):
+        while home_page.cb_history.count():
+            qtbot.mouseClick(monitor.btn_del, Qt.MouseButton.LeftButton)
+
+    # Should have no constraints/observables monitor
+    with pytest.raises(AttributeError):
+        _ = monitor.plot_con
+    with pytest.raises(AttributeError):
+        _ = monitor.plot_obs
+    # Variables/objectives monitor should be cleared
+    assert len(monitor.plot_var.items) == 0
+    assert len(monitor.plot_obj.items) == 0

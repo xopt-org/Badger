@@ -1,4 +1,5 @@
 import os
+import warnings
 from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
@@ -166,7 +167,17 @@ def load_routine(name: str):
         # return yaml.safe_load(records[0][1]), records[0][2]
         routine_dict = yaml.safe_load(records[0][1])
         # routine_dict['evaluator'] = None
-        return Routine(**routine_dict), records[0][2]
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            routine = Routine(**routine_dict)
+
+            # Check if any user warnings were caught
+            for warning in caught_warnings:
+                if warning.category == UserWarning:
+                    pass
+                else:
+                    print(f"Caught user warning: {warning.message}")
+
+            return routine, records[0][2]
     elif len(records) == 0:
         # logger.warning(f'Routine {name} not found in the database!')
         return None, None

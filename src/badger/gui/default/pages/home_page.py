@@ -258,14 +258,16 @@ class BadgerHomePage(QWidget):
         self.routine_editor.switch_mode(self.mode)
         self.toggle_lock(True, 0)
 
-    def select_routine(self, routine_item: QListWidgetItem):
+    def select_routine(self, routine_item: QListWidgetItem, force=False):
+        # force: if True, select the target routine_item even if
+        #        it's selected already
         if self.prev_routine_item:
             try:
                 self.routine_list.itemWidget(self.prev_routine_item).deactivate()
             except ValueError:
                 pass
 
-            if self.prev_routine_item.routine_name == routine_item.routine_name:  #
+            if (not force) and (self.prev_routine_item.routine_name == routine_item.routine_name):
                 # click a routine again to deselect
                 self.prev_routine_item = None
                 self.current_routine = None
@@ -345,6 +347,10 @@ class BadgerHomePage(QWidget):
 
         if i == -1:
             update_table(self.run_table)
+            try:
+                self.current_routine.data = None  # reset the data
+            except AttributeError:  # current routine is None
+                pass
             self.run_monitor.init_plots(self.current_routine)
             if not self.current_routine:
                 self.routine_editor.clear()
@@ -453,7 +459,7 @@ class BadgerHomePage(QWidget):
 
     def routine_saved(self):
         self.refresh_routine_list()
-        self.select_routine(self.routine_list.item(0))
+        self.select_routine(self.routine_list.item(0), force=True)
         self.tab_state = 0  # force jump to run monitor
         self.done_create_routine()
 

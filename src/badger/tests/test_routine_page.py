@@ -81,3 +81,49 @@ def test_ui_update(qtbot):
     window.refresh_ui(routine)
 
     assert window.generator_box.edit.toPlainText() == "{}\n"
+
+
+def test_constraints(qtbot):
+    # test if a simple routine can be created
+    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    window = BadgerRoutinePage()
+    qtbot.addWidget(window)
+
+    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.env_box.cb, "test")
+
+    # click checkbox to select vars/objectives
+    window.env_box.var_table.cellWidget(0, 0).setChecked(True)
+    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+    # Select constraint
+    qtbot.mouseClick(window.env_box.btn_add_con, Qt.MouseButton.LeftButton)
+    con_item = window.env_box.list_con.item(0)
+    con_widget = window.env_box.list_con.itemWidget(con_item)
+    qtbot.keyClicks(con_widget.cb_obs, "c")
+    con_widget.check_crit.setChecked(True)
+
+    routine = window._compose_routine()
+    assert routine.vocs.constraints == {"c": ["GREATER_THAN", 0]}
+    assert routine.critical_constraint_names == ["c"]
+
+
+def test_observables(qtbot):
+    # test if a simple routine can be created
+    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    window = BadgerRoutinePage()
+    qtbot.addWidget(window)
+
+    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.env_box.cb, "test")
+
+    # click checkbox to select vars/objectives
+    window.env_box.var_table.cellWidget(0, 0).setChecked(True)
+    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+    # Select observable
+    qtbot.mouseClick(window.env_box.btn_add_sta, Qt.MouseButton.LeftButton)
+    obs_item = window.env_box.list_obs.item(0)
+    obs_widget = window.env_box.list_obs.itemWidget(obs_item)
+    qtbot.keyClicks(obs_widget.cb_sta, "c")
+
+    routine = window._compose_routine()
+    assert routine.vocs.observables == ["c"]

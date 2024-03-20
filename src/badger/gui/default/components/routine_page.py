@@ -1,3 +1,4 @@
+import warnings
 import sqlite3
 import traceback
 from typing import List
@@ -154,9 +155,9 @@ class BadgerRoutinePage(QWidget):
 
         self.generators = list_generators()
         self.envs = list_env()
-        # Clean up the constraints/states list
+        # Clean up the constraints/observables list
         self.env_box.list_con.clear()
-        self.env_box.list_sta.clear()
+        self.env_box.list_obs.clear()
 
         if routine is None:
             # Reset the generator and env configs
@@ -222,9 +223,9 @@ class BadgerRoutinePage(QWidget):
                             'EQUAL_TO'].index(relation)
                 self.add_constraint(name, relation, thres, critical)
 
-        constants = routine.vocs.constants
-        if len(constants):
-            for name_sta, val in constants.items():
+        observables = routine.vocs.observable_names
+        if len(observables):
+            for name_sta in observables:
                 self.add_state(name_sta)
 
         # Config the metadata
@@ -370,7 +371,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.obj_table.update_objectives(objs_env)
 
         self.env_box.list_con.clear()
-        self.env_box.list_sta.clear()
+        self.env_box.list_obs.clear()
         self.env_box.fit_content()
         # self.routine = None
 
@@ -520,13 +521,13 @@ class BadgerRoutinePage(QWidget):
 
         var_names = [next(iter(d)) for d in self.configs['variables']]
         options = self.configs['observations'] + var_names
-        item = QListWidgetItem(self.env_box.list_sta)
+        item = QListWidgetItem(self.env_box.list_obs)
         sta_item = state_item(options,
-                              lambda: self.env_box.list_sta.takeItem(
-                                  self.env_box.list_sta.row(item)), name)
+                              lambda: self.env_box.list_obs.takeItem(
+                                  self.env_box.list_obs.row(item)), name)
         item.setSizeHint(sta_item.sizeHint())
-        self.env_box.list_sta.addItem(item)
-        self.env_box.list_sta.setItemWidget(item, sta_item)
+        self.env_box.list_obs.addItem(item)
+        self.env_box.list_obs.setItemWidget(item, sta_item)
         self.env_box.fit_content()
 
     def _compose_vocs(self) -> (VOCS, List[str]):
@@ -547,19 +548,19 @@ class BadgerRoutinePage(QWidget):
             if critical:
                 critical_constraints.append(con_name)
 
-        states = {}
-        for i in range(self.env_box.list_sta.count()):
-            raise NotImplementedError("constants/states has not been implemented yet!")
-            #item = self.env_box.list_sta.item(i)
-            #item_widget = self.env_box.list_sta.itemWidget(item)
-            #sta_name = item_widget.cb_sta.currentText()
-            #states[sta_name] =
+        observables = []
+        for i in range(self.env_box.list_obs.count()):
+            item = self.env_box.list_obs.item(i)
+            item_widget = self.env_box.list_obs.itemWidget(item)
+            obs_name = item_widget.cb_sta.currentText()
+            observables.append(obs_name)
 
         vocs = VOCS(
             variables=variables,
             objectives=objectives,
-            constraints={},
-            constants={}
+            constraints=constraints,
+            constants={},
+            observables=observables,
         )
 
         return vocs, critical_constraints
@@ -600,19 +601,29 @@ class BadgerRoutinePage(QWidget):
         else:
             script = None
 
-        return Routine(
-            # Xopt part
-            vocs=vocs,
-            generator={"name": generator_name} | generator_params,
-            # Badger part
-            name=name,
-            description=description,
-            environment={"name": env_name} | env_params,
-            initial_points=init_points_df.astype("double"),
-            critical_constraint_names=critical_constraints,
-            tags=None,
-            script=script,
-        )
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            routine = Routine(
+                # Xopt part
+                vocs=vocs,
+                generator={"name": generator_name} | generator_params,
+                # Badger part
+                name=name,
+                description=description,
+                environment={"name": env_name} | env_params,
+                initial_points=init_points_df.astype("double"),
+                critical_constraint_names=critical_constraints,
+                tags=None,
+                script=script,
+            )
+
+            # Check if any user warnings were caught
+            for warning in caught_warnings:
+                if warning.category == UserWarning:
+                    pass
+                else:
+                    print(f"Caught user warning: {warning.message}")
+
+            return routine
 
     def review(self):
         try:
