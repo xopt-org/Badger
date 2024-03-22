@@ -100,7 +100,6 @@ def run_routine(
         states_callback(states)
 
     # Optimization starts
-    print('')
     solution_meta = (None, None, None, None, None,
                      routine.vocs.variable_names,
                      routine.vocs.objective_names,

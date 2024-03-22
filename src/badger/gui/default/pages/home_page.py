@@ -41,13 +41,13 @@ QPushButton
 class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
 
-    def __init__(self):
+    def __init__(self, process_manager = None):
         super().__init__()
 
         self.mode = 'regular'  # home page mode
         self.splitter_state = None  # store the run splitter state
         self.tab_state = None  # store the tabs state before creating new routine
-
+        self.process_manager = process_manager
         self.init_ui()
         self.config_logic()
 
@@ -169,7 +169,7 @@ class BadgerHomePage(QWidget):
         self.run_view = run_view = QWidget()  # for consistent bg
         vbox_run_view = QVBoxLayout(run_view)
         vbox_run_view.setContentsMargins(0, 10, 0, 10)
-        self.run_monitor = run_monitor = BadgerOptMonitor()
+        self.run_monitor = run_monitor = BadgerOptMonitor(self.process_manager)
         vbox_run_view.addWidget(run_monitor)
 
         # Data table

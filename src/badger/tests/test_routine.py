@@ -40,7 +40,6 @@ class TestRoutine:
         assert routine.environment.flag == 1
 
         routine_str = routine.yaml()
-        # print(routine_str, 'yaml')
         routine_re = Routine.from_yaml(routine_str)
         assert routine_re.environment.flag == 1
 

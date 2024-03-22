@@ -113,7 +113,7 @@ class BadgerOptMonitor(QWidget):
     sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
     sig_del = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, process_manager=None):
         super().__init__()
         # self.setAttribute(Qt.WA_DeleteOnClose, True)
 
@@ -123,7 +123,7 @@ class BadgerOptMonitor(QWidget):
         self.x_plot_relative = True
         # Routine info
         self.routine = None
-        
+        self.process_manager = process_manager
         # Curves in the monitor
         self.curves_variable = {}
         self.curves_objective = {}
@@ -540,7 +540,7 @@ class BadgerOptMonitor(QWidget):
     def init_routine_runner(self):
         self.reset_routine_runner()
 
-        self.routine_runner = routine_runner = BadgerRoutineSubprocess(self.routine, False)
+        self.routine_runner = routine_runner = BadgerRoutineSubprocess(self.process_manager, self.routine, False)
 
         routine_runner.signals.env_ready.connect(self.env_ready)
         routine_runner.signals.finished.connect(self.routine_finished)

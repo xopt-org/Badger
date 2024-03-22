@@ -1,5 +1,6 @@
 import typing
 import time
+import datetime
 from .db import load_routine
 from pandas import concat, DataFrame
 import logging
@@ -13,8 +14,6 @@ from badger.utils import (
     curr_ts_to_str,
     dump_state,
 )
-#from db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
-from multiprocessing import Queue, Process, Event
 
 
 def check_critical(self, queue):
@@ -109,7 +108,8 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
     return solution
 
-def run_routine_subprocess(queue, evaluate_queue, routine_queue, stop_process, pause_process) -> None:
+
+def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, wait_event) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
     Parameters
@@ -118,8 +118,9 @@ def run_routine_subprocess(queue, evaluate_queue, routine_queue, stop_process, p
         
     stop_process : 
     pause_process : 
-    """    
-
+    """
+    wait_event.wait()
+    
     try:
         args = queue.get(timeout=1)
     except Exception as e:
@@ -168,7 +169,6 @@ def run_routine_subprocess(queue, evaluate_queue, routine_queue, stop_process, p
         queue.put(states) # might need to change queue here 
 
     # Optimization starts
-    #print('')
     solution_meta = (None, None, None, None, None,
                      routine.vocs.variable_names,
                      routine.vocs.objective_names,
@@ -182,7 +182,6 @@ def run_routine_subprocess(queue, evaluate_queue, routine_queue, stop_process, p
     # TODO: need to evaluate a single point at the time
 
     for _, ele in initial_points.iterrows():
-        #print(ele.to_dict(), "DATA IN")
         result = routine.evaluate_data(ele.to_dict())
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)

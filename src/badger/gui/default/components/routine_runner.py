@@ -1,15 +1,16 @@
 import logging
 
 logger = logging.getLogger(__name__)
-
+ 
 import time
 from xopt import VOCS
 from multiprocessing import Queue, Process, Event
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
-from ....core import Routine
+from badger.routine import Routine
+from .process_manager import processManager
 from ....errors import BadgerRunTerminatedError
 from ....core_subprocess import run_routine_subprocess
-
+import os
 
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
@@ -22,10 +23,10 @@ class BadgerRoutineSignals(QObject):
 
 class BadgerRoutineSubprocess():
     """
-        launches suprocess to run routine using code in core.py
+    This class takes the users choosen routine and then grabs a suprocess to run the routine using code in core_subprocess.py.
     """
 
-    def __init__(self, routine: Routine, save: bool, verbose=2, use_full_ts=False):
+    def __init__(self, process_manager: processManager, routine: Routine=None, save: bool=False, verbose: int=2, use_full_ts: bool=False) -> None:
         """
         Parameters
         ----------
@@ -43,7 +44,7 @@ class BadgerRoutineSubprocess():
         # Signals should belong to instance rather than class
         # Since there could be multiple runners running in parallel
         self.signals = BadgerRoutineSignals()
-
+        self.process_manager = process_manager
         self.routine = routine
         self.run_filename = None
         self.states = None  # system states to be saved at start of a run
@@ -60,35 +61,41 @@ class BadgerRoutineSubprocess():
         self.routine_process = None 
         self.is_killed = False
 
-    def set_termination_condition(self, termination_condition):
+    def set_termination_condition(self, termination_condition) -> None:
+        """
+        setter method for the termination condition.
+
+        Paramerters:
+            termination_condition : 
+        """
         self.termination_condition = termination_condition
 
     def run(self) -> None:
+        """
+        This method starts up the routine. 
+        The method grabs a subprocess from self.process_manager queue. 
+        Then the method unpauses the process along with passing the selected routine name. 
+        """
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
         try:
                 self.save_init_vars()
-                self.stop_event = Event()
-                self.pause_event = Event()
-                self.data_queue = Queue()
-                self.routine_queue = Queue()
-                self.evaluate_queue = Queue()
+                self.process_with_args = self.process_manager.remove_from_queue()
+                self.routine_process = self.process_with_args["process"]
+                self.stop_event = self.process_with_args["stop_event"]
+                self.pause_event = self.process_with_args["pause_event"]
+                self.data_queue = self.process_with_args["data_queue"]
+                self.evaluate_queue = self.process_with_args["evaluate_queue"]
+                self.wait_event = self.process_with_args["wait_event"]
 
                 arg_dict = {
                     'routine_name': self.routine.name,
                     'evaluate': True,
                     'termination_condition': self.termination_condition}
-                self.routine_process = Process(target=run_routine_subprocess, 
-                                               args=(self.data_queue, 
-                                                     self.evaluate_queue, 
-                                                     self.routine_queue,
-                                                     self.stop_event, 
-                                                     self.pause_event,))
-                self.routine_process.start()
 
                 self.data_queue.put(arg_dict)
-
+                self.wait_event.set()
                 self.setup_timer()
 
         except BadgerRunTerminatedError as e:
@@ -100,34 +107,49 @@ class BadgerRoutineSubprocess():
             self.signals.error.emit(e)
 
 
-    def setup_timer(self):
+    def setup_timer(self) -> None:
+        """
+        This sets up a QTimer to check for updates from the subprocess. 
+        The clock checks are every 100 miliseconds.  
+        """
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_queue)
         self.timer.setInterval(100)  
         self.timer.start() 
         
-    def check_queue(self):
-        if not self.routine_queue.empty():
-            data = self.routine_queue.get()
-            self.signals.routine_data.emit(data)
-
+    def check_queue(self) -> None:
+        """
+        This method checks teh subprocess for updates in the evaluate_queue. 
+        It is called by a QTimer every 100 miliseconds.  
+        """
         if not self.evaluate_queue.empty():
             results = self.evaluate_queue.get()
             self.after_evaluate(results)
 
-    def after_evaluate(self, results):
+    def after_evaluate(self, results) -> None:
+        """
+        This method emits updates sent over from the subprocess running the routine on the evaluate_queue.  
+        """
         self.signals.progress.emit(results)
         time.sleep(0.1)
 
-    def save_init_vars(self):
+    def save_init_vars(self) -> None:
+        """
+        Emits the intital variables in the env_ready signal. 
+        """
         var_names = self.routine.vocs.variable_names
         var_dict = self.routine.environment._get_variables(var_names)
         init_vars = list(var_dict.values())
         self.signals.env_ready.emit(init_vars)
 
-    def stop_routine(self):
+    def stop_routine(self) -> None:
+        """
+        This method will attempt to close the subprocess running the routine. 
+        If the process does not close withing the timeout time (0.1 seconds) then the method will terminate the process. 
+        The method then emits a signal that the process has been stopped. 
+        """
         self.stop_event.set()
-        self.routine_process.join(timeout=0.2) 
+        self.routine_process.join(timeout=0.1) 
 
         if self.routine_process.is_alive():
             self.routine_process.terminate()
@@ -137,8 +159,13 @@ class BadgerRoutineSubprocess():
         self.signals.finished.emit()
 
 
-    def ctrl_routine(self, pause):
+    def ctrl_routine(self, pause) -> None:
+        """
+        This method will pause and unpause the routine. 
+        This is accomplished by a multiprocessing Event which when set will pause the subprocess.
+        """
         if pause:
             self.pause_event.set()
         else:
             self.pause_event.clear()
+
