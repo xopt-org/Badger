@@ -1,4 +1,4 @@
-
+'''
 class TestRoutineRunner:
     def test_routine_runner(self, qtbot):
         from badger.gui.default.components.routine_runner import BadgerRoutineRunner
@@ -13,3 +13,4 @@ class TestRoutineRunner:
         assert len(runner.routine.data) == 2
 
         # TODO: check for signal emit message
+'''

@@ -1,6 +1,5 @@
 import typing
 import time
-import datetime
 from .db import load_routine
 from pandas import concat, DataFrame
 import logging
@@ -55,7 +54,7 @@ def check_critical(self, queue):
         queue.put(str(feas))
         return True 
 
-
+'''
 def check_run_status(self, routine, stop_process, pause_process, termination_condition = None):
         """
         check for termination condition
@@ -83,6 +82,7 @@ def check_run_status(self, routine, stop_process, pause_process, termination_con
             pause_process.wait()
         else:
             return 0  # continue to run
+'''
 
 def convert_to_solution(result: DataFrame, routine: Routine):
     vocs = routine.vocs
@@ -120,7 +120,7 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
     pause_process : 
     """
     wait_event.wait()
-    
+
     try:
         args = queue.get(timeout=1)
     except Exception as e:
@@ -156,6 +156,11 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
         termination_condition = args['termination_condition']
     except KeyError:
         termination_condition = None
+
+    try: 
+        start_time = args['start_time']
+    except KeyError:
+        start_time = None 
 
     environment = routine.environment
     initial_points = routine.initial_points
@@ -212,16 +217,32 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
             # generate_callback(generator, candidates)
             # generate_callback(candidates)
 
+            # Check if termination condition has been satisfied
+            if termination_condition and start_time:
+                tc_config = termination_condition
+                idx = tc_config['tc_idx']
+                if idx == 0:
+                    max_eval = tc_config['max_eval']
+                    if len(routine.data) >= max_eval:
+                        raise BadgerRunTerminatedError
+                elif idx == 1:
+                    max_time = tc_config['max_time']
+                    dt = time.time() - start_time 
+                    if dt >= max_time:
+                        raise BadgerRunTerminatedError
+
+            # External triggers
             if stop_process.is_set():
                 raise BadgerRunTerminatedError
             elif pause_process.is_set():
-                pause_process.wait() 
+                pause_process.wait()
 
             # if still active evaluate the points and add to generator
             # check active_callback evaluate point
             result = routine.evaluate_data(candidates)
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+            
             if evaluate:
                 evaluate_queue.put(routine.data)
 
@@ -237,3 +258,4 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         raise e
+    

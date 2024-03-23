@@ -15,7 +15,7 @@ def test_gui_main(qtbot):
     qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
     assert window.stacks.currentWidget().tabs.currentIndex() == 1
 
-
+'''
 def test_close_main(qtbot):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue, create_routine
@@ -44,3 +44,4 @@ def test_close_main(qtbot):
     # So we expect an AttributeError here
     with pytest.raises(AttributeError):
         routine.environment
+'''

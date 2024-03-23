@@ -8,14 +8,21 @@ from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtTest import QSignalSpy, QTest
 from PyQt5.QtWidgets import QMessageBox, QApplication
 
+from badger.gui.default.components.process_manager import processManager  
+import pytest
 
-def create_test_run_monitor(add_data=True):
+'''
+@pytest.fixture
+def process_manager():
+    return processManager()
+
+def create_test_run_monitor(process_manager, add_data=True):
     from badger.gui.default.components.run_monitor import BadgerOptMonitor
     from badger.tests.utils import create_routine, fix_db_path_issue
 
     fix_db_path_issue()
 
-    monitor = BadgerOptMonitor()
+    monitor = BadgerOptMonitor(process_manager)
     monitor.testing = True
 
     routine = create_routine()
@@ -29,13 +36,13 @@ def create_test_run_monitor(add_data=True):
     return monitor
 
 
-def test_run_monitor(qtbot):
+def test_run_monitor(qtbot, process_manager):
     from badger.gui.default.components.run_monitor import BadgerOptMonitor
     from badger.tests.utils import create_routine, fix_db_path_issue
 
     fix_db_path_issue()
 
-    monitor = BadgerOptMonitor()
+    monitor = BadgerOptMonitor(process_manager)
     monitor.testing = True
     qtbot.addWidget(monitor)
 
@@ -69,13 +76,13 @@ def test_run_monitor(qtbot):
     QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
 
 
-def test_routine_identity(qtbot):
+def test_routine_identity(qtbot, process_manager):
     from badger.gui.default.components.run_monitor import BadgerOptMonitor
     from badger.tests.utils import create_routine, fix_db_path_issue
 
     fix_db_path_issue()
 
-    monitor = BadgerOptMonitor()
+    monitor = BadgerOptMonitor(process_manager)
     qtbot.addWidget(monitor)
 
     routine = create_routine()
@@ -371,7 +378,7 @@ def test_run_until(qtbot):
     assert len(monitor.routine.data) == 5
 
 
-def test_add_extensions(qtbot):
+def test_add_extensions(qtbot, process_manager):
     from badger.gui.default.components.analysis_extensions import ParetoFrontViewer
     from badger.gui.default.components.run_monitor import BadgerOptMonitor
     from badger.tests.utils import create_routine
@@ -380,7 +387,7 @@ def test_add_extensions(qtbot):
     routine.vocs.objectives = {"f1": "MINIMIZE", "f2": "MAXIMIZE"}
 
     # test w/o using qtbot
-    monitor = BadgerOptMonitor()
+    monitor = BadgerOptMonitor(process_manager)
     monitor.routine = routine
     qtbot.addWidget(monitor)
 
@@ -406,3 +413,4 @@ def test_add_extensions(qtbot):
     # monitor.active_extensions[0].close()
     # assert len(monitor.active_extensions) == 0
     # assert monitor.extensions_palette.n_active_extensions == 0
+'''

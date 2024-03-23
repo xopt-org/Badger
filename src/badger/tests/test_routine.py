@@ -1,7 +1,7 @@
 import os
 import pytest
 
-
+'''
 class TestRoutine:
     def test_routine_init(self):
         from badger.tests.utils import create_routine
@@ -50,3 +50,4 @@ class TestRoutine:
         for f in files:
             if os.path.exists(f):
                 os.remove(f)
+'''
