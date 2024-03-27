@@ -247,6 +247,11 @@ class BadgerRoutinePage(QWidget):
 
         name = self.generators[i]
         default_config = get_generator_defaults(name)
+
+        # Patch for BOs that make the low noise prior False by default
+        if name in ['upper_confidence_bound', 'expected_improvement']:
+            default_config['gp_constructor']['use_low_noise_prior'] = False
+
         self.generator_box.edit.setPlainText(get_yaml_string(default_config))
 
         # Update the docs
