@@ -3,10 +3,10 @@ import traceback
 from importlib import resources
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QTextEdit, QCheckBox
 from PyQt5.QtWidgets import QMessageBox, QComboBox, QLabel, QStyledItemDelegate
-from PyQt5.QtWidgets import QToolButton, QMenu, QAction
-from PyQt5.QtCore import pyqtSignal, QThreadPool, QSize
+from PyQt5.QtWidgets import QToolButton, QMenu, QAction, QScrollArea
+from PyQt5.QtCore import pyqtSignal, QThreadPool
 from PyQt5.QtGui import QFont, QIcon
 import pyqtgraph as pg
 from xopt import VOCS
@@ -15,6 +15,7 @@ from .extensions_palette import ExtensionsPalette
 from .routine_runner import BadgerRoutineRunner
 from ..utils import create_button
 from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
+from ..windows.message_dialog import BadgerScrollableMessageBox
 from ....routine import Routine
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
 from ....logbook import send_to_logbook, BADGER_LOGBOOK_ROOT
@@ -784,12 +785,20 @@ class BadgerOptMonitor(QWidget):
                 pass
 
     def on_error(self, error):
-        QMessageBox.critical(self, 'Error!', str(error))
+        details = error._details if hasattr(error, '_details') else None
+
+        dialog = BadgerScrollableMessageBox(
+            title='Error!',
+            text=str(error),
+            parent=self
+        )
+        dialog.setIcon(QMessageBox.Critical)
+        dialog.setDetailedText(details)
+        dialog.exec_()
 
     # Do not show info -- too distracting
     def on_info(self, msg):
         pass
-        # QMessageBox.information(self, 'Info', msg)
 
     def logbook(self):
         try:

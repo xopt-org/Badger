@@ -2,6 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import time
+import traceback
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable
 from ....core import run_routine, Routine
@@ -79,7 +80,8 @@ class BadgerRoutineRunner(QRunnable):
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:
-            print(e)
+            traceback_info = traceback.format_exc()
+            e._details = traceback_info
             self.signals.finished.emit()
             self.signals.error.emit(e)
 
