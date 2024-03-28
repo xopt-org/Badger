@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication
 
 from badger.errors import BadgerRoutineError
 from badger.tests.utils import create_routine
@@ -127,3 +128,37 @@ def test_observables(qtbot):
 
     routine = window._compose_routine()
     assert routine.vocs.observables == ["c"]
+
+
+def test_add_random_points(qtbot):
+    # test to add random points to initial points table
+    from badger.gui.default.components.routine_page import BadgerRoutinePage
+
+    window = BadgerRoutinePage()
+    qtbot.addWidget(window)
+
+    qtbot.keyClicks(window.env_box.cb, "test")
+    qtbot.keyClicks(window.generator_box.cb, "random")
+
+    window.env_box.var_table.cellWidget(0, 0).setChecked(True)
+    window.env_box.var_table.cellWidget(1, 0).setChecked(True)
+    window.env_box.var_table.cellWidget(2, 0).setChecked(True)
+
+    def handle_dialog():
+        while window.rc_dialog is None:
+            QApplication.processEvents()
+
+        # Set number of points to 5, frac to 0.05, then add them
+        window.rc_dialog.sb_np.setValue(5)
+        window.rc_dialog.sb_frac.setValue(0.05)
+        qtbot.mouseClick(window.rc_dialog.btn_add, Qt.MouseButton.LeftButton)
+    QTimer.singleShot(0, handle_dialog)
+
+    qtbot.mouseClick(window.env_box.btn_add_rand, Qt.LeftButton)
+    routine = window._compose_routine()
+
+    assert routine.initial_points.shape[0] == 5
+    # curr is 0, frac is 0.05, range is [-1, 1]
+    # so max value should be 0.1, min value should be -0.1
+    assert routine.initial_points.to_numpy().max() <= 0.1
+    assert routine.initial_points.to_numpy().min() >= -0.1
