@@ -147,4 +147,4 @@ def test_default_low_noise_prior_in_ucb(qtbot):
     params = editor.routine_page.generator_box.edit.toPlainText()
     params_dict = yaml.safe_load(params)
 
-    assert params_dict['gp_constructor']['use_low_noise_prior'] == False
+    assert not params_dict['gp_constructor']['use_low_noise_prior']
