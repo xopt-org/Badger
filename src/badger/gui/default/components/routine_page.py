@@ -1,7 +1,6 @@
 import warnings
 import sqlite3
 import traceback
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -14,6 +13,7 @@ from coolname import generate_slug
 from pydantic import ValidationError
 from xopt import VOCS
 from xopt.generators import get_generator_defaults
+from xopt.utils import get_local_region
 
 from .generator_cbox import BadgerAlgoBox
 from .constraint_item import constraint_item
@@ -26,6 +26,7 @@ from ..windows.edit_script_dialog import BadgerEditScriptDialog
 from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
 from ..windows.var_dialog import BadgerVariableDialog
+from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
@@ -56,6 +57,10 @@ class BadgerRoutinePage(QWidget):
 
         # Limit variable ranges
         self.limit_option = None
+
+        # Add radom points config
+        self.add_rand_config = None
+        self.rc_dialog = None
 
         self.init_ui()
         self.config_logic()
@@ -147,6 +152,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_add_con.clicked.connect(self.add_constraint)
         self.env_box.btn_add_sta.clicked.connect(self.add_state)
         self.env_box.btn_add_curr.clicked.connect(self.fill_curr_in_init_table)
+        self.env_box.btn_add_rand.clicked.connect(self.show_add_rand_dialog)
         self.env_box.btn_clear.clicked.connect(self.clear_init_table)
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
 
@@ -407,6 +413,49 @@ class BadgerRoutinePage(QWidget):
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
+    def save_add_rand_config(self, add_rand_config):
+        self.add_rand_config = add_rand_config
+
+    def add_rand_in_init_table(self):
+        # Get current point
+        env = self.create_env()
+        vname_selected = self.get_init_table_header()
+        var_curr = env._get_variables(vname_selected)
+
+        # get small region around current point to sample
+        vocs, _ = self._compose_vocs()
+        n_point = self.add_rand_config['n_points']
+        fraction = self.add_rand_config['fraction']
+        random_sample_region = get_local_region(var_curr, vocs,
+                                                fraction=fraction)
+        random_points = vocs.random_inputs(n_point,
+                                           custom_bounds=random_sample_region)
+
+        # Add points to the table
+        table = self.env_box.init_table
+        for row in range(table.rowCount()):
+            # Check if the row is empty
+            if np.all([not table.item(row, col).text() for col in range(table.columnCount())]):
+                # Fill the row with content_list
+                try:
+                    point = random_points.pop(0)
+                    for col, name in enumerate(vname_selected):
+                        item = QTableWidgetItem(str(point[name]))
+                        table.setItem(row, col, item)
+                except IndexError:  # No more points to add
+                    break
+
+    def show_add_rand_dialog(self):
+        dlg = BadgerAddRandomDialog(
+            self, self.add_rand_in_init_table,
+            self.save_add_rand_config, self.add_rand_config,
+        )
+        self.rc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.rc_dialog = None
+
     def clear_init_table(self):
         table = self.env_box.init_table
         for row in range(table.rowCount()):
@@ -535,7 +584,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.list_obs.setItemWidget(item, sta_item)
         self.env_box.fit_content()
 
-    def _compose_vocs(self) -> (VOCS, List[str]):
+    def _compose_vocs(self) -> (VOCS, list[str]):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
         objectives = self.env_box.obj_table.export_objectives()
