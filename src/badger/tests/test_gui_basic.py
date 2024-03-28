@@ -125,3 +125,26 @@ def test_traceback_during_run(qtbot):
         # Wait until the run is done
         while home_page.run_monitor.running:
             qtbot.wait(100)
+
+
+def test_default_low_noise_prior_in_ucb(qtbot):
+    from badger.gui.default.windows.main_window import BadgerMainWindow
+    from badger.tests.utils import fix_db_path_issue
+    import yaml
+
+    fix_db_path_issue()
+
+    window = BadgerMainWindow()
+    qtbot.addWidget(window)
+
+    # Create and save a routine
+    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
+    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
+
+    editor = window.home_page.routine_editor
+    qtbot.keyClicks(editor.routine_page.generator_box.cb,
+                    "upper_confidence_bound")
+    params = editor.routine_page.generator_box.edit.toPlainText()
+    params_dict = yaml.safe_load(params)
+
+    assert params_dict['gp_constructor']['use_low_noise_prior'] == False
