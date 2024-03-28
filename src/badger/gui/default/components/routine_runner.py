@@ -2,7 +2,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 import time
+import traceback
 from pandas import DataFrame
+import torch  # for converting dtype str to torch object
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable
 from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
@@ -64,6 +66,17 @@ class BadgerRoutineRunner(QRunnable):
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
+        # Patch for converting dtype str to torch object
+        try:
+            dtype = self.routine.generator.turbo_controller.tkwargs['dtype']
+            self.routine.generator.turbo_controller.tkwargs['dtype'] = eval(dtype)
+        except AttributeError:
+            pass
+        except KeyError:
+            pass
+        except TypeError:
+            pass
+
         try:
             self.save_init_vars()
 
@@ -79,7 +92,8 @@ class BadgerRoutineRunner(QRunnable):
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:
-            print(e)
+            traceback_info = traceback.format_exc()
+            e._details = traceback_info
             self.signals.finished.emit()
             self.signals.error.emit(e)
 
