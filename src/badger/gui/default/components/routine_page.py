@@ -169,6 +169,11 @@ class BadgerRoutinePage(QWidget):
             # Reset the generator and env configs
             self.generator_box.cb.setCurrentIndex(-1)
             self.env_box.cb.setCurrentIndex(-1)
+            init_table = self.env_box.init_table
+            init_table.clear()
+            init_table.horizontalHeader().setVisible(False)
+            init_table.setRowCount(10)
+            init_table.setColumnCount(0)
 
             # Reset the routine configs check box status
             self.env_box.check_only_var.setChecked(False)
