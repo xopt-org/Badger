@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPlainTextEdit
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
 from .collapsible_box import CollapsibleBox
+from ..utils import MouseWheelWidgetAdjustmentGuard
 from ....settings import read_value
 from ....utils import strtobool
 
@@ -28,6 +29,7 @@ class BadgerAlgoBox(CollapsibleBox):
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.generators)
         cb.setCurrentIndex(-1)
+        cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(cb))
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         self.btn_docs = btn_docs = QPushButton('Open Docs')
