@@ -802,13 +802,7 @@ class BadgerOptMonitor(QWidget):
 
     def logbook(self):
         try:
-            if self.routine_runner:
-                routine = self.routine_runner.name
-                data = self.routine_runner.data.to_dict('list')
-            else:
-                routine = self.routine
-                data = self.data
-            send_to_logbook(routine, data, self.monitor)
+            send_to_logbook(self.routine, self.monitor)
         except Exception as e:
             QMessageBox.critical(self, 'Log failed!', str(e))
 
