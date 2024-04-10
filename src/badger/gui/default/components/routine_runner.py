@@ -8,6 +8,7 @@ import torch  # for converting dtype str to torch object
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable
 from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
+from ....tests.utils import get_current_vars
 
 
 class BadgerRoutineSignals(QObject):
@@ -157,9 +158,7 @@ class BadgerRoutineRunner(QRunnable):
             return 0  # continue to run
 
     def save_init_vars(self):
-        var_names = self.routine.vocs.variable_names
-        var_dict = self.routine.environment._get_variables(var_names)
-        init_vars = list(var_dict.values())
+        init_vars = get_current_vars(self.routine)
         self.signals.env_ready.emit(init_vars)
 
     def states_ready(self, states):

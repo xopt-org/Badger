@@ -20,6 +20,7 @@ from ....routine import Routine
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
 from ....logbook import send_to_logbook, BADGER_LOGBOOK_ROOT
 from ....archive import archive_run, BADGER_ARCHIVE_ROOT
+from ....tests.utils import get_current_vars
 
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -885,19 +886,13 @@ class BadgerOptMonitor(QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        # TODO: Should just get vars from env! Current values are not always
-        # ones in the latest solution
-        # current_vars = self.routine.data.iloc[-1].to_dict(orient="records")
-        current_vars = self.routine.sorted_data[
-            self.vocs.variable_names].iloc[-1].to_numpy().tolist()
+        curr_vars = get_current_vars(self.routine)
 
-        # evaluate the initial variables -- do not store the result
-        # self.routine.evaluate(self.init_vars)
         self.routine.environment._set_variables(
             dict(zip(self.vocs.variable_names, self.init_vars)))
 
         QMessageBox.information(self, 'Reset Environment',
-                                f'Env vars {current_vars} -> {self.init_vars}')
+                                f'Env vars {curr_vars} -> {self.init_vars}')
 
     def jump_to_optimal(self):
         try:
