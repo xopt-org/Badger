@@ -110,6 +110,7 @@ class BadgerOptMonitor(QWidget):
     sig_lock = pyqtSignal(bool)  # True: lock GUI, False: unlock GUI
     sig_new_run = pyqtSignal()
     sig_run_name = pyqtSignal(str)  # filename of the new run
+    sig_status = pyqtSignal(str)  # status information
     sig_inspect = pyqtSignal(int)  # index of the inspector
     sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
     sig_del = pyqtSignal()
@@ -570,6 +571,7 @@ class BadgerOptMonitor(QWidget):
 
     def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
+        self.sig_status.emit(f'Running routine {self.routine.name}...')
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
@@ -764,16 +766,18 @@ class BadgerOptMonitor(QWidget):
                 pass
 
             self.sig_run_name.emit(run['filename'])
-            if not self.testing:
-                QMessageBox.information(
-                    self, 'Success!',
-                    f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            self.sig_status.emit(f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            # if not self.testing:
+            #     QMessageBox.information(
+            #         self, 'Success!',
+            #         f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
         except Exception as e:
             self.sig_run_name.emit(None)
-            if not self.testing:
-                QMessageBox.critical(self, 'Archive failed!',
-                                     f'Archive failed: {str(e)}')
+            self.sig_status.emit(f'Archive failed: {str(e)}')
+            # if not self.testing:
+            #     QMessageBox.critical(self, 'Archive failed!',
+            #                          f'Archive failed: {str(e)}')
         finally:
             for action in self.post_run_actions:
                 action()
@@ -891,8 +895,20 @@ class BadgerOptMonitor(QWidget):
         self.routine.environment._set_variables(
             dict(zip(self.vocs.variable_names, self.init_vars)))
 
-        QMessageBox.information(self, 'Reset Environment',
-                                f'Env vars {curr_vars} -> {self.init_vars}')
+        self.jump_to_solution(0)
+        self.sig_inspect.emit(0)
+        # Center around the zero position
+        if self.plot_x_axis:  # x-axis is time
+            pos, _ = self.closest_ts(self.inspector_objective.value())
+        else:
+            pos = int(self.inspector_objective.value())
+        x_range = self.plot_var.getViewBox().viewRange()[0]
+        delta = (x_range[1] - x_range[0]) / 2
+        self.plot_var.setXRange(pos - delta, pos + delta)
+
+        self.sig_status.emit(f'Reset environment: Env vars {curr_vars} -> {self.init_vars}')
+        # QMessageBox.information(self, 'Reset Environment',
+        #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
     def jump_to_optimal(self):
         try:
@@ -934,17 +950,21 @@ class BadgerOptMonitor(QWidget):
 
         reply = QMessageBox.question(self,
                                      'Apply Solution',
-                                     f'Are you sure you want to apply the current solution at {solution} to env?',
+                                     f'Are you sure you want to apply the selected solution at {solution} to env?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
 
+        curr_vars = get_current_vars(self.routine)
         self.routine.environment._set_variables(
             dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2
         self.plot_var.setXRange(pos - delta, pos + delta)
+
+        updated_vars = get_current_vars(self.routine)
+        self.sig_status.emit(f'Dial in solution: Env vars {curr_vars} -> {updated_vars}')
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
 

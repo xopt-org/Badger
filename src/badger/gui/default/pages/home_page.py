@@ -226,6 +226,7 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_lock.connect(self.toggle_lock)
         self.run_monitor.sig_new_run.connect(self.new_run)
         self.run_monitor.sig_run_name.connect(self.run_name)
+        self.run_monitor.sig_status.connect(self.update_status)
         self.run_monitor.sig_progress.connect(self.progress)
         self.run_monitor.sig_del.connect(self.delete_run)
 
@@ -354,9 +355,9 @@ class BadgerHomePage(QWidget):
             self.run_monitor.init_plots(self.current_routine)
             if not self.current_routine:
                 self.routine_editor.clear()
-                self.status_bar.set_summary('no active routine')
+                self.status_bar.set_summary('No active routine')
             else:
-                self.status_bar.set_summary(f'current routine: {self.current_routine.name}')
+                self.status_bar.set_summary(f'Current routine: {self.current_routine.name}')
             return
 
         run_filename = self.cb_history.currentText()
@@ -370,7 +371,7 @@ class BadgerHomePage(QWidget):
         update_table(self.run_table, routine.sorted_data)
         self.run_monitor.init_plots(routine, run_filename)
         self.routine_editor.set_routine(routine)
-        self.status_bar.set_summary(f'current routine: {self.current_routine.name}')
+        self.status_bar.set_summary(f'Current routine: {self.current_routine.name}')
 
     def go_prev_run(self):
         self.cb_history.selectPreviousItem()
@@ -427,6 +428,9 @@ class BadgerHomePage(QWidget):
         else:
             runs = get_runs()
         self.cb_history.updateItems(runs)
+
+    def update_status(self, info):
+        self.status_bar.set_summary(info)
 
     def progress(self, solution: DataFrame):
         vocs = self.current_routine.vocs
