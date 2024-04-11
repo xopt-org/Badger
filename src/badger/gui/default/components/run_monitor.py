@@ -904,7 +904,7 @@ class BadgerOptMonitor(QWidget):
             pos = int(self.inspector_objective.value())
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2
-        self.plot_var.setXRange(pos - delta, pos + delta)
+        self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
 
         self.sig_status.emit(f'Reset environment: Env vars {curr_vars} -> {self.init_vars}')
         # QMessageBox.information(self, 'Reset Environment',
@@ -961,7 +961,7 @@ class BadgerOptMonitor(QWidget):
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2
-        self.plot_var.setXRange(pos - delta, pos + delta)
+        self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
 
         updated_vars = get_current_vars(self.routine)
         self.sig_status.emit(f'Dial in solution: Env vars {curr_vars} -> {updated_vars}')
