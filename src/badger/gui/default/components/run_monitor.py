@@ -809,10 +809,14 @@ class BadgerOptMonitor(QWidget):
         try:
             send_to_logbook(self.routine, self.monitor)
         except Exception as e:
-            QMessageBox.critical(self, 'Log failed!', str(e))
+            self.sig_status.emit(f'Log failed: {str(e)}')
+            # QMessageBox.critical(self, 'Log failed!', str(e))
 
-        QMessageBox.information(
-            self, 'Success!', f'Log saved to {BADGER_LOGBOOK_ROOT}')
+            return
+
+        self.sig_status.emit(f'Log success: Log saved to {BADGER_LOGBOOK_ROOT}')
+        # QMessageBox.information(
+        #     self, 'Success!', f'')
 
     def ctrl_routine(self):
         if self.btn_ctrl._status == 'pause':
