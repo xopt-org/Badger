@@ -523,7 +523,7 @@ class BadgerHomePage(QWidget):
             export_routines(filename, routines)
 
             QMessageBox.information(
-                self, 'Success!', f'Export succeeded: filtered routines exported to {filename}')
+                self, 'Success!', f'Export success: filtered routines exported to {filename}')
         except Exception as e:
             QMessageBox.critical(self, 'Export failed!', f'Export failed: {str(e)}')
 
@@ -545,6 +545,6 @@ class BadgerHomePage(QWidget):
             import_routines(filename)
 
             QMessageBox.information(
-                self, 'Success!', f'Import succeeded: imported all routines from {filename}')
+                self, 'Success!', f'Import success: imported all routines from {filename}')
         except Exception as e:
             QMessageBox.warning(self, 'Heads-up!', f'Failed to import the following routines since they already existed: \n{str(e)}')

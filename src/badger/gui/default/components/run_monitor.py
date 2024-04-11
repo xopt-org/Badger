@@ -766,11 +766,11 @@ class BadgerOptMonitor(QWidget):
                 pass
 
             self.sig_run_name.emit(run['filename'])
-            self.sig_status.emit(f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            self.sig_status.emit(f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
             # if not self.testing:
             #     QMessageBox.information(
             #         self, 'Success!',
-            #         f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            #         f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
         except Exception as e:
             self.sig_run_name.emit(None)

@@ -706,8 +706,8 @@ class BadgerRoutinePage(QWidget):
             self.sig_updated.emit(routine.name, routine.description)
             QMessageBox.information(
                 self,
-                'Update succeeded!',
-                f'Routine {self.routine.name} description was updated successfully!'
+                'Update success!',
+                f'Routine {self.routine.name} description was updated!'
             )
         except Exception:
             return QMessageBox.critical(
