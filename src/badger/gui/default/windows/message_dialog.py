@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QDialog, QMessageBox, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QScrollArea, QTextEdit)
 from PyQt5.QtGui import QTextOption, QFont, QFontDatabase
+# from ..components.eliding_label import ElidingLabel
 
 
 class BadgerScrollableMessageBox(QDialog):
@@ -16,7 +17,7 @@ class BadgerScrollableMessageBox(QDialog):
         if icon:
             self.iconLabel.setPixmap(icon.pixmap(64, 64))
         self.textLabel = QLabel(text)
-        self.textLabel.setMaximumWidth(280)
+        self.textLabel.setMinimumWidth(280)
         self.textLabel.setWordWrap(True)
         font = QFont()
         font.setBold(True)
