@@ -7,7 +7,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox
 from PyQt5.QtWidgets import QPushButton, QSplitter, QTabWidget, QShortcut
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QLabel, QFileDialog
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QKeySequence, QIcon, QFont
+from PyQt5.QtGui import QKeySequence, QIcon
+# from PyQt5.QtGui import QBrush, QColor
 from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..components.search_bar import search_bar
 from ..components.data_table import data_table, update_table, reset_table, add_row
@@ -20,7 +21,7 @@ from ..components.filter_cbox import BadgerFilterBox
 from ..utils import create_button
 from ....db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
 from ....db import import_routines, export_routines
-from ....archive import load_run, delete_run
+from ....archive import load_run, delete_run, get_base_run_filename
 from ....utils import get_header, strtobool
 from ....settings import read_value
 
@@ -367,7 +368,7 @@ class BadgerHomePage(QWidget):
                 self.status_bar.set_summary(f'Current routine: {self.current_routine.name}')
             return
 
-        run_filename = self.cb_history.currentText()
+        run_filename = get_base_run_filename(self.cb_history.currentText())
         try:
             _routine = load_run(run_filename)
             routine, _ = load_routine(_routine.name)  # get the initial routine
@@ -378,7 +379,7 @@ class BadgerHomePage(QWidget):
                 routine.data = _routine.data
         except IndexError:
             return
-        except Exception as e:
+        except Exception as e:  # failed to load the run
             details = traceback.format_exc()
             dialog = BadgerScrollableMessageBox(
                 title='Error!',
@@ -389,6 +390,14 @@ class BadgerHomePage(QWidget):
             dialog.setDetailedText(details)
             dialog.exec_()
             self.go_run_failed = True
+
+            # Show info in the nav bar
+            # red_brush = QBrush(QColor(255, 0, 0))  # red color
+            self.cb_history.changeCurrentItem(
+                f'{run_filename} (failed to load)',
+                # color=red_brush)
+                color=None)
+
             return
 
         self.current_routine = routine  # update the current routine
