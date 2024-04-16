@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
 from coolname import generate_slug
 from pydantic import ValidationError
 from xopt import VOCS
-from xopt.generators import get_generator_defaults
+from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
 
 from .generator_cbox import BadgerAlgoBox
@@ -276,7 +276,7 @@ class BadgerRoutinePage(QWidget):
         default_config = get_generator_defaults(name)
 
         # Patch for BOs that make the low noise prior False by default
-        if name in ['upper_confidence_bound', 'expected_improvement']:
+        if name in all_generator_names['bo']:
             default_config['gp_constructor']['use_low_noise_prior'] = False
 
         self.generator_box.edit.setPlainText(get_yaml_string(default_config))
