@@ -27,6 +27,7 @@ from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
 from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
+from ..windows.message_dialog import BadgerScrollableMessageBox
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
@@ -156,7 +157,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_clear.clicked.connect(self.clear_init_table)
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
 
-    def refresh_ui(self, routine: Routine = None):
+    def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
 
         self.generators = list_generators()
@@ -192,7 +193,22 @@ class BadgerRoutinePage(QWidget):
         self.btn_descr_update.setDisabled(False)
         # Fill in the generator and env configs
         name_generator = routine.generator.name
-        idx_generator = self.generators.index(name_generator)
+        try:
+            idx_generator = self.generators.index(name_generator)
+        except ValueError as e:
+            if not silent:  # show the error message if not in silent mode
+                details = traceback.format_exc()
+                dialog = BadgerScrollableMessageBox(
+                    title='Error!',
+                    text=str(e),
+                    parent=self
+                )
+                dialog.setIcon(QMessageBox.Critical)
+                dialog.setDetailedText(details)
+                dialog.exec_()
+
+            idx_generator = -1
+
         self.generator_box.cb.setCurrentIndex(idx_generator)
         # self.generator_box.edit.setPlainText(routine.generator.yaml())
         self.generator_box.edit.setPlainText(
