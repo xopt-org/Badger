@@ -1,4 +1,5 @@
 import os
+import traceback
 from importlib import resources
 from pandas import DataFrame
 
@@ -7,6 +8,7 @@ from PyQt5.QtWidgets import QPushButton, QSplitter, QTabWidget, QShortcut
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QLabel, QFileDialog
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QKeySequence, QIcon, QFont
+from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..components.search_bar import search_bar
 from ..components.data_table import data_table, update_table, reset_table, add_row
 from ..components.routine_item import BadgerRoutineItem
@@ -47,6 +49,8 @@ class BadgerHomePage(QWidget):
         self.mode = 'regular'  # home page mode
         self.splitter_state = None  # store the run splitter state
         self.tab_state = None  # store the tabs state before creating new routine
+        self.current_routine = None  # current routine
+        self.go_run_failed = False  # flag to indicate go_run failed
 
         self.init_ui()
         self.config_logic()
@@ -292,7 +296,10 @@ class BadgerHomePage(QWidget):
         if not runs:  # auto plot will not be triggered
             self.run_monitor.init_plots(routine)
 
-        self.routine_list.itemWidget(routine_item).activate()
+        if self.go_run_failed:  # failed to load run, do not select the routine
+            self.go_run_failed = False
+        else:
+            self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(self,
                            routines: list[str],
@@ -364,13 +371,30 @@ class BadgerHomePage(QWidget):
         try:
             _routine = load_run(run_filename)
             routine, _ = load_routine(_routine.name)  # get the initial routine
-            routine.data = _routine.data
-        except (IndexError, AttributeError):
+            # TODO: figure out how to recover the original routine
+            if routine is None:  # routine not found, could be deleted
+                routine = _routine  # make do w/ the routine saved in run
+            else:
+                routine.data = _routine.data
+        except IndexError:
             return
+        except Exception as e:
+            details = traceback.format_exc()
+            dialog = BadgerScrollableMessageBox(
+                title='Error!',
+                text=str(e),
+                parent=self
+            )
+            dialog.setIcon(QMessageBox.Critical)
+            dialog.setDetailedText(details)
+            dialog.exec_()
+            self.go_run_failed = True
+            return
+
         self.current_routine = routine  # update the current routine
         update_table(self.run_table, routine.sorted_data)
         self.run_monitor.init_plots(routine, run_filename)
-        self.routine_editor.set_routine(routine)
+        self.routine_editor.set_routine(routine, silent=True)
         self.status_bar.set_summary(f'Current routine: {self.current_routine.name}')
 
     def go_prev_run(self):
