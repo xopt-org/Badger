@@ -56,7 +56,10 @@ class Routine(Xopt):
                     except IndexError:
                         data["data"] = pd.DataFrame(data["data"], index=[0])
 
-                    data["generator"].add_data(data["data"])
+                    # Add data one row at a time to avoid generator issues
+                    for i in range(len(data["data"])):
+                        row_df = data["data"].iloc[[i]]
+                        data["generator"].add_data(row_df)
 
             # instantiate env
             if isinstance(data["environment"], dict):
