@@ -26,7 +26,7 @@ def test_routine_generation(qtbot):
         window._compose_routine()
 
     # add generator -- still should raise error for no environment
-    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     with pytest.raises(BadgerRoutineError):
         window._compose_routine()
 
@@ -90,7 +90,7 @@ def test_constraints(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
-    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     qtbot.keyClicks(window.env_box.cb, "test")
 
     # click checkbox to select vars/objectives
@@ -114,7 +114,7 @@ def test_observables(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
-    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     qtbot.keyClicks(window.env_box.cb, "test")
 
     # click checkbox to select vars/objectives

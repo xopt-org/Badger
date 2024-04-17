@@ -41,7 +41,9 @@ def test_list_algo():
 
     # Check output lines
     outlines = out.splitlines()
-    assert '- upper_confidence_bound' in outlines
+    assert '- expected_improvement' in outlines
+    assert '- neldermead' in outlines
+    assert '- rcds' in outlines
 
 
 # def test_cli_run(mock_config_root):

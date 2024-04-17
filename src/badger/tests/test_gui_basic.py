@@ -41,10 +41,10 @@ def test_close_main(qtbot):
     while home_page.run_monitor.running:
         qtbot.wait(100)
 
-    window.close()  # this action show release the env
+    window.close()  # this action should release the env
     # So we expect an AttributeError here
     with pytest.raises(AttributeError):
-        routine.environment
+        home_page.run_monitor.routine.environment
 
 
 def test_auto_select_updated_routine(qtbot):
@@ -62,7 +62,7 @@ def test_auto_select_updated_routine(qtbot):
 
     editor = window.home_page.routine_editor
     qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                    "upper_confidence_bound")
+                    "expected_improvement")
     qtbot.keyClicks(editor.routine_page.env_box.cb, "test")
     editor.routine_page.env_box.var_table.cellWidget(0, 0).setChecked(True)
     editor.routine_page.env_box.obj_table.cellWidget(0, 0).setChecked(True)
@@ -143,7 +143,7 @@ def test_default_low_noise_prior_in_ucb(qtbot):
 
     editor = window.home_page.routine_editor
     qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                    "upper_confidence_bound")
+                    "expected_improvement")
     params = editor.routine_page.generator_box.edit.toPlainText()
     params_dict = yaml.safe_load(params)
 

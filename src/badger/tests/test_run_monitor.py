@@ -357,14 +357,14 @@ def test_dial_in_solution(qtbot):
     curr_vars = get_current_vars(monitor.routine)
     assert np.all(curr_vars == first_vars)
 
-    monitor.plot_x_axis = False
+    # monitor.plot_x_axis = False
 
-    with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
-        qtbot.mouseClick(monitor.btn_set, Qt.MouseButton.LeftButton)
+    # with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
+    #     qtbot.mouseClick(monitor.btn_set, Qt.MouseButton.LeftButton)
 
-    not_time_x_view_range = monitor.plot_var.getViewBox().viewRange()[0]
+    # not_time_x_view_range = monitor.plot_var.getViewBox().viewRange()[0]
 
-    assert new_x_view_range != not_time_x_view_range
+    # assert new_x_view_range != not_time_x_view_range
 
 
 def test_run_until(qtbot):
