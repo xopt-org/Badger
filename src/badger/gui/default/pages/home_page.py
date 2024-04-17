@@ -474,7 +474,7 @@ class BadgerHomePage(QWidget):
         add_row(self.run_table, objs + cons + vars + stas)
 
     def delete_run(self):
-        run_name = self.cb_history.currentText()
+        run_name = get_base_run_filename(self.cb_history.currentText())
 
         reply = QMessageBox.question(
             self, 'Delete run',
