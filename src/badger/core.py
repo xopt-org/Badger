@@ -114,7 +114,6 @@ def run_routine(
     # evaluate initial points:
     # Nikita: more care about the setting var logic,
     # wait or consider timeout/retry
-    # TODO: need to evaluate a single point at the time
     for _, ele in initial_points.iterrows():
         result = routine.evaluate_data(ele.to_dict())
         solution = convert_to_solution(result, routine)
