@@ -147,14 +147,12 @@ class HistoryNavigator(QComboBox):
 
     def selectNextItem(self):
         parent, row = self._nextSelectableItem()
-        print(parent, row)
         if row is not None:
             self.setRootModelIndex(parent)
             self.setCurrentIndex(row)
 
     def selectPreviousItem(self):
         parent, row = self._previousSelectableItem()
-        print(parent, row)
         if row is not None:
             self.setRootModelIndex(parent)
             self.setCurrentIndex(row)
