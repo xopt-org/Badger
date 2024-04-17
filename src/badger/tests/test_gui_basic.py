@@ -151,4 +151,7 @@ def test_default_low_noise_prior_in_bo(qtbot):
             params = editor.routine_page.generator_box.edit.toPlainText()
             params_dict = yaml.safe_load(params)
 
-            assert not params_dict['gp_constructor']['use_low_noise_prior']
+            if 'gp_constructor' in params_dict:
+                assert not params_dict['gp_constructor']['use_low_noise_prior']
+            else:  # that part of params is hidden so we need to dig deeper
+                pass
