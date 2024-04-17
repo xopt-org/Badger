@@ -127,9 +127,10 @@ def test_traceback_during_run(qtbot):
             qtbot.wait(100)
 
 
-def test_default_low_noise_prior_in_ucb(qtbot):
+def test_default_low_noise_prior_in_bo(qtbot):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
+    from xopt.generators import all_generator_names
     import yaml
 
     fix_db_path_issue()
@@ -142,9 +143,12 @@ def test_default_low_noise_prior_in_ucb(qtbot):
     assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
     editor = window.home_page.routine_editor
-    qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                    "expected_improvement")
-    params = editor.routine_page.generator_box.edit.toPlainText()
-    params_dict = yaml.safe_load(params)
+    cb_generator = editor.routine_page.generator_box.cb
+    algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
+    for algo in algos:
+        if algo in all_generator_names['bo']:
+            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
+            params = editor.routine_page.generator_box.edit.toPlainText()
+            params_dict = yaml.safe_load(params)
 
-    assert not params_dict['gp_constructor']['use_low_noise_prior']
+            assert not params_dict['gp_constructor']['use_low_noise_prior']
