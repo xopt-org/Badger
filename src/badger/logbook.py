@@ -28,7 +28,7 @@ def send_to_logbook(routine, widget=None):
     obj_name = routine.vocs.objective_names[0]
     env_name = routine.environment.name
 
-    idx_opt, obj_opt = routine.vocs.select_best(routine.sorted_data, n=1)
+    idx_opt, obj_opt, _ = routine.vocs.select_best(routine.sorted_data, n=1)
     idx_opt = int(idx_opt[0])
     obj_opt = obj_opt[0]
 

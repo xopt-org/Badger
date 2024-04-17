@@ -916,7 +916,7 @@ class BadgerOptMonitor(QWidget):
 
     def jump_to_optimal(self):
         try:
-            best_idx, _ = self.routine.vocs.select_best(
+            best_idx, _, _ = self.routine.vocs.select_best(
                 self.routine.sorted_data, n=1)
             # print(best_idx, _)
             best_idx = int(best_idx[0])
