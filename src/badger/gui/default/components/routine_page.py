@@ -28,6 +28,7 @@ from ..windows.review_dialog import BadgerReviewDialog
 from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..utils import filter_generator_config
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
@@ -211,8 +212,9 @@ class BadgerRoutinePage(QWidget):
 
         self.generator_box.cb.setCurrentIndex(idx_generator)
         # self.generator_box.edit.setPlainText(routine.generator.yaml())
-        self.generator_box.edit.setPlainText(
-            get_yaml_string(routine.generator.model_dump()))
+        filtered_config = filter_generator_config(
+            name_generator, routine.generator.model_dump())
+        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
         self.script = routine.script
 
         name_env = routine.environment.name
@@ -279,7 +281,9 @@ class BadgerRoutinePage(QWidget):
         if name in all_generator_names['bo']:
             default_config['gp_constructor']['use_low_noise_prior'] = False
 
-        self.generator_box.edit.setPlainText(get_yaml_string(default_config))
+        # Patch to only show part of the config
+        filtered_config = filter_generator_config(name, default_config)
+        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
 
         # Update the docs
         self.window_docs.update_docs(name)
@@ -653,6 +657,14 @@ class BadgerRoutinePage(QWidget):
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.toPlainText())
+        # Patch the BO generators to make sure use_low_noise_prior is False
+        if generator_name in all_generator_names['bo']:
+            if 'gp_constructor' not in generator_params:
+                generator_params['gp_constructor'] = {
+                    'name': 'standard',  # have to add name too for pydantic validation
+                    'use_low_noise_prior': False,
+                }
+            # or else we use whatever specified by the users
         env_params = load_config(self.env_box.edit.toPlainText())
 
         # VOCS
