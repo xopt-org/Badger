@@ -26,7 +26,7 @@ def test_routine_generation(qtbot):
         window._compose_routine()
 
     # add generator -- still should raise error for no environment
-    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     with pytest.raises(BadgerRoutineError):
         window._compose_routine()
 
@@ -90,7 +90,7 @@ def test_constraints(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
-    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     qtbot.keyClicks(window.env_box.cb, "test")
 
     # click checkbox to select vars/objectives
@@ -114,7 +114,7 @@ def test_observables(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
-    qtbot.keyClicks(window.generator_box.cb, "upper_confidence_bound")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     qtbot.keyClicks(window.env_box.cb, "test")
 
     # click checkbox to select vars/objectives
@@ -162,3 +162,26 @@ def test_add_random_points(qtbot):
     # so max value should be 0.1, min value should be -0.1
     assert routine.initial_points.to_numpy().max() <= 0.1
     assert routine.initial_points.to_numpy().min() >= -0.1
+
+
+# TODO: Test if the EI, Simplex, and RCDS params show o the params editor
+# are the simplified versions
+def test_simplified_generator_params(qtbot):
+    pass
+
+
+# TODO: First load an old routine w/ initail points,
+# then create a new routine and check if the initial points panel
+# is cleared
+def test_initial_points_clear_when_create_routine(qtbot):
+    pass
+
+
+# TODO: Test if env selector reacts to scroll events, it should not
+def test_scroll_on_environment_selector(qtbot):
+    pass
+
+
+# TODO: Test if generator selector reacts to scroll events, it should not
+def test_scroll_on_generator_selector(qtbot):
+    pass

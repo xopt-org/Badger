@@ -84,7 +84,7 @@ def create_routine_turbo():
 
     test_routine = {
         "name": "routine-for-turbo-test",
-        "generator": "upper_confidence_bound",
+        "generator": "expected_improvement",
         "env": "test",
         "generator_params": {
             "turbo_controller": "optimize",
@@ -175,7 +175,7 @@ def create_routine_constrained_ucb():
 
     test_routine = {
         "name": "routine-for-ucb-cons-test",
-        "generator": "upper_confidence_bound",
+        "generator": "expected_improvement",
         "env": "test",
         "generator_params": {
             "turbo_controller": "optimize",

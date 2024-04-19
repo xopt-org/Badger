@@ -34,6 +34,8 @@ def test_cli_main():
 
 
 def test_list_algo():
+    from badger.factory import ALGO_EXCLUDED
+
     command = ['badger', 'generator']
     out, err, exitcode = capture(command)
 
@@ -41,7 +43,9 @@ def test_list_algo():
 
     # Check output lines
     outlines = out.splitlines()
-    assert '- upper_confidence_bound' in outlines
+    for algo in ['expected_improvement', 'neldermead', 'rcds']:
+        if algo not in ALGO_EXCLUDED:
+            assert f'- {algo}' in outlines
 
 
 # def test_cli_run(mock_config_root):

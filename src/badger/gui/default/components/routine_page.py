@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
 from coolname import generate_slug
 from pydantic import ValidationError
 from xopt import VOCS
-from xopt.generators import get_generator_defaults
+from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
 
 from .generator_cbox import BadgerAlgoBox
@@ -27,6 +27,8 @@ from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
 from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
+from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..utils import filter_generator_config
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
@@ -156,7 +158,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_clear.clicked.connect(self.clear_init_table)
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
 
-    def refresh_ui(self, routine: Routine = None):
+    def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
 
         self.generators = list_generators()
@@ -169,6 +171,11 @@ class BadgerRoutinePage(QWidget):
             # Reset the generator and env configs
             self.generator_box.cb.setCurrentIndex(-1)
             self.env_box.cb.setCurrentIndex(-1)
+            init_table = self.env_box.init_table
+            init_table.clear()
+            init_table.horizontalHeader().setVisible(False)
+            init_table.setRowCount(10)
+            init_table.setColumnCount(0)
 
             # Reset the routine configs check box status
             self.env_box.check_only_var.setChecked(False)
@@ -187,11 +194,27 @@ class BadgerRoutinePage(QWidget):
         self.btn_descr_update.setDisabled(False)
         # Fill in the generator and env configs
         name_generator = routine.generator.name
-        idx_generator = self.generators.index(name_generator)
+        try:
+            idx_generator = self.generators.index(name_generator)
+        except ValueError as e:
+            if not silent:  # show the error message if not in silent mode
+                details = traceback.format_exc()
+                dialog = BadgerScrollableMessageBox(
+                    title='Error!',
+                    text=str(e),
+                    parent=self
+                )
+                dialog.setIcon(QMessageBox.Critical)
+                dialog.setDetailedText(details)
+                dialog.exec_()
+
+            idx_generator = -1
+
         self.generator_box.cb.setCurrentIndex(idx_generator)
         # self.generator_box.edit.setPlainText(routine.generator.yaml())
-        self.generator_box.edit.setPlainText(
-            get_yaml_string(routine.generator.model_dump()))
+        filtered_config = filter_generator_config(
+            name_generator, routine.generator.model_dump())
+        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
         self.script = routine.script
 
         name_env = routine.environment.name
@@ -255,10 +278,12 @@ class BadgerRoutinePage(QWidget):
         default_config = get_generator_defaults(name)
 
         # Patch for BOs that make the low noise prior False by default
-        if name in ['upper_confidence_bound', 'expected_improvement']:
+        if name in all_generator_names['bo']:
             default_config['gp_constructor']['use_low_noise_prior'] = False
 
-        self.generator_box.edit.setPlainText(get_yaml_string(default_config))
+        # Patch to only show part of the config
+        filtered_config = filter_generator_config(name, default_config)
+        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
 
         # Update the docs
         self.window_docs.update_docs(name)
@@ -632,6 +657,14 @@ class BadgerRoutinePage(QWidget):
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.toPlainText())
+        # Patch the BO generators to make sure use_low_noise_prior is False
+        if generator_name in all_generator_names['bo']:
+            if 'gp_constructor' not in generator_params:
+                generator_params['gp_constructor'] = {
+                    'name': 'standard',  # have to add name too for pydantic validation
+                    'use_low_noise_prior': False,
+                }
+            # or else we use whatever specified by the users
         env_params = load_config(self.env_box.edit.toPlainText())
 
         # VOCS
@@ -701,8 +734,8 @@ class BadgerRoutinePage(QWidget):
             self.sig_updated.emit(routine.name, routine.description)
             QMessageBox.information(
                 self,
-                'Update succeeded!',
-                f'Routine {self.routine.name} description was updated successfully!'
+                'Update success!',
+                f'Routine {self.routine.name} description was updated!'
             )
         except Exception:
             return QMessageBox.critical(

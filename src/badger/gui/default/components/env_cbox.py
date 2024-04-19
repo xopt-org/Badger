@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPlainTextEdit, QLineEdit
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel, QListWidget, QFrame
 from PyQt5.QtCore import QRegExp
+
 from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
+from ..utils import MouseWheelWidgetAdjustmentGuard
 from ....settings import read_value
 from ....utils import strtobool
 
@@ -31,6 +33,7 @@ class BadgerEnvBox(CollapsibleBox):
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.envs)
         cb.setCurrentIndex(-1)
+        cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(cb))
         self.btn_env_play = btn_env_play = QPushButton('Open Playground')
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):

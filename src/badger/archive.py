@@ -127,3 +127,12 @@ def delete_run(run_fname):
 
     # Remove the yaml data file
     os.remove(os.path.join(prefix, run_fname))
+
+
+def get_base_run_filename(run_filename):
+    if run_filename.endswith(' (failed to load)'):
+        base_name = run_filename[:-17]
+    else:
+        base_name = run_filename
+
+    return base_name

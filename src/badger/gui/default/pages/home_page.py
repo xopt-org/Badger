@@ -1,4 +1,5 @@
 import os
+import traceback
 from importlib import resources
 from pandas import DataFrame
 
@@ -6,7 +7,9 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox
 from PyQt5.QtWidgets import QPushButton, QSplitter, QTabWidget, QShortcut
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QLabel, QFileDialog
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QKeySequence, QIcon, QFont
+from PyQt5.QtGui import QKeySequence, QIcon
+# from PyQt5.QtGui import QBrush, QColor
+from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..components.search_bar import search_bar
 from ..components.data_table import data_table, update_table, reset_table, add_row
 from ..components.routine_item import BadgerRoutineItem
@@ -18,7 +21,7 @@ from ..components.filter_cbox import BadgerFilterBox
 from ..utils import create_button
 from ....db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
 from ....db import import_routines, export_routines
-from ....archive import load_run, delete_run
+from ....archive import load_run, delete_run, get_base_run_filename
 from ....utils import get_header, strtobool
 from ....settings import read_value
 
@@ -47,6 +50,8 @@ class BadgerHomePage(QWidget):
         self.mode = 'regular'  # home page mode
         self.splitter_state = None  # store the run splitter state
         self.tab_state = None  # store the tabs state before creating new routine
+        self.current_routine = None  # current routine
+        self.go_run_failed = False  # flag to indicate go_run failed
 
         self.init_ui()
         self.config_logic()
@@ -226,6 +231,7 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_lock.connect(self.toggle_lock)
         self.run_monitor.sig_new_run.connect(self.new_run)
         self.run_monitor.sig_run_name.connect(self.run_name)
+        self.run_monitor.sig_status.connect(self.update_status)
         self.run_monitor.sig_progress.connect(self.progress)
         self.run_monitor.sig_del.connect(self.delete_run)
 
@@ -291,7 +297,10 @@ class BadgerHomePage(QWidget):
         if not runs:  # auto plot will not be triggered
             self.run_monitor.init_plots(routine)
 
-        self.routine_list.itemWidget(routine_item).activate()
+        if self.go_run_failed:  # failed to load run, do not select the routine
+            self.go_run_failed = False
+        else:
+            self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(self,
                            routines: list[str],
@@ -354,23 +363,48 @@ class BadgerHomePage(QWidget):
             self.run_monitor.init_plots(self.current_routine)
             if not self.current_routine:
                 self.routine_editor.clear()
-                self.status_bar.set_summary('no active routine')
+                self.status_bar.set_summary('No active routine')
             else:
-                self.status_bar.set_summary(f'current routine: {self.current_routine.name}')
+                self.status_bar.set_summary(f'Current routine: {self.current_routine.name}')
             return
 
-        run_filename = self.cb_history.currentText()
+        run_filename = get_base_run_filename(self.cb_history.currentText())
         try:
             _routine = load_run(run_filename)
             routine, _ = load_routine(_routine.name)  # get the initial routine
-            routine.data = _routine.data
-        except (IndexError, AttributeError):
+            # TODO: figure out how to recover the original routine
+            if routine is None:  # routine not found, could be deleted
+                routine = _routine  # make do w/ the routine saved in run
+            else:
+                routine.data = _routine.data
+        except IndexError:
             return
+        except Exception as e:  # failed to load the run
+            details = traceback.format_exc()
+            dialog = BadgerScrollableMessageBox(
+                title='Error!',
+                text=str(e),
+                parent=self
+            )
+            dialog.setIcon(QMessageBox.Critical)
+            dialog.setDetailedText(details)
+            dialog.exec_()
+            self.go_run_failed = True
+
+            # Show info in the nav bar
+            # red_brush = QBrush(QColor(255, 0, 0))  # red color
+            self.cb_history.changeCurrentItem(
+                f'{run_filename} (failed to load)',
+                # color=red_brush)
+                color=None)
+
+            return
+
         self.current_routine = routine  # update the current routine
         update_table(self.run_table, routine.sorted_data)
         self.run_monitor.init_plots(routine, run_filename)
-        self.routine_editor.set_routine(routine)
-        self.status_bar.set_summary(f'current routine: {self.current_routine.name}')
+        self.routine_editor.set_routine(routine, silent=True)
+        self.status_bar.set_summary(f'Current routine: {self.current_routine.name}')
 
     def go_prev_run(self):
         self.cb_history.selectPreviousItem()
@@ -428,6 +462,9 @@ class BadgerHomePage(QWidget):
             runs = get_runs()
         self.cb_history.updateItems(runs)
 
+    def update_status(self, info):
+        self.status_bar.set_summary(info)
+
     def progress(self, solution: DataFrame):
         vocs = self.current_routine.vocs
         vars = list(solution[vocs.variable_names].to_numpy()[0])
@@ -437,7 +474,7 @@ class BadgerHomePage(QWidget):
         add_row(self.run_table, objs + cons + vars + stas)
 
     def delete_run(self):
-        run_name = self.cb_history.currentText()
+        run_name = get_base_run_filename(self.cb_history.currentText())
 
         reply = QMessageBox.question(
             self, 'Delete run',
@@ -519,7 +556,7 @@ class BadgerHomePage(QWidget):
             export_routines(filename, routines)
 
             QMessageBox.information(
-                self, 'Success!', f'Export succeeded: filtered routines exported to {filename}')
+                self, 'Success!', f'Export success: filtered routines exported to {filename}')
         except Exception as e:
             QMessageBox.critical(self, 'Export failed!', f'Export failed: {str(e)}')
 
@@ -541,6 +578,6 @@ class BadgerHomePage(QWidget):
             import_routines(filename)
 
             QMessageBox.information(
-                self, 'Success!', f'Import succeeded: imported all routines from {filename}')
+                self, 'Success!', f'Import success: imported all routines from {filename}')
         except Exception as e:
             QMessageBox.warning(self, 'Heads-up!', f'Failed to import the following routines since they already existed: \n{str(e)}')

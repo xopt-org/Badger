@@ -41,10 +41,10 @@ def test_close_main(qtbot):
     while home_page.run_monitor.running:
         qtbot.wait(100)
 
-    window.close()  # this action show release the env
+    window.close()  # this action should release the env
     # So we expect an AttributeError here
     with pytest.raises(AttributeError):
-        routine.environment
+        home_page.run_monitor.routine.environment
 
 
 def test_auto_select_updated_routine(qtbot):
@@ -62,7 +62,7 @@ def test_auto_select_updated_routine(qtbot):
 
     editor = window.home_page.routine_editor
     qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                    "upper_confidence_bound")
+                    "expected_improvement")
     qtbot.keyClicks(editor.routine_page.env_box.cb, "test")
     editor.routine_page.env_box.var_table.cellWidget(0, 0).setChecked(True)
     editor.routine_page.env_box.obj_table.cellWidget(0, 0).setChecked(True)
@@ -127,9 +127,13 @@ def test_traceback_during_run(qtbot):
             qtbot.wait(100)
 
 
-def test_default_low_noise_prior_in_ucb(qtbot):
+# TODO: Check the use_low_noise_prior parameter in the routine
+# once it's running -- currently use_low_noise_prior is not exposed in the GUI
+# so need to check the routine object held by the monitor/runner
+def test_default_low_noise_prior_in_bo(qtbot):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
+    from xopt.generators import all_generator_names
     import yaml
 
     fix_db_path_issue()
@@ -142,9 +146,15 @@ def test_default_low_noise_prior_in_ucb(qtbot):
     assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
     editor = window.home_page.routine_editor
-    qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                    "upper_confidence_bound")
-    params = editor.routine_page.generator_box.edit.toPlainText()
-    params_dict = yaml.safe_load(params)
+    cb_generator = editor.routine_page.generator_box.cb
+    algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
+    for algo in algos:
+        if algo in all_generator_names['bo']:
+            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
+            params = editor.routine_page.generator_box.edit.toPlainText()
+            params_dict = yaml.safe_load(params)
 
-    assert not params_dict['gp_constructor']['use_low_noise_prior']
+            if 'gp_constructor' in params_dict:
+                assert not params_dict['gp_constructor']['use_low_noise_prior']
+            else:  # that part of params is hidden so we need to dig deeper
+                pass

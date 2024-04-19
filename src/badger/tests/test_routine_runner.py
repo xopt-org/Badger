@@ -33,7 +33,7 @@ class TestRoutineRunner:
 
         editor = window.home_page.routine_editor
         qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                        "upper_confidence_bound")
+                        "expected_improvement")
         params = editor.routine_page.generator_box.edit.toPlainText()
         # Turn on turbo controller
         params = params.replace("turbo_controller: null",
