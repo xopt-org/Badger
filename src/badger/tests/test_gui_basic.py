@@ -127,6 +127,9 @@ def test_traceback_during_run(qtbot):
             qtbot.wait(100)
 
 
+# TODO: Check the use_low_noise_prior parameter in the routine
+# once it's running -- currently use_low_noise_prior is not exposed in the GUI
+# so need to check the routine object held by the monitor/runner
 def test_default_low_noise_prior_in_bo(qtbot):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue

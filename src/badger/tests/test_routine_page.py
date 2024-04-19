@@ -162,3 +162,26 @@ def test_add_random_points(qtbot):
     # so max value should be 0.1, min value should be -0.1
     assert routine.initial_points.to_numpy().max() <= 0.1
     assert routine.initial_points.to_numpy().min() >= -0.1
+
+
+# TODO: Test if the EI, Simplex, and RCDS params show o the params editor
+# are the simplified versions
+def test_simplified_generator_params(qtbot):
+    pass
+
+
+# TODO: First load an old routine w/ initail points,
+# then create a new routine and check if the initial points panel
+# is cleared
+def test_initial_points_clear_when_create_routine(qtbot):
+    pass
+
+
+# TODO: Test if env selector reacts to scroll events, it should not
+def test_scroll_on_environment_selector(qtbot):
+    pass
+
+
+# TODO: Test if generator selector reacts to scroll events, it should not
+def test_scroll_on_generator_selector(qtbot):
+    pass

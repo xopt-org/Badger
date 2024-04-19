@@ -505,3 +505,9 @@ def test_del_last_run(qtbot):
     # Variables/objectives monitor should be cleared
     assert len(monitor.plot_var.items) == 0
     assert len(monitor.plot_obj.items) == 0
+
+
+# TODO: Test if logbook entry is created correctly and put into the
+# correct location when the logbook button is clicked
+def test_send_to_logbook(qtbot):
+    pass
