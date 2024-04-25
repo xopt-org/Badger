@@ -17,8 +17,6 @@ class BadgerMainWindow(QMainWindow):
         self.process_manager = processManager()
         self.process_manager.processQueueUpdated.connect(self.addSubprocess)
         self.addSubprocess()
-        self.addSubprocess()
-        self.addSubprocess()
         self.init_ui()
         self.config_logic()
 
@@ -36,19 +34,21 @@ class BadgerMainWindow(QMainWindow):
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(partial(self.cleanupThread, self.thread))
+        self.thread.finished.connect(self.cleanupThread)
         
         self.thread_list.append(self.thread)
         self.thread.start()
     
-    def cleanupThread(self, thread: QThread) -> None:
+    def cleanupThread(self) -> None:
         """
         Method to remove threads no longer active from the thread list. 
 
         Parameters: 
             thread: QThread
         """
-        self.thread_list.remove(thread)  
+        thread = self.sender()
+        if thread in self.thread_list:
+            self.thread_list.remove(thread)  
 
     def storeSubprocess(self, process_with_args: Dict) -> None:
         """
@@ -113,7 +113,7 @@ class BadgerMainWindow(QMainWindow):
 
             monitor.register_post_run_action(close_window)
             monitor.testing = True  # suppress the archive pop-ups
-            monitor.btn_stop.click()
+            monitor.routine_runner.stop_routine()
             event.ignore()
         else:
             event.ignore()

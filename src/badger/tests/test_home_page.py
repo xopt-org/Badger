@@ -1,13 +1,13 @@
 import pytest
-from badger.gui.default.components.process_manager import processManager  
+from PyQt5.QtCore import QEventLoop, QTimer
+import multiprocessing 
+from badger.db import save_routine
 
-@pytest.fixture
-def process_manager():
-    return processManager()
+@pytest.fixture(scope='session')
+def init_multiprocessing():
+    multiprocessing.set_start_method("fork", force=True)
 
-'''
-def test_home_page_run_routine(process_manager, qtbot):
-    from badger.gui.default.pages.home_page import BadgerHomePage
+def test_home_page_run_routine(qtbot, init_multiprocessing):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import (
         create_multiobjective_routine,
@@ -16,20 +16,24 @@ def test_home_page_run_routine(process_manager, qtbot):
         fix_db_path_issue,
     )
 
-    process_manager
-    print(process_manager, "test")
     fix_db_path_issue()
 
     main_page = BadgerMainWindow()
-    home_page = main_page.home_page
 
+    loop = QEventLoop()
+    QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+    loop.exec_()
+
+    home_page = main_page.home_page
     # test running routines w high level interface
     routines = [
         create_routine(),
-        create_multiobjective_routine(),
-        create_routine_turbo(),
+        #create_multiobjective_routine(),
+        #create_routine_turbo(),
     ]
+ 
     for ele in routines:
+        save_routine(ele)
         home_page.current_routine = ele
         home_page.run_monitor.testing = True
         home_page.run_monitor.termination_condition = {
@@ -39,13 +43,16 @@ def test_home_page_run_routine(process_manager, qtbot):
         home_page.go_run(-1)
         # start run in a thread and wait some time for it to finish
         home_page.run_monitor.start(True)
-        
+
         with qtbot.waitSignal(home_page.run_monitor.sig_progress, timeout=1000) as blocker:
             pass
 
         assert blocker.signal_triggered
-
+        
         # assert we get the right result, ie. correct number of samples
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        loop.exec_()
+
         assert len(home_page.run_monitor.routine.data) == 3
 
-'''

@@ -14,7 +14,7 @@ from badger.utils import (
     dump_state,
 )
 
-
+'''
 def check_critical(self, queue):
         """
         Check if a critical constraint has been violated in the last data point,
@@ -53,7 +53,7 @@ def check_critical(self, queue):
 
         queue.put(str(feas))
         return True 
-
+'''
 '''
 def check_run_status(self, routine, stop_process, pause_process, termination_condition = None):
         """
@@ -204,10 +204,9 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
     # perform optimization
     try:
         while True:
-
             if stop_process.is_set():
                 raise BadgerRunTerminatedError
-            elif pause_process.is_set():
+            elif not pause_process.is_set():
                 pause_process.wait() 
 
             # generate points to observe
@@ -234,7 +233,7 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
             # External triggers
             if stop_process.is_set():
                 raise BadgerRunTerminatedError
-            elif pause_process.is_set():
+            elif not pause_process.is_set():
                 pause_process.wait()
 
             # if still active evaluate the points and add to generator
@@ -259,3 +258,4 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         raise e
     
+

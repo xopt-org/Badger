@@ -739,14 +739,16 @@ class BadgerOptMonitor(QWidget):
         self.btn_del.setDisabled(False)
 
         self.sig_lock.emit(False)
-
+    
         try:
             # TODO: fill in the states
-            run = archive_run(self.routine, states=None)
-            self.routine_runner.run_filename = run['filename']
-            env = self.routine.environment
-            path = run['path']
-            filename = run['filename'][:-4] + 'pickle'
+            if not self.testing:
+                run = archive_run(self.routine, states=None)
+                self.routine_runner.run_filename = run['filename']
+                env = self.routine.environment
+                path = run['path']
+                filename = run['filename'][:-4] + 'pickle'
+            
             try:
                 env.interface.stop_recording(os.path.join(path, filename))
             except AttributeError:  # recording was not enabled
@@ -873,6 +875,7 @@ class BadgerOptMonitor(QWidget):
         # TODO: Should just get vars from env! Current values are not always
         # ones in the latest solution
         # current_vars = self.routine.data.iloc[-1].to_dict(orient="records")
+
         current_vars = self.routine.sorted_data[
             self.vocs.variable_names].iloc[-1].to_numpy().tolist()
 

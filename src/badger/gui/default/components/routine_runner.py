@@ -98,6 +98,7 @@ class BadgerRoutineSubprocess():
                 
                 self.data_queue.put(arg_dict)
                 self.wait_event.set()
+                self.pause_event.set()
                 self.setup_timer()
 
         except BadgerRunTerminatedError as e:
@@ -121,12 +122,17 @@ class BadgerRoutineSubprocess():
         
     def check_queue(self) -> None:
         """
-        This method checks teh subprocess for updates in the evaluate_queue. 
+        This method checks the subprocess for updates in the evaluate_queue. 
         It is called by a QTimer every 100 miliseconds.  
         """
         if not self.evaluate_queue.empty():
-            results = self.evaluate_queue.get()
-            self.after_evaluate(results)
+            while not self.evaluate_queue.empty():                                                  
+                results = self.evaluate_queue.get()
+                self.after_evaluate(results)
+
+        if not self.routine_process.is_alive():
+            self.timer.stop()
+            self.signals.finished.emit()
 
     def after_evaluate(self, results) -> None:
         """
@@ -167,7 +173,7 @@ class BadgerRoutineSubprocess():
         This is accomplished by a multiprocessing Event which when set will pause the subprocess.
         """
         if pause:
-            self.pause_event.set()
-        else:
             self.pause_event.clear()
+        else:
+            self.pause_event.set()
 

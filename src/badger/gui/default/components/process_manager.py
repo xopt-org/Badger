@@ -35,3 +35,11 @@ class processManager(QObject):
             return process_with_args
         
         return None
+    
+    def close_proccesses(self) -> bool:
+        for i in range(0, len(self.processes_queue)):
+            process = self.processes_queue.pop(0) 
+            process['process'].terminate()
+            process['process'].join()
+
+        return True 
