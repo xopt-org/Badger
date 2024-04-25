@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 from badger.errors import BadgerRoutineError
 from badger.tests.utils import create_routine
 
-'''
+
 def test_routine_page_init(qtbot):
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
@@ -81,4 +81,3 @@ def test_ui_update(qtbot):
     window.refresh_ui(routine)
 
     assert window.generator_box.edit.toPlainText() == "{}\n"
-'''
