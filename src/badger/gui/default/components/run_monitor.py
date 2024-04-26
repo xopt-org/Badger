@@ -4,10 +4,10 @@ from importlib import resources
 import numpy as np
 import pandas as pd
 from typing import List
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QCheckBox, QTextEdit
 from PyQt5.QtWidgets import QMessageBox, QComboBox, QLabel, QStyledItemDelegate
-from PyQt5.QtWidgets import QToolButton, QMenu, QAction
-from PyQt5.QtCore import pyqtSignal, QThreadPool, QSize
+from PyQt5.QtWidgets import QToolButton, QMenu, QAction, QScrollArea
+from PyQt5.QtCore import pyqtSignal, QThreadPool
 from PyQt5.QtGui import QFont, QIcon
 import pyqtgraph as pg
 from xopt import VOCS
@@ -17,10 +17,12 @@ from .extensions_palette import ExtensionsPalette
 from .routine_runner import BadgerRoutineSubprocess
 from ..utils import create_button
 from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
+from ..windows.message_dialog import BadgerScrollableMessageBox
 from ....routine import Routine
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
 from ....logbook import send_to_logbook, BADGER_LOGBOOK_ROOT
 from ....archive import archive_run, BADGER_ARCHIVE_ROOT
+from ....tests.utils import get_current_vars
 
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -109,6 +111,7 @@ class BadgerOptMonitor(QWidget):
     sig_lock = pyqtSignal(bool)  # True: lock GUI, False: unlock GUI
     sig_new_run = pyqtSignal()
     sig_run_name = pyqtSignal(str)  # filename of the new run
+    sig_status = pyqtSignal(str)  # status information
     sig_inspect = pyqtSignal(int)  # index of the inspector
     sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
     sig_del = pyqtSignal()
@@ -397,18 +400,20 @@ class BadgerOptMonitor(QWidget):
             self.plot_var.clear()
             self.plot_obj.clear()
 
-            # if constraints are active clear them
+            # if constraints are active delete them
             try:
-                self.plot_con.clear()
-                self.plot_con.addItem(self.inspector_constraint)
-            except AttributeError:
+                self.monitor.removeItem(self.plot_con)
+                self.plot_con.removeItem(self.inspector_constraint)
+                del self.plot_con
+            except:
                 pass
 
-            # if statics exist clear that plot
+            # if statics exist delete that plot
             try:
-                self.plot_sta.clear()
-                self.plot_sta.addItem(self.inspector_state)
-            except AttributeError:
+                self.monitor.removeItem(self.plot_obs)
+                self.plot_obs.removeItem(self.inspector_state)
+                del self.plot_obs
+            except:
                 pass
 
             # if no routine is loaded set button to disabled
@@ -420,6 +425,8 @@ class BadgerOptMonitor(QWidget):
             self.btn_opt.setDisabled(True)
             self.btn_set.setDisabled(True)
 
+            self.routine = None
+
             return
 
         self.routine = routine
@@ -428,7 +435,7 @@ class BadgerOptMonitor(QWidget):
         objective_names = self.vocs.objective_names
         variable_names = self.vocs.variable_names
         constraint_names = self.vocs.constraint_names
-        sta_names = self.vocs.constant_names
+        sta_names = self.vocs.observable_names
 
         # Configure variable plots
         self.curves_variable = self._configure_plot(
@@ -446,12 +453,11 @@ class BadgerOptMonitor(QWidget):
                 self.plot_con
             except:
                 self.plot_con = plot_con = add_axes(
-                    self.monitor, "Constraints", 'Evaluation History (C)',
+                    self.monitor, "constraints", 'Evaluation History (C)',
                     self.inspector_constraint, row=1, col=0
                 )
                 plot_con.setXLink(self.plot_obj)
 
-            # Configure objective plots
             self.curves_constraint = self._configure_plot(
                 self.plot_con, self.inspector_constraint, constraint_names
             )
@@ -467,26 +473,22 @@ class BadgerOptMonitor(QWidget):
         # Configure state plots
         if sta_names:
             try:
-                self.plot_sta
+                self.plot_obs
             except:
-                self.plot_sta = plot_sta = add_axes(
-                    self.monitor, "Constants", 'Evaluation History (S)',
-                    self.inspector_state, row=1, col=0
+                self.plot_obs = plot_obs = add_axes(
+                    self.monitor, "observables", 'Evaluation History (S)',
+                    self.inspector_state, row=2, col=0
                 )
-                plot_sta.setXLink(self.plot_obj)
+                plot_obs.setXLink(self.plot_obj)
 
-            self.curves_sta = []
-            for i, sta_name in enumerate(sta_names):
-                color = self.colors[i % len(self.colors)]
-                symbol = self.symbols[i % len(self.colors)]
-                _curve = self.plot_sta.plot(pen=pg.mkPen(color, width=3),
-                                            name=sta_name)
-                self.curves_sta.append(_curve)
+            self.curves_sta = self._configure_plot(
+                self.plot_obs, self.inspector_state, sta_names
+            )
         else:
             try:
-                self.monitor.removeItem(self.plot_sta)
-                self.plot_sta.removeItem(self.inspector_state)
-                del self.plot_sta
+                self.monitor.removeItem(self.plot_obs)
+                self.plot_obs.removeItem(self.inspector_state)
+                del self.plot_obs
             except:
                 pass
 
@@ -560,6 +562,7 @@ class BadgerOptMonitor(QWidget):
 
     def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
+        self.sig_status.emit(f'Running routine {self.routine.name}...')
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
@@ -586,8 +589,8 @@ class BadgerOptMonitor(QWidget):
         if self.vocs.constraint_names:
             self.plot_con.enableAutoRange()
 
-        # if self.sta_names:
-        #    self.plot_sta.enableAutoRange()
+        if self.vocs.observable_names:
+           self.plot_obs.enableAutoRange()
 
     def open_extensions_palette(self):
         self.extensions_palette.show()
@@ -652,8 +655,7 @@ class BadgerOptMonitor(QWidget):
         set_data(variable_names, self.curves_variable, input_data, ts)
         set_data(self.vocs.objective_names, self.curves_objective, data_copy, ts)
         set_data(self.vocs.constraint_names, self.curves_constraint, data_copy, ts)
-
-        # TODO: add tracking of observables
+        set_data(self.vocs.observable_names, self.curves_sta, data_copy, ts)
 
     def check_critical(self):
         """
@@ -683,23 +685,25 @@ class BadgerOptMonitor(QWidget):
         # if there are no critical constraints then skip
         if len(self.routine.critical_constraint_names) == 0:
             return
-        else:
-            feas = self.vocs.feasibility_data(self.routine.data.iloc[-1])
-            violated_critical = ~feas[self.routine.critical_constraint_names].any()
-
-            if not violated_critical:
-                return
             
+        feas = self.vocs.feasibility_data(self.routine.data.tail(1), prefix='')
+        feasible = feas['feasible'].iloc[0].item()
+        if feasible:
+            return
+
         # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
         self.btn_ctrl.setIcon(self.icon_play)
         self.btn_ctrl.setToolTip('Resume')
         self.btn_ctrl._status = 'play'
 
-        msg = str(feas)
+        # Show the list of critical violated constraints
+        feas_crit = feas[self.routine.critical_constraint_names]
+        violated_crit = feas_crit.columns[~feas_crit.iloc[0]].tolist()
+        msg = '\n'.join(violated_crit)
         reply = QMessageBox.warning(self,
                                     'Run Paused',
-                                    f'Critical constraint was violated: {msg}\nTerminate the run?',
+                                    f'The following critical constraints were violated:\n\n{msg}\n\nTerminate the run?',
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             self.sig_stop.emit()
@@ -755,16 +759,18 @@ class BadgerOptMonitor(QWidget):
                 pass
 
             self.sig_run_name.emit(run['filename'])
-            if not self.testing:
-                QMessageBox.information(
-                    self, 'Success!',
-                    f'Archive succeeded: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            self.sig_status.emit(f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            # if not self.testing:
+            #     QMessageBox.information(
+            #         self, 'Success!',
+            #         f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
         except Exception as e:
             self.sig_run_name.emit(None)
-            if not self.testing:
-                QMessageBox.critical(self, 'Archive failed!',
-                                     f'Archive failed: {str(e)}')
+            self.sig_status.emit(f'Archive failed: {str(e)}')
+            # if not self.testing:
+            #     QMessageBox.critical(self, 'Archive failed!',
+            #                          f'Archive failed: {str(e)}')
         finally:
             for action in self.post_run_actions:
                 action()
@@ -777,27 +783,33 @@ class BadgerOptMonitor(QWidget):
                 pass
 
     def on_error(self, error):
-        QMessageBox.critical(self, 'Error!', str(error))
+        details = error._details if hasattr(error, '_details') else None
+
+        dialog = BadgerScrollableMessageBox(
+            title='Error!',
+            text=str(error),
+            parent=self
+        )
+        dialog.setIcon(QMessageBox.Critical)
+        dialog.setDetailedText(details)
+        dialog.exec_()
 
     # Do not show info -- too distracting
     def on_info(self, msg):
         pass
-        # QMessageBox.information(self, 'Info', msg)
 
     def logbook(self):
         try:
-            if self.routine_runner:
-                routine = self.routine_runner.name
-                data = self.routine_runner.data.to_dict('list')
-            else:
-                routine = self.routine
-                data = self.data
-            send_to_logbook(routine, data, self.monitor)
+            send_to_logbook(self.routine, self.monitor)
         except Exception as e:
-            QMessageBox.critical(self, 'Log failed!', str(e))
+            self.sig_status.emit(f'Log failed: {str(e)}')
+            # QMessageBox.critical(self, 'Log failed!', str(e))
 
-        QMessageBox.information(
-            self, 'Success!', f'Log saved to {BADGER_LOGBOOK_ROOT}')
+            return
+
+        self.sig_status.emit(f'Log success: Log saved to {BADGER_LOGBOOK_ROOT}')
+        # QMessageBox.information(
+        #     self, 'Success!', f'')
 
     def ctrl_routine(self):
         if self.btn_ctrl._status == 'pause':
@@ -815,27 +827,27 @@ class BadgerOptMonitor(QWidget):
         self.inspector_variable.setValue(ins_obj.value())
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(ins_obj.value())
-        # if self.sta_names:
-        #    self.inspector_state.setValue(ins_obj.value())
+        if self.vocs.observable_names:
+            self.inspector_state.setValue(ins_obj.value())
 
     def ins_con_dragged(self, ins_con):
         self.inspector_variable.setValue(ins_con.value())
         self.inspector_objective.setValue(ins_con.value())
-        # if self.sta_names:
-        #    self.inspector_state.setValue(ins_con.value())
+        if self.vocs.observable_names:
+            self.inspector_state.setValue(ins_con.value())
 
     def ins_sta_dragged(self, ins_sta):
         self.inspector_variable.setValue(ins_sta.value())
         self.inspector_objective.setValue(ins_sta.value())
-        # if self.vocs.constraint_names:
-        #    self.inspector_constraint.setValue(ins_sta.value())
+        if self.vocs.constraint_names:
+            self.inspector_constraint.setValue(ins_sta.value())
 
     def ins_var_dragged(self, ins_var):
         self.inspector_objective.setValue(ins_var.value())
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(ins_var.value())
-        # if self.sta_names:
-        #    self.inspector_state.setValue(ins_var.value())
+        if self.vocs.observable_names:
+            self.inspector_state.setValue(ins_var.value())
 
     def ins_drag_done(self, ins):
         self.sync_ins(ins.value())
@@ -844,13 +856,16 @@ class BadgerOptMonitor(QWidget):
         if self.plot_x_axis:  # x-axis is time
             value, idx = self.closest_ts(pos)
         else:
-            ts = self.extract_timestamp()
-            value = idx = np.clip(np.round(pos), 0, len(ts) - 1)
+            try:
+                ts = self.extract_timestamp()
+                value = idx = np.clip(np.round(pos), 0, len(ts) - 1)
+            except:  # no data
+                value = idx = np.round(pos)
         self.inspector_objective.setValue(value)
-        if self.vocs.constraint_names:
+        if self.vocs and self.vocs.constraint_names:
             self.inspector_constraint.setValue(value)
-        # if self.sta_names:
-        #    self.inspector_state.setValue(value)
+        if self.vocs and self.vocs.observable_names:
+            self.inspector_state.setValue(value)
         self.inspector_variable.setValue(value)
 
         self.sig_inspect.emit(idx)
@@ -872,25 +887,31 @@ class BadgerOptMonitor(QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        # TODO: Should just get vars from env! Current values are not always
-        # ones in the latest solution
-        # current_vars = self.routine.data.iloc[-1].to_dict(orient="records")
+        curr_vars = get_current_vars(self.routine)
 
-        current_vars = self.routine.sorted_data[
-            self.vocs.variable_names].iloc[-1].to_numpy().tolist()
-
-        # evaluate the initial variables -- do not store the result
-        # self.routine.evaluate(self.init_vars)
         self.routine.environment._set_variables(
             dict(zip(self.vocs.variable_names, self.init_vars)))
 
-        QMessageBox.information(self, 'Reset Environment',
-                                f'Env vars {current_vars} -> {self.init_vars}')
+        self.jump_to_solution(0)
+        self.sig_inspect.emit(0)
+        # Center around the zero position
+        if self.plot_x_axis:  # x-axis is time
+            pos, _ = self.closest_ts(self.inspector_objective.value())
+        else:
+            pos = int(self.inspector_objective.value())
+        x_range = self.plot_var.getViewBox().viewRange()[0]
+        delta = (x_range[1] - x_range[0]) / 2
+        self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
+
+        self.sig_status.emit(f'Reset environment: Env vars {curr_vars} -> {self.init_vars}')
+        # QMessageBox.information(self, 'Reset Environment',
+        #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
     def jump_to_optimal(self):
         try:
-            best_idx, _ = self.routine.vocs.select_best(
+            best_idx, _, _ = self.routine.vocs.select_best(
                 self.routine.sorted_data, n=1)
+            # print(best_idx, _)
             best_idx = int(best_idx[0])
 
             self.jump_to_solution(best_idx)
@@ -911,8 +932,8 @@ class BadgerOptMonitor(QWidget):
         self.inspector_objective.setValue(value)
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(value)
-        # if self.sta_names:
-        #    self.inspector_state.setValue(value)
+        if self.vocs.observable_names:
+            self.inspector_state.setValue(value)
         self.inspector_variable.setValue(value)
 
     def set_vars(self):
@@ -926,17 +947,21 @@ class BadgerOptMonitor(QWidget):
 
         reply = QMessageBox.question(self,
                                      'Apply Solution',
-                                     f'Are you sure you want to apply the current solution at {solution} to env?',
+                                     f'Are you sure you want to apply the selected solution at {solution} to env?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
 
+        curr_vars = get_current_vars(self.routine)
         self.routine.environment._set_variables(
             dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2
-        self.plot_var.setXRange(pos - delta, pos + delta)
+        self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
+
+        updated_vars = get_current_vars(self.routine)
+        self.sig_status.emit(f'Dial in solution: Env vars {curr_vars} -> {updated_vars}')
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
 
@@ -949,15 +974,15 @@ class BadgerOptMonitor(QWidget):
             self.plot_obj.setLabel('bottom', 'time (s)')
             if self.vocs.constraint_names:
                 self.plot_con.setLabel('bottom', 'time (s)')
-            # if self.sta_names:
-            #    self.plot_sta.setLabel('bottom', 'time (s)')
+            if self.vocs.observable_names:
+                self.plot_obs.setLabel('bottom', 'time (s)')
         else:
             self.plot_var.setLabel('bottom', 'iterations')
             self.plot_obj.setLabel('bottom', 'iterations')
             if self.vocs.constraint_names:
                 self.plot_con.setLabel('bottom', 'iterations')
-            # if self.sta_names:
-            #     self.plot_sta.setLabel('bottom', 'iterations')
+            if self.vocs.observable_names:
+                self.plot_obs.setLabel('bottom', 'iterations')
 
         # Update inspector line position
         if i:
@@ -968,8 +993,8 @@ class BadgerOptMonitor(QWidget):
         self.inspector_objective.setValue(value)
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(value)
-        # if self.sta_names:
-        #    self.inspector_state.setValue(value)
+        if self.vocs.observable_names:
+            self.inspector_state.setValue(value)
         self.inspector_variable.setValue(value)
 
         self.update_curves()
@@ -986,18 +1011,18 @@ class BadgerOptMonitor(QWidget):
     def on_mouse_click(self, event):
         # https://stackoverflow.com/a/64081483
         coor_obj = self.plot_obj.vb.mapSceneToView(event._scenePos)
-        if self.vocs.constraint_names:
+        if self.vocs and self.vocs.constraint_names:
             coor_con = self.plot_con.vb.mapSceneToView(event._scenePos)
-        # if self.sta_names:
-        #    coor_sta = self.plot_sta.vb.mapSceneToView(event._scenePos)
+        if self.vocs and self.vocs.observable_names:
+            coor_sta = self.plot_obs.vb.mapSceneToView(event._scenePos)
         coor_var = self.plot_var.vb.mapSceneToView(event._scenePos)
 
         flag = self.plot_obj.viewRect().contains(coor_obj) or \
-               self.plot_var.viewRect().contains(coor_var)
-        if self.vocs.constraint_names:
+            self.plot_var.viewRect().contains(coor_var)
+        if self.vocs and self.vocs.constraint_names:
             flag = flag or self.plot_con.viewRect().contains(coor_con)
-        # if self.sta_names:
-        #    flag = flag or self.plot_sta.viewRect().contains(coor_sta)
+        if self.vocs and self.vocs.observable_names:
+            flag = flag or self.plot_obs.viewRect().contains(coor_sta)
 
         if flag:
             self.sync_ins(coor_obj.x())

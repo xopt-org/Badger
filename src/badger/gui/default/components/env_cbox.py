@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPlainTextEdit, QLineEdit
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel, QListWidget, QFrame
 from PyQt5.QtCore import QRegExp
+
 from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
+from ..utils import MouseWheelWidgetAdjustmentGuard
 from ....settings import read_value
 from ....utils import strtobool
 
@@ -31,6 +33,7 @@ class BadgerEnvBox(CollapsibleBox):
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.envs)
         cb.setCurrentIndex(-1)
+        cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(cb))
         self.btn_env_play = btn_env_play = QPushButton('Open Playground')
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
@@ -124,11 +127,14 @@ class BadgerEnvBox(CollapsibleBox):
         btn_add_row.setFixedSize(96, 24)
         self.btn_add_curr = btn_add_curr = QPushButton('Add Current')
         btn_add_curr.setFixedSize(96, 24)
+        self.btn_add_rand = btn_add_rand = QPushButton('Add Random')
+        btn_add_rand.setFixedSize(96, 24)
         self.btn_clear = btn_clear = QPushButton('Clear All')
         btn_clear.setFixedSize(96, 24)
         hbox_action_init.addWidget(btn_add_row)
         hbox_action_init.addStretch()
         hbox_action_init.addWidget(btn_add_curr)
+        hbox_action_init.addWidget(btn_add_rand)
         hbox_action_init.addWidget(btn_clear)
         vbox_init.addWidget(action_init)
         self.init_table = init_data_table()
@@ -219,7 +225,7 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_sta_col = QWidget()
         vbox_lbl_sta = QVBoxLayout(lbl_sta_col)
         vbox_lbl_sta.setContentsMargins(0, 0, 0, 0)
-        lbl_sta = QLabel('Constants')
+        lbl_sta = QLabel('Observables')
         lbl_sta.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_sta.addWidget(lbl_sta)
         vbox_lbl_sta.addStretch(1)
@@ -237,11 +243,11 @@ class BadgerEnvBox(CollapsibleBox):
         btn_add_sta.setDisabled(True)
         hbox_action_sta.addWidget(btn_add_sta)
         hbox_action_sta.addStretch()
-        self.list_sta = QListWidget()
-        self.list_sta.setMaximumHeight(80)
-        # self.list_sta.setFixedHeight(64)
-        self.list_sta.setViewportMargins(2, 2, 17, 2)
-        vbox_sta_edit.addWidget(self.list_sta)
+        self.list_obs = QListWidget()
+        self.list_obs.setMaximumHeight(80)
+        # self.list_obs.setFixedHeight(64)
+        self.list_obs.setViewportMargins(2, 2, 17, 2)
+        vbox_sta_edit.addWidget(self.list_obs)
         # vbox_sta_edit.addStretch()
         hbox_sta.addWidget(edit_sta_col)
         cbox_more.setContentLayout(vbox_more)
@@ -305,4 +311,4 @@ class BadgerEnvBox(CollapsibleBox):
         return
         self._fit_content(self.list_obj)
         self._fit_content(self.list_con)
-        self._fit_content(self.list_sta)
+        self._fit_content(self.list_obs)

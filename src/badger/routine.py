@@ -55,7 +55,10 @@ class Routine(Xopt):
                     except IndexError:
                         data["data"] = pd.DataFrame(data["data"], index=[0])
 
-                    data["generator"].add_data(data["data"])
+                    # Add data one row at a time to avoid generator issues
+                    for i in range(len(data["data"])):
+                        row_df = data["data"].iloc[[i]]
+                        data["generator"].add_data(row_df)
 
             # instantiate env
             if isinstance(data["environment"], dict):
@@ -103,8 +106,9 @@ class Routine(Xopt):
     @property
     def sorted_data(self):
         data_copy = deepcopy(self.data)
-        data_copy.index = data_copy.index.astype(int)
-        data_copy.sort_index(inplace=True)
+        if data_copy is not None:
+            data_copy.index = data_copy.index.astype(int)
+            data_copy.sort_index(inplace=True)
 
         return data_copy
 

@@ -1,4 +1,5 @@
 import os
+import warnings
 import logging
 logger = logging.getLogger(__name__)
 from .db import save_run, remove_run_by_filename
@@ -90,7 +91,17 @@ def load_run(run_fname):
                             third_level,
                             run_fname)
 
-    routine = Routine.from_file(filename)
+    # TODO: create utility function to catch warnings to remove code
+    # duplication
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        routine = Routine.from_file(filename)
+
+        # Check if any user warnings were caught
+        for warning in caught_warnings:
+            if warning.category == UserWarning:
+                pass
+            else:
+                print(f"Caught user warning: {warning.message}")
 
     return routine
 
@@ -116,3 +127,12 @@ def delete_run(run_fname):
 
     # Remove the yaml data file
     os.remove(os.path.join(prefix, run_fname))
+
+
+def get_base_run_filename(run_filename):
+    if run_filename.endswith(' (failed to load)'):
+        base_name = run_filename[:-17]
+    else:
+        base_name = run_filename
+
+    return base_name

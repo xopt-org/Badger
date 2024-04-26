@@ -30,11 +30,14 @@ def check_run_status(active_callback):
 def convert_to_solution(result: DataFrame, routine: Routine):
     vocs = routine.vocs
     try:
-        best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
-        if best_idx != len(routine.data) - 1:
+        best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
+        if best_idx.size > 0:
+            if best_idx != len(routine.data) - 1:
+                is_optimal = False
+            else:
+                is_optimal = True
+        else:  # no feasible solution
             is_optimal = False
-        else:
-            is_optimal = True
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
 
@@ -110,7 +113,6 @@ def run_routine(
     # evaluate initial points:
     # Nikita: more care about the setting var logic,
     # wait or consider timeout/retry
-    # TODO: need to evaluate a single point at the time
     for _, ele in initial_points.iterrows():
         result = routine.evaluate_data(ele.to_dict())
         solution = convert_to_solution(result, routine)

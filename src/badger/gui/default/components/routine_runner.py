@@ -11,6 +11,11 @@ from .process_manager import processManager
 from ....errors import BadgerRunTerminatedError
 from ....core_subprocess import run_routine_subprocess
 import os
+import traceback
+from pandas import DataFrame
+import torch  # for converting dtype str to torch object
+from ....tests.utils import get_current_vars
+
 
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
@@ -19,7 +24,7 @@ class BadgerRoutineSignals(QObject):
     routine_data = pyqtSignal(VOCS)
     error = pyqtSignal(Exception)
     info = pyqtSignal(str)
-
+    
 
 class BadgerRoutineSubprocess():
     """
@@ -80,6 +85,17 @@ class BadgerRoutineSubprocess():
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
+        # Patch for converting dtype str to torch object
+        try:
+            dtype = self.routine.generator.turbo_controller.tkwargs['dtype']
+            self.routine.generator.turbo_controller.tkwargs['dtype'] = eval(dtype)
+        except AttributeError:
+            pass
+        except KeyError:
+            pass
+        except TypeError:
+            pass
+
         try:
                 self.save_init_vars()
                 self.process_with_args = self.process_manager.remove_from_queue()
@@ -105,7 +121,8 @@ class BadgerRoutineSubprocess():
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:
-            print(e)
+            traceback_info = traceback.format_exc()
+            e._details = traceback_info
             self.signals.finished.emit()
             self.signals.error.emit(e)
 
@@ -148,6 +165,12 @@ class BadgerRoutineSubprocess():
         var_names = self.routine.vocs.variable_names
         var_dict = self.routine.environment._get_variables(var_names)
         init_vars = list(var_dict.values())
+
+    def save_init_vars_alt(self) -> None:
+        """
+        Emits the intital variables in the env_ready signal. 
+        """
+        init_vars = get_current_vars(self.routine)
         self.signals.env_ready.emit(init_vars)
 
     def stop_routine(self) -> None:
