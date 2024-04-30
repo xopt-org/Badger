@@ -20,6 +20,10 @@ import sys
 
 
 class TestRunMonitor:
+    @pytest.fixture(scope='session')
+    def init_multiprocessing(self):
+        multiprocessing.set_start_method("fork", force=True)
+
     @pytest.fixture
     def process_manager(self):
         process_manager = processManager()
@@ -28,21 +32,16 @@ class TestRunMonitor:
         process_builder.create_subprocess()
         return process_manager
 
-    @pytest.fixture(scope='session')
-    def init_multiprocessing(self):
-        multiprocessing.set_start_method("fork", force=True)
-
     @pytest.fixture
     def monitor(self, process_manager, init_multiprocessing):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine, fix_db_path_issue
 
         fix_db_path_issue()
+        routine = create_routine()
+        save_routine(routine)
         monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
-        routine = create_routine()
-        time.sleep(1)
-        save_routine(routine)
         monitor.routine = routine
     
         return monitor
@@ -54,23 +53,16 @@ class TestRunMonitor:
         assert len(monitor.routine.data) == 10
 
     
-    def test_run_monitor(self, qtbot, process_manager, init_multiprocessing):
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
+    def test_run_monitor(self, qtbot, monitor):
+        from badger.tests.utils import fix_db_path_issue
         fix_db_path_issue()
 
-        monitor = BadgerOptMonitor(process_manager)
-        monitor.testing = True
-        qtbot.addWidget(monitor)
-
-        routine = create_routine()
-        save_routine(routine)
         # test initialization - first w/o routine
         monitor.init_plots()
         assert monitor.btn_stop.text() == "Run"
 
         # test initialization - then w/ routine
-        monitor.init_plots(routine)
+        monitor.init_plots(monitor.routine)
         assert monitor.btn_stop.text() == "Run"
 
         # add some data
@@ -91,7 +83,7 @@ class TestRunMonitor:
         QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
         time.sleep(1)
         QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
-
+        
     def test_routine_identity(self, qtbot, process_manager, init_multiprocessing):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine, fix_db_path_issue
@@ -99,7 +91,7 @@ class TestRunMonitor:
         fix_db_path_issue()
 
         monitor = BadgerOptMonitor(process_manager)
-        qtbot.addWidget(monitor)
+        #qtbot.addWidget(monitor)
 
         routine = create_routine()
         save_routine(routine)
@@ -142,14 +134,13 @@ class TestRunMonitor:
         assert new_variable_value != orginal_value
         assert len(sig_inspect_spy) == 1
 
-
-    def create_test_run_monitor(self, add_data=True):
+    def create_test_run_monitor(self, process_manager, add_data=True):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine, fix_db_path_issue
 
         fix_db_path_issue()
 
-        monitor = BadgerOptMonitor()
+        monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
 
         routine = create_routine()
@@ -162,31 +153,15 @@ class TestRunMonitor:
 
         return monitor
 
-
-    def create_test_run_monitor_critical(self):
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine_critical, fix_db_path_issue
-
-        fix_db_path_issue()
-
-        monitor = BadgerOptMonitor()
-        monitor.testing = True
-
-        routine = create_routine_critical()
-        monitor.init_plots(routine)
-
-        return monitor
-
-
-    def test_run_monitor(self, qtbot):
+    def test_run_monitor(self, qtbot, process_manager):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine, fix_db_path_issue
 
         fix_db_path_issue()
 
-        monitor = BadgerOptMonitor()
+        monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
-        qtbot.addWidget(monitor)
+        #qtbot.addWidget(monitor)
 
         routine = create_routine()
 
@@ -216,106 +191,6 @@ class TestRunMonitor:
         QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
         time.sleep(1)
         QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
-
-
-    def test_routine_identity(self, qtbot):
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
-
-        monitor = BadgerOptMonitor()
-        qtbot.addWidget(monitor)
-
-        routine = create_routine()
-
-        # Feed in the sample routine
-        monitor.routine = routine
-        monitor.init_routine_runner()
-
-        assert monitor.routine_runner.routine == monitor.routine
-
-
-    def test_plotting(self, qtbot):
-        monitor = create_test_run_monitor()
-        monitor.update_curves()
-
-        monitor.plot_x_axis = 1
-        monitor.update_curves()
-
-        monitor.plot_x_axis = 0
-        monitor.x_plot_relative = 1
-        monitor.update_curves()
-
-        monitor.plot_x_axis = 1
-        monitor.x_plot_relative = 1
-        monitor.x_plot_y_axis = 1
-        monitor.update_curves()
-
-
-    def test_click_graph(self, qtbot, mocker):
-        monitor = create_test_run_monitor()
-        sig_inspect_spy = QSignalSpy(monitor.sig_inspect)
-        monitor.plot_x_axis = True
-
-        mock_event = mocker.MagicMock(spec=QMouseEvent)
-        mock_event._scenePos = QPointF(350, 240)
-
-        orginal_value = monitor.inspector_variable.value()
-        monitor.on_mouse_click(mock_event)
-        new_variable_value = monitor.inspector_variable.value()
-
-        assert new_variable_value != orginal_value
-        assert len(sig_inspect_spy) == 1
-
-        # TODO: make asserts for other changes when the graph is clicked on by the user.
-
-
-    def test_x_axis_specification(self, qtbot, mocker):
-        # check iteration/time drop down menu
-        monitor = create_test_run_monitor()
-
-        # read time stamp
-        time_value = monitor.inspector_variable.value()
-
-        # set inspector line index 1
-        monitor.inspector_variable.setValue(1)
-
-        # Iteration selected
-        monitor.cb_plot_x.setCurrentIndex(0)
-
-        # Test label setting
-        plot_var_axis = monitor.plot_var.getAxis("bottom")
-        assert plot_var_axis.label.toPlainText().strip() == "iterations"
-
-        plot_obj_axis = monitor.plot_obj.getAxis("bottom")
-        assert plot_obj_axis.label.toPlainText().strip() == "iterations"
-
-        if monitor.vocs.constraint_names:
-            plot_con_axis = monitor.plot_con.getAxis("bottom")
-            assert plot_con_axis.label.toPlainText().strip() == "iterations"
-
-        assert isinstance(monitor.inspector_objective.value(), int)
-        assert isinstance(monitor.inspector_variable.value(), int)
-        if monitor.vocs.constraint_names:
-            assert isinstance(monitor.inspector_constraint.value(), int)
-
-        # Time selected
-        monitor.cb_plot_x.setCurrentIndex(1)
-
-        # Test label setting
-        plot_var_axis_time = monitor.plot_var.getAxis("bottom")
-        assert plot_var_axis_time.label.toPlainText().strip() == "time (s)"
-
-        plot_obj_axis_time = monitor.plot_obj.getAxis("bottom")
-        assert plot_obj_axis_time.label.toPlainText().strip() == "time (s)"
-
-        if monitor.vocs.constraint_names:
-            plot_con_axis_time = monitor.plot_con.getAxis("bottom")
-            assert plot_con_axis_time.label.toPlainText().strip() == "time (s)"
-
-        mock_event = mocker.MagicMock(spec=QMouseEvent)
-        mock_event._scenePos = QPointF(350, 240)
 
     def test_x_axis_specification(self, qtbot, monitor, mocker):
         # check iteration/time drop down menu
@@ -462,43 +337,65 @@ class TestRunMonitor:
         # Check if it is going to be the optimal solution
         assert max_value == optimal_value
 
-    '''
-    def test_reset_environment(self, qtbot, monitor):
+    
+    def test_reset_environment(self, qtbot, init_multiprocessing):
         from badger.tests.utils import get_current_vars, get_vars_in_row
+        from badger.gui.default.windows.main_window import BadgerMainWindow
+        from badger.tests.utils import fix_db_path_issue, create_routine
+
+        fix_db_path_issue()
+
+        window = BadgerMainWindow()
+
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        loop.exec_()
+
+        # Run a routine
+        routine = create_routine()
+        save_routine(routine)
+        home_page = window.home_page
+        home_page.current_routine = routine
+        monitor = home_page.run_monitor
+        monitor.testing = True
 
         # check if reset button click signal is trigged and if state is same as original state after click
-        init_vars = get_current_vars(monitor.routine)
+        init_vars = get_current_vars(routine)
 
         monitor.termination_condition = {
             "tc_idx": 0,
             "max_eval": 10,
         }
+        home_page.go_run(-1)
         monitor.start(True)
 
-    with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
-        # with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
-        qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
-        # mock_info.assert_called_once()
-
-        # Check if current env vars matches the last solution in data
-        last_vars = get_vars_in_row(monitor.routine, idx=-1)
-        curr_vars = get_current_vars(monitor.routine)
-        assert np.all(curr_vars == last_vars)
-
-        # Reset env and confirm
-        spy = QSignalSpy(monitor.btn_reset.clicked)
+        while monitor.running:
+            qtbot.wait(100)
 
         with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
-            with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
-                qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
-                mock_info.assert_called_once()
+            # with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
+            qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
+            # mock_info.assert_called_once()
 
-        assert len(spy) == 1
+            # Check if current env vars matches the last solution in data
+            last_vars = get_vars_in_row(monitor.routine, idx=-1)
+            curr_vars = get_current_vars(monitor.routine)
+            assert np.all(curr_vars == last_vars)
 
-        # Check if the env has been reset
-        curr_vars = get_current_vars(monitor.routine)
-        assert np.all(curr_vars == init_vars)
-    '''
+            # Reset env and confirm
+            spy = QSignalSpy(monitor.btn_reset.clicked)
+
+            with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
+                with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
+                    qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
+                    mock_info.assert_called_once()
+
+            assert len(spy) == 1
+
+            # Check if the env has been reset
+            curr_vars = get_current_vars(monitor.routine)
+            assert np.all(curr_vars == init_vars)
+    
   
     def test_dial_in_solution(self, qtbot, monitor):
         from badger.tests.utils import get_current_vars, get_vars_in_row
@@ -521,22 +418,8 @@ class TestRunMonitor:
         assert len(spy) == 1
 
         new_x_view_range = monitor.plot_var.getViewBox().viewRange()[0]
-
-        """
+        
         assert new_x_view_range != current_x_view_range
-
-        # Test if the solution has been dialed in
-        first_vars = get_vars_in_row(monitor.routine, idx=0)
-        curr_vars = get_current_vars(monitor.routine)
-        assert np.all(curr_vars == first_vars)
-
-        monitor.plot_x_axis = False
-
-        with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
-            qtbot.mouseClick(monitor.btn_set, Qt.MouseButton.LeftButton)
-
-        not_time_x_view_range = monitor.plot_var.getViewBox().viewRange()[0]
-        """
         
         # Test if the solution has been dialed in
         third_vars = get_vars_in_row(monitor.routine, idx=2)
@@ -551,9 +434,6 @@ class TestRunMonitor:
         # not_time_x_view_range = monitor.plot_var.getViewBox().viewRange()[0]
 
         # assert new_x_view_range != not_time_x_view_range
-
-        assert new_x_view_range != not_time_x_view_range
-
     
     def test_run_until(self, qtbot, monitor):
 
@@ -574,7 +454,7 @@ class TestRunMonitor:
 
         assert len(monitor.routine.data) == 5
 
-    '''
+
     def test_add_extensions(self, qtbot, process_manager, init_multiprocessing):
         from badger.gui.default.components.analysis_extensions import ParetoFrontViewer
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
@@ -588,7 +468,6 @@ class TestRunMonitor:
         # test w/o using qtbot
         monitor = BadgerOptMonitor(process_manager)
         monitor.routine = routine
-        qtbot.addWidget(monitor)
 
         monitor.open_extensions_palette()
         monitor.extensions_palette.add_pf_viewer()
@@ -600,7 +479,7 @@ class TestRunMonitor:
         # a MO run here
 
         # test opening and closing windows
-        # monitor = BadgerOptMonitor()
+        # monitor = BadgerOptMonitor(process_manager)
         # qtbot.addWidget(monitor)
 
         # qtbot.mouseClick(monitor.btn_open_extensions_palette, Qt.LeftButton)
@@ -612,10 +491,9 @@ class TestRunMonitor:
         # monitor.active_extensions[0].close()
         # assert len(monitor.active_extensions) == 0
         # assert monitor.extensions_palette.n_active_extensions == 0
-    '''
+    
 
-    def test_critical_constraints(self, qtbot):
-        monitor = create_test_run_monitor_critical()
+    def test_critical_constraints(self, qtbot, monitor):
 
         def handle_dialog():
             while monitor.tc_dialog is None:
@@ -638,7 +516,7 @@ class TestRunMonitor:
         assert len(monitor.routine.data) == 1  # early-termination due to violation
 
 
-    def test_ucb_user_warning(self):
+    def test_ucb_user_warning(self, init_multiprocessing):
         from badger.tests.utils import create_routine_constrained_ucb
 
         with warnings.catch_warnings(record=True) as caught_warnings:
@@ -651,17 +529,18 @@ class TestRunMonitor:
 
     # Note: this test will delete all the previous runs
     # you might want to run this test last
-    def test_del_last_run(self, qtbot):
+    def test_del_last_run(self, qtbot, init_multiprocessing):
         from badger.gui.default.windows.main_window import BadgerMainWindow
         from badger.tests.utils import fix_db_path_issue, create_routine
 
         fix_db_path_issue()
 
         window = BadgerMainWindow()
-        qtbot.addWidget(window)
+        #qtbot.addWidget(window)
 
         # Run a routine
         routine = create_routine()
+        save_routine(routine)
         home_page = window.home_page
         home_page.current_routine = routine
         monitor = home_page.run_monitor
@@ -691,6 +570,7 @@ class TestRunMonitor:
             _ = monitor.plot_con
         with pytest.raises(AttributeError):
             _ = monitor.plot_obs
+            
         # Variables/objectives monitor should be cleared
         assert len(monitor.plot_var.items) == 0
         assert len(monitor.plot_obj.items) == 0

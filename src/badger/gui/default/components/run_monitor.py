@@ -127,6 +127,7 @@ class BadgerOptMonitor(QWidget):
         # Routine info
         self.routine = None
         self.process_manager = process_manager
+
         # Curves in the monitor
         self.curves_variable = {}
         self.curves_objective = {}
@@ -631,7 +632,7 @@ class BadgerOptMonitor(QWidget):
             self.routine.data = results
 
         data_copy = self.routine.sorted_data 
-
+        
         # Get timestamps
         if use_time_axis:
             ts = self.extract_timestamp(data_copy)
@@ -640,7 +641,7 @@ class BadgerOptMonitor(QWidget):
             ts = None
 
         variable_names = self.vocs.variable_names
-
+        
         # if normalize x, normalize using vocs
         if normalize_inputs:
             input_data = self.vocs.normalize_inputs(data_copy)

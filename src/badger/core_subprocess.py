@@ -13,6 +13,7 @@ from badger.utils import (
     curr_ts_to_str,
     dump_state,
 )
+import pkg_resources
 
 '''
 def check_critical(self, queue):
@@ -85,13 +86,21 @@ def check_run_status(self, routine, stop_process, pause_process, termination_con
 '''
 
 def convert_to_solution(result: DataFrame, routine: Routine):
+    xopt_package_version = pkg_resources.get_distribution('xopt').version
     vocs = routine.vocs
     try:
-        best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
-        if best_idx != len(routine.data) - 1:
-            is_optimal = False
+        if xopt_package_version >= "2.2.2":
+            best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
         else:
-            is_optimal = True
+            best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
+        
+        if best_idx.size > 0:
+            if best_idx != len(routine.data) - 1:
+                is_optimal = False
+            else:
+                is_optimal = True
+        else:  # no feasible solution
+            is_optimal = False
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
 

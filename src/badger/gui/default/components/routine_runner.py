@@ -3,19 +3,14 @@ import logging
 logger = logging.getLogger(__name__)
  
 import time
+import traceback
 from xopt import VOCS
-from multiprocessing import Queue, Process, Event
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 from badger.routine import Routine
 from .process_manager import processManager
 from ....errors import BadgerRunTerminatedError
-from ....core_subprocess import run_routine_subprocess
-import os
-import traceback
-from pandas import DataFrame
-import torch  # for converting dtype str to torch object
 from ....tests.utils import get_current_vars
-
+import torch 
 
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
@@ -158,6 +153,7 @@ class BadgerRoutineSubprocess():
         self.signals.progress.emit(results)
         time.sleep(0.1)
 
+    '''
     def save_init_vars(self) -> None:
         """
         Emits the intital variables in the env_ready signal. 
@@ -165,8 +161,9 @@ class BadgerRoutineSubprocess():
         var_names = self.routine.vocs.variable_names
         var_dict = self.routine.environment._get_variables(var_names)
         init_vars = list(var_dict.values())
+    '''
 
-    def save_init_vars_alt(self) -> None:
+    def save_init_vars(self) -> None:
         """
         Emits the intital variables in the env_ready signal. 
         """

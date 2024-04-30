@@ -5,7 +5,6 @@ from badger.db import save_routine
 import time 
 from unittest.mock import patch
 
-
 @pytest.fixture(scope='session')
 def init_multiprocessing():
     multiprocessing.set_start_method("fork", force=True)
@@ -91,6 +90,7 @@ def test_close_main(qtbot, init_multiprocessing):
     fix_db_path_issue()
 
     window = BadgerMainWindow()
+    
     qtbot.addWidget(window)
 
     loop = QEventLoop()
@@ -119,13 +119,18 @@ def test_close_main(qtbot, init_multiprocessing):
         home_page.run_monitor.routine.environment
 
 
-def test_auto_select_updated_routine(qtbot):
+def test_auto_select_updated_routine(qtbot, init_multiprocessing):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
 
     fix_db_path_issue()
 
     window = BadgerMainWindow()
+
+    loop = QEventLoop()
+    QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+    loop.exec_()
+
     qtbot.addWidget(window)
 
     # Create and save a routine
@@ -156,7 +161,7 @@ def test_auto_select_updated_routine(qtbot):
     assert routine_widget.activated
 
 
-def test_traceback_during_run(qtbot):
+def test_traceback_during_run(qtbot, init_multiprocessing):
     with patch('badger.core.run_routine') as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
@@ -167,6 +172,11 @@ def test_traceback_during_run(qtbot):
         fix_db_path_issue()
 
         window = BadgerMainWindow()
+
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        loop.exec_()
+
         qtbot.addWidget(window)
 
         routine = create_routine()
@@ -202,7 +212,7 @@ def test_traceback_during_run(qtbot):
 # TODO: Check the use_low_noise_prior parameter in the routine
 # once it's running -- currently use_low_noise_prior is not exposed in the GUI
 # so need to check the routine object held by the monitor/runner
-def test_default_low_noise_prior_in_bo(qtbot):
+def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
     from xopt.generators import all_generator_names
@@ -211,6 +221,11 @@ def test_default_low_noise_prior_in_bo(qtbot):
     fix_db_path_issue()
 
     window = BadgerMainWindow()
+
+    loop = QEventLoop()
+    QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+    loop.exec_()
+
     qtbot.addWidget(window)
 
     # Create and save a routine
