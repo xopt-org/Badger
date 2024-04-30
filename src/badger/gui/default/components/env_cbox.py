@@ -6,7 +6,7 @@ from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
-from ..utils import MouseWheelWidgetAdjustmentGuard
+from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
 from ....settings import read_value
 from ....utils import strtobool
 
@@ -29,7 +29,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_name.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel('Name')
         lbl.setFixedWidth(LABEL_WIDTH)
-        self.cb = cb = QComboBox()
+        self.cb = cb = NoHoverFocusComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.envs)
         cb.setCurrentIndex(-1)
