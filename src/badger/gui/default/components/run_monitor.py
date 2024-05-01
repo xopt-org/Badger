@@ -108,7 +108,9 @@ class BadgerOptMonitor(QWidget):
     sig_pause = pyqtSignal(bool)  # True: pause, False: resume
     sig_stop = pyqtSignal()
     sig_lock = pyqtSignal(bool)  # True: lock GUI, False: unlock GUI
-    sig_new_run = pyqtSignal()
+    sig_new_run = pyqtSignal()  # start the new run
+    sig_run_started = pyqtSignal()  # run started
+    sig_stop_run = pyqtSignal()  # stop the run
     sig_run_name = pyqtSignal(str)  # filename of the new run
     sig_status = pyqtSignal(str)  # status information
     sig_inspect = pyqtSignal(int)  # index of the inspector
@@ -577,6 +579,8 @@ class BadgerOptMonitor(QWidget):
 
         self.btn_stop.setStyleSheet(stylesheet_stop)
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
+        self.sig_run_started.emit()
+        self.btn_stop.setDisabled(False)
         self.run_action.setText('Stop')
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText('Stop')
@@ -712,6 +716,7 @@ class BadgerOptMonitor(QWidget):
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             self.sig_stop.emit()
+            self.sig_stop_run.emit()
 
     def update_analysis_extensions(self):
         for ele in self.active_extensions:
@@ -1045,10 +1050,12 @@ class BadgerOptMonitor(QWidget):
             self.btn_stop.setDefaultAction(self.run_action)
 
         if self.run_action.text() == 'Run':
+            self.btn_stop.setDisabled(True)
             self.start()
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
+            self.sig_stop_run.emit()
 
     def set_run_until_action(self):
         if self.btn_stop.defaultAction() is not self.run_until_action:
@@ -1067,6 +1074,7 @@ class BadgerOptMonitor(QWidget):
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
+            self.sig_stop_run.emit()
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)
