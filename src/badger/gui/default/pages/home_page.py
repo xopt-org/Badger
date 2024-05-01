@@ -599,8 +599,15 @@ class BadgerHomePage(QWidget):
             self.overlay
         except AttributeError:
             # Set parent to the main window
-            self.overlay = ModalOverlay(self.parent().parent())
+            try:
+                main_window = self.parent().parent()
+            except AttributeError:  # in test mode
+                return
+            self.overlay = ModalOverlay(main_window)
         self.overlay.show()
 
     def uncover_page(self):
-        self.overlay.hide()
+        try:
+            self.overlay.hide()
+        except AttributeError:  # in test mode
+            pass
