@@ -2,6 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import time
+# import debugpy
 import traceback
 from pandas import DataFrame
 import torch  # for converting dtype str to torch object
@@ -42,6 +43,7 @@ class BadgerRoutineRunner(QRunnable):
             If true use full time stamp info when dumping to database
         """
         super().__init__()
+        # print('Created a new thread to run the routine.')
 
         # Signals should belong to instance rather than class
         # Since there could be multiple runners running in parallel
@@ -64,6 +66,8 @@ class BadgerRoutineRunner(QRunnable):
         self.termination_condition = termination_condition
 
     def run(self) -> None:
+        # debugpy.debug_this_thread()
+
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
@@ -169,3 +173,8 @@ class BadgerRoutineRunner(QRunnable):
 
     def stop_routine(self):
         self.is_killed = True
+
+    def __del__(self):
+        pass
+
+        # print('Quit this thread, clean up the context.')
