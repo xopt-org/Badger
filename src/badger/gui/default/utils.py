@@ -1,5 +1,6 @@
 from importlib import resources
 from PyQt5.QtWidgets import QWidget, QAbstractSpinBox, QPushButton, QComboBox
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt, QObject, QEvent, QSize
 from PyQt5.QtGui import QIcon
 import copy
@@ -79,3 +80,22 @@ class NoHoverFocusComboBox(QComboBox):
 
     def wheelEvent(self, event):
         event.ignore()
+
+
+class ModalOverlay(QDialog):
+    def __init__(self, parent=None, info=None):
+        super().__init__(parent)
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setGeometry(parent.geometry())
+
+        layout = QVBoxLayout()
+        if info is None:
+            info = "Processing, please wait..."
+        label = QLabel(info, self)
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
+        self.setLayout(layout)
+        # Semi-transparent background
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 80);")
