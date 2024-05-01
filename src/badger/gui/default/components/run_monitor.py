@@ -602,7 +602,7 @@ class BadgerOptMonitor(QWidget):
             self.plot_con.enableAutoRange()
 
         if self.vocs.observable_names:
-           self.plot_obs.enableAutoRange()
+            self.plot_obs.enableAutoRange()
 
     def open_extensions_palette(self):
         self.extensions_palette.show()
