@@ -2,7 +2,7 @@ import pytest
 from badger.gui.default.components.process_manager import processManager  
 from badger.gui.default.components.create_process import createProcess
 from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QEventLoop
 from badger.tests.utils import create_routine
 from badger.db import save_routine
 from PyQt5.QtCore import QTimer
@@ -101,7 +101,7 @@ class TestRoutineRunner:
 
         # TODO: check for signal emit message
 
-        def test_turbo_with_routine_runner(self, qtbot):
+        def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing):
             from badger.gui.default.windows.main_window import BadgerMainWindow
             from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
             from badger.tests.utils import fix_db_path_issue
@@ -109,7 +109,11 @@ class TestRoutineRunner:
             fix_db_path_issue()
 
             window = BadgerMainWindow()
-            qtbot.addWidget(window)
+            #qtbot.addWidget(window)
+
+            loop = QEventLoop()
+            QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+            loop.exec_()
 
             # Create and save a routine
             qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
@@ -133,7 +137,6 @@ class TestRoutineRunner:
             # Run the routine
             monitor = window.home_page.run_monitor
             monitor.testing = True
-
         
             def handle_dialog():
                 while monitor.tc_dialog is None:

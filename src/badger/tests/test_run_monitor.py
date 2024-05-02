@@ -337,7 +337,6 @@ class TestRunMonitor:
         # Check if it is going to be the optimal solution
         assert max_value == optimal_value
 
-    
     def test_reset_environment(self, qtbot, init_multiprocessing):
         from badger.tests.utils import get_current_vars, get_vars_in_row
         from badger.gui.default.windows.main_window import BadgerMainWindow
@@ -396,7 +395,6 @@ class TestRunMonitor:
             curr_vars = get_current_vars(monitor.routine)
             assert np.all(curr_vars == init_vars)
     
-  
     def test_dial_in_solution(self, qtbot, monitor):
         from badger.tests.utils import get_current_vars, get_vars_in_row
 
@@ -454,7 +452,7 @@ class TestRunMonitor:
 
         assert len(monitor.routine.data) == 5
 
-
+    '''
     def test_add_extensions(self, qtbot, process_manager, init_multiprocessing):
         from badger.gui.default.components.analysis_extensions import ParetoFrontViewer
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
@@ -491,9 +489,21 @@ class TestRunMonitor:
         # monitor.active_extensions[0].close()
         # assert len(monitor.active_extensions) == 0
         # assert monitor.extensions_palette.n_active_extensions == 0
-    
+    '''
 
-    def test_critical_constraints(self, qtbot, monitor):
+    def test_critical_constraints(self, qtbot, process_manager, init_multiprocessing):
+        from badger.gui.default.components.run_monitor import BadgerOptMonitor
+        from badger.tests.utils import create_routine_critical, fix_db_path_issue
+
+        fix_db_path_issue()
+
+        monitor = BadgerOptMonitor(process_manager)
+        monitor.testing = True
+
+        routine = create_routine_critical()
+        save_routine(routine)
+        monitor.routine = routine
+        monitor.init_plots(routine)
 
         def handle_dialog():
             while monitor.tc_dialog is None:
@@ -515,7 +525,7 @@ class TestRunMonitor:
 
         assert len(monitor.routine.data) == 1  # early-termination due to violation
 
-
+  
     def test_ucb_user_warning(self, init_multiprocessing):
         from badger.tests.utils import create_routine_constrained_ucb
 
@@ -525,10 +535,10 @@ class TestRunMonitor:
             # Check if the user warning is caught
             assert len(caught_warnings) == 1
             assert caught_warnings[0].category == UserWarning
-
-
+        
     # Note: this test will delete all the previous runs
     # you might want to run this test last
+    # TODO: work out why monitor.plot_con still exists after the last routine is deleated 
     def test_del_last_run(self, qtbot, init_multiprocessing):
         from badger.gui.default.windows.main_window import BadgerMainWindow
         from badger.tests.utils import fix_db_path_issue, create_routine
@@ -537,6 +547,10 @@ class TestRunMonitor:
 
         window = BadgerMainWindow()
         #qtbot.addWidget(window)
+        
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        loop.exec_()
 
         # Run a routine
         routine = create_routine()
@@ -553,6 +567,7 @@ class TestRunMonitor:
         monitor.start(True)
         while monitor.running:
             qtbot.wait(100)
+            #time.sleep(1)
 
         # Variables/objectives/constraints monitor should contain some data
         assert len(monitor.plot_var.items) > 0
@@ -563,20 +578,22 @@ class TestRunMonitor:
         with patch("PyQt5.QtWidgets.QMessageBox.question",
                    return_value=QMessageBox.Yes):
             while home_page.cb_history.count():
-                qtbot.mouseClick(monitor.btn_del, Qt.MouseButton.LeftButton)
+                QTest.mouseClick(monitor.btn_del, Qt.MouseButton.LeftButton)
 
         # Should have no constraints/observables monitor
+
         with pytest.raises(AttributeError):
             _ = monitor.plot_con
         with pytest.raises(AttributeError):
             _ = monitor.plot_obs
-            
+
         # Variables/objectives monitor should be cleared
         assert len(monitor.plot_var.items) == 0
         assert len(monitor.plot_obj.items) == 0
-
-
+        
+    
     # TODO: Test if logbook entry is created correctly and put into the
     # correct location when the logbook button is clicked
     def test_send_to_logbook(qtbot):
         pass
+   

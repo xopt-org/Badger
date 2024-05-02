@@ -14,6 +14,7 @@ from badger.utils import (
     dump_state,
 )
 import pkg_resources
+import torch
 
 '''
 def check_critical(self, queue):
@@ -90,6 +91,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     vocs = routine.vocs
     try:
         if xopt_package_version >= "2.2.2":
+            print(routine.sorted_data)
             best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
         else:
             best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
@@ -137,6 +139,16 @@ def run_routine_subprocess(queue, evaluate_queue, stop_process, pause_process, w
 
     # set required arguments 
     routine, _ = load_routine(args['routine_name'])
+
+    try:
+        dtype = routine.generator.turbo_controller.tkwargs['dtype']
+        routine.generator.turbo_controller.tkwargs['dtype'] = eval(dtype)
+    except AttributeError:
+        pass
+    except KeyError:
+        pass
+    except TypeError:
+        pass
 
     # routine_queue.put(routine.vocs)
 

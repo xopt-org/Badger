@@ -28,7 +28,7 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
     # test running routines w high level interface
     routines = [
         create_routine(),
-        #create_multiobjective_routine(),
+        create_multiobjective_routine(),
         #create_routine_turbo(),
     ]
  
@@ -49,10 +49,10 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
 
         assert blocker.signal_triggered
         
-        # assert we get the right result, ie. correct number of samples
-        loop = QEventLoop()
-        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
-        loop.exec_()
+        # Wait until the run is done
+        while home_page.run_monitor.running:
+            qtbot.wait(100)
 
+        # assert we get the right result, ie. correct number of samples
         assert len(home_page.run_monitor.routine.data) == 3
 
