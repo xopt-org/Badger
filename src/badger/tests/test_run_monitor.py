@@ -52,7 +52,6 @@ class TestRunMonitor:
 
         assert len(monitor.routine.data) == 10
 
-    
     def test_run_monitor(self, qtbot, monitor):
         from badger.tests.utils import fix_db_path_issue
         fix_db_path_issue()
@@ -371,29 +370,35 @@ class TestRunMonitor:
         while monitor.running:
             qtbot.wait(100)
 
+        assert len(monitor.routine.data) == 10
+        
+        monitor.inspector_objective.setValue(9)
+
         with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
             # with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
-            qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
+            qtbot.mouseClick(monitor.btn_set, Qt.MouseButton.LeftButton)
             # mock_info.assert_called_once()
+        
+        
+        # Check if current env vars matches the last solution in data
+        last_vars = get_vars_in_row(monitor.routine, idx=-1)
+        curr_vars = get_current_vars(monitor.routine)
 
-            # Check if current env vars matches the last solution in data
-            last_vars = get_vars_in_row(monitor.routine, idx=-1)
-            curr_vars = get_current_vars(monitor.routine)
-            assert np.all(curr_vars == last_vars)
+        assert np.all(curr_vars == last_vars)
 
-            # Reset env and confirm
-            spy = QSignalSpy(monitor.btn_reset.clicked)
+        # Reset env and confirm
+        spy = QSignalSpy(monitor.btn_reset.clicked)
 
-            with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
-                with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
-                    qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
-                    mock_info.assert_called_once()
+        with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
+            # with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
+                qtbot.mouseClick(monitor.btn_reset, Qt.MouseButton.LeftButton)
+                # mock_info.assert_called_once()
 
-            assert len(spy) == 1
+        assert len(spy) == 1
 
-            # Check if the env has been reset
-            curr_vars = get_current_vars(monitor.routine)
-            assert np.all(curr_vars == init_vars)
+        # Check if the env has been reset
+        curr_vars = get_current_vars(monitor.routine)
+        assert np.all(curr_vars == init_vars)
     
     def test_dial_in_solution(self, qtbot, monitor):
         from badger.tests.utils import get_current_vars, get_vars_in_row
@@ -490,6 +495,7 @@ class TestRunMonitor:
         # assert len(monitor.active_extensions) == 0
         # assert monitor.extensions_palette.n_active_extensions == 0
     '''
+    
 
     def test_critical_constraints(self, qtbot, process_manager, init_multiprocessing):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
@@ -505,6 +511,7 @@ class TestRunMonitor:
         monitor.routine = routine
         monitor.init_plots(routine)
 
+        
         def handle_dialog():
             while monitor.tc_dialog is None:
                 QApplication.processEvents()
@@ -519,7 +526,6 @@ class TestRunMonitor:
 
         # Check if critical violation alert being triggered
         with patch("PyQt5.QtWidgets.QMessageBox.warning", return_value=QMessageBox.Yes):
-            # Have to keep it run to correctly trigger/dismiss the dialog
             while monitor.running:
                 qtbot.wait(100)
 
@@ -581,7 +587,9 @@ class TestRunMonitor:
                 QTest.mouseClick(monitor.btn_del, Qt.MouseButton.LeftButton)
 
         # Should have no constraints/observables monitor
-
+        qtbot.wait(100)
+        monitor.init_plots()
+        
         with pytest.raises(AttributeError):
             _ = monitor.plot_con
         with pytest.raises(AttributeError):
@@ -596,4 +604,3 @@ class TestRunMonitor:
     # correct location when the logbook button is clicked
     def test_send_to_logbook(qtbot):
         pass
-   

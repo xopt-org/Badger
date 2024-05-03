@@ -150,8 +150,9 @@ class BadgerRoutineSubprocess():
         """
         This method emits updates sent over from the subprocess running the routine on the evaluate_queue.  
         """
-        self.signals.progress.emit(results)
-        time.sleep(0.1)
+        if self.timer.isActive():
+            self.signals.progress.emit(results)
+            time.sleep(0.1)
 
     '''
     def save_init_vars(self) -> None:
@@ -182,10 +183,9 @@ class BadgerRoutineSubprocess():
         if self.routine_process.is_alive():
             self.routine_process.terminate()
             self.routine_process.join()
-            
+
         self.timer.stop()
         self.signals.finished.emit()
-
 
     def ctrl_routine(self, pause) -> None:
         """

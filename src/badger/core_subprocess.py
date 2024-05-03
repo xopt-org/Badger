@@ -105,6 +105,8 @@ def convert_to_solution(result: DataFrame, routine: Routine):
             is_optimal = False
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
+    except IndexError:
+        is_optimal = False
 
     vars = list(result[vocs.variable_names].to_numpy()[0])
     objs = list(result[vocs.objective_names].to_numpy()[0])

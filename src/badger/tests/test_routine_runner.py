@@ -16,6 +16,11 @@ class TestRoutineRunner:
         def init_multiprocessing(self):
             multiprocessing.set_start_method("fork", force=True)
 
+        @pytest.fixture(scope='session')
+        def init_multiprocessing_alt(self):
+            # Use 'spawn' to start new processes instead of 'fork'
+            multiprocessing.set_start_method('spawn', force=True)
+
         @pytest.fixture
         def process_manager(self):
             process_manager = processManager()
@@ -101,7 +106,7 @@ class TestRoutineRunner:
 
         # TODO: check for signal emit message
 
-        def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing):
+        def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing_alt):
             from badger.gui.default.windows.main_window import BadgerMainWindow
             from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
             from badger.tests.utils import fix_db_path_issue
@@ -167,3 +172,36 @@ class TestRoutineRunner:
 
             assert len(monitor.routine.data) == 2
         
+        '''
+        def test_turbo_with_routine_runner_alt(self, qtbot, init_multiprocessing_alt):
+            from badger.gui.default.windows.main_window import BadgerMainWindow
+            from badger.tests.utils import fix_db_path_issue, create_routine_turbo
+
+            fix_db_path_issue()
+            window = BadgerMainWindow()
+
+            loop = QEventLoop()
+            QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+            loop.exec_()
+
+            home_page = window.home_page
+
+            # test running routines w high level interface
+
+            routine = create_routine_turbo()
+            save_routine(routine)
+            home_page.current_routine = routine
+            home_page.run_monitor.testing = True
+            home_page.run_monitor.termination_condition = {
+                "tc_idx": 0,
+                "max_eval": 2,
+             }
+            
+            home_page.go_run(-1)
+            home_page.run_monitor.start(True)
+
+            while home_page.run_monitor.running:
+                qtbot.wait(100)
+
+            assert len(home_page.run_monitor.routine.data) == 2
+        '''
