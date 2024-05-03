@@ -1,3 +1,4 @@
+import gc
 import os
 import traceback
 from importlib import resources
@@ -340,6 +341,8 @@ class BadgerHomePage(QWidget):
         self.build_routine_list(routines, timestamps, descriptions)
 
     def go_run(self, i: int):
+        gc.collect()
+
         if self.cb_history.itemText(0) == 'Optimization in progress...':
             return
 
@@ -369,6 +372,8 @@ class BadgerHomePage(QWidget):
                 routine = _routine  # make do w/ the routine saved in run
             else:
                 routine.data = _routine.data
+                del _routine  # release the resource
+                gc.collect()
         except IndexError:
             return
         except Exception as e:  # failed to load the run
