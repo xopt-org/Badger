@@ -9,3 +9,4 @@ __pycache__
 /examples/*.yaml
 *.pickle
 *.db
+.vscode

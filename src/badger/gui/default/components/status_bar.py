@@ -1,10 +1,10 @@
 from importlib import resources
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QSize
 from ..windows.settings_dialog import BadgerSettingsDialog
+from .eliding_label import SimpleElidedLabel
 
 
 class BadgerStatusBar(QWidget):
@@ -22,7 +22,9 @@ class BadgerStatusBar(QWidget):
         hbox = QHBoxLayout(self)
         hbox.setContentsMargins(0, 0, 0, 0)
 
-        self.summary = summary = QLabel()
+        self.summary = summary = SimpleElidedLabel()
+        # summary.setStyleSheet("background-color: orange;")  # for debugging
+        summary.setAlignment(Qt.AlignCenter)
 
         self.btn_settings = btn_settings = QPushButton()
         btn_settings.setFixedSize(24, 24)
@@ -30,8 +32,6 @@ class BadgerStatusBar(QWidget):
         btn_settings.setIconSize(QSize(12, 12))
         btn_settings.setToolTip('Badger settings')
 
-        summary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        summary.setAlignment(Qt.AlignCenter)
         hbox.addWidget(summary, 1)
         hbox.addWidget(btn_settings)
 
@@ -40,6 +40,7 @@ class BadgerStatusBar(QWidget):
 
     def set_summary(self, text):
         self.summary.setText(text)
+        self.setToolTip(text)
 
     def go_settings(self):
         dlg = BadgerSettingsDialog(self)

@@ -1,5 +1,5 @@
 from importlib import resources
-from PyQt5.QtWidgets import QWidget, QAbstractSpinBox, QPushButton
+from PyQt5.QtWidgets import QWidget, QAbstractSpinBox, QPushButton, QComboBox
 from PyQt5.QtCore import Qt, QObject, QEvent, QSize
 from PyQt5.QtGui import QIcon
 import copy
@@ -62,3 +62,20 @@ def filter_generator_config(name, config):
         filtered_config = config
 
     return copy.deepcopy(filtered_config)
+
+
+class NoHoverFocusComboBox(QComboBox):
+    def focusInEvent(self, event):
+        # Prevent focus if it's from a hover event
+        if event.reason() == Qt.MouseFocusReason:
+            event.ignore()
+        else:
+            super().focusInEvent(event)
+
+    def mousePressEvent(self, event):
+        # Ensure the combo box behaves normally when clicked
+        self.setFocus()
+        super().mousePressEvent(event)
+
+    def wheelEvent(self, event):
+        event.ignore()

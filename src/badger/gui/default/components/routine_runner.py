@@ -3,6 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
  
 import time
+# import debugpy
 import traceback
 from xopt import VOCS
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
@@ -40,6 +41,7 @@ class BadgerRoutineSubprocess():
             If true use full time stamp info when dumping to database
         """
         super().__init__()
+        # print('Created a new thread to run the routine.')
 
         # Signals should belong to instance rather than class
         # Since there could be multiple runners running in parallel

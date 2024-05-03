@@ -135,7 +135,6 @@ class BadgerOptMonitor(QWidget):
         self.curves_sta = {}
 
         # Run optimization
-        self.thread_pool = None
         self.routine_runner = None
         self.running = False
         # Fix the auto range issue
@@ -337,9 +336,6 @@ class BadgerOptMonitor(QWidget):
         self.inspector_variable.sigPositionChangeFinished.connect(self.ins_drag_done)
         self.plot_obj.scene().sigMouseClicked.connect(self.on_mouse_click)
         # sigMouseReleased.connect(self.on_mouse_click)
-
-        # Thread runner
-        self.thread_pool = QThreadPool(self)
 
         self.btn_del.clicked.connect(self.delete_run)
         self.btn_log.clicked.connect(self.logbook)
@@ -591,7 +587,7 @@ class BadgerOptMonitor(QWidget):
             self.plot_con.enableAutoRange()
 
         if self.vocs.observable_names:
-           self.plot_obs.enableAutoRange()
+            self.plot_obs.enableAutoRange()
 
     def open_extensions_palette(self):
         self.extensions_palette.show()
@@ -776,8 +772,15 @@ class BadgerOptMonitor(QWidget):
             for action in self.post_run_actions:
                 action()
 
+        # self.reset_routine_runner()
+
     def destroy_unused_env(self):
         if not self.running:
+            try:
+                del self.routine_runner.routine.environment
+            except AttributeError:  # env already destroyed
+                pass
+
             try:
                 del self.routine.environment
             except AttributeError:  # env already destroyed
