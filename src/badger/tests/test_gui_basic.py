@@ -1,7 +1,6 @@
 import pytest
 from PyQt5.QtCore import Qt, QTimer, QEventLoop
 import multiprocessing
-from badger.db import save_routine
 import time 
 from unittest.mock import patch
 
@@ -37,6 +36,7 @@ def test_gui_main(qtbot, init_multiprocessing):
 
 
 def test_close_main(qtbot, init_multiprocessing):
+    from badger.db import save_routine
     from badger.gui.default.pages.home_page import BadgerHomePage
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import (
@@ -83,6 +83,7 @@ def test_close_main(qtbot, init_multiprocessing):
 
 
 def test_close_main(qtbot, init_multiprocessing):
+    from badger.db import save_routine
     from badger.gui.default.pages.home_page import BadgerHomePage
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue, create_routine

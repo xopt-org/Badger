@@ -1,10 +1,5 @@
 import pytest
-from badger.gui.default.components.process_manager import processManager  
-from badger.gui.default.components.create_process import createProcess
-from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
 from PyQt5.QtCore import Qt, QTimer, QEventLoop
-from badger.tests.utils import create_routine
-from badger.db import save_routine
 from PyQt5.QtCore import QTimer
 from PyQt5.QtTest import QSignalSpy
 import multiprocessing 
@@ -23,6 +18,9 @@ class TestRoutineRunner:
 
         @pytest.fixture
         def process_manager(self):
+            from badger.gui.default.components.process_manager import processManager  
+            from badger.gui.default.components.create_process import createProcess
+
             process_manager = processManager()
             process_builder = createProcess()
             process_builder.subprocess_prepared.connect(process_manager.add_to_queue)
@@ -32,6 +30,9 @@ class TestRoutineRunner:
         @pytest.fixture
         def instance(self, process_manager, init_multiprocessing):
             from badger.tests.utils import fix_db_path_issue
+            from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
+            from badger.tests.utils import create_routine
+            from badger.db import save_routine
 
             fix_db_path_issue()
 

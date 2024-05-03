@@ -1,9 +1,9 @@
 import pytest
 from PyQt5.QtCore import QObject, pyqtSignal
-from badger.gui.default.components.process_manager import processManager  
 
 @pytest.fixture
 def process_manager():
+    from badger.gui.default.components.process_manager import processManager  
     return processManager()
 
 class TestProcessManager:

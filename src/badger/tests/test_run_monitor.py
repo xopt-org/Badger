@@ -10,11 +10,10 @@ from PyQt5.QtCore import QPointF, Qt, QTimer, QEventLoop
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtTest import QSignalSpy, QTest
 from PyQt5.QtWidgets import QMessageBox, QApplication
-from badger.db import save_routine, remove_routine
+
 import multiprocessing 
 import os
-from badger.gui.default.components.process_manager import processManager  
-from badger.gui.default.components.create_process import createProcess
+
 import pytest
 import sys
 
@@ -26,6 +25,9 @@ class TestRunMonitor:
 
     @pytest.fixture
     def process_manager(self):
+        from badger.gui.default.components.process_manager import processManager  
+        from badger.gui.default.components.create_process import createProcess
+
         process_manager = processManager()
         process_builder = createProcess()
         process_builder.subprocess_prepared.connect(process_manager.add_to_queue)
@@ -36,6 +38,7 @@ class TestRunMonitor:
     def monitor(self, process_manager, init_multiprocessing):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine, fix_db_path_issue
+        from badger.db import save_routine
 
         fix_db_path_issue()
         routine = create_routine()
@@ -84,6 +87,7 @@ class TestRunMonitor:
         QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
         
     def test_routine_identity(self, qtbot, process_manager, init_multiprocessing):
+        from badger.db import save_routine
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine, fix_db_path_issue
 
@@ -102,6 +106,8 @@ class TestRunMonitor:
         assert monitor.routine_runner.routine == monitor.routine
 
     def test_plotting(self, qtbot, monitor):
+        from badger.db import remove_routine
+
         self.add_data(monitor)
         monitor.update_curves()
 
@@ -337,6 +343,7 @@ class TestRunMonitor:
         assert max_value == optimal_value
 
     def test_reset_environment(self, qtbot, init_multiprocessing):
+        from badger.db import save_routine
         from badger.tests.utils import get_current_vars, get_vars_in_row
         from badger.gui.default.windows.main_window import BadgerMainWindow
         from badger.tests.utils import fix_db_path_issue, create_routine
@@ -498,6 +505,7 @@ class TestRunMonitor:
     
 
     def test_critical_constraints(self, qtbot, process_manager, init_multiprocessing):
+        from badger.db import save_routine
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine_critical, fix_db_path_issue
 
@@ -548,6 +556,7 @@ class TestRunMonitor:
     def test_del_last_run(self, qtbot, init_multiprocessing):
         from badger.gui.default.windows.main_window import BadgerMainWindow
         from badger.tests.utils import fix_db_path_issue, create_routine
+        from badger.db import save_routine
 
         fix_db_path_issue()
 

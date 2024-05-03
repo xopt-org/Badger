@@ -1,13 +1,13 @@
 import pytest
 from PyQt5.QtCore import QEventLoop, QTimer
 import multiprocessing 
-from badger.db import save_routine
 
 @pytest.fixture(scope='session')
 def init_multiprocessing():
     multiprocessing.set_start_method("fork", force=True)
 
 def test_home_page_run_routine(qtbot, init_multiprocessing):
+    from badger.db import save_routine
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import (
         create_multiobjective_routine,

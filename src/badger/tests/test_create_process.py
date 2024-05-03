@@ -3,12 +3,12 @@ import multiprocessing as mp
 from unittest.mock import patch, MagicMock
 import pytest
 from PyQt5.QtWidgets import QApplication
-from badger.gui.default.components.create_process import createProcess  
 
 app = QApplication(sys.argv)
 
 @pytest.fixture
 def process_creator():
+    from badger.gui.default.components.create_process import createProcess  
     return createProcess()
 
 def test_create_subprocess_emits_signals(qtbot, process_creator):

@@ -91,13 +91,12 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     vocs = routine.vocs
     try:
         if xopt_package_version >= "2.2.2":
-            print(routine.sorted_data)
             best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
         else:
             best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
         
         if best_idx.size > 0:
-            if best_idx != len(routine.data) - 1:
+            if best_idx[0] != len(routine.data) - 1:
                 is_optimal = False
             else:
                 is_optimal = True
@@ -105,7 +104,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
             is_optimal = False
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
-    except IndexError:
+    except IndexError: # no feasible data 
         is_optimal = False
 
     vars = list(result[vocs.variable_names].to_numpy()[0])

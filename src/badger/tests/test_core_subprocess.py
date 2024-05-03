@@ -1,13 +1,10 @@
 import os
 import pytest
 import pandas as pd
-from badger.errors import BadgerRunTerminatedError
-from badger.gui.default.components.process_manager import processManager  
-from badger.gui.default.components.create_process import createProcess
 import multiprocessing 
 import os
 import time 
-from badger.db import save_routine
+
 
 class TestCore:
     """
@@ -15,6 +12,9 @@ class TestCore:
     """
     @pytest.fixture
     def process_manager(self):
+        from badger.gui.default.components.process_manager import processManager  
+        from badger.gui.default.components.create_process import createProcess
+
         process_manager = processManager()
         process_builder = createProcess()
         process_builder.subprocess_prepared.connect(process_manager.add_to_queue)
@@ -53,6 +53,7 @@ class TestCore:
         A unit test to ensure the core functionality
         of run_routine_xopt is functioning as intended.
         """
+        from badger.db import save_routine
         from badger.tests.utils import create_routine
         from badger.tests.utils import fix_db_path_issue
 
@@ -133,6 +134,7 @@ class TestCore:
         """
         A unit test to ensure TuRBO can run in Badger.
         """
+        from badger.db import save_routine
         from badger.tests.utils import create_routine_turbo
 
         self.count = 0

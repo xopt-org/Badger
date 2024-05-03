@@ -3,9 +3,6 @@ import pytest
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 
-from badger.errors import BadgerRoutineError
-from badger.tests.utils import create_routine
-
 
 def test_routine_page_init(qtbot):
     from badger.gui.default.components.routine_page import BadgerRoutinePage
@@ -16,6 +13,8 @@ def test_routine_page_init(qtbot):
 
 
 def test_routine_generation(qtbot):
+    from badger.errors import BadgerRoutineError
+
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
     window = BadgerRoutinePage()
@@ -70,6 +69,8 @@ def test_initial_points(qtbot):
 
 
 def test_ui_update(qtbot):
+    from badger.tests.utils import create_routine
+
     # test to make sure initial points widget works properly
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
