@@ -62,8 +62,10 @@ class TestRoutineRunner:
 
         def test_after_evaluate(self, instance):
             sig_progress_spy = QSignalSpy(instance.signals.progress)
+            instance.setup_timer()
             instance.after_evaluate(True)
             assert len(sig_progress_spy) == 1
+            instance.timer.stop()
 
         def test_check_queue(self, instance):
             instance.run()
