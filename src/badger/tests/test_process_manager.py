@@ -40,3 +40,4 @@ class TestProcessManager:
             process_manager.remove_from_queue()
         
         assert blocker.signal_triggered
+

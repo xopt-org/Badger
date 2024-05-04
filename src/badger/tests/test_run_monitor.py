@@ -32,7 +32,9 @@ class TestRunMonitor:
         process_builder = createProcess()
         process_builder.subprocess_prepared.connect(process_manager.add_to_queue)
         process_builder.create_subprocess()
-        return process_manager
+        yield process_manager
+            
+        process_manager.close_proccesses()
 
     @pytest.fixture
     def monitor(self, process_manager, init_multiprocessing):
@@ -406,6 +408,8 @@ class TestRunMonitor:
         # Check if the env has been reset
         curr_vars = get_current_vars(monitor.routine)
         assert np.all(curr_vars == init_vars)
+        window.process_manager.close_proccesses()
+
     
     def test_dial_in_solution(self, qtbot, monitor):
         from badger.tests.utils import get_current_vars, get_vars_in_row
@@ -607,7 +611,8 @@ class TestRunMonitor:
         # Variables/objectives monitor should be cleared
         assert len(monitor.plot_var.items) == 0
         assert len(monitor.plot_obj.items) == 0
-        
+        window.process_manager.close_proccesses()
+
     
     # TODO: Test if logbook entry is created correctly and put into the
     # correct location when the logbook button is clicked

@@ -25,7 +25,11 @@ class TestRoutineRunner:
             process_builder = createProcess()
             process_builder.subprocess_prepared.connect(process_manager.add_to_queue)
             process_builder.create_subprocess()
-            return process_manager
+
+            yield process_manager
+            
+            process_manager.close_proccesses()
+
 
         @pytest.fixture
         def instance(self, process_manager, init_multiprocessing):
@@ -174,6 +178,8 @@ class TestRoutineRunner:
                 qtbot.wait(100)
 
             assert len(monitor.routine.data) == 2
+
+            window.process_manager.close_proccesses()
         
         '''
         def test_turbo_with_routine_runner_alt(self, qtbot, init_multiprocessing_alt):

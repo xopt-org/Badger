@@ -19,7 +19,10 @@ class TestCore:
         process_builder = createProcess()
         process_builder.subprocess_prepared.connect(process_manager.add_to_queue)
         process_builder.create_subprocess()
-        return process_manager
+        
+        yield process_manager
+            
+        process_manager.close_proccesses()
 
     @pytest.fixture(scope='session')
     def init_multiprocessing(self):

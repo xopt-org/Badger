@@ -34,6 +34,8 @@ def test_gui_main(qtbot, init_multiprocessing):
     qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
     assert window.stacks.currentWidget().tabs.currentIndex() == 1
 
+    window.process_manager.close_proccesses()
+
 
 def test_close_main(qtbot, init_multiprocessing):
     from badger.db import save_routine
@@ -81,6 +83,7 @@ def test_close_main(qtbot, init_multiprocessing):
     with pytest.raises(AttributeError):
         routine.environment
 
+    main_page.process_manager.close_proccesses()
 
 def test_close_main(qtbot, init_multiprocessing):
     from badger.db import save_routine
@@ -118,6 +121,8 @@ def test_close_main(qtbot, init_multiprocessing):
     # So we expect an AttributeError here
     with pytest.raises(AttributeError):
         home_page.run_monitor.routine.environment
+
+    window.process_manager.close_proccesses()
 
 
 def test_auto_select_updated_routine(qtbot, init_multiprocessing):
@@ -160,6 +165,8 @@ def test_auto_select_updated_routine(qtbot, init_multiprocessing):
     routine_item = window.home_page.routine_list.item(0)
     routine_widget = window.home_page.routine_list.itemWidget(routine_item)
     assert routine_widget.activated
+
+    window.process_manager.close_proccesses()
 
 
 def test_traceback_during_run(qtbot, init_multiprocessing):
@@ -209,6 +216,8 @@ def test_traceback_during_run(qtbot, init_multiprocessing):
         while home_page.run_monitor.running:
             qtbot.wait(100)
 
+        window.process_manager.close_proccesses()
+
 
 # TODO: Check the use_low_noise_prior parameter in the routine
 # once it's running -- currently use_low_noise_prior is not exposed in the GUI
@@ -246,3 +255,5 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
                 assert not params_dict['gp_constructor']['use_low_noise_prior']
             else:  # that part of params is hidden so we need to dig deeper
                 pass
+    
+    window.process_manager.close_proccesses()
