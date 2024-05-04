@@ -97,6 +97,7 @@ class BadgerMainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         monitor = self.home_page.run_monitor
         if not monitor.running:
+            self.process_manager.close_proccesses()
             monitor.destroy_unused_env()
             return
 
@@ -117,3 +118,4 @@ class BadgerMainWindow(QMainWindow):
             event.ignore()
         else:
             event.ignore()
+        
