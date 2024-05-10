@@ -1,32 +1,50 @@
 import os
 import traceback
+from copy import deepcopy
 from importlib import resources
+from typing import List
+
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QTextEdit, QCheckBox
-from PyQt5.QtWidgets import QMessageBox, QComboBox, QLabel, QStyledItemDelegate
-from PyQt5.QtWidgets import QToolButton, QMenu, QAction, QScrollArea
+import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, QThreadPool
 from PyQt5.QtGui import QFont, QIcon
-import pyqtgraph as pg
+from PyQt5.QtWidgets import (
+    QAction,
+    QCheckBox,
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QStyledItemDelegate,
+    QTextEdit,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 from xopt import VOCS
 
-from .extensions_palette import ExtensionsPalette
-from .routine_runner import BadgerRoutineRunner
-from ..utils import create_button
-from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
-from ..windows.message_dialog import BadgerScrollableMessageBox
-from ....routine import Routine
-# from ...utils import AURORA_PALETTE, FROST_PALETTE
-from ....logbook import send_to_logbook, BADGER_LOGBOOK_ROOT
 from ....archive import archive_run, BADGER_ARCHIVE_ROOT
+
+# from ...utils import AURORA_PALETTE, FROST_PALETTE
+from ....logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
+from ....routine import Routine
 from ....tests.utils import get_current_vars
+from ..utils import create_button
+from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
+
+from .extensions_palette import ExtensionsPalette
+from .routine_runner import BadgerRoutineSubprocess
 
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-stylesheet_del = '''
+stylesheet_del = """
 QPushButton:hover:pressed
 {
     background-color: #C7737B;
@@ -39,9 +57,9 @@ QPushButton
 {
     background-color: #A9444E;
 }
-'''
+"""
 
-stylesheet_log = '''
+stylesheet_log = """
 QPushButton:hover:pressed
 {
     background-color: #88C0D0;
@@ -55,9 +73,9 @@ QPushButton
     background-color: #5C8899;
     color: #000000;
 }
-'''
+"""
 
-stylesheet_ext = '''
+stylesheet_ext = """
 QPushButton:hover:pressed
 {
     background-color: #4DB6AC;
@@ -70,9 +88,9 @@ QPushButton
 {
     background-color: #00897B;
 }
-'''
+"""
 
-stylesheet_run = '''
+stylesheet_run = """
 QToolButton:hover:pressed
 {
     background-color: #92D38C;
@@ -86,9 +104,9 @@ QToolButton
     background-color: #4AB640;
     color: #000000;
 }
-'''
+"""
 
-stylesheet_stop = '''
+stylesheet_stop = """
 QToolButton:hover:pressed
 {
     background-color: #C7737B;
@@ -101,7 +119,7 @@ QToolButton
 {
     background-color: #A9444E;
 }
-'''
+"""
 
 
 class BadgerOptMonitor(QWidget):
@@ -115,7 +133,7 @@ class BadgerOptMonitor(QWidget):
     sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
     sig_del = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, process_manager=None):
         super().__init__()
         # self.setAttribute(Qt.WA_DeleteOnClose, True)
 
@@ -125,6 +143,7 @@ class BadgerOptMonitor(QWidget):
         self.x_plot_relative = True
         # Routine info
         self.routine = None
+        self.process_manager = process_manager
 
         # Curves in the monitor
         self.curves_variable = {}
@@ -145,28 +164,28 @@ class BadgerOptMonitor(QWidget):
 
         self.testing = False
         self.tc_dialog = None
-
         self.post_run_actions = []
 
         self.init_ui()
         self.config_logic()
+        self._states = None
 
     @property
     def vocs(self) -> VOCS:
-        if self.routine is None:
-            return None
-        else:
-            return self.routine.vocs
+        return self.routine.vocs
+
+    def states(self, new_states: dict) -> None:
+        self._states = new_states
 
     def init_ui(self):
         # Load all icons
-        icon_ref = resources.files(__package__) / '../images/play.png'
+        icon_ref = resources.files(__package__) / "../images/play.png"
         with resources.as_file(icon_ref) as icon_path:
             self.icon_play = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/pause.png'
+        icon_ref = resources.files(__package__) / "../images/pause.png"
         with resources.as_file(icon_ref) as icon_path:
             self.icon_pause = QIcon(str(icon_path))
-        icon_ref = resources.files(__package__) / '../images/stop.png'
+        icon_ref = resources.files(__package__) / "../images/stop.png"
         with resources.as_file(icon_ref) as icon_path:
             self.icon_stop = QIcon(str(icon_path))
 
@@ -179,16 +198,16 @@ class BadgerOptMonitor(QWidget):
         config_bar = QWidget()
         hbox_config = QHBoxLayout(config_bar)
         hbox_config.setContentsMargins(8, 0, 8, 0)
-        label = QLabel('Evaluation History Plot Type')
-        label_x = QLabel('X Axis')
+        label = QLabel("Evaluation History Plot Type")
+        label_x = QLabel("X Axis")
         self.cb_plot_x = cb_plot_x = QComboBox()
         cb_plot_x.setItemDelegate(QStyledItemDelegate())
-        cb_plot_x.addItems(['Iteration', 'Time'])
-        label_y = QLabel('Y Axis (Var)')
+        cb_plot_x.addItems(["Iteration", "Time"])
+        label_y = QLabel("Y Axis (Var)")
         self.cb_plot_y = cb_plot_y = QComboBox()
         cb_plot_y.setItemDelegate(QStyledItemDelegate())
-        cb_plot_y.addItems(['Raw', 'Normalized'])
-        self.check_relative = check_relative = QCheckBox('Relative')
+        cb_plot_y.addItems(["Raw", "Normalized"])
+        self.check_relative = check_relative = QCheckBox("Relative")
         check_relative.setChecked(True)
         hbox_config.addWidget(label)
         # hbox_config.addSpacing(1)
@@ -213,7 +232,7 @@ class BadgerOptMonitor(QWidget):
 
         # add axes
         self.plot_obj = plot_obj = add_axes(
-            monitor, "objectives", 'Evaluation History (Y)', self.inspector_objective
+            monitor, "objectives", "Evaluation History (Y)", self.inspector_objective
         )
 
         monitor.nextRow()  # leave space for the cons plot
@@ -226,8 +245,8 @@ class BadgerOptMonitor(QWidget):
 
         plot_var.setXLink(plot_obj)
 
-        self.colors = ['c', 'g', 'm', 'y', 'b', 'r', 'w']
-        self.symbols = ['o', 't', 't1', 's', 'p', 'h', 'd']
+        self.colors = ["c", "g", "m", "y", "b", "r", "w"]
+        self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
 
         # Action bar
         action_bar = QWidget()
@@ -245,7 +264,7 @@ class BadgerOptMonitor(QWidget):
         self.btn_opt = create_button("star.png", "Jump to optimum")
         self.btn_set = create_button("set.png", "Dial in solution")
         self.btn_ctrl = create_button("pause.png", "Pause")
-        self.btn_ctrl._status = 'pause'
+        self.btn_ctrl._status = "pause"
         self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
@@ -256,14 +275,15 @@ class BadgerOptMonitor(QWidget):
 
         # add button for extensions
         self.btn_open_extensions_palette = btn_extensions = create_button(
-            "extension.png", "Open extensions", stylesheet_ext)
+            "extension.png", "Open extensions", stylesheet_ext
+        )
 
         # Create a menu and add options
         self.run_menu = menu = QMenu(self)
         menu.setFixedWidth(128)
-        self.run_action = run_action = QAction('Run', self)
+        self.run_action = run_action = QAction("Run", self)
         run_action.setIcon(self.icon_play)
-        self.run_until_action = run_until_action = QAction('Run until', self)
+        self.run_until_action = run_until_action = QAction("Run until", self)
         run_until_action.setIcon(self.icon_play)
         menu.addAction(run_action)
         menu.addAction(run_until_action)
@@ -353,13 +373,6 @@ class BadgerOptMonitor(QWidget):
         self.cb_plot_x.currentIndexChanged.connect(self.select_x_axis)
         self.cb_plot_y.currentIndexChanged.connect(self.select_x_plot_y_axis)
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
-
-    # def mousePressEvent(self, event):
-    #     print('Ho')
-    #     # Override the mousePressEvent to show the dropdown menu
-    #     if event.button() == Qt.RightButton:
-    #         print('Yo')
-    #         self.sender().showMenu()
 
     def init_plots(self, routine: Routine = None, run_filename: str = None):
         """
@@ -459,8 +472,12 @@ class BadgerOptMonitor(QWidget):
                 self.plot_con
             except:
                 self.plot_con = plot_con = add_axes(
-                    self.monitor, "constraints", 'Evaluation History (C)',
-                    self.inspector_constraint, row=1, col=0
+                    self.monitor,
+                    "constraints",
+                    "Evaluation History (C)",
+                    self.inspector_constraint,
+                    row=1,
+                    col=0,
                 )
                 plot_con.setXLink(self.plot_obj)
 
@@ -482,8 +499,12 @@ class BadgerOptMonitor(QWidget):
                 self.plot_obs
             except:
                 self.plot_obs = plot_obs = add_axes(
-                    self.monitor, "observables", 'Evaluation History (S)',
-                    self.inspector_state, row=2, col=0
+                    self.monitor,
+                    "observables",
+                    "Evaluation History (S)",
+                    self.inspector_state,
+                    row=2,
+                    col=0,
                 )
                 plot_obs.setXLink(self.plot_obj)
 
@@ -511,8 +532,7 @@ class BadgerOptMonitor(QWidget):
         self.enable_auto_range()
 
         # Reset button should only be available if it's the current run
-        if self.routine_runner and \
-                self.routine_runner.run_filename == run_filename:
+        if self.routine_runner and self.routine_runner.run_filename == run_filename:
             self.btn_reset.setDisabled(False)
         else:
             self.btn_reset.setDisabled(True)
@@ -547,14 +567,16 @@ class BadgerOptMonitor(QWidget):
     def init_routine_runner(self):
         self.reset_routine_runner()
 
-        self.routine_runner = routine_runner = BadgerRoutineRunner(
-            self.routine, False
+        self.routine_runner = routine_runner = BadgerRoutineSubprocess(
+            self.process_manager, self.routine, False
         )
+
         routine_runner.signals.env_ready.connect(self.env_ready)
         routine_runner.signals.finished.connect(self.routine_finished)
         routine_runner.signals.progress.connect(self.update)
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
+        routine_runner.signals.states.connect(self.states)
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
@@ -567,22 +589,19 @@ class BadgerOptMonitor(QWidget):
 
     def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
-        self.sig_status.emit(f'Running routine {self.routine.name}...')
+        self.sig_status.emit(f"Running routine {self.routine.name}...")
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        QThreadPool.globalInstance().start(self.routine_runner)
-
+        self.routine_runner.run()
         self.btn_stop.setStyleSheet(stylesheet_stop)
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
-        self.run_action.setText('Stop')
+        self.run_action.setText("Stop")
         self.run_action.setIcon(self.icon_stop)
-        self.run_until_action.setText('Stop')
+        self.run_until_action.setText("Stop")
         self.run_until_action.setIcon(self.icon_stop)
-        # self.btn_stop.setToolTip('')
-
         self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
         self.sig_lock.emit(True)
@@ -613,10 +632,19 @@ class BadgerOptMonitor(QWidget):
 
         return data["timestamp"].to_numpy(copy=True)
 
-    def update(self):
-        # update plots in main window as well as any active extensions and the
-        # extensions palette
-        self.update_curves()
+    def update(self, results: pd.DataFrame) -> None:
+        """Update plots in main window as well as any active extensions and the
+        extensions palette
+
+        Parameters
+        ----------
+        results : pd.DataFrame
+
+        Returns
+        -------
+        None
+        """
+        self.update_curves(results)
         self.update_analysis_extensions()
         self.extensions_palette.update_palette()
 
@@ -630,9 +658,12 @@ class BadgerOptMonitor(QWidget):
         # Check critical condition
         self.check_critical()
 
-    def update_curves(self):
+    def update_curves(self, results=None):
         use_time_axis = self.plot_x_axis == 1
         normalize_inputs = self.x_plot_y_axis == 1
+
+        if results is not None:
+            self.routine.data = results
 
         data_copy = self.routine.sorted_data
 
@@ -653,15 +684,16 @@ class BadgerOptMonitor(QWidget):
 
         # if plot relative, subtract the first value from the dict
         if self.x_plot_relative:
-            input_data[variable_names] = input_data[variable_names] - \
-                                        input_data[variable_names].iloc[0]
+            input_data[variable_names] = (
+                input_data[variable_names] - input_data[variable_names].iloc[0]
+            )
 
         set_data(variable_names, self.curves_variable, input_data, ts)
         set_data(self.vocs.objective_names, self.curves_objective, data_copy, ts)
         set_data(self.vocs.constraint_names, self.curves_constraint, data_copy, ts)
         set_data(self.vocs.observable_names, self.curves_sta, data_copy, ts)
 
-    def check_critical(self):
+    def check_critical(self) -> None:
         """
         Check if a critical constraint has been violated in the last data point,
         and take appropriate actions if so.
@@ -686,59 +718,61 @@ class BadgerOptMonitor(QWidget):
         pause and stop actions.
 
         """
-
         # if there are no critical constraints then skip
         if len(self.routine.critical_constraint_names) == 0:
             return
 
-        feas = self.vocs.feasibility_data(self.routine.data.tail(1), prefix='')
-        feasible = feas['feasible'].iloc[0].item()
+        feas = self.vocs.feasibility_data(self.routine.data.tail(1), prefix="")
+        feasible = feas["feasible"].iloc[0].item()
         if feasible:
             return
 
         # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
         self.btn_ctrl.setIcon(self.icon_play)
-        self.btn_ctrl.setToolTip('Resume')
-        self.btn_ctrl._status = 'play'
+        self.btn_ctrl.setToolTip("Resume")
+        self.btn_ctrl._status = "play"
 
         # Show the list of critical violated constraints
         feas_crit = feas[self.routine.critical_constraint_names]
         violated_crit = feas_crit.columns[~feas_crit.iloc[0]].tolist()
-        msg = '\n'.join(violated_crit)
-        reply = QMessageBox.warning(self,
-                                    'Run Paused',
-                                    f'The following critical constraints were violated:\n\n{msg}\n\nTerminate the run?',
-                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        msg = "\n".join(violated_crit)
+        reply = QMessageBox.warning(
+            self,
+            "Run Paused",
+            f"The following critical constraints were violated:\n\n{msg}\n\nTerminate the run?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
         if reply == QMessageBox.Yes:
             self.sig_stop.emit()
 
-    def update_analysis_extensions(self):
+    def update_analysis_extensions(self) -> None:
         for ele in self.active_extensions:
             try:
                 ele.update_window(self.routine)
             except ValueError:
                 traceback.print_exc()
 
-    def env_ready(self, init_vars):
+    def env_ready(self, init_vars) -> None:
         self.init_vars = init_vars
 
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
 
-    def routine_finished(self):
+    def routine_finished(self) -> None:
         self.running = False
         self.btn_ctrl.setIcon(self.icon_pause)
-        self.btn_ctrl.setToolTip('Pause')
-        self.btn_ctrl._status = 'pause'
+        self.btn_ctrl.setToolTip("Pause")
+        self.btn_ctrl._status = "pause"
         self.btn_ctrl.setDisabled(True)
 
         # Note the order of the following two lines cannot be changed!
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
         self.btn_stop.setStyleSheet(stylesheet_run)
-        self.run_action.setText('Run')
+        self.run_action.setText("Run")
         self.run_action.setIcon(self.icon_play)
-        self.run_until_action.setText('Run until')
+        self.run_until_action.setText("Run until")
         self.run_until_action.setIcon(self.icon_play)
         # self.btn_stop.setToolTip('')
         self.btn_stop.setDisabled(False)
@@ -751,18 +785,23 @@ class BadgerOptMonitor(QWidget):
 
         try:
             # TODO: fill in the states
-            run = archive_run(self.routine, states=None)
-            self.routine_runner.run_filename = run['filename']
-            env = self.routine.environment
-            path = run['path']
-            filename = run['filename'][:-4] + 'pickle'
+            # TODO: replace self.testing with with another processes for having a testing mode
+            if not self.testing:
+                run = archive_run(self.routine, states=self._states)
+                self.routine_runner.run_filename = run["filename"]
+                env = self.routine.environment
+                path = run["path"]
+                filename = run["filename"][:-4] + "pickle"
+
             try:
                 env.interface.stop_recording(os.path.join(path, filename))
             except AttributeError:  # recording was not enabled
                 pass
 
-            self.sig_run_name.emit(run['filename'])
-            self.sig_status.emit(f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
+            self.sig_run_name.emit(run["filename"])
+            self.sig_status.emit(
+                f"Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}"
+            )
             # if not self.testing:
             #     QMessageBox.information(
             #         self, 'Success!',
@@ -770,7 +809,7 @@ class BadgerOptMonitor(QWidget):
 
         except Exception as e:
             self.sig_run_name.emit(None)
-            self.sig_status.emit(f'Archive failed: {str(e)}')
+            self.sig_status.emit(f"Archive failed: {str(e)}")
             # if not self.testing:
             #     QMessageBox.critical(self, 'Archive failed!',
             #                          f'Archive failed: {str(e)}')
@@ -780,7 +819,7 @@ class BadgerOptMonitor(QWidget):
 
         # self.reset_routine_runner()
 
-    def destroy_unused_env(self):
+    def destroy_unused_env(self) -> None:
         if not self.running:
             try:
                 del self.routine_runner.routine.environment
@@ -793,12 +832,10 @@ class BadgerOptMonitor(QWidget):
                 pass
 
     def on_error(self, error):
-        details = error._details if hasattr(error, '_details') else None
+        details = error._details if hasattr(error, "_details") else None
 
         dialog = BadgerScrollableMessageBox(
-            title='Error!',
-            text=str(error),
-            parent=self
+            title="Error!", text=str(error), parent=self
         )
         dialog.setIcon(QMessageBox.Critical)
         dialog.setDetailedText(details)
@@ -812,26 +849,26 @@ class BadgerOptMonitor(QWidget):
         try:
             send_to_logbook(self.routine, self.monitor)
         except Exception as e:
-            self.sig_status.emit(f'Log failed: {str(e)}')
+            self.sig_status.emit(f"Log failed: {str(e)}")
             # QMessageBox.critical(self, 'Log failed!', str(e))
 
             return
 
-        self.sig_status.emit(f'Log success: Log saved to {BADGER_LOGBOOK_ROOT}')
+        self.sig_status.emit(f"Log success: Log saved to {BADGER_LOGBOOK_ROOT}")
         # QMessageBox.information(
         #     self, 'Success!', f'')
 
     def ctrl_routine(self):
-        if self.btn_ctrl._status == 'pause':
+        if self.btn_ctrl._status == "pause":
             self.sig_pause.emit(True)
             self.btn_ctrl.setIcon(self.icon_play)
-            self.btn_ctrl.setToolTip('Resume')
-            self.btn_ctrl._status = 'play'
+            self.btn_ctrl.setToolTip("Resume")
+            self.btn_ctrl._status = "play"
         else:
             self.sig_pause.emit(False)
             self.btn_ctrl.setIcon(self.icon_pause)
-            self.btn_ctrl.setToolTip('Pause')
-            self.btn_ctrl._status = 'pause'
+            self.btn_ctrl.setToolTip("Pause")
+            self.btn_ctrl._status = "pause"
 
     def ins_obj_dragged(self, ins_obj):
         self.inspector_variable.setValue(ins_obj.value())
@@ -889,18 +926,22 @@ class BadgerOptMonitor(QWidget):
         return ts[idx], idx
 
     def reset_env(self):
-        reply = QMessageBox.question(self,
-                                     'Reset Environment',
-                                     f'Are you sure you want to reset the env vars '
-                                     f'back to {self.init_vars}?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "Reset Environment",
+            f"Are you sure you want to reset the env vars "
+            f"back to {self.init_vars}?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if reply != QMessageBox.Yes:
             return
 
         curr_vars = get_current_vars(self.routine)
 
         self.routine.environment._set_variables(
-            dict(zip(self.vocs.variable_names, self.init_vars)))
+            dict(zip(self.vocs.variable_names, self.init_vars))
+        )
 
         self.jump_to_solution(0)
         self.sig_inspect.emit(0)
@@ -913,14 +954,17 @@ class BadgerOptMonitor(QWidget):
         delta = (x_range[1] - x_range[0]) / 2
         self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
 
-        self.sig_status.emit(f'Reset environment: Env vars {curr_vars} -> {self.init_vars}')
+        self.sig_status.emit(
+            f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
+        )
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
     def jump_to_optimal(self):
         try:
             best_idx, _, _ = self.routine.vocs.select_best(
-                self.routine.sorted_data, n=1)
+                self.routine.sorted_data, n=1
+            )
             # print(best_idx, _)
             best_idx = int(best_idx[0])
 
@@ -928,9 +972,11 @@ class BadgerOptMonitor(QWidget):
             self.sig_inspect.emit(best_idx)
         except NotImplementedError:
             QMessageBox.warning(
-                self, 'Jump to optimum',
-                'Jump to optimum is not supported for '
-                'multi-objective optimization yet')
+                self,
+                "Jump to optimum",
+                "Jump to optimum is not supported for "
+                "multi-objective optimization yet",
+            )
 
     def jump_to_solution(self, idx):
         if self.plot_x_axis:  # x-axis is time
@@ -955,23 +1001,27 @@ class BadgerOptMonitor(QWidget):
         variable_names = self.vocs.variable_names
         solution = df[variable_names].to_numpy()[idx]
 
-        reply = QMessageBox.question(self,
-                                     'Apply Solution',
-                                     f'Are you sure you want to apply the selected solution at {solution} to env?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "Apply Solution",
+            f"Are you sure you want to apply the selected solution at {solution} to env?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if reply != QMessageBox.Yes:
             return
 
         curr_vars = get_current_vars(self.routine)
-        self.routine.environment._set_variables(
-            dict(zip(variable_names, solution)))
+        self.routine.environment._set_variables(dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2
         self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
 
         updated_vars = get_current_vars(self.routine)
-        self.sig_status.emit(f'Dial in solution: Env vars {curr_vars} -> {updated_vars}')
+        self.sig_status.emit(
+            f"Dial in solution: Env vars {curr_vars} -> {updated_vars}"
+        )
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
 
@@ -980,19 +1030,19 @@ class BadgerOptMonitor(QWidget):
 
         # Switch the x-axis labels
         if i:
-            self.plot_var.setLabel('bottom', 'time (s)')
-            self.plot_obj.setLabel('bottom', 'time (s)')
+            self.plot_var.setLabel("bottom", "time (s)")
+            self.plot_obj.setLabel("bottom", "time (s)")
             if self.vocs.constraint_names:
-                self.plot_con.setLabel('bottom', 'time (s)')
+                self.plot_con.setLabel("bottom", "time (s)")
             if self.vocs.observable_names:
-                self.plot_obs.setLabel('bottom', 'time (s)')
+                self.plot_obs.setLabel("bottom", "time (s)")
         else:
-            self.plot_var.setLabel('bottom', 'iterations')
-            self.plot_obj.setLabel('bottom', 'iterations')
+            self.plot_var.setLabel("bottom", "iterations")
+            self.plot_obj.setLabel("bottom", "iterations")
             if self.vocs.constraint_names:
-                self.plot_con.setLabel('bottom', 'iterations')
+                self.plot_con.setLabel("bottom", "iterations")
             if self.vocs.observable_names:
-                self.plot_obs.setLabel('bottom', 'iterations')
+                self.plot_obs.setLabel("bottom", "iterations")
 
         # Update inspector line position
         if i:
@@ -1027,8 +1077,9 @@ class BadgerOptMonitor(QWidget):
             coor_sta = self.plot_obs.vb.mapSceneToView(event._scenePos)
         coor_var = self.plot_var.vb.mapSceneToView(event._scenePos)
 
-        flag = self.plot_obj.viewRect().contains(coor_obj) or \
-            self.plot_var.viewRect().contains(coor_var)
+        flag = self.plot_obj.viewRect().contains(
+            coor_obj
+        ) or self.plot_var.viewRect().contains(coor_var)
         if self.vocs and self.vocs.constraint_names:
             flag = flag or self.plot_con.viewRect().contains(coor_con)
         if self.vocs and self.vocs.observable_names:
@@ -1044,7 +1095,7 @@ class BadgerOptMonitor(QWidget):
         if self.btn_stop.defaultAction() is not self.run_action:
             self.btn_stop.setDefaultAction(self.run_action)
 
-        if self.run_action.text() == 'Run':
+        if self.run_action.text() == "Run":
             self.start()
         else:
             self.btn_stop.setDisabled(True)
@@ -1054,10 +1105,12 @@ class BadgerOptMonitor(QWidget):
         if self.btn_stop.defaultAction() is not self.run_until_action:
             self.btn_stop.setDefaultAction(self.run_until_action)
 
-        if self.run_until_action.text() == 'Run until':
+        if self.run_until_action.text() == "Run until":
             dlg = BadgerTerminationConditionDialog(
-                self, self.start,
-                self.save_termination_condition, self.termination_condition,
+                self,
+                self.start,
+                self.save_termination_condition,
+                self.termination_condition,
             )
             self.tc_dialog = dlg
             try:
@@ -1074,8 +1127,8 @@ class BadgerOptMonitor(QWidget):
 
 def add_axes(monitor, ylabel, title, cursor_line, **kwargs):
     plot_obj = monitor.addPlot(title=title, **kwargs)
-    plot_obj.setLabel('left', ylabel)
-    plot_obj.setLabel('bottom', 'iterations')
+    plot_obj.setLabel("left", ylabel)
+    plot_obj.setLabel("bottom", "iterations")
     plot_obj.showGrid(x=True, y=True)
     leg_obj = plot_obj.addLegend()
     leg_obj.setBrush((50, 50, 100, 200))
@@ -1086,15 +1139,20 @@ def add_axes(monitor, ylabel, title, cursor_line, **kwargs):
 
 
 def create_cursor_line():
-    return pg.InfiniteLine(movable=True, angle=90, label=None,
-                           labelOpts={
-                               'position': 0.1,
-                               'color': (200, 200, 100),
-                               'fill': (200, 200, 200, 50),
-                               'movable': True})
+    return pg.InfiniteLine(
+        movable=True,
+        angle=90,
+        label=None,
+        labelOpts={
+            "position": 0.1,
+            "color": (200, 200, 100),
+            "fill": (200, 200, 200, 50),
+            "movable": True,
+        },
+    )
 
 
-def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None):
+def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
 
     for name in names:
         if ts is not None:

@@ -3,16 +3,11 @@ from typing import Callable
 
 from pandas import concat, DataFrame
 
-from badger.errors import (
-    BadgerRunTerminatedError,
-)
-from badger.routine import Routine
+from badger.errors import BadgerRunTerminatedError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
-from badger.utils import (
-    curr_ts_to_str,
-    dump_state,
-)
+from badger.routine import Routine
+from badger.utils import curr_ts_to_str, dump_state
 
 
 def check_run_status(active_callback):
@@ -46,23 +41,29 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     cons = list(result[vocs.constraint_names].to_numpy()[0])
     stas = list(result[vocs.observable_names].to_numpy()[0])
 
-    solution = (vars, objs, cons, stas, is_optimal,
-                vocs.variable_names,
-                vocs.objective_names,
-                vocs.constraint_names,
-                vocs.observable_names)
+    solution = (
+        vars,
+        objs,
+        cons,
+        stas,
+        is_optimal,
+        vocs.variable_names,
+        vocs.objective_names,
+        vocs.constraint_names,
+        vocs.observable_names,
+    )
 
     return solution
 
 
 def run_routine(
-        routine: Routine,
-        active_callback: Callable,
-        generate_callback: Callable,
-        evaluate_callback: Callable,
-        states_callback: Callable,
-        dump_file_callback: Callable = None,
-        verbose: int = 2,
+    routine: Routine,
+    active_callback: Callable,
+    generate_callback: Callable,
+    evaluate_callback: Callable,
+    states_callback: Callable,
+    dump_file_callback: Callable = None,
+    verbose: int = 2,
 ) -> None:
     """
     Run the provided routine object using Xopt.
@@ -103,12 +104,17 @@ def run_routine(
         states_callback(states)
 
     # Optimization starts
-    print('')
-    solution_meta = (None, None, None, None, None,
-                     routine.vocs.variable_names,
-                     routine.vocs.objective_names,
-                     routine.vocs.constraint_names,
-                     routine.vocs.observable_names)
+    solution_meta = (
+        None,
+        None,
+        None,
+        None,
+        None,
+        routine.vocs.variable_names,
+        routine.vocs.objective_names,
+        routine.vocs.constraint_names,
+        routine.vocs.observable_names,
+    )
     opt_logger.update(Events.OPTIMIZATION_START, solution_meta)
 
     # evaluate initial points:
@@ -157,8 +163,9 @@ def run_routine(
             # Dump Xopt state after each step
             if dump_file_callback:
                 if combined_results is not None:
-                    combined_results = concat([combined_results, result],
-                                              axis=0).reset_index(drop=True)
+                    combined_results = concat(
+                        [combined_results, result], axis=0
+                    ).reset_index(drop=True)
                 else:
                     combined_results = result
 
