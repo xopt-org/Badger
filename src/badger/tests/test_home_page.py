@@ -1,10 +1,13 @@
+import multiprocessing
+
 import pytest
 from PyQt5.QtCore import QEventLoop, QTimer
-import multiprocessing 
 
-@pytest.fixture(scope='session')
+
+@pytest.fixture(scope="session")
 def init_multiprocessing():
     multiprocessing.set_start_method("fork", force=True)
+
 
 def test_home_page_run_routine(qtbot, init_multiprocessing):
     from badger.db import save_routine
@@ -29,9 +32,9 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
     routines = [
         create_routine(),
         create_multiobjective_routine(),
-        #create_routine_turbo(),
+        # create_routine_turbo(),
     ]
- 
+
     for ele in routines:
         save_routine(ele)
         home_page.current_routine = ele
@@ -44,11 +47,13 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
         # start run in a thread and wait some time for it to finish
         home_page.run_monitor.start(True)
 
-        with qtbot.waitSignal(home_page.run_monitor.sig_progress, timeout=1000) as blocker:
+        with qtbot.waitSignal(
+            home_page.run_monitor.sig_progress, timeout=1000
+        ) as blocker:
             pass
 
         assert blocker.signal_triggered
-        
+
         # Wait until the run is done
         while home_page.run_monitor.running:
             qtbot.wait(100)

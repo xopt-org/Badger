@@ -1,20 +1,22 @@
 import os
 import time
-from typing import Dict
-from importlib import metadata
 from functools import partial
-from PyQt5.QtWidgets import (QMainWindow, QStackedWidget, QDesktopWidget, 
-                             QMessageBox)
+from importlib import metadata
+from typing import Dict
+
 from PyQt5.QtCore import QThread
-from ..pages.home_page import BadgerHomePage
-from ..components.process_manager import processManager
-from ..components.create_process import createProcess
+from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWidget
+
+from badger.gui.default.components.create_process import CreateProcess
+from badger.gui.default.components.process_manager import ProcessManager
+from badger.gui.default.pages.home_page import BadgerHomePage
+
 
 class BadgerMainWindow(QMainWindow):
     def __init__(self) -> None:
-        super().__init__() 
+        super().__init__()
         self.thread_list = []
-        self.process_manager = processManager()
+        self.process_manager = ProcessManager()
         self.process_manager.processQueueUpdated.connect(self.addSubprocess)
         self.addSubprocess()
         self.init_ui()
@@ -22,48 +24,48 @@ class BadgerMainWindow(QMainWindow):
 
     def addSubprocess(self) -> None:
         """
-        Adds a subprocess to the subprocess queue. 
+        Adds a subprocess to the subprocess queue.
         This method builds the subprocess on a QThread so as to not disrupt the main process.
         """
         self.thread = QThread()
-        self.worker = createProcess()
+        self.worker = CreateProcess()
         self.worker.moveToThread(self.thread)
 
-        self.thread.started.connect(self.worker.create_subprocess)        
+        self.thread.started.connect(self.worker.create_subprocess)
         self.worker.subprocess_prepared.connect(self.storeSubprocess)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.finished.connect(self.cleanupThread)
-        
+
         self.thread_list.append(self.thread)
         self.thread.start()
-    
+
     def cleanupThread(self) -> None:
         """
-        Method to remove threads no longer active from the thread list. 
+        Method to remove threads no longer active from the thread list.
 
-        Parameters: 
+        Parameters:
             thread: QThread
         """
         thread = self.sender()
         if thread in self.thread_list:
-            self.thread_list.remove(thread)  
+            self.thread_list.remove(thread)
 
     def storeSubprocess(self, process_with_args: Dict) -> None:
         """
-        Store the prepared subprocess for later use. 
+        Store the prepared subprocess for later use.
 
-        Parameters: 
+        Parameters:
             process_with_args: Dict
         """
-        self.process_manager.add_to_queue(process_with_args)  
-    
+        self.process_manager.add_to_queue(process_with_args)
+
     def init_ui(self) -> None:
-        version = metadata.version('badger-opt')
-        version_xopt = metadata.version('xopt')
-        self.setWindowTitle(f'Badger v{version} (Xopt v{version_xopt})')
-        if os.getenv('DEMO'):
+        version = metadata.version("badger-opt")
+        version_xopt = metadata.version("xopt")
+        self.setWindowTitle(f"Badger v{version} (Xopt v{version_xopt})")
+        if os.getenv("DEMO"):
             self.resize(1280, 720)
         else:
             self.resize(960, 720)
@@ -102,12 +104,16 @@ class BadgerMainWindow(QMainWindow):
             return
 
         reply = QMessageBox.question(
-            self, 'Window Close',
-            'Closing this window will terminate the current run, '
-            'and the run data would be archived.\n\nProceed?',
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            self,
+            "Window Close",
+            "Closing this window will terminate the current run, "
+            "and the run data would be archived.\n\nProceed?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
 
         if reply == QMessageBox.Yes:
+
             def close_window():
                 monitor.destroy_unused_env()
                 self.close()
@@ -118,4 +124,3 @@ class BadgerMainWindow(QMainWindow):
             event.ignore()
         else:
             event.ignore()
-        

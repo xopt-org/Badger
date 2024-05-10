@@ -17,6 +17,7 @@ def test_routine_generation(qtbot):
 
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
+
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
@@ -64,15 +65,16 @@ def test_initial_points(qtbot):
     # test routine generation with fake current values selected
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
     routine = window._compose_routine()
-    assert routine.initial_points.to_dict() == pd.DataFrame(
-        {"x0": 0, "x1": 0, "x2": 0}, index=[0]).to_dict()
+    assert (
+        routine.initial_points.to_dict()
+        == pd.DataFrame({"x0": 0, "x1": 0, "x2": 0}, index=[0]).to_dict()
+    )
 
 
 def test_ui_update(qtbot):
-    from badger.tests.utils import create_routine
-
     # test to make sure initial points widget works properly
     from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.tests.utils import create_routine
 
     window = BadgerRoutinePage()
 
@@ -88,6 +90,7 @@ def test_ui_update(qtbot):
 def test_constraints(qtbot):
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
+
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
@@ -112,6 +115,7 @@ def test_constraints(qtbot):
 def test_observables(qtbot):
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
+
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
@@ -153,6 +157,7 @@ def test_add_random_points(qtbot):
         window.rc_dialog.sb_np.setValue(5)
         window.rc_dialog.sb_frac.setValue(0.05)
         qtbot.mouseClick(window.rc_dialog.btn_add, Qt.MouseButton.LeftButton)
+
     QTimer.singleShot(0, handle_dialog)
 
     qtbot.mouseClick(window.env_box.btn_add_rand, Qt.LeftButton)

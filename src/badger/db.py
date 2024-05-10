@@ -208,7 +208,7 @@ def list_routine(keyword='', tags={}):
 def save_run(run):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
-    con = sqlite3.connect(db_run)
+    con = sqlite3.connect(db_run, timeout=30.0)
     cur = con.cursor()
 
     # Insert or update a record
