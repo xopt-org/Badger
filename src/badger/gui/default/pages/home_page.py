@@ -326,7 +326,7 @@ class BadgerHomePage(QWidget):
             self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(
-        self, routines: List[str], timestamps: List[str], descriptions: List[str]
+        self, routines: List[str], timestamps: List[str], environments: List[str], descriptions: List[str]
     ):
         try:
             selected_routine = self.prev_routine_item.routine_name
@@ -334,7 +334,7 @@ class BadgerHomePage(QWidget):
             selected_routine = None
         self.routine_list.clear()
         for i, routine in enumerate(routines):
-            _item = BadgerRoutineItem(routine, timestamps[i], descriptions[i], self)
+            _item = BadgerRoutineItem(routine, timestamps[i], environments[i], descriptions[i], self)
             _item.sig_del.connect(self.delete_routine)
             item = QListWidgetItem(self.routine_list)
             item.routine_name = routine  # dirty trick
@@ -356,15 +356,15 @@ class BadgerHomePage(QWidget):
         if tag_reg:
             tags["region"] = tag_reg
         if tag_gain:
-            tags["gain"] = tag_gain
-        routines, timestamps, descriptions = list_routine(keyword, tags)
+            tags['gain'] = tag_gain
+        routines, timestamps, environments, descriptions = list_routine(keyword, tags)
 
-        return routines, timestamps, descriptions
+        return routines, timestamps, environments, descriptions
 
     def refresh_routine_list(self):
-        routines, timestamps, descriptions = self.get_current_routines()
+        routines, timestamps, environments, descriptions = self.get_current_routines()
 
-        self.build_routine_list(routines, timestamps, descriptions)
+        self.build_routine_list(routines, timestamps, environments, descriptions)
 
     def go_run(self, i: int):
         gc.collect()
