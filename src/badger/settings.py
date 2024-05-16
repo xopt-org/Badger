@@ -1,85 +1,69 @@
 import os
 import shutil
+import platform
+import yaml
 from importlib import resources
 from PyQt5.QtCore import QSettings
 from .utils import get_datadir
 
+def load_config(self):
+    """
+    """
+    config_path = os.path.join(self.app_support_dir, self.config_file)
+        
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"{config_path} does not exist. Please create it first.")
+        
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+        
+    return config
 
-BADGER_PATH_DICT = {
-    "BADGER_PLUGIN_ROOT": {
-        "display name": "plugin root",
-        "description": "This setting (BADGER_PLUGIN_ROOT) tells Badger where to look for the plugins",
-        "default value": None,
-    },
-    "BADGER_DB_ROOT": {
-        "display name": "database root",
-        "description": "This setting (BADGER_DB_ROOT) tells Badger where to store the routine database",
-        "default value": None,
-    },
-    "BADGER_LOGBOOK_ROOT": {
-        "display name": "logbook root",
-        "description": "This setting (BADGER_LOGBOOK_ROOT) tells Badger where to send the logs (GUI mode)",
-        "default value": None,
-    },
-    "BADGER_ARCHIVE_ROOT": {
-        "display name": "archive root",
-        "description": "This setting (BADGER_ARCHIVE_ROOT) tells Badger where to archive the historical optimization runs",
-        "default value": None,
-    },
-}
+def create_config(config_file='config.yaml', template_file='config_template.yaml'):
+    """
+    """
+    app_support_dir = get_app_support_dir()
+    config_path = os.path.join(app_support_dir, config_file)
+        
+    if not os.path.exists(app_support_dir):
+        os.makedirs(app_support_dir)
 
+    if not os.path.exists(config_path):
+        shutil.copy(template_file, config_file)
+        print(f"{config_file} created from {template_file}.")
+    else:
+        print(f"{config_file} already exists.")
 
-BADGER_CORE_DICT = {
-    # 'BADGER_CHECK_VAR_INTERVAL': {
-    #     'display name': 'check var interval',
-    #     'description': 'Waiting time between each round of check var when set var to env, unit is second',
-    #     'default value': 0.1,
-    # },
-    # 'BADGER_CHECK_VAR_TIMEOUT': {
-    #     'display name': 'check var timeout',
-    #     'description': 'Maximum waiting time before giving up check var if takes too long time, unit is second',
-    #     'default value': 3,
-    # },
-    "BADGER_DATA_DUMP_PERIOD": {
-        "display name": "data dump period",
-        "description": "Minimum time interval between data dumps, unit is second",
-        "default value": 1,
-    },
-    # 'BADGER_PLUGINS_URL': {
-    #     'display name': 'badger plugins url',
-    #     'description': 'URL for badger plugins server',
-    #     'default value': 'http://teeport.ml/badger-plugins'
-    # }
-}
-
-
-BADGER_GUI_DICT = {
-    "BADGER_THEME": {
-        "display name": "theme",
-        "description": "Theme for the Badger GUI",
-        "default value": "dark",
-    },
-    "BADGER_ENABLE_ADVANCED": {
-        "display name": "enable advanced features",
-        "description": "Enable advanced features on the GUI",
-        "default value": False,
-    },
-}
-
+def get_app_support_dir(self):
+    """
+    """
+    system = platform.system()
+    if system == 'Darwin':  # macOS
+        return os.path.expanduser('~/Library/Application Support/MyApp')
+    elif system == 'Linux':  # Linux
+        return os.path.expanduser('~/.config/MyApp')
+    elif system == 'Windows':  # Windows
+        return os.path.join(os.environ['APPDATA'], 'MyApp')
+    else:
+        raise ValueError(f'Unsupported OS: {system}')
 
 def init_settings():
+    config = load_config()
     settings = QSettings("SLAC-ML", "Badger")
+    print(config, "WE ARE GOLDEN")
+    BADGER_PATH_DICT = config["BADGER_PATH_DICT"]
+    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
+    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
 
     for key in BADGER_PATH_DICT.keys():
         if settings.value(key) is None:
-            settings.setValue(key, BADGER_PATH_DICT[key]["default value"])
+            settings.setValue(key, BADGER_PATH_DICT[key]["value"])
     for key in BADGER_CORE_DICT.keys():
         if settings.value(key) is None:
-            settings.setValue(key, BADGER_CORE_DICT[key]["default value"])
+            settings.setValue(key, BADGER_CORE_DICT[key]["value"])
     for key in BADGER_GUI_DICT.keys():
         if settings.value(key) is None:
-            settings.setValue(key, BADGER_GUI_DICT[key]["default value"])
-
+            settings.setValue(key, BADGER_GUI_DICT[key]["value"])
 
 def list_settings():
     """List all the settings in Badger
@@ -91,7 +75,12 @@ def list_settings():
         settings, the value for each key is the current value for that setting.
 
     """
+    config = load_config()
     settings = QSettings("SLAC-ML", "Badger")
+    BADGER_PATH_DICT = config["BADGER_PATH_DICT"]
+    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
+    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
+
     result = {}
     for key in BADGER_PATH_DICT.keys():
         result[key] = settings.value(key)
@@ -119,7 +108,10 @@ def mock_settings():
     app_data_dir = get_datadir() / "Badger"
     os.makedirs(app_data_dir, exist_ok=True)
 
+    config = load_config()
     settings = QSettings("SLAC-ML", "Badger")
+    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
+    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
 
     # Configure the paths and put/refresh the mock plugins there if needed
     plugins_dir = str(app_data_dir / "plugins")
@@ -142,16 +134,21 @@ def mock_settings():
 
     # Set other settings to the default values
     for key in BADGER_CORE_DICT.keys():
-        settings.setValue(key, BADGER_CORE_DICT[key]["default value"])
+        settings.setValue(key, BADGER_CORE_DICT[key]["value"])
     for key in BADGER_GUI_DICT.keys():
-        settings.setValue(key, BADGER_GUI_DICT[key]["default value"])
+        settings.setValue(key, BADGER_GUI_DICT[key]["value"])
 
 
 def reset_settings():
+    config = load_config()
     settings = QSettings("SLAC-ML", "Badger")
+    BADGER_PATH_DICT = config["BADGER_PATH_DICT"]
+    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
+    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
+
     for key in BADGER_PATH_DICT.keys():
-        settings.setValue(key, BADGER_PATH_DICT[key]["default value"])
+        settings.setValue(key, BADGER_PATH_DICT[key]["value"])
     for key in BADGER_CORE_DICT.keys():
-        settings.setValue(key, BADGER_CORE_DICT[key]["default value"])
+        settings.setValue(key, BADGER_CORE_DICT[key]["value"])
     for key in BADGER_GUI_DICT.keys():
-        settings.setValue(key, BADGER_GUI_DICT[key]["default value"])
+        settings.setValue(key, BADGER_GUI_DICT[key]["value"])
