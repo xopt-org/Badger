@@ -1,5 +1,6 @@
 import gc
 import os
+import yaml
 import traceback
 from importlib import resources
 from typing import List
@@ -333,8 +334,15 @@ class BadgerHomePage(QWidget):
         except Exception:
             selected_routine = None
         self.routine_list.clear()
+        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
+        try:
+            with open(env_dict_dir, 'r') as stream:
+                env_dict = yaml.safe_load(stream)
+        except (FileNotFoundError, yaml.YAMLError):
+            env_dict = {}
         for i, routine in enumerate(routines):
-            _item = BadgerRoutineItem(routine, timestamps[i], environments[i], descriptions[i], self)
+            _item = BadgerRoutineItem(routine, timestamps[i], environments[i], env_dict, descriptions[i], self)
             _item.sig_del.connect(self.delete_routine)
             item = QListWidgetItem(self.routine_list)
             item.routine_name = routine  # dirty trick

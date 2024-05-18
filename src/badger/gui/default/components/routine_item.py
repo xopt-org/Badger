@@ -6,15 +6,6 @@ from PyQt5.QtGui import QFont
 from .eliding_label import ElidingLabel
 from ..utils import create_button
 
-env_dict = {
-    'sphere_2d': {
-        'normal': '#E06666',
-        'normal_hover': '#E06666',
-        'activate': '#E06666',
-        'activate_hover': '#E06666'
-    }
-}
-
 stylesheet_normal_default = '''
     background-color: #4C566A;
     border-radius: 2px;
@@ -72,7 +63,7 @@ QPushButton
 class BadgerRoutineItem(QWidget):
     sig_del = pyqtSignal(str)
 
-    def __init__(self, name, timestamp, environment, description='', parent=None):
+    def __init__(self, name, timestamp, environment, env_dict, description='', parent=None):
         super().__init__(parent)
 
         self.activated = False
