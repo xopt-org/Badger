@@ -6,6 +6,7 @@ import time
 import traceback
 
 import torch
+import epics
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
@@ -189,6 +190,7 @@ class BadgerRoutineSubprocess:
         self.routine_process.join(timeout=0.1)
 
         if self.routine_process.is_alive():
+            epics.ca.destroy_context()
             self.routine_process.terminate()
             self.routine_process.join()
 
