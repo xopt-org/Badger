@@ -7,6 +7,7 @@ import traceback
 
 import torch
 import epics
+import threading
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
@@ -197,7 +198,8 @@ class BadgerRoutineSubprocess:
         self.close()
 
         self.list_connections()
-
+        self.list_active_threads()
+        
     def ctrl_routine(self, pause: bool) -> None:
         """
         This method will pause and unpause the routine.
@@ -226,3 +228,10 @@ class BadgerRoutineSubprocess:
         for pvname, chid in connections.items():
             pv = epics.PV(pvname)
             print(f"PV Name: {pvname}, Connected: {pv.connected}, Status: {pv.status}")
+
+    def list_active_threads(self):
+        threads = threading.enumerate()
+        print(f"Number of active threads: {len(threads)}\n")
+        print("Active threads:")
+        for thread in threads:
+            print(f"Thread Name: {thread.name}, Thread ID: {thread.ident}, Is Alive: {thread.is_alive()}")
