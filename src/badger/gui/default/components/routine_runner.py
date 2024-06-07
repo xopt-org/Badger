@@ -125,6 +125,7 @@ class BadgerRoutineSubprocess:
             }
 
             self.data_queue.put(arg_dict)
+            self.data_queue.close()
             self.wait_event.set()
             self.pause_event.set()
             self.setup_timer()
@@ -196,10 +197,10 @@ class BadgerRoutineSubprocess:
             self.routine_process.join()
 
         self.close()
-
+        #self.evaluate_queue[1].close()
         self.list_connections()
         self.list_active_threads()
-        
+
     def ctrl_routine(self, pause: bool) -> None:
         """
         This method will pause and unpause the routine.
