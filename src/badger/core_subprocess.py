@@ -162,7 +162,7 @@ def run_routine_subprocess(
         while True:
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                epics.ca.destroy_context()
+                #epics.ca.destroy_context()
                 raise BadgerRunTerminatedError
             elif not pause_process.is_set():
                 pause_process.wait()
@@ -193,7 +193,7 @@ def run_routine_subprocess(
             # External triggers
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                epics.ca.destroy_context()
+                #epics.ca.destroy_context()
                 raise BadgerRunTerminatedError
             elif not pause_process.is_set():
                 pause_process.wait()
