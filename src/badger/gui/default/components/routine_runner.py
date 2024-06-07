@@ -216,7 +216,7 @@ class BadgerRoutineSubprocess:
         self.timer.stop()
         self.signals.finished.emit()
 
-    def list_connections():
+    def list_connections(self):
         connections = epics.ca.get_cache('channels')
         if not connections:
             print("No active connections.")
