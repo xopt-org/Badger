@@ -4,6 +4,7 @@ logger = logging.getLogger(__name__)
 
 import time
 import traceback
+
 import torch
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
