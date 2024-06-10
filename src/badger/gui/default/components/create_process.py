@@ -4,7 +4,7 @@ from PyQt5.QtCore import pyqtSignal, QObject
 
 from badger.core_subprocess import run_routine_subprocess
 
-from epics import CAProcess
+import epics
 
 class CreateProcess(QObject):
     """
@@ -28,8 +28,9 @@ class CreateProcess(QObject):
         self.data_queue = Queue()
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
-
-        new_process = CAProcess(
+        
+        epics.ca.clear_cache()
+        new_process = Process(
             target=run_routine_subprocess,
             args=(
                 self.data_queue,
