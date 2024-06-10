@@ -5,7 +5,6 @@ from PyQt5.QtCore import pyqtSignal, QObject
 from badger.core_subprocess import run_routine_subprocess
 
 from epics import CAProcess
-import threading
 
 class CreateProcess(QObject):
     """
@@ -18,12 +17,6 @@ class CreateProcess(QObject):
     finished = pyqtSignal()
     subprocess_prepared = pyqtSignal(object)
 
-    def list_active_threads(self):
-        threads = threading.enumerate()
-        print(f"Number of active threads: {len(threads)}\n")
-        print("Active threads:")
-        for thread in threads:
-            print(f"Thread Name: {thread.name}, Thread ID: {thread.ident}, Is Alive: {thread.is_alive()}")
 
     def create_subprocess(self) -> None:
         """
@@ -36,9 +29,6 @@ class CreateProcess(QObject):
         self.data_queue = Queue()
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
-        print("before")
-        self.list_active_threads()
-        print("after")
         new_process = CAProcess(
             target=run_routine_subprocess,
             args=(

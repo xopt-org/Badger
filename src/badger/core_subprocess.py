@@ -1,13 +1,11 @@
 import logging
 import time
 import typing
-import threading
 
 import pkg_resources
 import torch
 from pandas import concat, DataFrame
 
-import epics
 logger = logging.getLogger(__name__)
 
 import multiprocessing as mp
@@ -161,12 +159,8 @@ def run_routine_subprocess(
     # perform optimization
     try:
         while True:
-            list_connections()
-            list_active_threads()
-
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                #epics.ca.destroy_context()
                 raise BadgerRunTerminatedError
             elif not pause_process.is_set():
                 pause_process.wait()
@@ -197,7 +191,6 @@ def run_routine_subprocess(
             # External triggers
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                #epics.ca.destroy_context()
                 raise BadgerRunTerminatedError
             elif not pause_process.is_set():
                 pause_process.wait()
@@ -227,22 +220,3 @@ def run_routine_subprocess(
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
         raise e
-
-
-def list_connections():
-    connections = epics.ca.get_cache('channels')
-    if not connections:
-        print("No active connections.")
-        return
-
-    print("Current EPICS connections:")
-    for pvname, chid in connections.items():
-        pv = epics.PV(pvname)
-        print(f"PV Name: {pvname}, Connected: {pv.connected}, Status: {pv.status}")
-
-def list_active_threads():
-    threads = threading.enumerate()
-    print(f"Number of active threads: {len(threads)}\n")
-    print("Active threads:")
-    for thread in threads:
-        print(f"Thread Name: {thread.name}, Thread ID: {thread.ident}, Is Alive: {thread.is_alive()}")

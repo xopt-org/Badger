@@ -4,10 +4,7 @@ logger = logging.getLogger(__name__)
 
 import time
 import traceback
-
 import torch
-import epics
-import threading
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
@@ -192,14 +189,10 @@ class BadgerRoutineSubprocess:
         self.routine_process.join(timeout=0.1)
 
         if self.routine_process.is_alive():
-            #epics.ca.destroy_context()
             self.routine_process.terminate()
             self.routine_process.join()
 
         self.close()
-        #self.evaluate_queue[1].close()
-        self.list_connections()
-        self.list_active_threads()
 
     def ctrl_routine(self, pause: bool) -> None:
         """
@@ -218,21 +211,3 @@ class BadgerRoutineSubprocess:
     def close(self) -> None:
         self.timer.stop()
         self.signals.finished.emit()
-
-    def list_connections(self):
-        connections = epics.ca.get_cache('channels')
-        if not connections:
-            print("No active connections.")
-            return
-
-        print("Current EPICS connections:")
-        for pvname, chid in connections.items():
-            pv = epics.PV(pvname)
-            print(f"PV Name: {pvname}, Connected: {pv.connected}, Status: {pv.status}")
-
-    def list_active_threads(self):
-        threads = threading.enumerate()
-        print(f"Number of active threads: {len(threads)}\n")
-        print("Active threads:")
-        for thread in threads:
-            print(f"Thread Name: {thread.name}, Thread ID: {thread.ident}, Is Alive: {thread.is_alive()}")
