@@ -6,3 +6,5 @@ pyqtgraph
 qdarkstyle
 pytest-qt
 pytest-mock
+# for epics
+pyepics
