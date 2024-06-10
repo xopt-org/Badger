@@ -29,7 +29,7 @@ class CreateProcess(QObject):
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
 
-        new_process = CAProcess(
+        new_process = Process(
             target=run_routine_subprocess,
             args=(
                 self.data_queue,

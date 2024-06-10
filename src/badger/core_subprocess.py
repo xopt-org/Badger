@@ -17,6 +17,7 @@ from badger.logger.event import Events
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
 
+import epics 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
     """
@@ -88,6 +89,7 @@ def run_routine_subprocess(
     pause_process: mp.Event
     wait_event: mp.Event
     """
+    epics.ca.clear_cache()
     wait_event.wait()
 
     try:
