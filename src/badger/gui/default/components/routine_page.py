@@ -277,9 +277,11 @@ class BadgerRoutinePage(QWidget):
         name = self.generators[i]
         default_config = get_generator_defaults(name)
 
-        # Patch for BOs that make the low noise prior False by default
         if name in all_generator_names['bo']:
+            # Patch for BOs that make the low noise prior False by default
             default_config['gp_constructor']['use_low_noise_prior'] = False
+            # Patch for BOs that turn on TuRBO by default
+            default_config['turbo_controller'] = 'optimize'
 
         # Patch to only show part of the config
         filtered_config = filter_generator_config(name, default_config)
@@ -657,14 +659,18 @@ class BadgerRoutinePage(QWidget):
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.toPlainText())
-        # Patch the BO generators to make sure use_low_noise_prior is False
         if generator_name in all_generator_names['bo']:
+            # Patch the BO generators to make sure use_low_noise_prior is False
             if 'gp_constructor' not in generator_params:
                 generator_params['gp_constructor'] = {
                     'name': 'standard',  # have to add name too for pydantic validation
                     'use_low_noise_prior': False,
                 }
             # or else we use whatever specified by the users
+
+            # Patch the BO generators to turn on TuRBO by default
+            if 'turbo_controller' not in generator_params:
+                generator_params['turbo_controller'] = 'optimize'
         env_params = load_config(self.env_box.edit.toPlainText())
 
         # VOCS
