@@ -292,9 +292,14 @@ class BadgerEnvBox(CollapsibleBox):
 
     def toggle_init_mode(self, checked):
         if checked:
+            self.auto_populate.setDisabled(False)
+
             self.var_table.lock_bounds()
             self.init_table.setDisabled(True)
         else:
+            self.auto_populate.setChecked(False)
+            self.auto_populate.setDisabled(True)
+
             self.var_table.unlock_bounds()
             self.init_table.setDisabled(False)
 

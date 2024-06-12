@@ -175,6 +175,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_clear.clicked.connect(
             partial(self.clear_init_table, reset_actions=True))
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
+        self.env_box.auto_populate.stateChanged.connect(self.toggle_auto_populate)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
@@ -471,7 +472,7 @@ class BadgerRoutinePage(QWidget):
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
-        if record:
+        if record and self.env_box.auto_populate.isChecked():
             self.init_table_actions.append({'type': 'add_curr'})
 
     def save_add_rand_config(self, add_rand_config):
@@ -509,7 +510,7 @@ class BadgerRoutinePage(QWidget):
                 except IndexError:  # No more points to add
                     break
 
-        if record:
+        if record and self.env_box.auto_populate.isChecked():
             self.init_table_actions.append({
                 'type': 'add_rand',
                 'config': add_rand_config,
@@ -534,7 +535,7 @@ class BadgerRoutinePage(QWidget):
                 if item:
                     item.setText('')  # Set the cell content to an empty string
 
-        if reset_actions:
+        if reset_actions and self.env_box.auto_populate.isChecked():
             self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
@@ -608,7 +609,7 @@ class BadgerRoutinePage(QWidget):
                 vrange[name] = bounds
 
         self.env_box.var_table.set_bounds(vrange)
-        self.clear_init_table()  # clear table after changing ranges
+        self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 
     def save_limit_option(self, limit_option):
@@ -654,6 +655,10 @@ class BadgerRoutinePage(QWidget):
                     )
                 except IndexError:  # lower bound is the same as upper bound
                     pass
+
+    def toggle_auto_populate(self, checked):
+        if checked and self.env_box.var_table.selected:
+            self.update_init_table()
 
     def add_constraint(self, name=None, relation=0, threshold=0, critical=False):
         if self.configs is None:
