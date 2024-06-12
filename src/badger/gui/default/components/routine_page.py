@@ -1,6 +1,7 @@
 import warnings
 import sqlite3
 import traceback
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -17,7 +18,11 @@ from xopt.utils import get_local_region
 
 from .generator_cbox import BadgerAlgoBox
 from .constraint_item import constraint_item
-from .data_table import get_table_content_as_dict, set_init_data_table
+from .data_table import (
+    get_table_content_as_dict,
+    set_init_data_table,
+    update_init_data_table,
+)
 from .env_cbox import BadgerEnvBox
 from .filter_cbox import BadgerFilterBox
 from .state_item import state_item
@@ -58,11 +63,22 @@ class BadgerRoutinePage(QWidget):
         self.window_docs = BadgerDocsWindow(self, '')
 
         # Limit variable ranges
-        self.limit_option = None
+        self.limit_option = {
+            'limit_option_idx': 0,
+            'ratio_curr': 0.1,
+            'ratio_full': 0.1,
+        }
 
         # Add radom points config
-        self.add_rand_config = None
+        self.add_rand_config = {
+            'method': 0,
+            'n_points': 3,
+            'fraction': 0.1,
+        }
         self.rc_dialog = None
+
+        # Record the initial table actions
+        self.init_table_actions = []
 
         self.init_ui()
         self.config_logic()
@@ -153,10 +169,13 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_con.clicked.connect(self.add_constraint)
         self.env_box.btn_add_sta.clicked.connect(self.add_state)
-        self.env_box.btn_add_curr.clicked.connect(self.fill_curr_in_init_table)
+        self.env_box.btn_add_curr.clicked.connect(
+            partial(self.fill_curr_in_init_table, record=True))
         self.env_box.btn_add_rand.clicked.connect(self.show_add_rand_dialog)
-        self.env_box.btn_clear.clicked.connect(self.clear_init_table)
+        self.env_box.btn_clear.clicked.connect(
+            partial(self.clear_init_table, reset_actions=True))
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
+        self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
@@ -180,6 +199,8 @@ class BadgerRoutinePage(QWidget):
             # Reset the routine configs check box status
             self.env_box.check_only_var.setChecked(False)
             self.env_box.check_only_obj.setChecked(False)
+            self.env_box.relative_to_curr.setChecked(True)
+            self.env_box.auto_populate.setChecked(True)
 
             # Reset the save settings
             name = generate_slug(2)
@@ -227,6 +248,10 @@ class BadgerRoutinePage(QWidget):
         # Config the vocs panel
         variables = routine.vocs.variable_names
         self.env_box.check_only_var.setChecked(True)
+
+        self.env_box.relative_to_curr.setChecked(False)
+        self.env_box.auto_populate.setChecked(False)
+
         self.env_box.edit_var.clear()
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.set_bounds(routine.vocs.variables)
@@ -348,6 +373,9 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, 'Invalid script!', str(e))
 
     def select_env(self, i):
+        # Reset the initial table actions
+        self.init_table_actions = []
+
         if i == -1:
             self.env_box.edit.setPlainText('')
             self.env_box.edit_var.clear()
@@ -398,6 +426,9 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.check_only_var.setChecked(False)
         self.env_box.var_table.update_variables(vars_combine)
+        # Auto apply the limited variable ranges if the option is set
+        if self.env_box.relative_to_curr.isChecked():
+            self.set_vrange(set_all=True)
 
         _objs_env = configs['observations']
         objs_env = []
@@ -424,7 +455,7 @@ class BadgerRoutinePage(QWidget):
                 header_list.append('')  # Handle the case where the header item is None
         return header_list
 
-    def fill_curr_in_init_table(self):
+    def fill_curr_in_init_table(self, record=False):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
@@ -440,10 +471,16 @@ class BadgerRoutinePage(QWidget):
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
+        if record:
+            self.init_table_actions.append({'type': 'add_curr'})
+
     def save_add_rand_config(self, add_rand_config):
         self.add_rand_config = add_rand_config
 
-    def add_rand_in_init_table(self):
+    def add_rand_in_init_table(self, add_rand_config=None, record=True):
+        if add_rand_config is None:
+            add_rand_config = self.add_rand_config
+
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
@@ -451,8 +488,8 @@ class BadgerRoutinePage(QWidget):
 
         # get small region around current point to sample
         vocs, _ = self._compose_vocs()
-        n_point = self.add_rand_config['n_points']
-        fraction = self.add_rand_config['fraction']
+        n_point = add_rand_config['n_points']
+        fraction = add_rand_config['fraction']
         random_sample_region = get_local_region(var_curr, vocs,
                                                 fraction=fraction)
         random_points = vocs.random_inputs(n_point,
@@ -472,6 +509,12 @@ class BadgerRoutinePage(QWidget):
                 except IndexError:  # No more points to add
                     break
 
+        if record:
+            self.init_table_actions.append({
+                'type': 'add_rand',
+                'config': add_rand_config,
+            })
+
     def show_add_rand_dialog(self):
         dlg = BadgerAddRandomDialog(
             self, self.add_rand_in_init_table,
@@ -483,13 +526,16 @@ class BadgerRoutinePage(QWidget):
         finally:
             self.rc_dialog = None
 
-    def clear_init_table(self):
+    def clear_init_table(self, reset_actions=True):
         table = self.env_box.init_table
         for row in range(table.rowCount()):
             for col in range(table.columnCount()):
                 item = table.item(row, col)
                 if item:
                     item.setText('')  # Set the cell content to an empty string
+
+        if reset_actions:
+            self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
         table = self.env_box.init_table
@@ -529,13 +575,13 @@ class BadgerRoutinePage(QWidget):
         )
         dlg.exec()
 
-    def set_vrange(self):
+    def set_vrange(self, set_all=False):
         vname_selected = []
         vrange = {}
 
         for var in self.env_box.var_table.all_variables:
             name = next(iter(var))
-            if self.env_box.var_table.is_checked(name):
+            if set_all or self.env_box.var_table.is_checked(name):
                 vname_selected.append(name)
                 vrange[name] = var[name]
 
@@ -562,6 +608,8 @@ class BadgerRoutinePage(QWidget):
                 vrange[name] = bounds
 
         self.env_box.var_table.set_bounds(vrange)
+        self.clear_init_table()  # clear table after changing ranges
+        self.update_init_table()  # auto populate if option is set
 
     def save_limit_option(self, limit_option):
         self.limit_option = limit_option
@@ -579,6 +627,33 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.add_var(name, lb, ub)
         return 0
+
+    def update_init_table(self):
+        selected = self.env_box.var_table.selected
+        variable_names = [v for v in selected if selected[v]]
+        update_init_data_table(self.env_box.init_table, variable_names)
+
+        if not self.env_box.auto_populate.isChecked():
+            return
+
+        # Auto populate the initial table based on recorded actions
+        if not self.init_table_actions:
+            self.init_table_actions = [
+                {'type': 'add_curr'},
+                {'type': 'add_rand', 'config': self.add_rand_config},
+            ]
+        self.clear_init_table(reset_actions=False)
+        for action in self.init_table_actions:
+            if action['type'] == 'add_curr':
+                self.fill_curr_in_init_table(record=False)
+            elif action['type'] == 'add_rand':
+                try:
+                    self.add_rand_in_init_table(
+                        add_rand_config=action['config'],
+                        record=False,
+                    )
+                except IndexError:  # lower bound is the same as upper bound
+                    pass
 
     def add_constraint(self, name=None, relation=0, threshold=0, critical=False):
         if self.configs is None:

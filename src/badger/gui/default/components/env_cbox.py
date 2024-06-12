@@ -90,6 +90,29 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_var_edit = QVBoxLayout(edit_var_col)
         vbox_var_edit.setContentsMargins(0, 0, 0, 0)
 
+        # Add relative to current option
+        action_common = QWidget()
+        hbox_action_common = QHBoxLayout(action_common)
+        hbox_action_common.setContentsMargins(0, 0, 0, 0)
+        vbox_var_edit.addWidget(action_common)
+        self.relative_to_curr = relative_to_curr = QCheckBox('Relative to Current State')
+        relative_to_curr.setChecked(True)
+        tooltip = 'If checked, you will not be able to change the\n' + \
+            'variable ranges and initial points manually.\n' + \
+            'Instead, the variable ranges and the initial points will be\n' + \
+            'generated based on the current state.\n\n' + \
+            'You can adjust them by using the "Limit Varable Range"\n' + \
+            'button and the "Add Current"/"Add Random" buttons.\n' + \
+            'The actual values of those settings will be re-calcuated\n' + \
+            'based on the machine state at the time of running.'
+        relative_to_curr.setToolTip(tooltip)
+        hbox_action_common.addWidget(relative_to_curr)
+        # Add auto-populate option
+        self.auto_populate = auto_populate = QCheckBox('Auto Populate')
+        auto_populate.setChecked(True)
+        hbox_action_common.addWidget(auto_populate)
+        hbox_action_common.addStretch()
+
         action_var = QWidget()
         hbox_action_var = QHBoxLayout(action_var)
         hbox_action_var.setContentsMargins(0, 0, 0, 0)
@@ -114,6 +137,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_var.addWidget(check_only_var)
 
         self.var_table = VariableTable()
+        self.var_table.lock_bounds()
         vbox_var_edit.addWidget(self.var_table)
 
         cbox_init = CollapsibleBox(self, ' Initial Points', tooltip='If set, it takes precedence over the start from current setting in generator configuration.')
@@ -138,6 +162,9 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_init.addWidget(btn_clear)
         vbox_init.addWidget(action_init)
         self.init_table = init_data_table()
+        # TODO: should allow scrolling, so better to set each cell ineditable
+        # rather than disable the whole table
+        self.init_table.setDisabled(True)
         vbox_init.addWidget(self.init_table)
         cbox_init.setContentLayout(vbox_init)
         cbox_init.expand()
@@ -257,11 +284,19 @@ class BadgerEnvBox(CollapsibleBox):
     def config_logic(self):
         self.dict_con = {}
 
+        self.relative_to_curr.stateChanged.connect(self.toggle_init_mode)
         self.edit_var.textChanged.connect(self.filter_var)
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
-        self.var_table.sig_sel_changed.connect(self.update_init_table)
+
+    def toggle_init_mode(self, checked):
+        if checked:
+            self.var_table.lock_bounds()
+            self.init_table.setDisabled(True)
+        else:
+            self.var_table.unlock_bounds()
+            self.init_table.setDisabled(False)
 
     def toggle_var_show_mode(self, _):
         self.var_table.toggle_show_mode(self.check_only_var.isChecked())
@@ -296,11 +331,6 @@ class BadgerEnvBox(CollapsibleBox):
                 _objectives.append(obj)
 
         self.obj_table.update_objectives(_objectives, 1)
-
-    def update_init_table(self):
-        selected = self.var_table.selected
-        variable_names = [v for v in selected if selected[v]]
-        update_init_data_table(self.init_table, variable_names)
 
     def _fit_content(self, list):
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4
