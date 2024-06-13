@@ -103,12 +103,22 @@ class BadgerEnvBox(CollapsibleBox):
             'generated based on the current state.\n\n' + \
             'You can adjust them by using the "Limit Varable Range"\n' + \
             'button and the "Add Current"/"Add Random" buttons.\n' + \
-            'The actual values of those settings will be re-calcuated\n' + \
+            'The actual values of those settings will be re-calculated\n' + \
             'based on the machine state at the time of running.'
         relative_to_curr.setToolTip(tooltip)
         hbox_action_common.addWidget(relative_to_curr)
         # Add auto-populate option
         self.auto_populate = auto_populate = QCheckBox('Auto Populate')
+        tooltip = 'If checked, Badger will try to fill \n' + \
+            'the initial points table automatically.\n\n' + \
+            'By default, the current point would firstly be inserted,\n' + \
+            'followed by a few random points centered around the current\n' + \
+            'point. The specific parameters to generate the random\n' + \
+            'points can be checked with the "Add Random" button.\n\n' + \
+            'If unchecked, you will need to use the buttons to fill the\n' + \
+            'initial points table yourself every time variable selection\n' + \
+            'or variable ranges are changed.'
+        auto_populate.setToolTip(tooltip)
         auto_populate.setChecked(True)
         hbox_action_common.addWidget(auto_populate)
         hbox_action_common.addStretch()
