@@ -194,3 +194,15 @@ def test_scroll_on_environment_selector(qtbot):
 # TODO: Test if generator selector reacts to scroll events, it should not
 def test_scroll_on_generator_selector(qtbot):
     pass
+
+
+# TODO: Test relative to current behavior, including the auto calculated
+# bounds and initial points wrt the current variable values
+def test_relative_to_current(qtbot):
+    pass
+
+
+# TODO: Test auto populate behavior, that if the initial points are
+# automatically filled in correctly, with different actions list
+def test_auto_populate(qtbot):
+    pass
