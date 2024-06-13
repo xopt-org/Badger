@@ -254,18 +254,31 @@ class BadgerRoutinePage(QWidget):
         variables = routine.vocs.variable_names
         self.env_box.check_only_var.setChecked(True)
 
-        self.env_box.relative_to_curr.setChecked(False)
-        self.env_box.auto_populate.setChecked(False)
-
         self.env_box.edit_var.clear()
         self.env_box.var_table.set_selected(variables)
-        self.env_box.var_table.set_bounds(routine.vocs.variables)
 
-        try:
-            init_points = routine.initial_points
-            set_init_data_table(self.env_box.init_table, init_points)
-        except KeyError:
-            set_init_data_table(self.env_box.init_table, None)
+        flag_relative = routine.relative_to_current
+        if flag_relative:  # load the relative to current settings
+            self.ratio_var_ranges = routine.vrange_limit_options
+            self.init_table_actions = routine.initial_point_actions
+        is_relative_checked = self.env_box.relative_to_curr.isChecked()
+        self.env_box.relative_to_curr.setChecked(flag_relative)
+        if is_relative_checked == flag_relative:  # have to manually trigger the event
+            self.toggle_relative_to_curr(flag_relative)
+        self.env_box.auto_populate.setChecked(False)
+        if flag_relative:
+            self.clear_init_table(reset_actions=False)
+            self._fill_init_table()
+        else:
+            # use ranges in routine if not relative to current
+            self.env_box.var_table.set_bounds(routine.vocs.variables)
+
+            # Fill in initial points stored in routine if available
+            try:
+                init_points = routine.initial_points
+                set_init_data_table(self.env_box.init_table, init_points)
+            except KeyError:
+                set_init_data_table(self.env_box.init_table, None)
 
         objectives = routine.vocs.objective_names
         self.env_box.check_only_obj.setChecked(True)
@@ -319,6 +332,19 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_docs.update_docs(name)
+
+    def _fill_init_table(self):  # make sure self.init_table_actions is set
+        for action in self.init_table_actions:
+            if action['type'] == 'add_curr':
+                self.fill_curr_in_init_table(record=False)
+            elif action['type'] == 'add_rand':
+                try:
+                    self.add_rand_in_init_table(
+                        add_rand_config=action['config'],
+                        record=False,
+                    )
+                except IndexError:  # lower bound is the same as upper bound
+                    pass
 
     def toggle_use_script(self):
         if self.generator_box.check_use_script.isChecked():
@@ -477,7 +503,7 @@ class BadgerRoutinePage(QWidget):
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
-        if record and self.env_box.auto_populate.isChecked():
+        if record and self.env_box.relative_to_curr.isChecked():
             self.init_table_actions.append({'type': 'add_curr'})
 
     def save_add_rand_config(self, add_rand_config):
@@ -515,7 +541,7 @@ class BadgerRoutinePage(QWidget):
                 except IndexError:  # No more points to add
                     break
 
-        if record and self.env_box.auto_populate.isChecked():
+        if record and self.env_box.relative_to_curr.isChecked():
             self.init_table_actions.append({
                 'type': 'add_rand',
                 'config': add_rand_config,
@@ -540,7 +566,7 @@ class BadgerRoutinePage(QWidget):
                 if item:
                     item.setText('')  # Set the cell content to an empty string
 
-        if reset_actions and self.env_box.auto_populate.isChecked():
+        if reset_actions and self.env_box.relative_to_curr.isChecked():
             self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
@@ -654,17 +680,7 @@ class BadgerRoutinePage(QWidget):
                 {'type': 'add_rand', 'config': self.add_rand_config},
             ]
         self.clear_init_table(reset_actions=False)
-        for action in self.init_table_actions:
-            if action['type'] == 'add_curr':
-                self.fill_curr_in_init_table(record=False)
-            elif action['type'] == 'add_rand':
-                try:
-                    self.add_rand_in_init_table(
-                        add_rand_config=action['config'],
-                        record=False,
-                    )
-                except IndexError:  # lower bound is the same as upper bound
-                    pass
+        self._fill_init_table()
 
     def calc_auto_bounds(self):
         vname_selected = []
@@ -839,6 +855,16 @@ class BadgerRoutinePage(QWidget):
         else:
             script = None
 
+        # Relative to current params
+        if self.env_box.relative_to_curr.isChecked():
+            relative_to_current = True
+            vrange_limit_options = self.ratio_var_ranges
+            initial_point_actions = self.init_table_actions
+        else:
+            relative_to_current = False
+            vrange_limit_options = None
+            initial_point_actions = None
+
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(
                 # Xopt part
@@ -852,6 +878,9 @@ class BadgerRoutinePage(QWidget):
                 critical_constraint_names=critical_constraints,
                 tags=None,
                 script=script,
+                relative_to_current=relative_to_current,
+                vrange_limit_options=vrange_limit_options,
+                initial_point_actions=initial_point_actions,
             )
 
             # Check if any user warnings were caught
