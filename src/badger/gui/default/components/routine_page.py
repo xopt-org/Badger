@@ -1,6 +1,7 @@
 import warnings
 import sqlite3
 import traceback
+import copy
 from functools import partial
 
 import numpy as np
@@ -79,6 +80,8 @@ class BadgerRoutinePage(QWidget):
 
         # Record the initial table actions
         self.init_table_actions = []
+        # Record the ratio var ranges
+        self.ratio_var_ranges = {}
 
         self.init_ui()
         self.config_logic()
@@ -175,6 +178,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_clear.clicked.connect(
             partial(self.clear_init_table, reset_actions=True))
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
+        self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
         self.env_box.auto_populate.stateChanged.connect(self.toggle_auto_populate)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
 
@@ -374,8 +378,9 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, 'Invalid script!', str(e))
 
     def select_env(self, i):
-        # Reset the initial table actions
+        # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
+        self.ratio_var_ranges = {}
 
         if i == -1:
             self.env_box.edit.setPlainText('')
@@ -612,6 +617,11 @@ class BadgerRoutinePage(QWidget):
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 
+        # Record the ratio var ranges
+        if self.env_box.relative_to_curr.isChecked():
+            for vname in vname_selected:
+                self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
+
     def save_limit_option(self, limit_option):
         self.limit_option = limit_option
 
@@ -655,6 +665,61 @@ class BadgerRoutinePage(QWidget):
                     )
                 except IndexError:  # lower bound is the same as upper bound
                     pass
+
+    def calc_auto_bounds(self):
+        vname_selected = []
+        vrange = {}
+
+        for var in self.env_box.var_table.all_variables:
+            name = next(iter(var))
+            vname_selected.append(name)
+            vrange[name] = var[name]
+
+        env = self.create_env()
+        var_curr = env._get_variables(vname_selected)
+
+        for name in vname_selected:
+            try:
+                limit_option = self.ratio_var_ranges[name]
+            except KeyError:
+                limit_option = self.limit_option
+
+            option_idx = limit_option['limit_option_idx']
+            if option_idx:
+                ratio = limit_option['ratio_full']
+                hard_bounds = vrange[name]
+                delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
+                bounds = [var_curr[name] - delta, var_curr[name] + delta]
+                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                vrange[name] = bounds
+            else:
+                ratio = limit_option['ratio_curr']
+                hard_bounds = vrange[name]
+                sign = np.sign(var_curr[name])
+                bounds = [var_curr[name] * (1 - 0.5 * sign * ratio),
+                          var_curr[name] * (1 + 0.5 * sign * ratio)]
+                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                vrange[name] = bounds
+
+        return vrange
+
+    def toggle_relative_to_curr(self, checked):
+        if checked:
+            self.env_box.auto_populate.setDisabled(False)
+
+            if self.env_box.var_table.selected:
+                bounds = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds)
+                self.clear_init_table(reset_actions=False)
+
+            self.env_box.var_table.lock_bounds()
+            self.env_box.init_table.setDisabled(True)
+        else:
+            self.env_box.auto_populate.setChecked(False)
+            self.env_box.auto_populate.setDisabled(True)
+
+            self.env_box.var_table.unlock_bounds()
+            self.env_box.init_table.setDisabled(False)
 
     def toggle_auto_populate(self, checked):
         if checked and self.env_box.var_table.selected:

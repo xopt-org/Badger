@@ -284,24 +284,10 @@ class BadgerEnvBox(CollapsibleBox):
     def config_logic(self):
         self.dict_con = {}
 
-        self.relative_to_curr.stateChanged.connect(self.toggle_init_mode)
         self.edit_var.textChanged.connect(self.filter_var)
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
-
-    def toggle_init_mode(self, checked):
-        if checked:
-            self.auto_populate.setDisabled(False)
-
-            self.var_table.lock_bounds()
-            self.init_table.setDisabled(True)
-        else:
-            self.auto_populate.setChecked(False)
-            self.auto_populate.setDisabled(True)
-
-            self.var_table.unlock_bounds()
-            self.init_table.setDisabled(False)
 
     def toggle_var_show_mode(self, _):
         self.var_table.toggle_show_mode(self.check_only_var.isChecked())
