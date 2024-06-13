@@ -100,7 +100,11 @@ class Routine(Xopt):
 
             # re-calculate the variable ranges and initial points
             # if relative to current is set
-            if data["relative_to_current"]:
+            try:
+                relative_to_current = data["relative_to_current"]
+            except KeyError:
+                relative_to_current = False
+            if relative_to_current:
                 # Calculate the variable ranges
                 limit_options = data["vrange_limit_options"]
                 vnames = data["vocs"].variable_names
