@@ -98,27 +98,6 @@ class Routine(Xopt):
 
             data["evaluator"] = Evaluator(function=evaluate_point)
 
-            # re-calculate the variable ranges and initial points
-            # if relative to current is set
-            try:
-                relative_to_current = data["relative_to_current"]
-            except KeyError:
-                relative_to_current = False
-            if relative_to_current:
-                # Calculate the variable ranges
-                variables_updated = calc_bounds(
-                    data["vrange_limit_options"], data["vocs"], env)
-
-                # Now update vocs with the variables_updated dict
-                data['vocs'].variables = variables_updated
-
-                # Calculate the initial points
-                init_points = calc_init_points(
-                    data["initial_point_actions"], data["vocs"], env)
-
-                # Update the initial points in data
-                data['initial_points'] = init_points
-
         return data
 
     @field_validator("initial_points", mode="before")

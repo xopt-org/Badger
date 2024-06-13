@@ -383,6 +383,8 @@ class BadgerHomePage(QWidget):
                 routine = _routine  # make do w/ the routine saved in run
             else:
                 routine.data = _routine.data
+                routine.vocs = _routine.vocs
+                routine.initial_points = _routine.initial_points
                 del _routine  # release the resource
                 gc.collect()
         except IndexError:

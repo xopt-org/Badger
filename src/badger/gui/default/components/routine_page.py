@@ -261,24 +261,23 @@ class BadgerRoutinePage(QWidget):
         if flag_relative:  # load the relative to current settings
             self.ratio_var_ranges = routine.vrange_limit_options
             self.init_table_actions = routine.initial_point_actions
-        is_relative_checked = self.env_box.relative_to_curr.isChecked()
+        self.env_box.relative_to_curr.blockSignals(True)
         self.env_box.relative_to_curr.setChecked(flag_relative)
-        if is_relative_checked == flag_relative:  # have to manually trigger the event
-            self.toggle_relative_to_curr(flag_relative)
-        self.env_box.auto_populate.setChecked(False)
-        if flag_relative:
-            self.clear_init_table(reset_actions=False)
-            self._fill_init_table()
-        else:
-            # use ranges in routine if not relative to current
-            self.env_box.var_table.set_bounds(routine.vocs.variables)
+        self.env_box.relative_to_curr.blockSignals(False)
+        self.toggle_relative_to_curr(flag_relative, refresh=False)
 
-            # Fill in initial points stored in routine if available
-            try:
-                init_points = routine.initial_points
-                set_init_data_table(self.env_box.init_table, init_points)
-            except KeyError:
-                set_init_data_table(self.env_box.init_table, None)
+        # No actions would be triggered since checked would be False
+        self.env_box.auto_populate.setChecked(False)
+
+        # Always use ranges stored in routine
+        self.env_box.var_table.set_bounds(routine.vocs.variables)
+
+        # Fill in initial points stored in routine if available
+        try:
+            init_points = routine.initial_points
+            set_init_data_table(self.env_box.init_table, init_points)
+        except KeyError:
+            set_init_data_table(self.env_box.init_table, None)
 
         objectives = routine.vocs.objective_names
         self.env_box.check_only_obj.setChecked(True)
@@ -719,11 +718,11 @@ class BadgerRoutinePage(QWidget):
 
         return vrange
 
-    def toggle_relative_to_curr(self, checked):
+    def toggle_relative_to_curr(self, checked, refresh=True):
         if checked:
             self.env_box.auto_populate.setDisabled(False)
 
-            if self.env_box.var_table.selected:
+            if refresh and self.env_box.var_table.selected:
                 bounds = self.calc_auto_bounds()
                 self.env_box.var_table.set_bounds(bounds)
                 self.clear_init_table(reset_actions=False)
