@@ -21,6 +21,9 @@ def test_routine_generation(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
+
     # test without anything selected
     with pytest.raises(BadgerRoutineError):
         window._compose_routine()
@@ -52,6 +55,9 @@ def test_initial_points(qtbot):
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
+
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
 
     qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
@@ -136,6 +142,9 @@ def test_add_random_points(qtbot):
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
+
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
 
     qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")

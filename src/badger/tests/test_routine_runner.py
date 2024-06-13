@@ -32,6 +32,10 @@ class TestRoutineRunner:
         assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
         editor = window.home_page.routine_editor
+
+        # Turn off relative to current
+        editor.routine_page.env_box.relative_to_curr.setChecked(False)
+
         qtbot.keyClicks(editor.routine_page.generator_box.cb,
                         "expected_improvement")
         params = editor.routine_page.generator_box.edit.toPlainText()
