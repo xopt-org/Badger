@@ -4,12 +4,14 @@ logger = logging.getLogger(__name__)
 import time
 # import debugpy
 import traceback
+import pandas as pd
 from pandas import DataFrame
 import torch  # for converting dtype str to torch object
 from PyQt5.QtCore import pyqtSignal, QObject, QRunnable
 from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
 from ....tests.utils import get_current_vars
+from ....routine import calc_bounds, calc_init_points
 
 
 class BadgerRoutineSignals(QObject):
@@ -86,6 +88,26 @@ class BadgerRoutineRunner(QRunnable):
             self.save_init_vars()
 
             self.routine.data = None  # reset data
+            # Recalculate the bounds and initial points if asked
+            if self.routine.relative_to_current:
+                variables_updated = calc_bounds(
+                    self.routine.vrange_limit_options,
+                    self.routine.vocs,
+                    self.routine.environment)
+
+                self.routine.vocs.variables = variables_updated
+
+                init_points = calc_init_points(
+                    self.routine.initial_point_actions,
+                    self.routine.vocs,
+                    self.routine.environment)
+                try:
+                    init_points = pd.DataFrame(init_points)
+                except IndexError:
+                    init_points = pd.DataFrame(init_points, index=[0])
+
+                self.routine.initial_points = init_points
+
             run_routine(
                 self.routine,
                 active_callback=self.check_run_status,

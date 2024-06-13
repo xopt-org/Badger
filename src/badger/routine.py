@@ -106,61 +106,15 @@ class Routine(Xopt):
                 relative_to_current = False
             if relative_to_current:
                 # Calculate the variable ranges
-                limit_options = data["vrange_limit_options"]
-                vnames = data["vocs"].variable_names
-                var_curr = env._get_variables(vnames)
-
-                vrange_dict = {}
-                for v in configs_env['variables']:
-                    vrange_dict.update(v)
-
-                variables_updated = {}
-                for name in vnames:
-                    try:
-                        limit_option = limit_options[name]
-                    except KeyError:
-                        continue
-
-                    option_idx = limit_option['limit_option_idx']
-                    if option_idx:
-                        ratio = limit_option['ratio_full']
-                        hard_bounds = vrange_dict[name]
-                        delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
-                        bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                        bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                        variables_updated[name] = bounds
-                    else:
-                        ratio = limit_option['ratio_curr']
-                        hard_bounds = vrange_dict[name]
-                        sign = np.sign(var_curr[name])
-                        bounds = [var_curr[name] * (1 - 0.5 * sign * ratio),
-                                  var_curr[name] * (1 + 0.5 * sign * ratio)]
-                        bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                        variables_updated[name] = bounds
+                variables_updated = calc_bounds(
+                    data["vrange_limit_options"], data["vocs"], env)
 
                 # Now update vocs with the variables_updated dict
                 data['vocs'].variables = variables_updated
 
                 # Calculate the initial points
-                init_actions = data["initial_point_actions"]
-
-                init_points = {k: [] for k in vnames}
-                for action in init_actions:
-                    if action['type'] == 'add_curr':
-                        var_curr = env._get_variables(vnames)
-                        for name in vnames:
-                            init_points[name].append(var_curr[name])
-                    elif action['type'] == 'add_rand':
-                        var_curr = env._get_variables(vnames)
-                        n_point = action['config']['n_points']
-                        fraction = action['config']['fraction']
-                        random_sample_region = get_local_region(
-                            var_curr, data['vocs'], fraction=fraction)
-                        random_points = data['vocs'].random_inputs(
-                            n_point, custom_bounds=random_sample_region)
-                        for point in random_points:
-                            for name in vnames:
-                                init_points[name].append(point[name])
+                init_points = calc_init_points(
+                    data["initial_point_actions"], data["vocs"], env)
 
                 # Update the initial points in data
                 data['initial_points'] = init_points
@@ -216,3 +170,59 @@ class Routine(Xopt):
             pass
 
         return json.dumps(dict_result)
+
+
+def calc_bounds(limit_options, vocs, env):
+    vnames = vocs.variable_names
+    var_curr = env._get_variables(vnames)
+    var_range = env._get_bounds(vnames)
+
+    variables_updated = {}
+    for name in vnames:
+        try:
+            limit_option = limit_options[name]
+        except KeyError:
+            continue
+
+        option_idx = limit_option['limit_option_idx']
+        if option_idx:
+            ratio = limit_option['ratio_full']
+            hard_bounds = var_range[name]
+            delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
+            bounds = [var_curr[name] - delta, var_curr[name] + delta]
+            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            variables_updated[name] = bounds
+        else:
+            ratio = limit_option['ratio_curr']
+            hard_bounds = var_range[name]
+            sign = np.sign(var_curr[name])
+            bounds = [var_curr[name] * (1 - 0.5 * sign * ratio),
+                      var_curr[name] * (1 + 0.5 * sign * ratio)]
+            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            variables_updated[name] = bounds
+
+    return variables_updated
+
+
+def calc_init_points(init_actions, vocs, env):
+    vnames = vocs.variable_names
+    init_points = {k: [] for k in vnames}
+
+    for action in init_actions:
+        if action['type'] == 'add_curr':
+            var_curr = env._get_variables(vnames)
+            for name in vnames:
+                init_points[name].append(var_curr[name])
+        elif action['type'] == 'add_rand':
+            var_curr = env._get_variables(vnames)
+            n_point = action['config']['n_points']
+            fraction = action['config']['fraction']
+            random_sample_region = get_local_region(
+                var_curr, vocs, fraction=fraction)
+            random_points = vocs.random_inputs(
+                n_point, custom_bounds=random_sample_region)
+            for point in random_points:
+                for name in vnames:
+                    init_points[name].append(point[name])
+
+    return init_points
