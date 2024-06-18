@@ -12,6 +12,23 @@ from ....utils import strtobool
 
 LABEL_WIDTH = 80
 
+stylesheet_auto = '''
+    #VarPanel {
+        border: 4px solid #FDD835;
+        border-radius: 4px;
+    }
+'''
+
+stylesheet_auto_msg = '''
+    QLabel {
+        background-color: #FDD835;
+        color: #19232D;
+        padding: 4px 4px 8px 4px;
+        border-radius: 0;
+    }
+'''
+
+
 class BadgerEnvBox(CollapsibleBox):
     def __init__(self, parent=None, envs=[]):
         super().__init__(parent, ' Environment + VOCS')
@@ -72,11 +89,28 @@ class BadgerEnvBox(CollapsibleBox):
         vbox.addWidget(seperator)
 
         # Variables config (table style)
-        var_panel = QWidget()
+        self.var_panel = var_panel = QWidget()
+        var_panel.setObjectName('VarPanel')
         var_panel.setMinimumHeight(280)
         vbox.addWidget(var_panel, 2)
-        hbox_var = QHBoxLayout(var_panel)
-        hbox_var.setContentsMargins(0, 0, 0, 0)
+        self.vbox_var = vbox_var = QVBoxLayout(var_panel)
+        vbox_var.setContentsMargins(4, 4, 4, 4)
+        vbox_var.setSpacing(0)
+        msg_auto = QLabel('The values you see in the variable ranges spin '
+                          'boxes and initial points table are preview that '
+                          'generated either based on current machine state, '
+                          'or the machine state at the time of this historical'
+                          ' run. The real values would be regenerated based on'
+                          ' the machine state before running the optimization '
+                          'again.')
+        msg_auto.setWordWrap(True)
+        msg_auto.setStyleSheet(stylesheet_auto_msg)
+        msg_auto.hide()
+        self.msg_auto = msg_auto
+        vbox_var.addWidget(msg_auto)
+        var_panel_origin = QWidget()
+        vbox_var.addWidget(var_panel_origin)
+        self.hbox_var = hbox_var = QHBoxLayout(var_panel_origin)
         lbl_var_col = QWidget()
         vbox_lbl_var = QVBoxLayout(lbl_var_col)
         vbox_lbl_var.setContentsMargins(0, 0, 0, 0)
@@ -344,3 +378,15 @@ class BadgerEnvBox(CollapsibleBox):
         self._fit_content(self.list_obj)
         self._fit_content(self.list_con)
         self._fit_content(self.list_obs)
+
+    def switch_var_panel_style(self, auto=True):
+        if auto:
+            self.var_panel.setStyleSheet(stylesheet_auto)
+            self.vbox_var.setContentsMargins(4, 4, 4, 4)
+            self.hbox_var.setContentsMargins(8, 8, 8, 8)
+            self.msg_auto.show()
+        else:
+            self.var_panel.setStyleSheet(None)
+            self.vbox_var.setContentsMargins(0, 0, 0, 0)
+            self.hbox_var.setContentsMargins(0, 0, 0, 0)
+            self.msg_auto.hide()

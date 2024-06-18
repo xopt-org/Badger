@@ -720,6 +720,8 @@ class BadgerRoutinePage(QWidget):
 
     def toggle_relative_to_curr(self, checked, refresh=True):
         if checked:
+            self.env_box.switch_var_panel_style(True)
+
             self.env_box.auto_populate.setDisabled(False)
 
             if refresh and self.env_box.var_table.selected:
@@ -737,6 +739,8 @@ class BadgerRoutinePage(QWidget):
             self.env_box.var_table.lock_bounds()
             self.env_box.init_table.setDisabled(True)
         else:
+            self.env_box.switch_var_panel_style(False)
+
             self.env_box.auto_populate.setChecked(False)
             self.env_box.auto_populate.setDisabled(True)
 
