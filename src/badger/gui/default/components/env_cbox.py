@@ -95,7 +95,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_common = QHBoxLayout(action_common)
         hbox_action_common.setContentsMargins(0, 0, 0, 0)
         vbox_var_edit.addWidget(action_common)
-        self.relative_to_curr = relative_to_curr = QCheckBox('Relative to Current State')
+        self.relative_to_curr = relative_to_curr = QCheckBox('Automatic')
         relative_to_curr.setChecked(True)
         tooltip = 'If checked, you will not be able to change the\n' + \
             'variable ranges and initial points manually.\n' + \
@@ -120,6 +120,7 @@ class BadgerEnvBox(CollapsibleBox):
             'or variable ranges are changed.'
         auto_populate.setToolTip(tooltip)
         auto_populate.setChecked(True)
+        auto_populate.hide()
         hbox_action_common.addWidget(auto_populate)
         hbox_action_common.addStretch()
 

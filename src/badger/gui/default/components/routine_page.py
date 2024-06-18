@@ -267,7 +267,7 @@ class BadgerRoutinePage(QWidget):
         self.toggle_relative_to_curr(flag_relative, refresh=False)
 
         # No actions would be triggered since checked would be False
-        self.env_box.auto_populate.setChecked(False)
+        # self.env_box.auto_populate.setChecked(False)
 
         # Always use ranges stored in routine
         self.env_box.var_table.set_bounds(routine.vocs.variables)
@@ -726,6 +726,13 @@ class BadgerRoutinePage(QWidget):
                 bounds = self.calc_auto_bounds()
                 self.env_box.var_table.set_bounds(bounds)
                 self.clear_init_table(reset_actions=False)
+                # Auto populate the initial table
+                self.env_box.auto_populate.setChecked(True)
+            else:
+                # Check auto populate w/o triggering the signal
+                self.env_box.auto_populate.blockSignals(True)
+                self.env_box.auto_populate.setChecked(True)
+                self.env_box.auto_populate.blockSignals(False)
 
             self.env_box.var_table.lock_bounds()
             self.env_box.init_table.setDisabled(True)
