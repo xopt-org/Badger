@@ -435,7 +435,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_lim_vrange.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
-        except:
+        except Exception:
             self.configs = None
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
@@ -455,7 +455,9 @@ class BadgerRoutinePage(QWidget):
         vars_env = configs['variables']
         vars_combine = [*vars_env]
 
+        self.env_box.check_only_var.blockSignals(True)
         self.env_box.check_only_var.setChecked(False)
+        self.env_box.check_only_var.blockSignals(False)
         self.env_box.var_table.update_variables(vars_combine)
         # Auto apply the limited variable ranges if the option is set
         if self.env_box.relative_to_curr.isChecked():
