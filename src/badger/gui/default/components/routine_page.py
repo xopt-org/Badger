@@ -1,6 +1,8 @@
 import warnings
 import sqlite3
 import traceback
+import os
+import yaml
 
 import numpy as np
 import pandas as pd
@@ -135,7 +137,14 @@ class BadgerRoutinePage(QWidget):
         vbox.addWidget(self.generator_box)
 
         # Env box
-        self.env_box = BadgerEnvBox(None, self.envs)
+        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
+        try:
+            with open(env_dict_dir, 'r') as stream:
+                env_dict = yaml.safe_load(stream)
+        except (FileNotFoundError, yaml.YAMLError):
+            env_dict = {}
+        self.env_box = BadgerEnvBox(env_dict, None, self.envs)
         self.env_box.expand()  # expand the box initially
         vbox.addWidget(self.env_box)
 
@@ -359,6 +368,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
             self.routine = None
+            self.env_box.update_stylesheets()
             return
 
         name = self.envs[i]
@@ -410,6 +420,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
         # self.routine = None
+
+        self.env_box.update_stylesheets(env.name)
 
     def get_init_table_header(self):
         table = self.env_box.init_table

@@ -327,7 +327,7 @@ class BadgerHomePage(QWidget):
             self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(
-        self, routines: List[str], timestamps: List[str], environments: List[str], descriptions: List[str]
+        self, routine_names: List[str], timestamps: List[str], environments: List[str], descriptions: List[str]
     ):
         try:
             selected_routine = self.prev_routine_item.routine_name
@@ -341,15 +341,15 @@ class BadgerHomePage(QWidget):
                 env_dict = yaml.safe_load(stream)
         except (FileNotFoundError, yaml.YAMLError):
             env_dict = {}
-        for i, routine in enumerate(routines):
-            _item = BadgerRoutineItem(routine, timestamps[i], environments[i], env_dict, descriptions[i], self)
+        for i, routine_name in enumerate(routine_names):
+            _item = BadgerRoutineItem(routine_name, timestamps[i], environments[i], env_dict, descriptions[i], self)
             _item.sig_del.connect(self.delete_routine)
             item = QListWidgetItem(self.routine_list)
-            item.routine_name = routine  # dirty trick
+            item.routine_name = routine_name  # dirty trick
             item.setSizeHint(_item.sizeHint())
             self.routine_list.addItem(item)
             self.routine_list.setItemWidget(item, _item)
-            if routine == selected_routine:
+            if routine_name == selected_routine:
                 _item.activate()
                 self.prev_routine_item = item
 
@@ -365,14 +365,14 @@ class BadgerHomePage(QWidget):
             tags["region"] = tag_reg
         if tag_gain:
             tags['gain'] = tag_gain
-        routines, timestamps, environments, descriptions = list_routine(keyword, tags)
+        routine_names, timestamps, environments, descriptions = list_routine(keyword, tags)
 
-        return routines, timestamps, environments, descriptions
+        return routine_names, timestamps, environments, descriptions
 
     def refresh_routine_list(self):
-        routines, timestamps, environments, descriptions = self.get_current_routines()
+        routine_names, timestamps, environments, descriptions = self.get_current_routines()
 
-        self.build_routine_list(routines, timestamps, environments, descriptions)
+        self.build_routine_list(routine_names, timestamps, environments, descriptions)
 
     def go_run(self, i: int):
         gc.collect()

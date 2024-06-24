@@ -70,10 +70,9 @@ class BadgerRoutineItem(QWidget):
         self.hover = False
         self.name = name
         self.timestamp = timestamp
-        self.environment = environment
         self.description = description
-        if self.environment in env_dict:
-            self.color_dict = env_dict[self.environment]
+        if environment in env_dict:
+            self.color_dict = env_dict[environment]
             self.stylesheet_normal = f'''
                 background-color: {self.color_dict['normal']};
                 border-radius: 2px;
