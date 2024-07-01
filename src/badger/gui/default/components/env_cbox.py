@@ -7,7 +7,7 @@ from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
 from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
-from ....settings import read_value
+from ....settings import read_value, AUTO_REFRESH
 from ....utils import strtobool
 
 LABEL_WIDTH = 80
@@ -103,6 +103,9 @@ class BadgerEnvBox(CollapsibleBox):
                           ' run. The real values would be regenerated based on'
                           ' the machine state before running the optimization '
                           'again.')
+        if not AUTO_REFRESH:
+            msg_auto = QLabel('Auto mode is on. To switch to manual mode, '
+                              'uncheck the "Automatic" check box.')
         msg_auto.setWordWrap(True)
         msg_auto.setStyleSheet(stylesheet_auto_msg)
         msg_auto.hide()

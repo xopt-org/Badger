@@ -12,6 +12,7 @@ from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
 from ....tests.utils import get_current_vars
 from ....routine import calc_bounds, calc_init_points
+from ....settings import AUTO_REFRESH
 
 
 class BadgerRoutineSignals(QObject):
@@ -89,7 +90,7 @@ class BadgerRoutineRunner(QRunnable):
 
             self.routine.data = None  # reset data
             # Recalculate the bounds and initial points if asked
-            if self.routine.relative_to_current:
+            if AUTO_REFRESH and self.routine.relative_to_current:
                 variables_updated = calc_bounds(
                     self.routine.vrange_limit_options,
                     self.routine.vocs,
