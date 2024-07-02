@@ -104,7 +104,8 @@ class BadgerEnvBox(CollapsibleBox):
                           ' the machine state before running the optimization '
                           'again.')
         if not AUTO_REFRESH:
-            msg_auto = QLabel('Auto mode is on. To switch to manual mode, '
+            msg_auto = QLabel('Auto mode is on.  To explicitly set the '
+                              'variable ranges and/or initial points,  please '
                               'uncheck the "Automatic" check box.')
         msg_auto.setWordWrap(True)
         msg_auto.setStyleSheet(stylesheet_auto_msg)
