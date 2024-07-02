@@ -138,7 +138,7 @@ class BadgerEnvBox(CollapsibleBox):
             'variable ranges and initial points manually.\n' + \
             'Instead, the variable ranges and the initial points will be\n' + \
             'generated based on the current state.\n\n' + \
-            'You can adjust them by using the "Limit Varable Range"\n' + \
+            'You can adjust them by using the "Set Variable Range"\n' + \
             'button and the "Add Current"/"Add Random" buttons.\n' + \
             'The actual values of those settings will be re-calculated\n' + \
             'based on the machine state at the time of running.'
@@ -173,7 +173,7 @@ class BadgerEnvBox(CollapsibleBox):
         btn_add_var.setDisabled(True)
         if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
             btn_add_var.hide()
-        self.btn_lim_vrange = btn_lim_vrange = QPushButton('Limit Variable Range')
+        self.btn_lim_vrange = btn_lim_vrange = QPushButton('Set Variable Range')
         btn_lim_vrange.setFixedSize(144, 24)
         btn_lim_vrange.setDisabled(True)
         self.check_only_var = check_only_var = QCheckBox('Show Checked Only')
