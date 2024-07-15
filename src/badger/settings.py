@@ -1,59 +1,98 @@
 import os
 import shutil
-import platform
 import yaml
 from importlib import resources
 from PyQt5.QtCore import QSettings
-from .utils import get_datadir
+from badger.utils import get_datadir
+from badger.generate_config import generate_config
+from typing import Dict, Any
 
-def load_config(self):
+BADGER_PATH_DICT = {
+    "BADGER_PLUGIN_ROOT": {
+        "display name": "plugin root",
+        "description": "This setting (BADGER_PLUGIN_ROOT) tells Badger where to look for the plugins",
+        "value": None,
+    },
+    "BADGER_DB_ROOT": {
+        "display name": "database root",
+        "description": "This setting (BADGER_DB_ROOT) tells Badger where to store the routine database",
+        "value": None,
+    },
+    "BADGER_LOGBOOK_ROOT": {
+        "display name": "logbook root",
+        "description": "This setting (BADGER_LOGBOOK_ROOT) tells Badger where to send the logs (GUI mode)",
+        "value": None,
+    },
+    "BADGER_ARCHIVE_ROOT": {
+        "display name": "archive root",
+        "description": "This setting (BADGER_ARCHIVE_ROOT) tells Badger where to archive the historical optimization runs",
+        "value": None,
+    },
+}
+
+
+BADGER_CORE_DICT = {
+    "BADGER_DATA_DUMP_PERIOD": {
+        "display name": "data dump period",
+        "description": "Minimum time interval between data dumps, unit is second",
+        "value": 1,
+    },
+}
+
+
+BADGER_GUI_DICT = {
+    "BADGER_THEME": {
+        "display name": "theme",
+        "description": "Theme for the Badger GUI",
+        "value": "dark",
+    },
+    "BADGER_ENABLE_ADVANCED": {
+        "display name": "enable advanced features",
+        "description": "Enable advanced features on the GUI",
+        "value": False,
+    },
+}
+
+def load_config(config_dir: str, config_file: str = 'config.yaml') -> Dict:
     """
+    Parameters
+    ----------
+    config_dir
+
+    config_file: str 
+
+    Returns
+    -------
+    config: Dict
+
     """
-    config_path = os.path.join(self.app_support_dir, self.config_file)
-        
+    config_path = os.path.join(config_dir, config_file)
+
+    settings = QSettings("SLAC-ML", "Badger")
+    settings.setValue("path", config_path)
+    
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"{config_path} does not exist. Please create it first.")
         
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
-        
+    
     return config
 
-def create_config(config_file='config.yaml', template_file='config_template.yaml'):
-    """
-    """
-    app_support_dir = get_app_support_dir()
-    config_path = os.path.join(app_support_dir, config_file)
-        
-    if not os.path.exists(app_support_dir):
-        os.makedirs(app_support_dir)
-
-    if not os.path.exists(config_path):
-        shutil.copy(template_file, config_file)
-        print(f"{config_file} created from {template_file}.")
-    else:
-        print(f"{config_file} already exists.")
-
-def get_app_support_dir(self):
-    """
-    """
-    system = platform.system()
-    if system == 'Darwin':  # macOS
-        return os.path.expanduser('~/Library/Application Support/MyApp')
-    elif system == 'Linux':  # Linux
-        return os.path.expanduser('~/.config/MyApp')
-    elif system == 'Windows':  # Windows
-        return os.path.join(os.environ['APPDATA'], 'MyApp')
-    else:
-        raise ValueError(f'Unsupported OS: {system}')
-
-def init_settings():
-    config = load_config()
+def init_settings() -> None:
+    """intialize settings for Badger. loads local config file."""
     settings = QSettings("SLAC-ML", "Badger")
-    print(config, "WE ARE GOLDEN")
-    BADGER_PATH_DICT = config["BADGER_PATH_DICT"]
-    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
-    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
+    badger_dir = os.path.dirname(os.path.realpath(__file__))
+
+    template = os.path.join(badger_dir, 'config_template.yaml')
+    config = os.path.join(badger_dir, 'config.yaml')
+    generate_config(template, config)
+
+    config = load_config(badger_dir)
+    
+    BADGER_PATH_DICT = config["BADGER_PATH"]
+    BADGER_CORE_DICT = config["BADGER_CORE"]
+    BADGER_GUI_DICT = config["BADGER_GUI"]
 
     for key in BADGER_PATH_DICT.keys():
         if settings.value(key) is None:
@@ -65,22 +104,16 @@ def init_settings():
         if settings.value(key) is None:
             settings.setValue(key, BADGER_GUI_DICT[key]["value"])
 
-def list_settings():
+def list_settings() -> Dict:
     """List all the settings in Badger
 
     Returns
     -------
-    dict
+    result: Dict
         A dictionary contains the settings. Keys in the dict are fields of the
         settings, the value for each key is the current value for that setting.
-
     """
-    config = load_config()
     settings = QSettings("SLAC-ML", "Badger")
-    BADGER_PATH_DICT = config["BADGER_PATH_DICT"]
-    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
-    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
-
     result = {}
     for key in BADGER_PATH_DICT.keys():
         result[key] = settings.value(key)
@@ -92,26 +125,63 @@ def list_settings():
     return result
 
 
-def read_value(key):
-    settings = QSettings("SLAC-ML", "Badger")
+def read_value(key: str) -> Any:
+    """
+    Returns a value saved in the QSettings. 
 
+    Returns
+    -------
+    settings.value(key): Any
+        value from the QSettings dict. 
+    """
+    settings = QSettings("SLAC-ML", "Badger")
     return settings.value(key)
 
 
-def write_value(key, value):
+def write_value(key: str, value: Any) -> None:
+    """A method for setting a new value for the Qsettings and the config file.
+
+    Parameters
+    ----------
+    key: str
+        The field that is having is being given a new value. 
+    value: Any
+        value that is being saved.
+    """
     settings = QSettings("SLAC-ML", "Badger")
 
     settings.setValue(key, value)
+    path = settings.value("path", "")
+    
+    update = {key: value}
+    update_config_file(path, update)
 
+def update_config_file(file_path: str, updates: Dict[str, Any]) -> None:
+    """saves changes to the config file.
+
+    Parameters
+    ----------
+    file_path : str
+        The path to the config file to be updated.
+    updates : dict of {str: Any}
+        A dictionary containing the keys and new values to update in the YAML file.
+    """
+    with open(file_path, 'r') as file:
+        data = yaml.safe_load(file)
+    
+    for key, new_value in updates.items():
+        data[key] = new_value
+    
+    with open(file_path, 'w') as file:
+        yaml.dump(data, file, default_flow_style=False)
+    
 
 def mock_settings():
+    """A method for setting up mock settings"""
     app_data_dir = get_datadir() / "Badger"
     os.makedirs(app_data_dir, exist_ok=True)
 
-    config = load_config()
     settings = QSettings("SLAC-ML", "Badger")
-    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
-    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
 
     # Configure the paths and put/refresh the mock plugins there if needed
     plugins_dir = str(app_data_dir / "plugins")
@@ -139,13 +209,9 @@ def mock_settings():
         settings.setValue(key, BADGER_GUI_DICT[key]["value"])
 
 
-def reset_settings():
-    config = load_config()
+def reset_settings() -> None:
+    """A method to reset the Qsettings in Badger"""
     settings = QSettings("SLAC-ML", "Badger")
-    BADGER_PATH_DICT = config["BADGER_PATH_DICT"]
-    BADGER_CORE_DICT = config["BADGER_CORE_DICT"]
-    BADGER_GUI_DICT = config["BADGER_GUI_DICT"]
-
     for key in BADGER_PATH_DICT.keys():
         settings.setValue(key, BADGER_PATH_DICT[key]["value"])
     for key in BADGER_CORE_DICT.keys():

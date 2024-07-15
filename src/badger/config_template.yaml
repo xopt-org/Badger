@@ -1,0 +1,24 @@
+BADGER_ARCHIVE_ROOT: /Users/yazar/Library/Application Support/Badger/archive
+BADGER_CORE:
+  BADGER_DATA_DUMP_PERIOD:
+    default_value: 1
+BADGER_DATA_DUMP_PERIOD: 1.0
+BADGER_DB_ROOT: /Users/yazar/Library/Application Support/Badger/db
+BADGER_ENABLE_ADVANCED: false
+BADGER_GUI:
+  BADGER_ENABLE_ADVANCED:
+    value: false
+  BADGER_THEME:
+    value: dark
+BADGER_LOGBOOK_ROOT: /Users/yazar/Library/Application Support/Badger/logbook
+BADGER_PATH:
+  BADGER_ARCHIVE_ROOT:
+    value: null
+  BADGER_DB_ROOT:
+    value: null
+  BADGER_LOGBOOK_ROOT:
+    value: null
+  BADGER_PLUGIN_ROOT:
+    value: null
+BADGER_PLUGIN_ROOT: /Users/yazar/Library/Application Support/Badger/plugins
+BADGER_THEME: dark
