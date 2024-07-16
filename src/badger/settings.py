@@ -7,6 +7,7 @@ from badger.utils import get_datadir
 from badger.generate_config import generate_config
 from typing import Dict, Any
 
+
 BADGER_PATH_DICT = {
     "BADGER_PLUGIN_ROOT": {
         "display name": "plugin root",
@@ -53,6 +54,7 @@ BADGER_GUI_DICT = {
     },
 }
 
+
 def load_config(config_dir: str, config_file: str = 'config.yaml') -> Dict:
     """
     Parameters
@@ -79,6 +81,7 @@ def load_config(config_dir: str, config_file: str = 'config.yaml') -> Dict:
     
     return config
 
+
 def init_settings() -> None:
     """intialize settings for Badger. loads local config file."""
     settings = QSettings("SLAC-ML", "Badger")
@@ -103,6 +106,7 @@ def init_settings() -> None:
     for key in BADGER_GUI_DICT.keys():
         if settings.value(key) is None:
             settings.setValue(key, BADGER_GUI_DICT[key]["value"])
+
 
 def list_settings() -> Dict:
     """List all the settings in Badger
