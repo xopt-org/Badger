@@ -23,7 +23,7 @@ class Interface(interface.Interface):
             try:
                 value = self._states[channel]
             except KeyError:
-                self._states[channel] = value = 0
+                self._states[channel] = value = 0.5
 
             channel_outputs[channel] = value
 

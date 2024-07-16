@@ -33,11 +33,11 @@ def test_get_values():
     intf = Interface()
 
     channel_outputs = intf.get_values(["x1", "x2"])
-    assert channel_outputs == {"x1": 0, "x2": 0}
+    assert channel_outputs == {"x1": 0.5, "x2": 0.5}
 
     # Test single version
     value = intf.get_value("x3")
-    assert value == 0
+    assert value == 0.5
 
 
 def test_set_values():
@@ -49,7 +49,7 @@ def test_set_values():
     channel_inputs = {"x1": 3, "x2": 4}
     intf.set_values(channel_inputs)
     channel_outputs = intf.get_values(["x1", "x2", "x3"])
-    assert channel_outputs == {"x1": 3, "x2": 4, "x3": 0}
+    assert channel_outputs == {"x1": 3, "x2": 4, "x3": 0.5}
 
     # Test single version
     intf.set_value("x3", 5)
