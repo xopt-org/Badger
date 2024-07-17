@@ -145,21 +145,6 @@ class BadgerEnvBox(CollapsibleBox):
             'based on the machine state at the time of running.'
         relative_to_curr.setToolTip(tooltip)
         hbox_action_common.addWidget(relative_to_curr)
-        # Add auto-populate option
-        self.auto_populate = auto_populate = QCheckBox('Auto Populate')
-        tooltip = 'If checked, Badger will try to fill \n' + \
-            'the initial points table automatically.\n\n' + \
-            'By default, the current point would firstly be inserted,\n' + \
-            'followed by a few random points centered around the current\n' + \
-            'point. The specific parameters to generate the random\n' + \
-            'points can be checked with the "Add Random" button.\n\n' + \
-            'If unchecked, you will need to use the buttons to fill the\n' + \
-            'initial points table yourself every time variable selection\n' + \
-            'or variable ranges are changed.'
-        auto_populate.setToolTip(tooltip)
-        auto_populate.setChecked(True)
-        auto_populate.hide()
-        hbox_action_common.addWidget(auto_populate)
         hbox_action_common.addStretch()
 
         action_var = QWidget()

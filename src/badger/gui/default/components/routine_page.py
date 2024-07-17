@@ -162,9 +162,11 @@ class BadgerRoutinePage(QWidget):
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
-        self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
+        self.generator_box.cb.currentIndexChanged.connect(
+            self.select_generator)
         self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
-        self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
+        self.generator_box.check_use_script.stateChanged.connect(
+            self.toggle_use_script)
         self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.cb.currentIndexChanged.connect(self.select_env)
         self.env_box.btn_env_play.clicked.connect(self.open_playground)
@@ -178,8 +180,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_clear.clicked.connect(
             partial(self.clear_init_table, reset_actions=True))
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
-        self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
-        self.env_box.auto_populate.stateChanged.connect(self.toggle_auto_populate)
+        self.env_box.relative_to_curr.stateChanged.connect(
+            self.toggle_relative_to_curr)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
@@ -205,7 +207,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.check_only_var.setChecked(False)
             self.env_box.check_only_obj.setChecked(False)
             self.env_box.relative_to_curr.setChecked(True)
-            self.env_box.auto_populate.setChecked(True)
+            self.try_populate_init_table()
 
             # Reset the save settings
             name = generate_slug(2)
@@ -265,9 +267,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.setChecked(flag_relative)
         self.env_box.relative_to_curr.blockSignals(False)
         self.toggle_relative_to_curr(flag_relative, refresh=False)
-
-        # No actions would be triggered since checked would be False
-        # self.env_box.auto_populate.setChecked(False)
 
         # Always use ranges stored in routine
         self.env_box.var_table.set_bounds(routine.vocs.variables)
@@ -525,8 +524,16 @@ class BadgerRoutinePage(QWidget):
         fraction = add_rand_config['fraction']
         random_sample_region = get_local_region(var_curr, vocs,
                                                 fraction=fraction)
-        random_points = vocs.random_inputs(n_point,
-                                           custom_bounds=random_sample_region)
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            random_points = vocs.random_inputs(
+                n_point, custom_bounds=random_sample_region)
+
+            for warning in caught_warnings:
+                # Ignore runtime warnings (usually caused by clip by bounds)
+                if warning.category == RuntimeWarning:
+                    pass
+                else:
+                    print(f"Caught user warning: {warning.message}")
 
         # Add points to the table
         table = self.env_box.init_table
@@ -671,7 +678,7 @@ class BadgerRoutinePage(QWidget):
         variable_names = [v for v in selected if selected[v]]
         update_init_data_table(self.env_box.init_table, variable_names)
 
-        if not self.env_box.auto_populate.isChecked():
+        if not self.env_box.relative_to_curr.isChecked():
             return
 
         # Auto populate the initial table based on recorded actions
@@ -724,36 +731,28 @@ class BadgerRoutinePage(QWidget):
         if checked:
             self.env_box.switch_var_panel_style(True)
 
-            self.env_box.auto_populate.setDisabled(False)
-
             if refresh and self.env_box.var_table.selected:
                 bounds = self.calc_auto_bounds()
                 self.env_box.var_table.set_bounds(bounds)
                 self.clear_init_table(reset_actions=False)
                 # Auto populate the initial table
-                self.env_box.auto_populate.setChecked(True)
-            else:
-                # Check auto populate w/o triggering the signal
-                self.env_box.auto_populate.blockSignals(True)
-                self.env_box.auto_populate.setChecked(True)
-                self.env_box.auto_populate.blockSignals(False)
+                self.try_populate_init_table()
 
             self.env_box.var_table.lock_bounds()
             self.env_box.init_table.setDisabled(True)
         else:
             self.env_box.switch_var_panel_style(False)
 
-            self.env_box.auto_populate.setChecked(False)
-            self.env_box.auto_populate.setDisabled(True)
-
             self.env_box.var_table.unlock_bounds()
             self.env_box.init_table.setDisabled(False)
 
-    def toggle_auto_populate(self, checked):
-        if checked and self.env_box.var_table.selected:
+    def try_populate_init_table(self):
+        if (self.env_box.relative_to_curr.isChecked() and
+                self.env_box.var_table.selected):
             self.update_init_table()
 
-    def add_constraint(self, name=None, relation=0, threshold=0, critical=False):
+    def add_constraint(self, name=None, relation=0, threshold=0,
+                       critical=False):
         if self.configs is None:
             return
 

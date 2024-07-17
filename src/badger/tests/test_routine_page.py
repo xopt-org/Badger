@@ -200,9 +200,3 @@ def test_scroll_on_generator_selector(qtbot):
 # bounds and initial points wrt the current variable values
 def test_relative_to_current(qtbot):
     pass
-
-
-# TODO: Test auto populate behavior, that if the initial points are
-# automatically filled in correctly, with different actions list
-def test_auto_populate(qtbot):
-    pass
