@@ -10,7 +10,7 @@
 
 <link rel="search" type="application/opensearchdescription+xml" title="Badger" href="/Badger/opensearch.xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.24/dist/katex.min.css" integrity="sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM" crossorigin="anonymous"><link rel="stylesheet" href="/Badger/assets/css/styles.ad3cd27a.css">
-<script src="/Badger/assets/js/runtime~main.2470fa53.js" defer="defer"></script>
+<script src="/Badger/assets/js/runtime~main.6e293c1a.js" defer="defer"></script>
 <script src="/Badger/assets/js/main.2638f177.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -39,7 +39,7 @@
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="run-your-first-optimization">Run your first optimization<a href="#run-your-first-optimization" class="hash-link" aria-label="Direct link to Run your first optimization" title="Direct link to Run your first optimization">​</a></h2>
 <p>Before you can run the optimization, you need to create the routine. Click the plus button to the right of the search bar, you&#x27;ll be navigated to the routine editor:</p>
 <p><img loading="lazy" alt="Badger routine editor" src="/Badger/assets/images/create_1st_routine-11b2cf6040021ce1469b292337c8e38e.png" width="2784" height="1720" class="img_ev3q"></p>
-<p>Where you can change the routine name and description in the <strong>Metadata</strong> section, as shown above. For your first routine, let&#x27;s select <code>upper_confidence_bound</code> generator<sup><a href="#user-content-fn-generator" id="user-content-fnref-generator" data-footnote-ref="true" aria-describedby="footnote-label">1</a></sup> in the <strong>Algorithm</strong> section. In the <strong>Environment + VOCS</strong> section, select the sphere_2d environment that shipped with Badger.</p>
+<p>Where you can change the routine name and description in the <strong>Metadata</strong> section, as shown above. For your first routine, let&#x27;s select <code>expected_improvement</code> generator<sup><a href="#user-content-fn-generator" id="user-content-fnref-generator" data-footnote-ref="true" aria-describedby="footnote-label">1</a></sup> in the <strong>Algorithm</strong> section. In the <strong>Environment + VOCS</strong> section, select the sphere_2d environment that shipped with Badger.</p>
 <p>Now we can shape our optimization problem by configuring the VOCS:</p>
 <p><img loading="lazy" alt="Configure the VOCS" src="/Badger/assets/images/configure_vocs-27b846d3da549fe68f467098433349da.png" width="2784" height="2414" class="img_ev3q"></p>
 <p>To archive the above configuration, simply click the blank cell on top of the checkboxes in the variable table to include all the two variables in the routine, then click the <em>Add Current</em> button in the <strong>Initial Points</strong> section to add the current values of the variables as the initial points where the optimization starts from. You of course can add more initial points as you wish but for now let&#x27;s keep it simple -- we only start the run from the current values. Finally check the <code>f</code> observable shown in the objectives table and change the rule (direction of the optimization) to <code>MAXIMIZE</code>, this means we&#x27;ll maximize <code>f</code> instead of minimize it (which is the default setting).</p>
