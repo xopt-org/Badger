@@ -17,7 +17,7 @@ from .actions.config import config_settings
 
 def main():
     # Initialize the Badger settings
-    init_settings()
+    # init_settings()
 
     # Create the top-level parser
     parser = argparse.ArgumentParser(description='Badger the optimizer')

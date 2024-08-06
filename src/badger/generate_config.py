@@ -1,28 +1,31 @@
 import yaml
 import os
+from pydantic import BaseModel
 
-def generate_config(template_path: str, config_path: str):
+def generate_config(template_model: BaseModel, config_path: str):
     """
-    Creates or updates a config file from badger's template config file.
+    Creates or updates a config file from a Pydantic model as the template.
     
     Parameters
     ----------
-    template_path: str
-        path to the template config file
-    user_config_path: str
-        path to the config file 
-
+    template_model: BaseModel
+        Pydantic model instance to use as the template.
+    config_path: str
+        Path to the user config file.
     """
-    with open(template_path, 'r') as template_file:
-        template_data = yaml.safe_load(template_file)
+    template_data = template_model.dict(by_alias=True)
     
     if os.path.exists(config_path):
         with open(config_path, 'r') as user_file:
-            config_data = yaml.safe_load(user_file)
+            config_data = yaml.safe_load(user_file) or {}
         
         for key, value in template_data.items():
             if key not in config_data:
                 config_data[key] = value
+            elif isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    if sub_key not in config_data[key]:
+                        config_data[key][sub_key] = sub_value
     else:
         config_data = template_data
     

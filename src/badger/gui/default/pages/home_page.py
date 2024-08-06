@@ -20,7 +20,7 @@ from ....db import list_routine, load_routine, remove_routine, get_runs_by_routi
 from ....db import import_routines, export_routines
 from ....archive import load_run, delete_run
 from ....utils import get_header, strtobool
-from ....settings import read_value
+from ....settings import init_settings
 
 
 stylesheet = '''
@@ -54,6 +54,8 @@ class BadgerHomePage(QWidget):
         self.load_all_runs()
 
     def init_ui(self):
+        config_singleton = init_settings()
+
         icon_ref = resources.files(__package__) / '../images/add.png'
         with resources.as_file(icon_ref) as icon_path:
             self.icon_add = QIcon(str(icon_path))
@@ -104,7 +106,7 @@ class BadgerHomePage(QWidget):
 
         # Filters
         self.filter_box = filter_box = BadgerFilterBox(self, title=' Filters')
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             filter_box.hide()
         vbox_routine.addWidget(filter_box)
 

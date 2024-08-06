@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPlainTextEdit
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
 from .collapsible_box import CollapsibleBox
-from ....settings import read_value
+from ....settings import init_settings
 from ....utils import strtobool
 
 
@@ -16,6 +16,8 @@ class BadgerAlgoBox(CollapsibleBox):
         self.init_ui()
 
     def init_ui(self):
+        config_singleton = init_settings()
+
         vbox = QVBoxLayout()
 
         # Algo selector
@@ -62,7 +64,7 @@ class BadgerAlgoBox(CollapsibleBox):
         btn_edit_script.hide()
         hbox_script.addWidget(check_use_script)
         hbox_script.addWidget(btn_edit_script)
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             script_bar.hide()
         self.edit = edit = QPlainTextEdit()
         # edit.setMaximumHeight(80)
@@ -111,7 +113,7 @@ class BadgerAlgoBox(CollapsibleBox):
         vbox_misc.addWidget(params_s)
 
         cbox_misc.setContentLayout(vbox_misc)
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             cbox_misc.hide()
 
         self.setContentLayout(vbox)

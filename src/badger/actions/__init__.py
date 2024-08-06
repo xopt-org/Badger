@@ -27,12 +27,13 @@ def show_info(args):
     if not check_n_config_paths():
         return
 
-    from ..settings import read_value
+    from ..settings import init_settings
 
-    BADGER_PLUGIN_ROOT = read_value("BADGER_PLUGIN_ROOT")
-    BADGER_DB_ROOT = read_value("BADGER_DB_ROOT")
-    BADGER_LOGBOOK_ROOT = read_value("BADGER_LOGBOOK_ROOT")
-    BADGER_ARCHIVE_ROOT = read_value("BADGER_ARCHIVE_ROOT")
+    config_singleton = init_settings()
+    BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
+    BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
+    BADGER_LOGBOOK_ROOT = config_singleton.read_value("BADGER_LOGBOOK_ROOT")
+    BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
 
     info = {
         'name': 'Badger the optimizer',

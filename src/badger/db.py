@@ -6,13 +6,15 @@ logger = logging.getLogger(__name__)
 import yaml
 import sqlite3
 from .routine import Routine
-from .settings import read_value
+from .settings import init_settings
 from .utils import get_yaml_string
 from .errors import BadgerConfigError, BadgerDBError
 
 
 # Check badger database root
-BADGER_DB_ROOT = read_value('BADGER_DB_ROOT')
+config_singleton = init_settings()
+BADGER_DB_ROOT = config_singleton.read_value('BADGER_DB_ROOT')
+print(BADGER_DB_ROOT, "what")
 if BADGER_DB_ROOT is None:
     raise BadgerConfigError('Please set the BADGER_DB_ROOT env var!')
 elif not os.path.exists(BADGER_DB_ROOT):

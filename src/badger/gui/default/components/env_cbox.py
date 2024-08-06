@@ -5,7 +5,7 @@ from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
-from ....settings import read_value
+from ....settings import init_settings
 from ....utils import strtobool
 
 LABEL_WIDTH = 80
@@ -20,6 +20,7 @@ class BadgerEnvBox(CollapsibleBox):
         self.config_logic()
 
     def init_ui(self):
+        config_singleton = init_settings()
         vbox = QVBoxLayout()
 
         name = QWidget()
@@ -33,7 +34,7 @@ class BadgerEnvBox(CollapsibleBox):
         cb.setCurrentIndex(-1)
         self.btn_env_play = btn_env_play = QPushButton('Open Playground')
         btn_env_play.setFixedSize(128, 24)
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             btn_env_play.hide()
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
@@ -97,7 +98,7 @@ class BadgerEnvBox(CollapsibleBox):
         self.btn_add_var = btn_add_var = QPushButton('Add')
         btn_add_var.setFixedSize(96, 24)
         btn_add_var.setDisabled(True)
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             btn_add_var.hide()
         self.btn_lim_vrange = btn_lim_vrange = QPushButton('Limit Variable Range')
         btn_lim_vrange.setFixedSize(144, 24)
