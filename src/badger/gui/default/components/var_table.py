@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
 )
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
 from .robust_spinbox import RobustSpinBox
 
 
@@ -26,7 +26,7 @@ class VariableTable(QTableWidget):
         self.setColumnCount(4)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         self.verticalHeader().setVisible(False)
         header = self.horizontalHeader()
@@ -44,6 +44,7 @@ class VariableTable(QTableWidget):
         self.selected = {}  # track var selected status
         self.bounds = {}  # track var bounds
         self.checked_only = False
+        self.addtl_vars = [] # track variables added on the fly
 
         self.config_logic()
 
@@ -86,10 +87,11 @@ class VariableTable(QTableWidget):
         self.update_variables(self.variables, 2)
 
     def update_selected(self, _):
-        for i in range(self.rowCount()):
+        for i in range(self.rowCount()-1): # TODO: Fix
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
-            self.selected[name] = _cb.isChecked()
+            if name != "Enter new PV here...": # TODO: fix...
+                self.selected[name] = _cb.isChecked()
 
         self.sig_sel_changed.emit()
 
@@ -160,7 +162,7 @@ class VariableTable(QTableWidget):
         else:
             _variables = variables
 
-        n = len(_variables)
+        n = len(_variables) + 1
         self.setRowCount(n)
         for i, var in enumerate(_variables):
             name = next(iter(var))
@@ -185,6 +187,13 @@ class VariableTable(QTableWidget):
             self.setCellWidget(i, 2, sb_lower)
             self.setCellWidget(i, 3, sb_upper)
 
+        # Make extra editable row
+        # TODO: make gray colored text
+        item = QTableWidgetItem("Enter new PV here...")
+        item.setFlags(item.flags() | Qt.ItemIsEditable)
+        self.setItem(i+1, 1, item)
+        self.itemEntered.connect(self.add_addtl_variable)
+
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
@@ -194,9 +203,50 @@ class VariableTable(QTableWidget):
 
         self.sig_sel_changed.emit()
 
+    def add_addtl_variable(self, item):
+        if item.row() == self.rowCount() - 1 and item.column() == 1:
+            idx = item.row()
+            name = item.text()
+
+            if name == "Enter new PV here...":
+                # TODO: fix this loop
+                return
+
+            # Dummy bounds for now
+            # TODO: check that it's not already in variables
+            # TODO: get bounds through interface cnx from here or from routine page
+            ub, lb = 1, -1
+
+            # Add checkbox only when a PV is entered
+            self.setCellWidget(idx, 0, QCheckBox())
+
+            _cb = self.cellWidget(idx, 0)
+
+            # Checked by default when entered
+            _cb.setChecked(True)
+            self.selected[name] = True
+
+            _cb.stateChanged.connect(self.update_selected)
+
+            _bounds = vrange = [-1, 1] # TODO: implement
+            sb_lower = RobustSpinBox(
+                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+            )
+            sb_lower.valueChanged.connect(self.update_bounds)
+            sb_upper = RobustSpinBox(
+                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+            )
+            sb_upper.valueChanged.connect(self.update_bounds)
+            self.setCellWidget(idx, 2, sb_lower)
+            self.setCellWidget(idx, 3, sb_upper)
+
+            self.add_variable(name, lb, ub)
+            self.addtl_vars.append(name)
+
+            self.update_variables(self.variables, 2)
+
     def add_variable(self, name, lb, ub):
-        var = {}
-        var[name] = [lb, ub]
+        var = {name: [lb, ub]}
 
         self.all_variables.append(var)
         self.bounds[name] = [lb, ub]

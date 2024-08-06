@@ -88,8 +88,9 @@ def extract_metadata(records):
 
 
 @maybe_create_routines_db
-def save_routine(routine: Routine):
+def save_routine(routine: Routine, routine_yaml=None):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
+    routine_yaml = routine_yaml or routine.yaml()
 
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
@@ -102,7 +103,7 @@ def save_routine(routine: Routine):
 
     if record and len(runs) == 0:  # update the record
         cur.execute('update routine set config = ?, savedAt = ? where name = ?',
-                    (routine.yaml(), datetime.now(), routine.name))
+                    (routine_yaml, datetime.now(), routine.name))
     else:  # insert a record
         cur.execute('insert into routine values (?, ?, ?)',
                     (routine.name, routine.yaml(), datetime.now()))
