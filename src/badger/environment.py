@@ -167,7 +167,6 @@ class Environment(BaseModel, ABC):
         #     + "Getting them through interface is not allowed."
         # )
         # raise BadgerInterfaceChannelError(err_msg)
-        print(variable_outputs_def)
         return {**variable_outputs_def}#, **variable_outputs_tmp}
 
     # The reason for this method is we cannot know the bounds of a variable

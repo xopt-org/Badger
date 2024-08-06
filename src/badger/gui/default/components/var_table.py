@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
 )
 from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QColor
 from .robust_spinbox import RobustSpinBox
 
 
@@ -188,9 +189,9 @@ class VariableTable(QTableWidget):
             self.setCellWidget(i, 3, sb_upper)
 
         # Make extra editable row
-        # TODO: make gray colored text
         item = QTableWidgetItem("Enter new PV here...")
         item.setFlags(item.flags() | Qt.ItemIsEditable)
+        item.setForeground(QColor('gray'))
         self.setItem(i+1, 1, item)
         self.itemEntered.connect(self.add_addtl_variable)
 
