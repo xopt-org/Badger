@@ -232,12 +232,15 @@ class Environment(BaseModel, ABC):
             variable_names = self.variable_names
 
         variable_names_new = [
-            name for name in variable_names if not len(self.variables[name])
+            name for name in variable_names if not len(self.variables.get(name, []))
         ]
         if len(variable_names_new):
             self.variables.update(self.get_bounds(variable_names_new))
 
-        return {k: self.variables[k] for k in variable_names}
+        # Set a default value for the bounds if not defined
+        default_value = [-1, 1]
+
+        return {k: self.variables.get(k, default_value) for k in variable_names}
 
 
 def instantiate_env(env_class, configs, manager=None):

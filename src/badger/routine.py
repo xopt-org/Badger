@@ -27,6 +27,7 @@ class Routine(Xopt):
     critical_constraint_names: Optional[List[str]] = Field([])
     tags: Optional[List] = Field(None)
     script: Optional[str] = Field(None)
+    additional_variables: Optional[List[str]] = Field([])
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
