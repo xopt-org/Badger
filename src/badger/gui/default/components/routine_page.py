@@ -3,7 +3,6 @@ import sqlite3
 import traceback
 import os
 import yaml
-import json
 
 import numpy as np
 import pandas as pd
