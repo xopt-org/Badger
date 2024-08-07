@@ -193,7 +193,7 @@ class VariableTable(QTableWidget):
         item.setFlags(item.flags() | Qt.ItemIsEditable)
         item.setForeground(QColor('gray'))
         self.setItem(i+1, 1, item)
-        self.itemEntered.connect(self.add_addtl_variable)
+        self.cellChanged.connect(self.add_addtl_variable)
 
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
@@ -204,8 +204,10 @@ class VariableTable(QTableWidget):
 
         self.sig_sel_changed.emit()
 
-    def add_addtl_variable(self, item):
-        if item.row() == self.rowCount() - 1 and item.column() == 1:
+    def add_addtl_variable(self, row, column):
+        #self.cellChanged.disconnect()  # to avoid seg fault, TODO: fix
+        if row == self.rowCount() - 1 and column == 1:
+            item = self.item(row, column)
             idx = item.row()
             name = item.text()
 
