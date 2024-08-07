@@ -769,13 +769,7 @@ class BadgerRoutinePage(QWidget):
             )
 
         try:
-            # routine_json = json.loads(routine.to_json())
-            # # If we have addt'l variables added on the fly, add to saved YAML
-            # if len(self.env_box.var_table.addtl_vars):
-            #     routine_json["vocs"]["additional_variables"] = self.env_box.var_table.addtl_vars
-            # # Save routine YAML
-            # routine_yaml = yaml.dump(routine_json)
-            save_routine(routine)#, routine_yaml=routine_yaml)
+            save_routine(routine)
         except sqlite3.IntegrityError:
             return QMessageBox.critical(
                 self, 'Error!',
