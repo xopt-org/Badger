@@ -235,8 +235,11 @@ class BadgerRoutinePage(QWidget):
 
         # Config the vocs panel
         variables = routine.vocs.variable_names
-        self.env_box.check_only_var.setChecked(True)
         self.env_box.edit_var.clear()
+        # Add addt'l variables to table as well
+        all_variables = [{key: value} for key, value in routine.vocs.variables.items()]
+        self.env_box.check_only_var.setChecked(False)
+        self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.set_bounds(routine.vocs.variables)
 
