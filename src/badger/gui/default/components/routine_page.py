@@ -410,6 +410,9 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_var.setChecked(False)
         self.env_box.var_table.update_variables(vars_combine)
 
+        # Needed for getting bounds on the fly
+        self.env_box.var_table.env_class, self.env_box.var_table.configs = self.add_var()
+
         _objs_env = configs['observations']
         objs_env = []
         for name in _objs_env:
@@ -531,8 +534,9 @@ class BadgerRoutinePage(QWidget):
             'interface': [intf_name]
         }
 
-        dlg = BadgerVariableDialog(self, self.env, configs, self.add_var_to_list)
-        dlg.exec()
+        return self.env, configs
+        # dlg = BadgerVariableDialog(self, self.env, configs, self.add_var_to_list)
+        # dlg.exec()
 
     def limit_variable_ranges(self):
         dlg = BadgerLimitVariableRangeDialog(

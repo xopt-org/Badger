@@ -10,6 +10,8 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
 from .robust_spinbox import RobustSpinBox
 
+from badger.environment import instantiate_env
+
 
 class VariableTable(QTableWidget):
     sig_sel_changed = pyqtSignal()
@@ -46,7 +48,10 @@ class VariableTable(QTableWidget):
         self.selected = {}  # track var selected status
         self.bounds = {}  # track var bounds
         self.checked_only = False
-        self.addtl_vars = [] # track variables added on the fly
+        self.addtl_vars = []  # track variables added on the fly
+        self.env_class = None  # needed to get bounds on the fly
+        self.env = None  # needed to get bounds on the fly
+        self.configs = None  # needed to get bounds on the fly
 
         self.config_logic()
 
@@ -89,7 +94,7 @@ class VariableTable(QTableWidget):
         self.update_variables(self.variables, 2)
 
     def update_selected(self, _):
-        for i in range(self.rowCount()-1): # TODO: Fix
+        for i in range(self.rowCount()-1):
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
             if name != "Enter new PV here...": # TODO: fix...
@@ -222,9 +227,21 @@ class VariableTable(QTableWidget):
                                     f'Variable {name} already exists!')
                 return
 
-            # Dummy bounds for now
-            # TODO: get bounds through interface cnx from here or from routine page
-            ub, lb = 1, -1
+            # Get bounds from interface, if PV exists on interface
+            _bounds = None
+            if self.env_class is not None:
+                try:
+                    _val, _bounds = self.get_bounds(name)
+                    vrange = _bounds
+                except Exception as e:
+                    print(e)
+            # If bounds are not defined, set to default
+            if not _bounds:
+                _bounds = vrange = [-1, 1]
+                QMessageBox.warning(self, 'Bounds could not be found!',
+                                    f'Variable {name} bounds could not be found.' +
+                                    'Please check default values!'
+                                    )
 
             # Add checkbox only when a PV is entered
             self.setCellWidget(idx, 0, QCheckBox())
@@ -237,7 +254,6 @@ class VariableTable(QTableWidget):
 
             _cb.stateChanged.connect(self.update_selected)
 
-            _bounds = vrange = [-1, 1] # TODO: implement
             sb_lower = RobustSpinBox(
                 default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
             )
@@ -249,10 +265,21 @@ class VariableTable(QTableWidget):
             self.setCellWidget(idx, 2, sb_lower)
             self.setCellWidget(idx, 3, sb_upper)
 
-            self.add_variable(name, lb, ub)
+            self.add_variable(name, _bounds[0], _bounds[1])
             self.addtl_vars.append(name)
 
             self.update_variables(self.variables, 2)
+
+    def get_bounds(self, name):
+        # TODO: move elsewhere?
+        self.env = instantiate_env(self.env_class, self.configs)
+
+        try:
+            value = self.env.get_variables([name])[name]
+            bounds = self.env.get_bounds([name])[name]
+            return value, bounds
+        except Exception as e:
+            QMessageBox.critical(self, 'Error!', f'Variable {name} cannot be found!')
 
     def add_variable(self, name, lb, ub):
         var = {name: [lb, ub]}
