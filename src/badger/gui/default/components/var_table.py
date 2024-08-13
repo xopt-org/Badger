@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QAbstractItemView,
     QCheckBox,
+    QMessageBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
@@ -192,7 +193,7 @@ class VariableTable(QTableWidget):
         item = QTableWidgetItem("Enter new PV here...")
         item.setFlags(item.flags() | Qt.ItemIsEditable)
         item.setForeground(QColor('gray'))
-        self.setItem(i+1, 1, item)
+        self.setItem(n-1, 1, item)
         self.cellChanged.connect(self.add_addtl_variable)
 
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
@@ -205,18 +206,23 @@ class VariableTable(QTableWidget):
         self.sig_sel_changed.emit()
 
     def add_addtl_variable(self, row, column):
-        #self.cellChanged.disconnect()  # to avoid seg fault, TODO: fix
         if row == self.rowCount() - 1 and column == 1:
             item = self.item(row, column)
             idx = item.row()
             name = item.text()
 
             if name == "Enter new PV here...":
-                # TODO: fix this loop
+                # TODO: fix this loop? (maybe user another signal?)
+                return
+
+            # Check that variables doesn't already exist in table
+            if name in [list(d.keys())[0] for d in self.variables]:
+                self.update_variables(self.variables, 2)
+                QMessageBox.warning(self, 'Variable already exists!',
+                                    f'Variable {name} already exists!')
                 return
 
             # Dummy bounds for now
-            # TODO: check that it's not already in variables
             # TODO: get bounds through interface cnx from here or from routine page
             ub, lb = 1, -1
 
