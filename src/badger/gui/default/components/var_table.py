@@ -11,6 +11,7 @@ from PyQt5.QtGui import QColor
 from .robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
+from badger.errors import BadgerInterfaceChannelError
 
 
 class VariableTable(QTableWidget):
@@ -231,17 +232,27 @@ class VariableTable(QTableWidget):
             _bounds = None
             if self.env_class is not None:
                 try:
-                    _val, _bounds = self.get_bounds(name)
+                    _, _bounds = self.get_bounds(name)
                     vrange = _bounds
+                except BadgerInterfaceChannelError:
+                    # Raised when PV does not exist after attempting to call value
+                    # Revert table to previous state
+                    self.update_variables(self.variables, 2)
+                    QMessageBox.critical(self, 'Variable Not Found!' +
+                                         f'Variable {name} cannot be found through the interface!'
+                                         )
+                    return
                 except Exception as e:
-                    print(e)
-            # If bounds are not defined, set to default
-            if not _bounds:
-                _bounds = vrange = [-1, 1]
-                QMessageBox.warning(self, 'Bounds could not be found!',
-                                    f'Variable {name} bounds could not be found.' +
-                                    'Please check default values!'
-                                    )
+                    # Raised when PV exists but value/hard limits cannot be found
+                    # Set to some default values
+                    _bounds = vrange = [-1, 1]
+                    QMessageBox.warning(self, 'Bounds could not be found!',
+                                        f'Variable {name} bounds could not be found.' +
+                                        'Please check default values!'
+                                        )
+            else:
+                # TODO: handle this case? Right now I don't think it should happen
+                raise "Environment cannot be found for new variable bounds!"
 
             # Add checkbox only when a PV is entered
             self.setCellWidget(idx, 0, QCheckBox())
@@ -274,12 +285,9 @@ class VariableTable(QTableWidget):
         # TODO: move elsewhere?
         self.env = instantiate_env(self.env_class, self.configs)
 
-        try:
-            value = self.env.get_variables([name])[name]
-            bounds = self.env.get_bounds([name])[name]
-            return value, bounds
-        except Exception as e:
-            QMessageBox.critical(self, 'Error!', f'Variable {name} cannot be found!')
+        value = self.env.get_variables([name])[name]
+        bounds = self.env.get_bounds([name])[name]
+        return value, bounds
 
     def add_variable(self, name, lb, ub):
         var = {name: [lb, ub]}
