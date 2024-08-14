@@ -58,6 +58,7 @@ class BadgerRoutinePage(QWidget):
         self.routine = None
         self.script = ''
         self.window_docs = BadgerDocsWindow(self, '')
+        self.vars_env = None  # needed for passing env vars to the var table
 
         # Limit variable ranges
         self.limit_option = None
@@ -235,10 +236,19 @@ class BadgerRoutinePage(QWidget):
 
         # Config the vocs panel
         variables = routine.vocs.variable_names
+        self.env_box.check_only_var.setChecked(True)
         self.env_box.edit_var.clear()
-        # Add addt'l variables to table as well
-        all_variables = [{key: value} for key, value in routine.vocs.variables.items()]
-        self.env_box.check_only_var.setChecked(False)
+
+        # Add additional variables to table as well
+        # Combine the variables from the env with the additional variables
+        all_variables = {}
+        all_variables.update(routine.vocs.variables)
+        for i in self.vars_env:
+            all_variables.update(i)
+        # Format for update_variables method
+        all_variables = dict(sorted(all_variables.items()))
+        all_variables = [{key: value} for key, value in all_variables.items()]
+
         self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.set_bounds(routine.vocs.variables)
@@ -404,7 +414,8 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.edit.setPlainText(get_yaml_string(configs['params']))
 
-        vars_env = configs['variables']
+        # Get and save vars to combine with additional vars added on the fly
+        vars_env = self.vars_env = configs['variables']
         vars_combine = [*vars_env]
 
         self.env_box.check_only_var.setChecked(False)
