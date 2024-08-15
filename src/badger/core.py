@@ -32,6 +32,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     try:
         best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
         if best_idx.size > 0:
+            best_idx = int(best_idx[0])  # convert numpy array to int
             if best_idx != len(routine.data) - 1:
                 is_optimal = False
             else:
@@ -40,6 +41,8 @@ def convert_to_solution(result: DataFrame, routine: Routine):
             is_optimal = False
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
+    except IndexError:  # no feasible solution
+        is_optimal = False
 
     vars = list(result[vocs.variable_names].to_numpy()[0])
     objs = list(result[vocs.objective_names].to_numpy()[0])

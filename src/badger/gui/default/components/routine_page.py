@@ -1,6 +1,8 @@
 import warnings
 import sqlite3
 import traceback
+import copy
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -17,7 +19,11 @@ from xopt.utils import get_local_region
 
 from .generator_cbox import BadgerAlgoBox
 from .constraint_item import constraint_item
-from .data_table import get_table_content_as_dict, set_init_data_table
+from .data_table import (
+    get_table_content_as_dict,
+    set_init_data_table,
+    update_init_data_table,
+)
 from .env_cbox import BadgerEnvBox
 from .filter_cbox import BadgerFilterBox
 from .state_item import state_item
@@ -58,11 +64,24 @@ class BadgerRoutinePage(QWidget):
         self.window_docs = BadgerDocsWindow(self, '')
 
         # Limit variable ranges
-        self.limit_option = None
+        self.limit_option = {
+            'limit_option_idx': 0,
+            'ratio_curr': 0.1,
+            'ratio_full': 0.1,
+        }
 
         # Add radom points config
-        self.add_rand_config = None
+        self.add_rand_config = {
+            'method': 0,
+            'n_points': 3,
+            'fraction': 0.1,
+        }
         self.rc_dialog = None
+
+        # Record the initial table actions
+        self.init_table_actions = []
+        # Record the ratio var ranges
+        self.ratio_var_ranges = {}
 
         self.init_ui()
         self.config_logic()
@@ -143,9 +162,11 @@ class BadgerRoutinePage(QWidget):
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
-        self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
+        self.generator_box.cb.currentIndexChanged.connect(
+            self.select_generator)
         self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
-        self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
+        self.generator_box.check_use_script.stateChanged.connect(
+            self.toggle_use_script)
         self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.cb.currentIndexChanged.connect(self.select_env)
         self.env_box.btn_env_play.clicked.connect(self.open_playground)
@@ -153,10 +174,15 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_con.clicked.connect(self.add_constraint)
         self.env_box.btn_add_sta.clicked.connect(self.add_state)
-        self.env_box.btn_add_curr.clicked.connect(self.fill_curr_in_init_table)
+        self.env_box.btn_add_curr.clicked.connect(
+            partial(self.fill_curr_in_init_table, record=True))
         self.env_box.btn_add_rand.clicked.connect(self.show_add_rand_dialog)
-        self.env_box.btn_clear.clicked.connect(self.clear_init_table)
+        self.env_box.btn_clear.clicked.connect(
+            partial(self.clear_init_table, reset_actions=True))
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
+        self.env_box.relative_to_curr.stateChanged.connect(
+            self.toggle_relative_to_curr)
+        self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
@@ -180,6 +206,8 @@ class BadgerRoutinePage(QWidget):
             # Reset the routine configs check box status
             self.env_box.check_only_var.setChecked(False)
             self.env_box.check_only_obj.setChecked(False)
+            self.env_box.relative_to_curr.setChecked(True)
+            self.try_populate_init_table()
 
             # Reset the save settings
             name = generate_slug(2)
@@ -227,10 +255,23 @@ class BadgerRoutinePage(QWidget):
         # Config the vocs panel
         variables = routine.vocs.variable_names
         self.env_box.check_only_var.setChecked(True)
+
         self.env_box.edit_var.clear()
         self.env_box.var_table.set_selected(variables)
+
+        flag_relative = routine.relative_to_current
+        if flag_relative:  # load the relative to current settings
+            self.ratio_var_ranges = routine.vrange_limit_options
+            self.init_table_actions = routine.initial_point_actions
+        self.env_box.relative_to_curr.blockSignals(True)
+        self.env_box.relative_to_curr.setChecked(flag_relative)
+        self.env_box.relative_to_curr.blockSignals(False)
+        self.toggle_relative_to_curr(flag_relative, refresh=False)
+
+        # Always use ranges stored in routine
         self.env_box.var_table.set_bounds(routine.vocs.variables)
 
+        # Fill in initial points stored in routine if available
         try:
             init_points = routine.initial_points
             set_init_data_table(self.env_box.init_table, init_points)
@@ -277,9 +318,11 @@ class BadgerRoutinePage(QWidget):
         name = self.generators[i]
         default_config = get_generator_defaults(name)
 
-        # Patch for BOs that make the low noise prior False by default
         if name in all_generator_names['bo']:
+            # Patch for BOs that make the low noise prior False by default
             default_config['gp_constructor']['use_low_noise_prior'] = False
+            # Patch for BOs that turn on TuRBO by default
+            default_config['turbo_controller'] = 'optimize'
 
         # Patch to only show part of the config
         filtered_config = filter_generator_config(name, default_config)
@@ -287,6 +330,19 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_docs.update_docs(name)
+
+    def _fill_init_table(self):  # make sure self.init_table_actions is set
+        for action in self.init_table_actions:
+            if action['type'] == 'add_curr':
+                self.fill_curr_in_init_table(record=False)
+            elif action['type'] == 'add_rand':
+                try:
+                    self.add_rand_in_init_table(
+                        add_rand_config=action['config'],
+                        record=False,
+                    )
+                except IndexError:  # lower bound is the same as upper bound
+                    pass
 
     def toggle_use_script(self):
         if self.generator_box.check_use_script.isChecked():
@@ -346,6 +402,10 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, 'Invalid script!', str(e))
 
     def select_env(self, i):
+        # Reset the initial table actions and ratio var ranges
+        self.init_table_actions = []
+        self.ratio_var_ranges = {}
+
         if i == -1:
             self.env_box.edit.setPlainText('')
             self.env_box.edit_var.clear()
@@ -374,7 +434,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_lim_vrange.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
-        except:
+        except Exception:
             self.configs = None
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
@@ -394,8 +454,13 @@ class BadgerRoutinePage(QWidget):
         vars_env = configs['variables']
         vars_combine = [*vars_env]
 
+        self.env_box.check_only_var.blockSignals(True)
         self.env_box.check_only_var.setChecked(False)
+        self.env_box.check_only_var.blockSignals(False)
         self.env_box.var_table.update_variables(vars_combine)
+        # Auto apply the limited variable ranges if the option is set
+        if self.env_box.relative_to_curr.isChecked():
+            self.set_vrange(set_all=True)
 
         _objs_env = configs['observations']
         objs_env = []
@@ -422,7 +487,7 @@ class BadgerRoutinePage(QWidget):
                 header_list.append('')  # Handle the case where the header item is None
         return header_list
 
-    def fill_curr_in_init_table(self):
+    def fill_curr_in_init_table(self, record=False):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
@@ -438,10 +503,16 @@ class BadgerRoutinePage(QWidget):
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
+        if record and self.env_box.relative_to_curr.isChecked():
+            self.init_table_actions.append({'type': 'add_curr'})
+
     def save_add_rand_config(self, add_rand_config):
         self.add_rand_config = add_rand_config
 
-    def add_rand_in_init_table(self):
+    def add_rand_in_init_table(self, add_rand_config=None, record=True):
+        if add_rand_config is None:
+            add_rand_config = self.add_rand_config
+
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
@@ -449,12 +520,20 @@ class BadgerRoutinePage(QWidget):
 
         # get small region around current point to sample
         vocs, _ = self._compose_vocs()
-        n_point = self.add_rand_config['n_points']
-        fraction = self.add_rand_config['fraction']
+        n_point = add_rand_config['n_points']
+        fraction = add_rand_config['fraction']
         random_sample_region = get_local_region(var_curr, vocs,
                                                 fraction=fraction)
-        random_points = vocs.random_inputs(n_point,
-                                           custom_bounds=random_sample_region)
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            random_points = vocs.random_inputs(
+                n_point, custom_bounds=random_sample_region)
+
+            for warning in caught_warnings:
+                # Ignore runtime warnings (usually caused by clip by bounds)
+                if warning.category == RuntimeWarning:
+                    pass
+                else:
+                    print(f"Caught user warning: {warning.message}")
 
         # Add points to the table
         table = self.env_box.init_table
@@ -470,6 +549,12 @@ class BadgerRoutinePage(QWidget):
                 except IndexError:  # No more points to add
                     break
 
+        if record and self.env_box.relative_to_curr.isChecked():
+            self.init_table_actions.append({
+                'type': 'add_rand',
+                'config': add_rand_config,
+            })
+
     def show_add_rand_dialog(self):
         dlg = BadgerAddRandomDialog(
             self, self.add_rand_in_init_table,
@@ -481,13 +566,16 @@ class BadgerRoutinePage(QWidget):
         finally:
             self.rc_dialog = None
 
-    def clear_init_table(self):
+    def clear_init_table(self, reset_actions=True):
         table = self.env_box.init_table
         for row in range(table.rowCount()):
             for col in range(table.columnCount()):
                 item = table.item(row, col)
                 if item:
                     item.setText('')  # Set the cell content to an empty string
+
+        if reset_actions and self.env_box.relative_to_curr.isChecked():
+            self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
         table = self.env_box.init_table
@@ -527,13 +615,13 @@ class BadgerRoutinePage(QWidget):
         )
         dlg.exec()
 
-    def set_vrange(self):
+    def set_vrange(self, set_all=False):
         vname_selected = []
         vrange = {}
 
         for var in self.env_box.var_table.all_variables:
             name = next(iter(var))
-            if self.env_box.var_table.is_checked(name):
+            if set_all or self.env_box.var_table.is_checked(name):
                 vname_selected.append(name)
                 vrange[name] = var[name]
 
@@ -560,6 +648,13 @@ class BadgerRoutinePage(QWidget):
                 vrange[name] = bounds
 
         self.env_box.var_table.set_bounds(vrange)
+        self.clear_init_table(reset_actions=False)  # clear table after changing ranges
+        self.update_init_table()  # auto populate if option is set
+
+        # Record the ratio var ranges
+        if self.env_box.relative_to_curr.isChecked():
+            for vname in vname_selected:
+                self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
 
     def save_limit_option(self, limit_option):
         self.limit_option = limit_option
@@ -578,7 +673,86 @@ class BadgerRoutinePage(QWidget):
         self.env_box.add_var(name, lb, ub)
         return 0
 
-    def add_constraint(self, name=None, relation=0, threshold=0, critical=False):
+    def update_init_table(self):
+        selected = self.env_box.var_table.selected
+        variable_names = [v for v in selected if selected[v]]
+        update_init_data_table(self.env_box.init_table, variable_names)
+
+        if not self.env_box.relative_to_curr.isChecked():
+            return
+
+        # Auto populate the initial table based on recorded actions
+        if not self.init_table_actions:
+            self.init_table_actions = [
+                {'type': 'add_curr'},
+                {'type': 'add_rand', 'config': self.add_rand_config},
+            ]
+        self.clear_init_table(reset_actions=False)
+        self._fill_init_table()
+
+    def calc_auto_bounds(self):
+        vname_selected = []
+        vrange = {}
+
+        for var in self.env_box.var_table.all_variables:
+            name = next(iter(var))
+            vname_selected.append(name)
+            vrange[name] = var[name]
+
+        env = self.create_env()
+        var_curr = env._get_variables(vname_selected)
+
+        for name in vname_selected:
+            try:
+                limit_option = self.ratio_var_ranges[name]
+            except KeyError:
+                limit_option = self.limit_option
+
+            option_idx = limit_option['limit_option_idx']
+            if option_idx:
+                ratio = limit_option['ratio_full']
+                hard_bounds = vrange[name]
+                delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
+                bounds = [var_curr[name] - delta, var_curr[name] + delta]
+                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                vrange[name] = bounds
+            else:
+                ratio = limit_option['ratio_curr']
+                hard_bounds = vrange[name]
+                sign = np.sign(var_curr[name])
+                bounds = [var_curr[name] * (1 - 0.5 * sign * ratio),
+                          var_curr[name] * (1 + 0.5 * sign * ratio)]
+                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                vrange[name] = bounds
+
+        return vrange
+
+    def toggle_relative_to_curr(self, checked, refresh=True):
+        if checked:
+            self.env_box.switch_var_panel_style(True)
+
+            if refresh and self.env_box.var_table.selected:
+                bounds = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds)
+                self.clear_init_table(reset_actions=False)
+                # Auto populate the initial table
+                self.try_populate_init_table()
+
+            self.env_box.var_table.lock_bounds()
+            self.env_box.init_table.setDisabled(True)
+        else:
+            self.env_box.switch_var_panel_style(False)
+
+            self.env_box.var_table.unlock_bounds()
+            self.env_box.init_table.setDisabled(False)
+
+    def try_populate_init_table(self):
+        if (self.env_box.relative_to_curr.isChecked() and
+                self.env_box.var_table.selected):
+            self.update_init_table()
+
+    def add_constraint(self, name=None, relation=0, threshold=0,
+                       critical=False):
         if self.configs is None:
             return
 
@@ -657,14 +831,18 @@ class BadgerRoutinePage(QWidget):
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.toPlainText())
-        # Patch the BO generators to make sure use_low_noise_prior is False
         if generator_name in all_generator_names['bo']:
+            # Patch the BO generators to make sure use_low_noise_prior is False
             if 'gp_constructor' not in generator_params:
                 generator_params['gp_constructor'] = {
                     'name': 'standard',  # have to add name too for pydantic validation
                     'use_low_noise_prior': False,
                 }
             # or else we use whatever specified by the users
+
+            # Patch the BO generators to turn on TuRBO by default
+            if 'turbo_controller' not in generator_params:
+                generator_params['turbo_controller'] = 'optimize'
         env_params = load_config(self.env_box.edit.toPlainText())
 
         # VOCS
@@ -688,6 +866,16 @@ class BadgerRoutinePage(QWidget):
         else:
             script = None
 
+        # Relative to current params
+        if self.env_box.relative_to_curr.isChecked():
+            relative_to_current = True
+            vrange_limit_options = self.ratio_var_ranges
+            initial_point_actions = self.init_table_actions
+        else:
+            relative_to_current = False
+            vrange_limit_options = None
+            initial_point_actions = None
+
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(
                 # Xopt part
@@ -701,6 +889,9 @@ class BadgerRoutinePage(QWidget):
                 critical_constraint_names=critical_constraints,
                 tags=None,
                 script=script,
+                relative_to_current=relative_to_current,
+                vrange_limit_options=vrange_limit_options,
+                initial_point_actions=initial_point_actions,
             )
 
             # Check if any user warnings were caught

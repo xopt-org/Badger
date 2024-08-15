@@ -2,12 +2,14 @@ import json
 from copy import deepcopy
 from typing import Optional, List, Any
 
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pydantic import ConfigDict, Field, model_validator, field_validator, \
     ValidationInfo, SerializeAsAny
 from xopt import Xopt, VOCS, Evaluator
 from xopt.generators import get_generator
+from xopt.utils import get_local_region
 from badger.utils import curr_ts
 from badger.environment import Environment, instantiate_env
 
@@ -21,6 +23,10 @@ class Routine(Xopt):
     critical_constraint_names: Optional[List[str]] = Field([])
     tags: Optional[List] = Field(None)
     script: Optional[str] = Field(None)
+    # Store relative to current params
+    relative_to_current: Optional[bool] = Field(False)
+    vrange_limit_options: Optional[dict] = Field(None)
+    initial_point_actions: Optional[List] = Field(None)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -143,3 +149,59 @@ class Routine(Xopt):
             pass
 
         return json.dumps(dict_result)
+
+
+def calc_bounds(limit_options, vocs, env):
+    vnames = vocs.variable_names
+    var_curr = env._get_variables(vnames)
+    var_range = env._get_bounds(vnames)
+
+    variables_updated = {}
+    for name in vnames:
+        try:
+            limit_option = limit_options[name]
+        except KeyError:
+            continue
+
+        option_idx = limit_option['limit_option_idx']
+        if option_idx:
+            ratio = limit_option['ratio_full']
+            hard_bounds = var_range[name]
+            delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
+            bounds = [var_curr[name] - delta, var_curr[name] + delta]
+            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            variables_updated[name] = bounds
+        else:
+            ratio = limit_option['ratio_curr']
+            hard_bounds = var_range[name]
+            sign = np.sign(var_curr[name])
+            bounds = [var_curr[name] * (1 - 0.5 * sign * ratio),
+                      var_curr[name] * (1 + 0.5 * sign * ratio)]
+            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            variables_updated[name] = bounds
+
+    return variables_updated
+
+
+def calc_init_points(init_actions, vocs, env):
+    vnames = vocs.variable_names
+    init_points = {k: [] for k in vnames}
+
+    for action in init_actions:
+        if action['type'] == 'add_curr':
+            var_curr = env._get_variables(vnames)
+            for name in vnames:
+                init_points[name].append(var_curr[name])
+        elif action['type'] == 'add_rand':
+            var_curr = env._get_variables(vnames)
+            n_point = action['config']['n_points']
+            fraction = action['config']['fraction']
+            random_sample_region = get_local_region(
+                var_curr, vocs, fraction=fraction)
+            random_points = vocs.random_inputs(
+                n_point, custom_bounds=random_sample_region)
+            for point in random_points:
+                for name in vnames:
+                    init_points[name].append(point[name])
+
+    return init_points

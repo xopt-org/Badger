@@ -48,6 +48,7 @@ def test_close_main(qtbot):
 
 
 def test_auto_select_updated_routine(qtbot):
+
     from badger.gui.default.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
 
@@ -158,3 +159,30 @@ def test_default_low_noise_prior_in_bo(qtbot):
                 assert not params_dict['gp_constructor']['use_low_noise_prior']
             else:  # that part of params is hidden so we need to dig deeper
                 pass
+
+
+def test_default_turbo_in_bo(qtbot):
+    from badger.gui.default.windows.main_window import BadgerMainWindow
+    from badger.tests.utils import fix_db_path_issue
+    from xopt.generators import all_generator_names
+    import yaml
+
+    fix_db_path_issue()
+
+    window = BadgerMainWindow()
+    qtbot.addWidget(window)
+
+    # Create and save a routine
+    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
+    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
+
+    editor = window.home_page.routine_editor
+    cb_generator = editor.routine_page.generator_box.cb
+    algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
+    for algo in algos:
+        if algo in all_generator_names['bo']:
+            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
+            params = editor.routine_page.generator_box.edit.toPlainText()
+            params_dict = yaml.safe_load(params)
+
+            assert params_dict['turbo_controller'] == 'optimize'

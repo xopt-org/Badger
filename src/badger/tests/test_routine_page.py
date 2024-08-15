@@ -21,6 +21,9 @@ def test_routine_generation(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
+
     # test without anything selected
     with pytest.raises(BadgerRoutineError):
         window._compose_routine()
@@ -53,6 +56,9 @@ def test_initial_points(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
+
     qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
 
@@ -66,7 +72,7 @@ def test_initial_points(qtbot):
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
     routine = window._compose_routine()
     assert routine.initial_points.to_dict() == pd.DataFrame(
-        {"x0": 0, "x1": 0, "x2": 0}, index=[0]).to_dict()
+        {"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
 
 
 def test_ui_update(qtbot):
@@ -137,6 +143,9 @@ def test_add_random_points(qtbot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
+
     qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
 
@@ -158,10 +167,10 @@ def test_add_random_points(qtbot):
     routine = window._compose_routine()
 
     assert routine.initial_points.shape[0] == 5
-    # curr is 0, frac is 0.05, range is [-1, 1]
-    # so max value should be 0.1, min value should be -0.1
-    assert routine.initial_points.to_numpy().max() <= 0.1
-    assert routine.initial_points.to_numpy().min() >= -0.1
+    # curr is 0.5, frac is 0.05, range is [-1, 1]
+    # so max value should be 0.6, min value should be 0.4
+    assert routine.initial_points.to_numpy().max() <= 0.6
+    assert routine.initial_points.to_numpy().min() >= 0.4
 
 
 # TODO: Test if the EI, Simplex, and RCDS params show o the params editor
@@ -184,4 +193,10 @@ def test_scroll_on_environment_selector(qtbot):
 
 # TODO: Test if generator selector reacts to scroll events, it should not
 def test_scroll_on_generator_selector(qtbot):
+    pass
+
+
+# TODO: Test relative to current behavior, including the auto calculated
+# bounds and initial points wrt the current variable values
+def test_relative_to_current(qtbot):
     pass

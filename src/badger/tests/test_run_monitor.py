@@ -513,3 +513,9 @@ def test_del_last_run(qtbot):
 # correct location when the logbook button is clicked
 def test_send_to_logbook(qtbot):
     pass
+
+
+# TODO: Test if the overlay is shown/hiden correctly
+# when start/stop run button is clicked
+def test_run_stop_overlay(qtbot):
+    pass

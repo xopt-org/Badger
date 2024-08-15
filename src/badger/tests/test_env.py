@@ -81,7 +81,7 @@ def test_get_variables():
     env.interface = intf
 
     variable_outputs = env._get_variables(["x1", "x2"])
-    assert variable_outputs == {"x1": 0, "x2": 0}
+    assert variable_outputs == {"x1": 0.5, "x2": 0.5}
 
     # Test getting variables not defined in env
     with pytest.raises(Exception) as e:
@@ -160,12 +160,12 @@ def test_get_observables():
     env.interface = intf
 
     variable_outputs = env._get_observables(["f"])
-    assert variable_outputs == {"f": 0}
+    assert variable_outputs == {"f": 0.5}
 
     variable_inputs = {"x1": 1, "x2": -1}
     env._set_variables(variable_inputs)
     variable_outputs = env._get_observables(["f"])
-    assert variable_outputs == {"f": 2}
+    assert variable_outputs == {"f": 6.5}
 
     # Test getting observables not defined in env
     with pytest.raises(Exception) as e:

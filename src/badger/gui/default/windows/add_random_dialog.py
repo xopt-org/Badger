@@ -32,12 +32,12 @@ class BadgerAddRandomDialog(QDialog):
         hbox = QHBoxLayout(action_bar)
         hbox.setContentsMargins(0, 0, 0, 0)
 
-        lbl = QLabel('Method')
-        lbl.setFixedWidth(64)
+        lbl = QLabel('Add points in')
+        # lbl.setFixedWidth(64)
         self.cb = cb = QComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems([
-            'xopt',
+            'region around current value',
             # 'lhs',
         ])
         cb.setCurrentIndex(self.configs['method'])

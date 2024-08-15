@@ -108,7 +108,9 @@ class BadgerOptMonitor(QWidget):
     sig_pause = pyqtSignal(bool)  # True: pause, False: resume
     sig_stop = pyqtSignal()
     sig_lock = pyqtSignal(bool)  # True: lock GUI, False: unlock GUI
-    sig_new_run = pyqtSignal()
+    sig_new_run = pyqtSignal()  # start the new run
+    sig_run_started = pyqtSignal()  # run started
+    sig_stop_run = pyqtSignal()  # stop the run
     sig_run_name = pyqtSignal(str)  # filename of the new run
     sig_status = pyqtSignal(str)  # status information
     sig_inspect = pyqtSignal(int)  # index of the inspector
@@ -133,7 +135,6 @@ class BadgerOptMonitor(QWidget):
         self.curves_sta = {}
 
         # Run optimization
-        self.thread_pool = None
         self.routine_runner = None
         self.running = False
         # Fix the auto range issue
@@ -339,9 +340,6 @@ class BadgerOptMonitor(QWidget):
         self.inspector_variable.sigPositionChangeFinished.connect(self.ins_drag_done)
         self.plot_obj.scene().sigMouseClicked.connect(self.on_mouse_click)
         # sigMouseReleased.connect(self.on_mouse_click)
-
-        # Thread runner
-        self.thread_pool = QThreadPool(self)
 
         self.btn_del.clicked.connect(self.delete_run)
         self.btn_log.clicked.connect(self.logbook)
@@ -577,10 +575,12 @@ class BadgerOptMonitor(QWidget):
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        self.thread_pool.start(self.routine_runner)
+        QThreadPool.globalInstance().start(self.routine_runner)
 
         self.btn_stop.setStyleSheet(stylesheet_stop)
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
+        self.sig_run_started.emit()
+        self.btn_stop.setDisabled(False)
         self.run_action.setText('Stop')
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText('Stop')
@@ -602,7 +602,7 @@ class BadgerOptMonitor(QWidget):
             self.plot_con.enableAutoRange()
 
         if self.vocs.observable_names:
-           self.plot_obs.enableAutoRange()
+            self.plot_obs.enableAutoRange()
 
     def open_extensions_palette(self):
         self.extensions_palette.show()
@@ -716,6 +716,7 @@ class BadgerOptMonitor(QWidget):
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             self.sig_stop.emit()
+            self.sig_stop_run.emit()
 
     def update_analysis_extensions(self):
         for ele in self.active_extensions:
@@ -782,8 +783,15 @@ class BadgerOptMonitor(QWidget):
             for action in self.post_run_actions:
                 action()
 
+        # self.reset_routine_runner()
+
     def destroy_unused_env(self):
         if not self.running:
+            try:
+                del self.routine_runner.routine.environment
+            except AttributeError:  # env already destroyed
+                pass
+
             try:
                 del self.routine.environment
             except AttributeError:  # env already destroyed
@@ -1042,10 +1050,12 @@ class BadgerOptMonitor(QWidget):
             self.btn_stop.setDefaultAction(self.run_action)
 
         if self.run_action.text() == 'Run':
+            self.btn_stop.setDisabled(True)
             self.start()
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
+            self.sig_stop_run.emit()
 
     def set_run_until_action(self):
         if self.btn_stop.defaultAction() is not self.run_until_action:
@@ -1064,6 +1074,7 @@ class BadgerOptMonitor(QWidget):
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
+            self.sig_stop_run.emit()
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)

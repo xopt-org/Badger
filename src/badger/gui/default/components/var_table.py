@@ -44,6 +44,7 @@ class VariableTable(QTableWidget):
         self.selected = {}  # track var selected status
         self.bounds = {}  # track var bounds
         self.checked_only = False
+        self.bounds_locked = False
 
         self.config_logic()
 
@@ -185,6 +186,13 @@ class VariableTable(QTableWidget):
             self.setCellWidget(i, 2, sb_lower)
             self.setCellWidget(i, 3, sb_upper)
 
+            if self.bounds_locked:
+                sb_lower.setEnabled(False)
+                sb_upper.setEnabled(False)
+            else:
+                sb_lower.setEnabled(True)
+                sb_upper.setEnabled(True)
+
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
@@ -209,3 +217,11 @@ class VariableTable(QTableWidget):
                 variables_exported[name] = self.bounds[name]
 
         return variables_exported
+
+    def lock_bounds(self):
+        self.bounds_locked = True
+        self.toggle_show_mode(self.checked_only)
+
+    def unlock_bounds(self):
+        self.bounds_locked = False
+        self.toggle_show_mode(self.checked_only)
