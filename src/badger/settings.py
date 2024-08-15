@@ -112,6 +112,24 @@ class ConfigSingleton:
         if os.path.exists(config_path):
             with open(config_path, 'r') as config_file:
                 config_data = yaml.safe_load(config_file)
+
+            # Convert each entry in config_data to an instance of Setting
+            for key, value in config_data.items():
+                if isinstance(value, dict) and 'value' in value:                    
+                    # Convert to Setting instance
+                    config_data[key] = Setting(
+                        display_name=value.get('display_name', key),
+                        description=value.get('description', f"Setting for {key.replace('_', ' ').lower()}"),
+                        value=value['value']
+                    )
+                else:
+                    # If it's a direct value, wrap it in a Setting
+                    config_data[key] = Setting(
+                        display_name=key,
+                        description=f"Setting for {key.replace('_', ' ').lower()}",
+                        value=value
+                    )
+
             try:
                 return BadgerConfig(**config_data)
             except ValidationError as e:
@@ -170,7 +188,7 @@ class ConfigSingleton:
         
         self._config = BadgerConfig(**config_data)
         print(f'Configuration updated in {self.config_path}')
-
+    
     def _update_config_by_dot_key(self, config_data: Dict[str, Any], dot_key: str, value: Any) -> None:
         """Update the config data with the provided value using dot-separated keys."""
         keys = dot_key.split(':')
@@ -215,8 +233,6 @@ class ConfigSingleton:
         KeyError
             If the key is not found in the configuration.
         """
-        print(key)
-        print(self._config)
         data = self._config.dict(by_alias=True)
         if key in data:
             return data[key]['value'] if return_value_field else data[key]
@@ -236,7 +252,6 @@ class ConfigSingleton:
         updates = {}
         sub_dict = updates
         
-        print(key, value, "whats up")
         for key in keys[:-1]:
             sub_dict = sub_dict.setdefault(key, {})
         sub_dict[keys[-1]] = value
@@ -285,7 +300,6 @@ def mock_settings():
     config_singleton.write_value("BADGER_DB_ROOT", db_dir)
 
     logbook_dir = str(app_data_dir / "logbook")
-    print(logbook_dir, "okay")
     os.makedirs(logbook_dir, exist_ok=True)
     config_singleton.write_value("BADGER_LOGBOOK_ROOT", logbook_dir)
 
@@ -322,7 +336,7 @@ def get_user_config_folder() -> str:
     if system == 'Windows':
         config_folder = os.getenv('APPDATA') or os.getenv('LOCALAPPDATA')
     elif system == 'Darwin':
-        config_folder = os.path.expanduser('~/Library/Application Support')
+        config_folder = os.path.expanduser('~/Library/Application Support/Badger')
     elif system == 'Linux':
         config_folder = os.path.expanduser('~/.config')
     else:

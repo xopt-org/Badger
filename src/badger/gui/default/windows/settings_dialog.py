@@ -36,7 +36,7 @@ class BadgerSettingsDialog(QDialog):
         grid.setContentsMargins(0, 0, 0, 0)
 
         # Theme selector
-        theme = self.settings['BADGER_THEME']
+        theme = self.settings['BADGER_THEME']['value']
         self.lbl_theme = lbl_theme = QLabel('Theme')
         self.cb_theme = cb_theme = QComboBox()
         cb_theme.setItemDelegate(QStyledItemDelegate())
@@ -150,11 +150,11 @@ class BadgerSettingsDialog(QDialog):
     def restore_settings(self):
         # Reset theme if needed
         theme_curr = self.config_singleton.read_value('BADGER_THEME')
-        theme_prev = self.settings['BADGER_THEME']
+        theme_prev = self.settings['BADGER_THEME']["value"]
         if theme_prev != theme_curr:
             self.set_theme(theme_prev)
 
         for key in self.settings.keys():
-            self.config_singleton.write_value(key, self.settings[key])
+            self.config_singleton.write_value(key, self.settings[key]["value"])
 
         self.reject()
