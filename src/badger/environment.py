@@ -199,12 +199,12 @@ class Environment(BaseModel, ABC):
         #     return
 
         # If no interface
-        if self.interface is None:
-            err_msg = (
-                f"Variables [{variable_names_tmp}] "
-                + "do not exist in the environment!"
-            )
-            raise BadgerEnvVarError(err_msg)
+        # if self.interface is None:
+        #     err_msg = (
+        #         f"Variables [{variable_names_tmp}] "
+        #         + "do not exist in the environment!"
+        #     )
+        #     raise BadgerEnvVarError(err_msg)
 
         # Heads-up to the users that this behavior is not allowed for now
         # err_msg = (
