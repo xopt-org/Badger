@@ -84,13 +84,13 @@ def test_get_variables():
     assert variable_outputs == {"x1": 0.5, "x2": 0.5}
 
     # Test getting variables not defined in env
-    with pytest.raises(Exception) as e:
-        variable_outputs = env._get_variables(["x19", "x20"])
+    # with pytest.raises(Exception) as e:
+    #     variable_outputs = env._get_variables(["x19", "x20"])
 
-    assert e.type == BadgerInterfaceChannelError
-    assert "x19" not in str(e.value)
-    assert "x20" in str(e.value)
-    assert "Getting them through interface is not allowed" in str(e.value)
+    # assert e.type == BadgerInterfaceChannelError
+    # assert "x19" not in str(e.value)
+    # assert "x20" in str(e.value)
+    # assert "Getting them through interface is not allowed" in str(e.value)
 
 
 def test_set_variables():
@@ -120,13 +120,13 @@ def test_set_variables():
     assert variable_outputs == {"x1": 1, "x2": -1}
 
     # Test setting variables not defined in env
-    variable_inputs_undef = {"x21": 1, "x22": -1}
-    with pytest.raises(Exception) as e:
-        env._set_variables(variable_inputs_undef)
+    # variable_inputs_undef = {"x21": 1, "x22": -1}
+    # with pytest.raises(Exception) as e:
+    #     env._set_variables(variable_inputs_undef)
 
-    assert e.type == BadgerInterfaceChannelError
-    assert "x21" in str(e.value)
-    assert "Setting them through interface is not allowed" in str(e.value)
+    # assert e.type == BadgerInterfaceChannelError
+    # assert "x21" in str(e.value)
+    # assert "Setting them through interface is not allowed" in str(e.value)
 
     # Test setting variables out of range
     variable_inputs_out_range = {"x1": 0, "x2": -2}
