@@ -1,7 +1,7 @@
 import torch
 from badger import environment
 from badger.errors import BadgerNoInterfaceError
-
+import time 
 
 class Environment(environment.Environment):
 
@@ -10,6 +10,7 @@ class Environment(environment.Environment):
     observables = ['f', "c"]
 
     flag: int = 0
+    delay: float = 0.0
 
     def set_variables(self, variable_inputs: dict[str, float]):
         if not self.interface:
@@ -22,3 +23,4 @@ class Environment(environment.Environment):
         x = torch.tensor([full_outputs[f'x{i}'] for i in range(20)])
         self.interface.set_value('f', float((x ** 2).sum().numpy()))
         self.interface.set_value('c', float((x ** 2).sum().numpy()))
+        time.sleep(self.delay)

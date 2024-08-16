@@ -4,9 +4,14 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QAbstractItemView,
     QCheckBox,
+    QMessageBox
 )
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QColor
 from .robust_spinbox import RobustSpinBox
+
+from badger.environment import instantiate_env
+from badger.errors import BadgerInterfaceChannelError
 
 
 class VariableTable(QTableWidget):
@@ -26,7 +31,7 @@ class VariableTable(QTableWidget):
         self.setColumnCount(4)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         self.verticalHeader().setVisible(False)
         header = self.horizontalHeader()
@@ -45,6 +50,10 @@ class VariableTable(QTableWidget):
         self.bounds = {}  # track var bounds
         self.checked_only = False
         self.bounds_locked = False
+        self.addtl_vars = []  # track variables added on the fly
+        self.env_class = None  # needed to get bounds on the fly
+        self.env = None  # needed to get bounds on the fly
+        self.configs = None  # needed to get bounds on the fly
 
         self.config_logic()
 
@@ -87,10 +96,11 @@ class VariableTable(QTableWidget):
         self.update_variables(self.variables, 2)
 
     def update_selected(self, _):
-        for i in range(self.rowCount()):
+        for i in range(self.rowCount()-1):
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
-            self.selected[name] = _cb.isChecked()
+            if name != "Enter new PV here...": # TODO: fix...
+                self.selected[name] = _cb.isChecked()
 
         self.sig_sel_changed.emit()
 
@@ -161,7 +171,7 @@ class VariableTable(QTableWidget):
         else:
             _variables = variables
 
-        n = len(_variables)
+        n = len(_variables) + 1
         self.setRowCount(n)
         for i, var in enumerate(_variables):
             name = next(iter(var))
@@ -193,6 +203,13 @@ class VariableTable(QTableWidget):
                 sb_lower.setEnabled(True)
                 sb_upper.setEnabled(True)
 
+        # Make extra editable row
+        item = QTableWidgetItem("Enter new PV here...")
+        item.setFlags(item.flags() | Qt.ItemIsEditable)
+        item.setForeground(QColor('gray'))
+        self.setItem(n-1, 1, item)
+        self.cellChanged.connect(self.add_addtl_variable)
+
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
@@ -202,9 +219,86 @@ class VariableTable(QTableWidget):
 
         self.sig_sel_changed.emit()
 
+    def add_addtl_variable(self, row, column):
+        if row == self.rowCount() - 1 and column == 1:
+            item = self.item(row, column)
+            idx = item.row()
+            name = item.text()
+
+            if name == "Enter new PV here...":
+                # TODO: fix this loop? (maybe user another signal?)
+                return
+
+            # Check that variables doesn't already exist in table
+            if name in [list(d.keys())[0] for d in self.variables]:
+                self.update_variables(self.variables, 2)
+                QMessageBox.warning(self, 'Variable already exists!',
+                                    f'Variable {name} already exists!')
+                return
+
+            # Get bounds from interface, if PV exists on interface
+            _bounds = None
+            if self.env_class is not None:
+                try:
+                    _, _bounds = self.get_bounds(name)
+                    vrange = _bounds
+                except BadgerInterfaceChannelError:
+                    # Raised when PV does not exist after attempting to call value
+                    # Revert table to previous state
+                    self.update_variables(self.variables, 2)
+                    QMessageBox.critical(self, 'Variable Not Found!' +
+                                         f'Variable {name} cannot be found through the interface!'
+                                         )
+                    return
+                except Exception as e:
+                    # Raised when PV exists but value/hard limits cannot be found
+                    # Set to some default values
+                    _bounds = vrange = [-1, 1]
+                    QMessageBox.warning(self, 'Bounds could not be found!',
+                                        f'Variable {name} bounds could not be found.' +
+                                        'Please check default values!'
+                                        )
+            else:
+                # TODO: handle this case? Right now I don't think it should happen
+                raise "Environment cannot be found for new variable bounds!"
+
+            # Add checkbox only when a PV is entered
+            self.setCellWidget(idx, 0, QCheckBox())
+
+            _cb = self.cellWidget(idx, 0)
+
+            # Checked by default when entered
+            _cb.setChecked(True)
+            self.selected[name] = True
+
+            _cb.stateChanged.connect(self.update_selected)
+
+            sb_lower = RobustSpinBox(
+                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+            )
+            sb_lower.valueChanged.connect(self.update_bounds)
+            sb_upper = RobustSpinBox(
+                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+            )
+            sb_upper.valueChanged.connect(self.update_bounds)
+            self.setCellWidget(idx, 2, sb_lower)
+            self.setCellWidget(idx, 3, sb_upper)
+
+            self.add_variable(name, _bounds[0], _bounds[1])
+            self.addtl_vars.append(name)
+
+            self.update_variables(self.variables, 2)
+
+    def get_bounds(self, name):
+        # TODO: move elsewhere?
+        self.env = instantiate_env(self.env_class, self.configs)
+
+        value = self.env.get_variables([name])[name]
+        bounds = self.env.get_bounds([name])[name]
+        return value, bounds
+
     def add_variable(self, name, lb, ub):
-        var = {}
-        var[name] = [lb, ub]
+        var = {name: [lb, ub]}
 
         self.all_variables.append(var)
         self.bounds[name] = [lb, ub]

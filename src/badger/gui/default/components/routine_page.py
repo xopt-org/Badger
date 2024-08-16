@@ -3,6 +3,8 @@ import sqlite3
 import traceback
 import copy
 from functools import partial
+import os
+import yaml
 
 import numpy as np
 import pandas as pd
@@ -62,6 +64,7 @@ class BadgerRoutinePage(QWidget):
         self.routine = None
         self.script = ''
         self.window_docs = BadgerDocsWindow(self, '')
+        self.vars_env = None  # needed for passing env vars to the var table
 
         # Limit variable ranges
         self.limit_option = {
@@ -154,7 +157,14 @@ class BadgerRoutinePage(QWidget):
         vbox.addWidget(self.generator_box)
 
         # Env box
-        self.env_box = BadgerEnvBox(None, self.envs)
+        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
+        try:
+            with open(env_dict_dir, 'r') as stream:
+                env_dict = yaml.safe_load(stream)
+        except (FileNotFoundError, yaml.YAMLError):
+            env_dict = {}
+        self.env_box = BadgerEnvBox(env_dict, None, self.envs)
         self.env_box.expand()  # expand the box initially
         vbox.addWidget(self.env_box)
 
@@ -257,6 +267,18 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_var.setChecked(True)
 
         self.env_box.edit_var.clear()
+
+        # Add additional variables to table as well
+        # Combine the variables from the env with the additional variables
+        all_variables = {}
+        all_variables.update(routine.vocs.variables)
+        for i in self.vars_env:
+            all_variables.update(i)
+        # Format for update_variables method
+        all_variables = dict(sorted(all_variables.items()))
+        all_variables = [{key: value} for key, value in all_variables.items()]
+
+        self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
 
         flag_relative = routine.relative_to_current
@@ -419,6 +441,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
             self.routine = None
+            self.env_box.update_stylesheets()
             return
 
         name = self.envs[i]
@@ -451,7 +474,8 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.edit.setPlainText(get_yaml_string(configs['params']))
 
-        vars_env = configs['variables']
+        # Get and save vars to combine with additional vars added on the fly
+        vars_env = self.vars_env = configs['variables']
         vars_combine = [*vars_env]
 
         self.env_box.check_only_var.blockSignals(True)
@@ -461,6 +485,9 @@ class BadgerRoutinePage(QWidget):
         # Auto apply the limited variable ranges if the option is set
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange(set_all=True)
+
+        # Needed for getting bounds on the fly
+        self.env_box.var_table.env_class, self.env_box.var_table.configs = self.add_var()
 
         _objs_env = configs['observations']
         objs_env = []
@@ -475,6 +502,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
         # self.routine = None
+
+        self.env_box.update_stylesheets(env.name)
 
     def get_init_table_header(self):
         table = self.env_box.init_table
@@ -604,8 +633,9 @@ class BadgerRoutinePage(QWidget):
             'interface': [intf_name]
         }
 
-        dlg = BadgerVariableDialog(self, self.env, configs, self.add_var_to_list)
-        dlg.exec()
+        return self.env, configs
+        # dlg = BadgerVariableDialog(self, self.env, configs, self.add_var_to_list)
+        # dlg.exec()
 
     def limit_variable_ranges(self):
         dlg = BadgerLimitVariableRangeDialog(
@@ -892,6 +922,7 @@ class BadgerRoutinePage(QWidget):
                 relative_to_current=relative_to_current,
                 vrange_limit_options=vrange_limit_options,
                 initial_point_actions=initial_point_actions,
+                additional_variables=self.env_box.var_table.addtl_vars
             )
 
             # Check if any user warnings were caught

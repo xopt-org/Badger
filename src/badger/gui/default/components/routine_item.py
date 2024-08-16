@@ -6,23 +6,22 @@ from PyQt5.QtGui import QFont
 from .eliding_label import ElidingLabel
 from ..utils import create_button
 
-
-stylesheet_normal = '''
+stylesheet_normal_default = '''
     background-color: #4C566A;
     border-radius: 2px;
 '''
 
-stylesheet_normal_hover = '''
+stylesheet_normal_hover_default = '''
     background-color: #5E81AC;
     border-radius: 2px;
 '''
 
-stylesheet_activate = '''
+stylesheet_activate_default = '''
     background-color: #4B6789;
     border-radius: 2px;
 '''
 
-stylesheet_activate_hover = '''
+stylesheet_activate_hover_default = '''
     background-color: #54749A;
     border-radius: 2px;
 '''
@@ -64,7 +63,7 @@ QPushButton
 class BadgerRoutineItem(QWidget):
     sig_del = pyqtSignal(str)
 
-    def __init__(self, name, timestamp, description='', parent=None):
+    def __init__(self, name, timestamp, environment, env_dict, description='', parent=None):
         super().__init__(parent)
 
         self.activated = False
@@ -72,13 +71,36 @@ class BadgerRoutineItem(QWidget):
         self.name = name
         self.timestamp = timestamp
         self.description = description
+        if environment in env_dict:
+            self.color_dict = env_dict[environment]
+            self.stylesheet_normal = f'''
+                background-color: {self.color_dict['normal']};
+                border-radius: 2px;
+            '''
+            self.stylesheet_normal_hover = f'''
+                background-color: {self.color_dict['normal_hover']};
+                border-radius: 2px;
+            '''
+            self.stylesheet_activate = f'''
+                background-color: {self.color_dict['activate']};
+                border-radius: 2px;
+            '''
+            self.stylesheet_activate_hover = f'''
+                background-color: {self.color_dict['activate_hover']};
+                border-radius: 2px;
+            '''
+        else:
+            self.stylesheet_normal = stylesheet_normal_default
+            self.stylesheet_normal_hover = stylesheet_normal_hover_default
+            self.stylesheet_activate = stylesheet_activate_default
+            self.stylesheet_activate_hover  = stylesheet_activate_hover_default
 
         self.init_ui()
         self.config_logic()
 
     def init_ui(self):
         self.setAttribute(Qt.WA_StyledBackground)
-        self.setStyleSheet(stylesheet_normal)
+        self.setStyleSheet(self.stylesheet_normal)
 
         cool_font = QFont()
         cool_font.setWeight(QFont.DemiBold)
@@ -128,34 +150,34 @@ class BadgerRoutineItem(QWidget):
     def activate(self):
         self.activated = True
         if self.hover:
-            self.setStyleSheet(stylesheet_activate_hover)
+            self.setStyleSheet(self.stylesheet_activate_hover)
         else:
-            self.setStyleSheet(stylesheet_activate)
+            self.setStyleSheet(self.stylesheet_activate)
 
     def deactivate(self):
         self.activated = False
         if self.hover:
-            self.setStyleSheet(stylesheet_normal_hover)
+            self.setStyleSheet(self.stylesheet_normal_hover)
         else:
-            self.setStyleSheet(stylesheet_normal)
+            self.setStyleSheet(self.stylesheet_normal)
 
     def enterEvent(self, event):
         self.hover = True
         # self.btn_fav.show()
         # self.btn_del.show()
         if self.activated:
-            self.setStyleSheet(stylesheet_activate_hover)
+            self.setStyleSheet(self.stylesheet_activate_hover)
         else:
-            self.setStyleSheet(stylesheet_normal_hover)
+            self.setStyleSheet(self.stylesheet_normal_hover)
 
     def leaveEvent(self, event):
         self.hover = False
         # self.btn_fav.hide()
         # self.btn_del.hide()
         if self.activated:
-            self.setStyleSheet(stylesheet_activate)
+            self.setStyleSheet(self.stylesheet_activate)
         else:
-            self.setStyleSheet(stylesheet_normal)
+            self.setStyleSheet(self.stylesheet_normal)
 
     def delete_routine(self):
         reply = QMessageBox.question(

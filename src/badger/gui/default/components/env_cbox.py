@@ -30,16 +30,19 @@ stylesheet_auto_msg = '''
 
 
 class BadgerEnvBox(CollapsibleBox):
-    def __init__(self, parent=None, envs=[]):
+    def __init__(self, env_dict, parent=None, envs=[]):
         super().__init__(parent, ' Environment + VOCS')
 
         self.envs = envs
+        self.env_dict = env_dict
 
         self.init_ui()
         self.config_logic()
 
     def init_ui(self):
         vbox = QVBoxLayout()
+
+        self.content_area.setObjectName('EnvBox')
 
         name = QWidget()
         hbox_name = QHBoxLayout(name)
@@ -379,3 +382,17 @@ class BadgerEnvBox(CollapsibleBox):
             self.vbox_var.setContentsMargins(0, 0, 0, 0)
             self.hbox_var.setContentsMargins(0, 0, 0, 0)
             self.msg_auto.hide()
+
+    def update_stylesheets(self, environment=''):
+        if environment in self.env_dict:
+            color_dict = self.env_dict[environment]
+            stylesheet = f'''
+                #EnvBox {{
+                    border-radius: 4px;
+                    border-color: {color_dict['normal']};
+                    border-width: 4px;
+                }}
+            '''
+        else:
+            stylesheet = ''
+        self.setStyleSheet(stylesheet)

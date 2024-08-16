@@ -17,7 +17,7 @@ def test_get_params():
     _, configs = get_env("test")
     params = configs["params"]
 
-    assert params == {"flag": 0}
+    assert params == {"delay": 0.0, "flag": 0}
 
 
 def test_set_params():
