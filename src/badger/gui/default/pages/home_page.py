@@ -649,6 +649,8 @@ class BadgerHomePage(QWidget):
             QMessageBox.warning(self, 'Heads-up!', f'Failed to import the following routines since they already existed: \n{str(e)}')
 
     def cover_page(self):
+        return  # disable overlay for now
+
         try:
             self.overlay
         except AttributeError:
@@ -661,6 +663,8 @@ class BadgerHomePage(QWidget):
         self.overlay.show()
 
     def uncover_page(self):
+        return  # disable overlay for now
+
         try:
             self.overlay.hide()
         except AttributeError:  # in test mode
