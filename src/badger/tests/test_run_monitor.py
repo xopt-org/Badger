@@ -618,14 +618,14 @@ class TestRunMonitor:
         assert len(monitor.plot_obj.items) == 0
         window.process_manager.close_proccesses()
 
-    # Should have no constraints/observables monitor
-    with pytest.raises(AttributeError):
-        _ = monitor.plot_con
-    with pytest.raises(AttributeError):
-        _ = monitor.plot_obs
-    # Variables/objectives monitor should be cleared
-    assert len(monitor.plot_var.items) == 0
-    assert len(monitor.plot_obj.items) == 0
+        # Should have no constraints/observables monitor
+        with pytest.raises(AttributeError):
+            _ = monitor.plot_con
+        with pytest.raises(AttributeError):
+            _ = monitor.plot_obs
+        # Variables/objectives monitor should be cleared
+        assert len(monitor.plot_var.items) == 0
+        assert len(monitor.plot_obj.items) == 0
 
 
 # TODO: Test if logbook entry is created correctly and put into the
