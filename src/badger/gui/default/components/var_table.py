@@ -61,7 +61,7 @@ class VariableTable(QTableWidget):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
 
     def is_all_checked(self):
-        for i in range(self.rowCount()):
+        for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item.isChecked():
                 return False
@@ -74,7 +74,7 @@ class VariableTable(QTableWidget):
 
         all_checked = self.is_all_checked()
 
-        for i in range(self.rowCount()):
+        for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             # Doing batch update
             item.blockSignals(True)
@@ -83,7 +83,7 @@ class VariableTable(QTableWidget):
         self.update_selected(0)
 
     def update_bounds(self):
-        for i in range(self.rowCount()):
+        for i in range(self.rowCount() - 1):
             name = self.item(i, 1).text()
             sb_lower = self.cellWidget(i, 2)
             sb_upper = self.cellWidget(i, 3)
@@ -96,7 +96,7 @@ class VariableTable(QTableWidget):
         self.update_variables(self.variables, 2)
 
     def update_selected(self, _):
-        for i in range(self.rowCount()-1):
+        for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
             if name != "Enter new PV here...": # TODO: fix...
@@ -246,7 +246,7 @@ class VariableTable(QTableWidget):
                     # Raised when PV does not exist after attempting to call value
                     # Revert table to previous state
                     self.update_variables(self.variables, 2)
-                    QMessageBox.critical(self, 'Variable Not Found!' +
+                    QMessageBox.critical(self, 'Variable Not Found!',
                                          f'Variable {name} cannot be found through the interface!'
                                          )
                     return
@@ -284,7 +284,7 @@ class VariableTable(QTableWidget):
             self.setCellWidget(idx, 2, sb_lower)
             self.setCellWidget(idx, 3, sb_upper)
 
-            self.add_variable(name, _bounds[0], _bounds[1])
+            self.add_variable(name, vrange[0], vrange[1])
             self.addtl_vars.append(name)
 
             self.update_variables(self.variables, 2)
