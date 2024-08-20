@@ -33,3 +33,4 @@ class Interface(interface.Interface):
     def set_values(self, channel_inputs):
         for channel, value in channel_inputs.items():
             self._states[channel] = value
+
