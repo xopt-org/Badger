@@ -27,10 +27,6 @@ class Environment(environment.Environment):
 
     def get_bounds(self, variable_names):
         """
-        Get the bounds of new variables (not already included in env).
-        Calls the interface to get the bounds of the variables.
+        Returns the bounds of new variables (not already included in env).
         """
-        if not self.interface:
-            raise BadgerNoInterfaceError
-
-        return self.interface.get_bounds(variable_names)
+        return {name: [-1, 1] for name in variable_names}
