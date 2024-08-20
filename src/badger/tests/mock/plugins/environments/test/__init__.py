@@ -24,3 +24,13 @@ class Environment(environment.Environment):
         self.interface.set_value('f', float((x ** 2).sum().numpy()))
         self.interface.set_value('c', float((x ** 2).sum().numpy()))
         time.sleep(self.delay)
+
+    def get_bounds(self, variable_names):
+        """
+        Get the bounds of new variables (not already included in env).
+        Calls the interface to get the bounds of the variables.
+        """
+        if not self.interface:
+            raise BadgerNoInterfaceError
+
+        return self.interface.get_bounds(variable_names)
