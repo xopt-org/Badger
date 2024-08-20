@@ -49,6 +49,57 @@ def test_routine_generation(qtbot):
     assert routine.initial_points.empty
 
 
+def test_add_additional_vars(qtbot):
+    from badger.db import load_routine, remove_routine
+    from badger.gui.default.components.routine_page import BadgerRoutinePage
+
+    window = BadgerRoutinePage()
+    qtbot.addWidget(window)
+
+    # Turn off relative to current
+    window.env_box.relative_to_curr.setChecked(False)
+
+    # add generator
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
+
+    # add the test environment
+    qtbot.keyClicks(window.env_box.cb, "test")
+
+    # click checkbox to select vars/objectives
+    window.env_box.var_table.cellWidget(0, 0).setChecked(True)
+    assert window.env_box.var_table.export_variables() == {"x0": [-1, 1]}
+
+    # Check that there is an extra row: X0 to X19, and one to enter a new PV
+    n_rows = window.env_box.var_table.rowCount()
+    assert n_rows == 21
+
+    # Enter text in first cell of last row
+    item = window.env_box.var_table.item(20, 1)
+    item.setText("x20")
+    assert window.env_box.var_table.item(20, 1).text() == "x20"
+
+    # Send signal of table item changing
+    window.env_box.var_table.cellChanged.emit(20, 1)
+
+    # Why isn't this updating the table after changing the value?
+    variables = {
+        "x0": [-1, 1],
+        "x20": [-1, 1]
+    }
+
+    # Check that new variable was added
+    # Its checkbox checked by default when added
+    assert window.env_box.var_table.addtl_vars == ["x20"]
+    assert window.env_box.var_table.export_variables() == variables
+
+    # Check that a new row was automatically added
+    assert window.env_box.var_table.rowCount() == n_rows + 1
+
+    # Check VOCS
+    routine = window._compose_routine()
+    assert routine.vocs.variables == variables
+
+
 def test_initial_points(qtbot):
     # test to make sure initial points widget works properly
     from badger.gui.default.components.routine_page import BadgerRoutinePage
