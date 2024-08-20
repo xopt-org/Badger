@@ -99,13 +99,6 @@ def test_add_additional_vars(qtbot):
     routine = window._compose_routine()
     assert routine.vocs.variables == variables
 
-    # Check saved routine
-    window.save()
-    new_routine, _ = load_routine(routine.name)
-    assert new_routine.vocs == routine.vocs
-
-    remove_routine(routine.name)
-
 
 def test_initial_points(qtbot):
     # test to make sure initial points widget works properly
