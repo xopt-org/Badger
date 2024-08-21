@@ -295,6 +295,11 @@ class VariableTable(QTableWidget):
                 # TODO: handle this case? Right now I don't think it should happen
                 raise "Environment cannot be found for new variable bounds!"
 
+            # Sanitize vrange
+            # TODO: raise a heads-up regarding the invalid bounds
+            if vrange[1] <= vrange[0]:
+                vrange = [-1000, 1000]  # fallback to some default values
+
             # Add checkbox only when a PV is entered
             self.setCellWidget(idx, 0, QCheckBox())
 
@@ -307,11 +312,11 @@ class VariableTable(QTableWidget):
             _cb.stateChanged.connect(self.update_selected)
 
             sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=-1000, upper_bound=1000
+                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_lower.valueChanged.connect(self.update_bounds)
             sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=-1000, upper_bound=1000
+                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(idx, 2, sb_lower)
@@ -319,6 +324,7 @@ class VariableTable(QTableWidget):
 
             self.add_variable(name, vrange[0], vrange[1])
             self.addtl_vars.append(name)
+            # self.all_variables = [var for var in self.all_variables if next(iter(var)) != prev_name]
 
             self.update_variables(self.variables, 2)
 
@@ -326,13 +332,14 @@ class VariableTable(QTableWidget):
         # TODO: move elsewhere?
         self.env = instantiate_env(self.env_class, self.configs)
 
-        value = self.env.get_variables([name])[name]
-        bounds = self.env.get_bounds([name])[name]
+        value = self.env.get_variable(name)
+        bounds = self.env.get_bound(name)
         return value, bounds
 
     def add_variable(self, name, lb, ub):
         var = {name: [lb, ub]}
 
+        self.all_variables.append(var)
         self.variables.append(var)
         self.bounds[name] = [lb, ub]
 
