@@ -254,6 +254,7 @@ class VariableTable(QTableWidget):
                 self.variables = [var for var in self.variables if next(iter(var)) != prev_name]
                 self.all_variables = [var for var in self.all_variables if next(iter(var)) != prev_name]
                 del self.bounds[prev_name]
+                del self.selected[prev_name]
 
                 self.update_variables(self.variables, 2)
             return
