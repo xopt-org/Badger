@@ -113,19 +113,32 @@ def save_routine(routine: Routine):
 
 # This function is not safe and might break database! Use with caution!
 @maybe_create_routines_db
-def update_routine(routine: Routine):
+@maybe_create_runs_db
+def update_routine(routine: Routine, old_name=''):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
+    name = old_name if old_name else routine.name
     cur.execute('select * from routine where name=:name',
-                {'name': routine.name})
+                {'name': name})
     record = cur.fetchone()
 
     if record:  # update the record
-        cur.execute('update routine set config = ?, savedAt = ? where name = ?',
-                    (routine.yaml(), datetime.now(), routine.name))
+        cur.execute('update routine set name = ?, config = ?, savedAt = ? where name = ?',
+                    (routine.name, routine.yaml(), datetime.now(), old_name))
+        
+    if old_name:
+        db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
+
+        con_run = sqlite3.connect(db_run, timeout=30.0)
+        cur_run = con_run.cursor()
+
+        cur_run.execute('update run set routine = ? where routine = ?',(routine.name, old_name))
+
+        con_run.commit()
+        con_run.close()
 
     con.commit()
     con.close()
@@ -299,6 +312,19 @@ def remove_run_by_id(rid):
 
     con.commit()
     con.close()
+
+@maybe_create_runs_db
+def get_routine_name_by_filename(filename):
+    db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
+
+    con = sqlite3.connect(db_run)
+    cur = con.cursor()
+
+    cur.execute(f'select routine from run where filename = "{filename}"')
+    routine_name = cur.fetchone()[0]
+    con.close()
+
+    return routine_name
 
 
 def import_routines(filename):

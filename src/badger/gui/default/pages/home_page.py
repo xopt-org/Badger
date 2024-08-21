@@ -32,6 +32,7 @@ from ....db import (
     list_routine,
     load_routine,
     remove_routine,
+    get_routine_name_by_filename
 )
 from ....settings import read_value
 from ....utils import get_header, strtobool
@@ -258,9 +259,10 @@ class BadgerHomePage(QWidget):
         self.routine_editor.sig_saved.connect(self.routine_saved)
         self.routine_editor.sig_canceled.connect(self.done_create_routine)
         self.routine_editor.sig_deleted.connect(self.routine_deleted)
-        self.routine_editor.routine_page.sig_updated.connect(
+        self.routine_editor.routine_page.descr_updated.connect(
             self.routine_description_updated
         )
+        self.routine_editor.routine_page.name_updated.connect(self.routine_name_updated)
 
         # Assign shortcuts
         self.shortcut_go_search = QShortcut(QKeySequence("Ctrl+L"), self)
@@ -330,7 +332,11 @@ class BadgerHomePage(QWidget):
         self, routine_names: List[str], timestamps: List[str], environments: List[str], descriptions: List[str]
     ):
         try:
-            selected_routine = self.prev_routine_item.routine_name
+            if self.prev_routine_item.routine_name in routine_names:
+                selected_routine = self.prev_routine_item.routine_name
+            else:
+                self.prev_routine_item = None
+                selected_routine = None
         except Exception:
             selected_routine = None
         self.routine_list.clear()
@@ -402,6 +408,9 @@ class BadgerHomePage(QWidget):
         run_filename = get_base_run_filename(self.cb_history.currentText())
         try:
             _routine = load_run(run_filename)
+            _routine.name = get_routine_name_by_filename(run_filename) # in case name changed
+            # if self.current_routine:
+            #     _routine.name = self.current_routine.name
             routine, _ = load_routine(_routine.name)  # get the initial routine
             # TODO: figure out how to recover the original routine
             if routine is None:  # routine not found, could be deleted
@@ -572,6 +581,15 @@ class BadgerHomePage(QWidget):
                 routine_item = self.routine_list.itemWidget(item)
                 if routine_item.name == name:
                     routine_item.update_description(descr)
+                    break
+    
+    def routine_name_updated(self, old_name, new_name):
+        for i in range(self.routine_list.count()):
+            item = self.routine_list.item(i)
+            if item is not None:
+                routine_item = self.routine_list.itemWidget(item)
+                if routine_item.name == old_name:
+                    routine_item.update_name(new_name)
                     break
 
     def export_routines(self):
