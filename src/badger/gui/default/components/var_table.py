@@ -54,11 +54,20 @@ class VariableTable(QTableWidget):
         self.env_class = None  # needed to get bounds on the fly
         self.env = None  # needed to get bounds on the fly
         self.configs = None  # needed to get bounds on the fly
+        self.previous_values = {}  # to track changes in table
 
         self.config_logic()
 
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        # Catch if any item gets changed
+        self.itemChanged.connect(self.add_addtl_variable)
+
+    def setItem(self, row, column, item):
+        text = item.text()
+        if text != "Enter new PV here...":
+            self.previous_values[(row, column)] = item.text()
+        super().setItem(row, column, item)
 
     def is_all_checked(self):
         for i in range(self.rowCount() - 1):
@@ -173,6 +182,8 @@ class VariableTable(QTableWidget):
 
         n = len(_variables) + 1
         self.setRowCount(n)
+        self.previous_values = {}  # to track changes in table
+
         for i, var in enumerate(_variables):
             name = next(iter(var))
             vrange = var[name]
@@ -182,15 +193,22 @@ class VariableTable(QTableWidget):
             _cb = self.cellWidget(i, 0)
             _cb.setChecked(self.is_checked(name))
             _cb.stateChanged.connect(self.update_selected)
-            self.setItem(i, 1, QTableWidgetItem(name))
+            item = QTableWidgetItem(name)
+            if name in self.addtl_vars:
+                # Make new PVs a different color
+                item.setForeground(QColor('darkCyan'))
+            else:
+                # Make non-new PVs not editable
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            self.setItem(i, 1, item)
 
             _bounds = self.bounds[name]
             sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=_bounds[0], lower_bound=-1000, upper_bound=1000
             )
             sb_lower.valueChanged.connect(self.update_bounds)
             sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=_bounds[1], lower_bound=-1000, upper_bound=1000
             )
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(i, 2, sb_lower)
@@ -208,7 +226,6 @@ class VariableTable(QTableWidget):
         item.setFlags(item.flags() | Qt.ItemIsEditable)
         item.setForeground(QColor('gray'))
         self.setItem(n-1, 1, item)
-        self.cellChanged.connect(self.add_addtl_variable)
 
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
@@ -219,15 +236,28 @@ class VariableTable(QTableWidget):
 
         self.sig_sel_changed.emit()
 
-    def add_addtl_variable(self, row, column):
-        if row == self.rowCount() - 1 and column == 1:
-            item = self.item(row, column)
-            idx = item.row()
-            name = item.text()
+    def add_addtl_variable(self, item):
+        row = idx = item.row()
+        column = item.column()
+        name = item.text()
 
-            if name == "Enter new PV here...":
-                # TODO: fix this loop? (maybe user another signal?)
+        if row != self.rowCount() - 1 and column == 1 and name != "Enter new PV here...":
+            # check that the new text is not equal to the previous value at that cell
+            prev_name = self.previous_values.get((row, column), "")
+            if name == prev_name:
                 return
+            else:
+                # delete row and additional variable
+                self.removeRow(row)
+                self.addtl_vars.remove(prev_name)
+                self.variables = [var for var in self.variables if next(iter(var)) != prev_name]
+                self.all_variables = [var for var in self.all_variables if next(iter(var)) != prev_name]
+                del self.bounds[prev_name]
+
+                self.update_variables(self.variables, 2)
+            return
+
+        if row == self.rowCount() - 1 and column == 1 and name != "Enter new PV here...":
 
             # Check that variables doesn't already exist in table
             if name in [list(d.keys())[0] for d in self.variables]:
@@ -250,14 +280,15 @@ class VariableTable(QTableWidget):
                                          f'Variable {name} cannot be found through the interface!'
                                          )
                     return
-                except Exception as e:
-                    # Raised when PV exists but value/hard limits cannot be found
-                    # Set to some default values
-                    _bounds = vrange = [-1, 1]
-                    QMessageBox.warning(self, 'Bounds could not be found!',
-                                        f'Variable {name} bounds could not be found.' +
-                                        'Please check default values!'
-                                        )
+                # except Exception as e: # TODO: fix this
+                #     print(e)
+                #     # Raised when PV exists but value/hard limits cannot be found
+                #     # Set to some default values
+                #     _bounds = vrange = [-1, 1]
+                #     QMessageBox.warning(self, 'Bounds could not be found!',
+                #                         f'Variable {name} bounds could not be found.' +
+                #                         'Please check default values!'
+                #                         )
             else:
                 # TODO: handle this case? Right now I don't think it should happen
                 raise "Environment cannot be found for new variable bounds!"
@@ -274,11 +305,11 @@ class VariableTable(QTableWidget):
             _cb.stateChanged.connect(self.update_selected)
 
             sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=_bounds[0], lower_bound=-1000, upper_bound=1000
             )
             sb_lower.valueChanged.connect(self.update_bounds)
             sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=_bounds[1], lower_bound=-1000, upper_bound=1000
             )
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(idx, 2, sb_lower)
@@ -300,7 +331,7 @@ class VariableTable(QTableWidget):
     def add_variable(self, name, lb, ub):
         var = {name: [lb, ub]}
 
-        self.all_variables.append(var)
+        self.variables.append(var)
         self.bounds[name] = [lb, ub]
 
     def export_variables(self) -> dict:
