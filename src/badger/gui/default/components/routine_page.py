@@ -280,6 +280,7 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
+        self.env_box.var_table.addtl_vars = routine.additional_variables
 
         flag_relative = routine.relative_to_current
         if flag_relative:  # load the relative to current settings
