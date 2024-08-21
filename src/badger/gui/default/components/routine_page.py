@@ -36,6 +36,7 @@ from ..windows.review_dialog import BadgerReviewDialog
 from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..windows.expandable_message_box import ExpandableMessageBox
 from ..utils import filter_generator_config
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
@@ -983,12 +984,18 @@ class BadgerRoutinePage(QWidget):
     def save(self):
         try:
             routine = self._compose_routine()
-        except ValidationError:
-            return QMessageBox.critical(
-                self,
-                'Error!',
-                traceback.format_exc()
+        except ValidationError as e:
+            error_message = "".join([error['msg']+'\n\n' for error in e.errors()]).strip()
+            details = traceback.format_exc()
+            dialog = ExpandableMessageBox(
+                title="Error!",
+                text=error_message,
+                detailedText=details,
+                parent=self
             )
+            dialog.setIcon(QMessageBox.Critical)
+            dialog.exec_()
+            return
 
         try:
             save_routine(routine)

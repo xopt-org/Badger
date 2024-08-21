@@ -91,6 +91,8 @@ class BadgerRoutineEditor(QWidget):
         self.sig_canceled.emit()
 
     def save_routine(self):
+        # here save() is not a property/attribute
+        # it's a method that also calls _compose_routine()
         if self.routine_page.save() == 0:
             self.sig_saved.emit()
 
