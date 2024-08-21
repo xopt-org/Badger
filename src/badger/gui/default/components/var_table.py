@@ -162,6 +162,7 @@ class VariableTable(QTableWidget):
             self.variables = self.all_variables
             self.selected = {}
             self.bounds = {}
+            self.addtl_vars = []
             for var in self.variables:
                 name = next(iter(var))
                 self.bounds[name] = var[name]
