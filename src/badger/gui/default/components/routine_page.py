@@ -54,7 +54,8 @@ CONS_RELATION_DICT = {
 
 
 class BadgerRoutinePage(QWidget):
-    sig_updated = pyqtSignal(str, str)  # routine name, routine description
+    name_updated = pyqtSignal(str, str) # routine name, routine new name
+    descr_updated = pyqtSignal(str, str)  # routine name, routine description
 
     def __init__(self):
         super().__init__()
@@ -968,7 +969,7 @@ class BadgerRoutinePage(QWidget):
         try:
             update_routine(routine)
             # Notify routine list to update
-            self.sig_updated.emit(routine.name, routine.description)
+            self.descr_updated.emit(routine.name, routine.description)
             QMessageBox.information(
                 self,
                 'Update success!',
@@ -998,7 +999,11 @@ class BadgerRoutinePage(QWidget):
             return
 
         try:
-            save_routine(routine)
+            if self.routine and routine.name != self.routine.name:
+                update_routine(routine, old_name=self.routine.name)
+                self.name_updated.emit(self.routine.name, routine.name)
+            else:
+                save_routine(routine)
         except sqlite3.IntegrityError:
             return QMessageBox.critical(
                 self, 'Error!',
