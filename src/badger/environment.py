@@ -116,6 +116,16 @@ class Environment(BaseModel, ABC):
     def get_system_states(self) -> Optional[Dict]:
         return None
 
+    # Shortcuts for getting/setting single variable
+    def get_variable(self, variable_name):
+        return self.get_variables([variable_name])[variable_name]
+
+    def set_variable(self, variable_name, variable_value):
+        return self.set_variables({variable_name: variable_value})
+
+    def get_bound(self, variable_name):
+        return self.get_bounds([variable_name])[variable_name]
+
     ############################################################
     # Expert level of customization
     ############################################################
