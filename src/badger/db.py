@@ -127,7 +127,7 @@ def update_routine(routine: Routine, old_name=''):
 
     if record:  # update the record
         cur.execute('update routine set name = ?, config = ?, savedAt = ? where name = ?',
-                    (routine.name, routine.yaml(), datetime.now(), old_name))
+                    (routine.name, routine.yaml(), datetime.now(), name))
         
     if old_name:
         db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
