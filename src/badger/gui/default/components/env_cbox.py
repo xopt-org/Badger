@@ -156,7 +156,7 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_var_edit.addWidget(action_var)
         self.edit_var = edit_var = QLineEdit()
         edit_var.setPlaceholderText('Filter variables...')
-        edit_var.setFixedWidth(192)
+        edit_var.setFixedWidth(160)
         self.btn_add_var = btn_add_var = QPushButton('Add')
         btn_add_var.setFixedSize(96, 24)
         btn_add_var.setDisabled(True)
