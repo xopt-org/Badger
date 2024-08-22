@@ -301,7 +301,7 @@ class BadgerRoutinePage(QWidget):
         self.toggle_relative_to_curr(flag_relative, refresh=False)
 
         # Always use ranges stored in routine
-        self.env_box.var_table.set_bounds(routine.vocs.variables)
+        self.env_box.var_table.set_bounds(routine.vocs.variables, signal=False)
 
         # Fill in initial points stored in routine if available
         try:

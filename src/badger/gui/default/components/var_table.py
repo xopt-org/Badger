@@ -98,11 +98,14 @@ class VariableTable(QTableWidget):
             sb_upper = self.cellWidget(i, 3)
             self.bounds[name] = [sb_lower.value(), sb_upper.value()]
 
-    def set_bounds(self, variables: dict):
+    def set_bounds(self, variables: dict, signal=True):
         for name in variables:
             self.bounds[name] = variables[name]
 
-        self.update_variables(self.variables, 2)
+        if signal:
+            self.update_variables(self.variables, 2)
+        else:
+            self.update_variables(self.variables, 3)
 
     def update_selected(self, _):
         for i in range(self.rowCount() - 1):
@@ -153,6 +156,7 @@ class VariableTable(QTableWidget):
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
         # filtered = 2: just rerender based on check status
+        # filtered = 3: same as 2 but do not emit the signal
 
         self.setRowCount(0)
         self.horizontalHeader().setVisible(False)
@@ -234,7 +238,8 @@ class VariableTable(QTableWidget):
         # header.setSectionResizeMode(0, QHeaderView.Interactive)
         header.setVisible(True)
 
-        self.sig_sel_changed.emit()
+        if filtered != 3:
+            self.sig_sel_changed.emit()
 
     def add_addtl_variable(self, item):
         row = idx = item.row()
