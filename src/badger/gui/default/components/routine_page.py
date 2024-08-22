@@ -193,6 +193,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.stateChanged.connect(
             self.toggle_relative_to_curr)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
+        self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
@@ -789,6 +790,10 @@ class BadgerRoutinePage(QWidget):
         if (self.env_box.relative_to_curr.isChecked() and
                 self.env_box.var_table.selected):
             self.update_init_table()
+
+    def handle_pv_added(self):
+        if self.env_box.relative_to_curr.isChecked():
+            self.set_vrange()
 
     def add_constraint(self, name=None, relation=0, threshold=0,
                        critical=False):

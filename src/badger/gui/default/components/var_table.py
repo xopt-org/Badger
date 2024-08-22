@@ -16,6 +16,7 @@ from badger.errors import BadgerInterfaceChannelError
 
 class VariableTable(QTableWidget):
     sig_sel_changed = pyqtSignal()
+    sig_pv_added = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -323,6 +324,8 @@ class VariableTable(QTableWidget):
             self.addtl_vars.append(name)
 
             self.update_variables(self.variables, 2)
+
+            self.sig_pv_added.emit()  # notify the routine page that a new PV has been added
 
     def get_bounds(self, name):
         # TODO: move elsewhere?
