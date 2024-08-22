@@ -270,10 +270,18 @@ class BadgerRoutinePage(QWidget):
 
         # Add additional variables to table as well
         # Combine the variables from the env with the additional variables
-        all_variables = {}
-        all_variables.update(routine.vocs.variables)
+        all_variables = {}  # note this stores the hard bounds of the variables
         for i in self.vars_env:
             all_variables.update(i)
+        if routine.additional_variables:  # there are additional variables
+            env = self.create_env()
+            # Have to check each variable since some could fail
+            for v in routine.additional_variables:
+                try:
+                    b = env.get_bound(v)
+                except Exception:
+                    b = [-1000, 1000]  # default wide range
+                all_variables.update({v: b})
         # Format for update_variables method
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]

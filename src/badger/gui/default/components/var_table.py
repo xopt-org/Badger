@@ -205,11 +205,11 @@ class VariableTable(QTableWidget):
 
             _bounds = self.bounds[name]
             sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=-1000, upper_bound=1000
+                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_lower.valueChanged.connect(self.update_bounds)
             sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=-1000, upper_bound=1000
+                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(i, 2, sb_lower)
