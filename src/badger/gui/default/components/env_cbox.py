@@ -338,7 +338,7 @@ class BadgerEnvBox(CollapsibleBox):
         rx = QRegExp(keyword)
 
         _variables = []
-        for var in self.var_table.all_variables:
+        for var in self.var_table.variables:
             vname = next(iter(var))
             if rx.indexIn(vname, 0) != -1:
                 _variables.append(var)

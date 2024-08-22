@@ -658,7 +658,7 @@ class BadgerRoutinePage(QWidget):
         vname_selected = []
         vrange = {}
 
-        for var in self.env_box.var_table.all_variables:
+        for var in self.env_box.var_table.variables:
             name = next(iter(var))
             if set_all or self.env_box.var_table.is_checked(name):
                 vname_selected.append(name)
@@ -733,7 +733,7 @@ class BadgerRoutinePage(QWidget):
         vname_selected = []
         vrange = {}
 
-        for var in self.env_box.var_table.all_variables:
+        for var in self.env_box.var_table.variables:
             name = next(iter(var))
             vname_selected.append(name)
             vrange[name] = var[name]
