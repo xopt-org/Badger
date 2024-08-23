@@ -11,7 +11,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
 from ....tests.utils import get_current_vars
-from ....routine import calc_bounds, calc_init_points
+from ....routine import calculate_variable_bounds, calculate_initial_points
 from ....settings import AUTO_REFRESH
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
@@ -133,14 +133,14 @@ class BadgerRoutineSubprocess:
             self.routine.data = None  # reset data
             # Recalculate the bounds and initial points if asked
             if AUTO_REFRESH and self.routine.relative_to_current:
-                variables_updated = calc_bounds(
+                variables_updated = calculate_variable_bounds(
                     self.routine.vrange_limit_options,
                     self.routine.vocs,
                     self.routine.environment)
 
                 self.routine.vocs.variables = variables_updated
 
-                init_points = calc_init_points(
+                init_points = calculate_initial_points(
                     self.routine.initial_point_actions,
                     self.routine.vocs,
                     self.routine.environment)

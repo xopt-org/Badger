@@ -159,7 +159,7 @@ class Routine(Xopt):
         return json.dumps(dict_result)
 
 
-def calc_bounds(limit_options, vocs, env):
+def calculate_variable_bounds(limit_options, vocs, env):
     vnames = vocs.variable_names
     var_curr = env._get_variables(vnames)
     var_range = env._get_bounds(vnames)
@@ -191,7 +191,7 @@ def calc_bounds(limit_options, vocs, env):
     return variables_updated
 
 
-def calc_init_points(init_actions, vocs, env):
+def calculate_initial_points(init_actions, vocs, env):
     vnames = vocs.variable_names
     init_points = {k: [] for k in vnames}
 

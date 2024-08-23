@@ -151,33 +151,10 @@ class Environment(BaseModel, ABC):
     def _get_variables(self, variable_names: List[str]) -> Dict:
         # Deal with variables defined in env
         # TODO: check these with the interface through routine page/var table?
-        variable_names_def = [v for v in variable_names] # if v in self.variables]
+        variable_names_def = [v for v in variable_names]
         variable_outputs_def = self.get_variables(variable_names_def)
 
-        # Deal with tmp variables
-        # Usually should be able to read from the interface
-        # variable_names_tmp = [v for v in variable_names if
-        #                       v not in self.variables]
-        #
-        # # If no undefined variables
-        # if not len(variable_names_tmp):
-        #     return variable_outputs_def
-
-        # # If no interface
-        # if self.interface is None:
-        #     raise BadgerEnvVarError(
-        #         f"Variables {variable_names_tmp} " +
-        #         "do not exist in the environment!"
-        #     )
-        #
-        # # Heads-up to the users that this behavior is not allowed for now
-        # err_msg = (
-        #     f"Variables [{variable_names_tmp}] "
-        #     + "not defined in the environment! "
-        #     + "Getting them through interface is not allowed."
-        # )
-        # raise BadgerInterfaceChannelError(err_msg)
-        return {**variable_outputs_def}#, **variable_outputs_tmp}
+        return {**variable_outputs_def}
 
     # The reason for this method is we cannot know the bounds of a variable
     # that exists in interface but not defined in environment.
@@ -193,36 +170,9 @@ class Environment(BaseModel, ABC):
         # Deal with variables defined in env
         # TODO: check these with the interface through routine page/var table?
         variable_inputs_def = dict(
-            [v for v in variable_inputs.items()] # if v[0] in self.variables]
+            [v for v in variable_inputs.items()]
         )
         self._set_variables_def(variable_inputs_def)
-
-        # Deal with tmp variables
-        # Usually should be able to directly set to the interface
-        # variable_inputs_tmp = dict(
-        #     [v for v in variable_inputs.items() if v[0] not in self.variables]
-        # )
-        # variable_names_tmp = list(variable_inputs_tmp.keys())
-
-        # If no undefined variables
-        # if not len(variable_inputs_tmp):
-        #     return
-
-        # If no interface
-        # if self.interface is None:
-        #     err_msg = (
-        #         f"Variables [{variable_names_tmp}] "
-        #         + "do not exist in the environment!"
-        #     )
-        #     raise BadgerEnvVarError(err_msg)
-
-        # Heads-up to the users that this behavior is not allowed for now
-        # err_msg = (
-        #     f"Variables [{variable_names_tmp}] "
-        #     + "not defined in the environment! "
-        #     + "Setting them through interface is not allowed."
-        # )
-        # raise BadgerInterfaceChannelError(err_msg)
 
     # Optimizer will only call this method to get observable values
     @final

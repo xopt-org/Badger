@@ -61,7 +61,7 @@ class VariableTable(QTableWidget):
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
         # Catch if any item gets changed
-        self.itemChanged.connect(self.add_addtl_variable)
+        self.itemChanged.connect(self.add_additional_variable)
 
     def setItem(self, row, column, item):
         text = item.text()
@@ -241,7 +241,7 @@ class VariableTable(QTableWidget):
         if filtered != 3:
             self.sig_sel_changed.emit()
 
-    def add_addtl_variable(self, item):
+    def add_additional_variable(self, item):
         row = idx = item.row()
         column = item.column()
         name = item.text()
