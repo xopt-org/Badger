@@ -142,32 +142,6 @@ class ConfigSingleton:
     def config(self) -> BadgerConfig:
         return self._config
 
-    '''
-    def update_and_save_config(self, updates: Dict[str, Any]) -> None:
-        """Saves changes to the config file.
-
-        Parameters
-        ----------
-        file_path : str
-            The path to the config file to be updated.
-        updates : dict of {str: Any}
-            A dictionary containing the keys and new values to update in the YAML file.
-        """
-        config_data = self._config.dict(by_alias=True)
-
-        for key, value in updates.items():
-            if isinstance(value, dict) and key in config_data:
-                config_data[key].update(value)
-            else:
-                config_data[key] = value
-
-        with open(self.config_path, 'w') as file:
-            yaml.dump(config_data, file, default_flow_style=False)
-        
-        self._config = BadgerConfig(**config_data)
-        print(f'Configuration updated in {self.config_path}')
-    '''
-
     def update_and_save_config(self, updates: Dict[str, Any]) -> None:
         """Saves changes to the config file.
 
@@ -187,7 +161,6 @@ class ConfigSingleton:
             yaml.dump(config_data, file, default_flow_style=False)
         
         self._config = BadgerConfig(**config_data)
-        print(f'Configuration updated in {self.config_path}')
     
     def _update_config_by_dot_key(self, config_data: Dict[str, Any], dot_key: str, value: Any) -> None:
         """Update the config data with the provided value using dot-separated keys."""
