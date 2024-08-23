@@ -7,9 +7,12 @@ from .utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 
+AUTO_REFRESH = False
+
 class Setting(BaseModel):
     """
     Setting model to store the configuration details.
+
 
     Attributes
     ----------
@@ -23,7 +26,6 @@ class Setting(BaseModel):
     display_name: str 
     description: str
     value: Optional[Union[str, int, bool, None]] = Field(None, description="The value of the setting which can be of different types.")
-
 
 class BadgerConfig(BaseModel):
     """
