@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPla
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
 from .collapsible_box import CollapsibleBox
 from ....settings import init_settings
+from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
 from ....utils import strtobool
 
 
@@ -26,10 +27,11 @@ class BadgerAlgoBox(CollapsibleBox):
         hbox_name.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel('Name')
         lbl.setFixedWidth(64)
-        self.cb = cb = QComboBox()
+        self.cb = cb = NoHoverFocusComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.generators)
         cb.setCurrentIndex(-1)
+        cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(cb))
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         self.btn_docs = btn_docs = QPushButton('Open Docs')

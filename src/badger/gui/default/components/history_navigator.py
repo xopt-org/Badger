@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QComboBox, QTreeWidget, QTreeWidgetItem
 from PyQt5.QtCore import QModelIndex, Qt
+from ....archive import get_base_run_filename
 from ....utils import run_names_to_dict
 
 
@@ -40,7 +41,7 @@ class HistoryNavigator(QComboBox):
         if not self.runs:
             return True
 
-        run = self.currentText()
+        run = get_base_run_filename(self.currentText())
         try:
             idx = self.runs.index(run)
             if idx == 0:
@@ -54,7 +55,7 @@ class HistoryNavigator(QComboBox):
         if not self.runs:
             return True
 
-        run = self.currentText()
+        run = get_base_run_filename(self.currentText())
         try:
             idx = self.runs.index(run)
             tot = len(self.runs)
@@ -69,7 +70,7 @@ class HistoryNavigator(QComboBox):
         for i in range(self.model().rowCount(parent)):
             itemIndex = self.model().index(i, 0, parent)
             item = self.view().itemFromIndex(itemIndex)
-            if (item.flags() & Qt.ItemIsSelectable) and item.text(0) == text:
+            if (item.flags() & Qt.ItemIsSelectable) and item.text(0).startswith(text):
                 return parent, i
             else:
                 itemIndex, row = self._firstMatchingSelectableItem(text, itemIndex)
@@ -78,18 +79,23 @@ class HistoryNavigator(QComboBox):
         return parent, None
 
     def _nextSelectableItem(self, parent=QModelIndex()):
-        run_curr = self.currentText()
+        run_curr = get_base_run_filename(self.currentText())
         idx = self.runs.index(run_curr)
         run_next = self.runs[idx + 1]
 
         return self._firstMatchingSelectableItem(run_next)
 
     def _previousSelectableItem(self, parent=QModelIndex()):
-        run_curr = self.currentText()
+        run_curr = get_base_run_filename(self.currentText())
         idx = self.runs.index(run_curr)
         run_prev = self.runs[idx - 1]
 
         return self._firstMatchingSelectableItem(run_prev)
+
+    def _currentSelectableItem(self, parent=QModelIndex()):
+        run_curr = get_base_run_filename(self.currentText())
+
+        return self._firstMatchingSelectableItem(run_curr)
 
     def updateItems(self, runs=None):
         self.view().clear()
@@ -150,3 +156,12 @@ class HistoryNavigator(QComboBox):
         if row is not None:
             self.setRootModelIndex(parent)
             self.setCurrentIndex(row)
+
+    def changeCurrentItem(self, text, color=None):
+        parent, row = self._currentSelectableItem()
+        if row is not None:
+            itemIndex = self.model().index(row, 0, parent)
+            item = self.view().itemFromIndex(itemIndex)
+            item.setText(0, text)
+            if color:
+                item.setForeground(0, color)

@@ -1,19 +1,25 @@
 import json
 from copy import deepcopy
-from typing import Optional, List, Any
+from typing import Any, List, Optional
 
 import pandas as pd
 from pandas import DataFrame
-from pydantic import ConfigDict, Field, model_validator, field_validator, \
-    ValidationInfo, SerializeAsAny
-from xopt import Xopt, VOCS, Evaluator
+from pydantic import (
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+    SerializeAsAny,
+    ValidationInfo,
+)
+from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
-from badger.utils import curr_ts
+
 from badger.environment import Environment, instantiate_env
+from badger.utils import curr_ts
 
 
 class Routine(Xopt):
-
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[Environment]
@@ -56,7 +62,10 @@ class Routine(Xopt):
                     except IndexError:
                         data["data"] = pd.DataFrame(data["data"], index=[0])
 
-                    data["generator"].add_data(data["data"])
+                    # Add data one row at a time to avoid generator issues
+                    for i in range(len(data["data"])):
+                        row_df = data["data"].iloc[[i]]
+                        data["generator"].add_data(row_df)
 
             # instantiate env
             if isinstance(data["environment"], dict):
@@ -83,7 +92,7 @@ class Routine(Xopt):
                 obs = env._get_observables(data["vocs"].output_names)
 
                 ts = curr_ts()
-                obs['timestamp'] = ts.timestamp()
+                obs["timestamp"] = ts.timestamp()
 
                 return obs
 
@@ -123,17 +132,18 @@ class Routine(Xopt):
             "max_evaluations",
             "serialize_inline",
             "serialize_torch",
-            "strict"
+            "strict",
         ]
         for field in fields_to_be_removed:
             dict_result.pop(field, None)
 
-        dict_result["environment"] = {"name": self.environment.name} |\
-            dict_result["environment"]
+        dict_result["environment"] = {"name": self.environment.name} | dict_result[
+            "environment"
+        ]
         try:
             dict_result["environment"]["interface"] = {
-                "name": self.environment.interface.name} |\
-                dict_result["environment"]["interface"]
+                "name": self.environment.interface.name
+            } | dict_result["environment"]["interface"]
         except KeyError:
             pass
         except AttributeError:

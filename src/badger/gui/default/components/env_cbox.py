@@ -1,20 +1,23 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPlainTextEdit, QLineEdit
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel, QListWidget, QFrame
 from PyQt5.QtCore import QRegExp
+
 from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
 from ....settings import init_settings
+from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
 from ....utils import strtobool
 
 LABEL_WIDTH = 80
 
 class BadgerEnvBox(CollapsibleBox):
-    def __init__(self, parent=None, envs=[]):
+    def __init__(self, env_dict, parent=None, envs=[]):
         super().__init__(parent, ' Environment + VOCS')
 
         self.envs = envs
+        self.env_dict = env_dict
 
         self.init_ui()
         self.config_logic()
@@ -23,15 +26,18 @@ class BadgerEnvBox(CollapsibleBox):
         config_singleton = init_settings()
         vbox = QVBoxLayout()
 
+        self.content_area.setObjectName('EnvBox')
+
         name = QWidget()
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
         lbl = QLabel('Name')
         lbl.setFixedWidth(LABEL_WIDTH)
-        self.cb = cb = QComboBox()
+        self.cb = cb = NoHoverFocusComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.envs)
         cb.setCurrentIndex(-1)
+        cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(cb))
         self.btn_env_play = btn_env_play = QPushButton('Open Playground')
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
@@ -125,11 +131,14 @@ class BadgerEnvBox(CollapsibleBox):
         btn_add_row.setFixedSize(96, 24)
         self.btn_add_curr = btn_add_curr = QPushButton('Add Current')
         btn_add_curr.setFixedSize(96, 24)
+        self.btn_add_rand = btn_add_rand = QPushButton('Add Random')
+        btn_add_rand.setFixedSize(96, 24)
         self.btn_clear = btn_clear = QPushButton('Clear All')
         btn_clear.setFixedSize(96, 24)
         hbox_action_init.addWidget(btn_add_row)
         hbox_action_init.addStretch()
         hbox_action_init.addWidget(btn_add_curr)
+        hbox_action_init.addWidget(btn_add_rand)
         hbox_action_init.addWidget(btn_clear)
         vbox_init.addWidget(action_init)
         self.init_table = init_data_table()
@@ -307,3 +316,17 @@ class BadgerEnvBox(CollapsibleBox):
         self._fit_content(self.list_obj)
         self._fit_content(self.list_con)
         self._fit_content(self.list_obs)
+
+    def update_stylesheets(self, environment=''):
+        if environment in self.env_dict:
+            color_dict = self.env_dict[environment]
+            stylesheet = f'''
+                #EnvBox {{
+                    border-radius: 4px;
+                    border-color: {color_dict['normal']};
+                    border-width: 4px;
+                }}
+            '''
+        else:
+            stylesheet = ''
+        self.setStyleSheet(stylesheet)

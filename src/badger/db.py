@@ -71,16 +71,21 @@ def filter_routines(records, tags):
     return records_filtered
 
 
-def extract_descriptions(records):
+def extract_metadata(records):
+    env_list = []
     descr_list = []
     for record in records:
         try:
-            descr = yaml.safe_load(record[1])['description']
+            metadata = yaml.safe_load(record[1])
+            env = metadata['environment']['name']
+            env_list.append(env)
+            descr = metadata['description']
             descr_list.append(descr)
         except Exception:
+            env_list.append('')
             descr_list.append('')
 
-    return descr_list
+    return env_list, descr_list
 
 
 @maybe_create_routines_db
@@ -199,17 +204,17 @@ def list_routine(keyword='', tags={}):
         records = filter_routines(records, tags)
     names = [record[0] for record in records]
     timestamps = [record[2] for record in records]
-    descriptions = extract_descriptions(records)
+    environments, descriptions = extract_metadata(records)
     con.close()
 
-    return names, timestamps, descriptions
+    return names, timestamps, environments, descriptions
 
 
 @maybe_create_runs_db
 def save_run(run):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
-    con = sqlite3.connect(db_run)
+    con = sqlite3.connect(db_run, timeout=30.0)
     cur = con.cursor()
 
     # Insert or update a record

@@ -1,5 +1,6 @@
 def test_init(qtbot):
     from badger.gui.default.components.routine_editor import BadgerRoutineEditor
+
     BadgerRoutineEditor()
 
 

@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center">
-    Badger: The Missing Optimizer in ACR
+    Badger: The Go-To Optimizer in ACR
     <br />
     <br />
     <a href="https://slaclab.github.io/Badger">

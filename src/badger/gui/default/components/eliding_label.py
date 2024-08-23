@@ -96,3 +96,23 @@ class ElidingLabel(QtWidgets.QLabel):
         if did_elide != self.is_elided:
             self.is_elided = did_elide
             self.elision_changed.emit(did_elide)
+
+
+class SimpleElidedLabel(QtWidgets.QLabel):
+    def __init__(self, text="", parent=None):
+        super(SimpleElidedLabel, self).__init__(parent)
+        self._text = text
+
+    def setText(self, text):
+        self._text = text
+        super(SimpleElidedLabel, self).setText(self.elidedText())
+
+    def resizeEvent(self, event):
+        super(SimpleElidedLabel, self).setText(self.elidedText())
+        super(SimpleElidedLabel, self).resizeEvent(event)
+
+    def elidedText(self):
+        metrics = QtGui.QFontMetrics(self.font())
+        elided = metrics.elidedText(
+            self._text, QtCore.Qt.ElideRight, self.width())
+        return elided
