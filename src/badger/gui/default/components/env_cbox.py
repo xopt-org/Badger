@@ -6,7 +6,7 @@ from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
-from ....settings import init_settings, AUTO_REFRESH
+from ....settings import init_settings
 from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
 from ....utils import strtobool
 
@@ -107,7 +107,7 @@ class BadgerEnvBox(CollapsibleBox):
                           ' run. The real values would be regenerated based on'
                           ' the machine state before running the optimization '
                           'again.')
-        if not AUTO_REFRESH:
+        if not config_singleton.read_value("AUTO_REFRESH"):
             msg_auto = QLabel('Auto mode is on.  To explicitly set the '
                               'variable ranges and/or initial points,  please '
                               'uncheck the "Automatic" check box.')

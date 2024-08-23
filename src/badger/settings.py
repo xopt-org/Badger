@@ -7,8 +7,6 @@ from .utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 
-AUTO_REFRESH = False
-
 class Setting(BaseModel):
     """
     Setting model to store the configuration details.
@@ -82,6 +80,11 @@ class BadgerConfig(BaseModel):
         display_name="enable advanced features",
         description="Enable advanced features on the GUI",
         value=False,
+    )
+    AUTO_REFRESH: Setting = Setting(
+        display_name="Auto-refresh",
+        description="Permits each run to start from the initial points calculated based on the current values and the rules",
+        value=False
     )
 
 class ConfigSingleton:
