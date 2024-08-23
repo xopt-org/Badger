@@ -83,7 +83,7 @@ class BadgerHomePage(QWidget):
         self.load_all_runs()
 
     def init_ui(self):
-        config_singleton = init_settings()
+        self.config_singleton = init_settings()
         icon_ref = resources.files(__package__) / '../images/add.png'
 
         with resources.as_file(icon_ref) as icon_path:
@@ -129,7 +129,7 @@ class BadgerHomePage(QWidget):
 
         # Filters
         self.filter_box = filter_box = BadgerFilterBox(self, title=' Filters')
-        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(self.config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             filter_box.hide()
         vbox_routine.addWidget(filter_box)
 
@@ -336,7 +336,7 @@ class BadgerHomePage(QWidget):
         except Exception:
             selected_routine = None
         self.routine_list.clear()
-        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        BADGER_PLUGIN_ROOT = self.config_singleton.read_value('BADGER_PLUGIN_ROOT')
         env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
         try:
             with open(env_dict_dir, 'r') as stream:
