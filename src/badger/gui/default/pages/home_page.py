@@ -47,6 +47,20 @@ from ..utils import create_button
 
 # from PyQt5.QtGui import QBrush, QColor
 from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..components.search_bar import search_bar
+from ..components.data_table import data_table, update_table, reset_table, add_row
+from ..components.routine_item import BadgerRoutineItem
+from ..components.history_navigator import HistoryNavigator
+from ..components.run_monitor import BadgerOptMonitor
+from ..components.routine_editor import BadgerRoutineEditor
+from ..components.status_bar import BadgerStatusBar
+from ..components.filter_cbox import BadgerFilterBox
+from ..utils import create_button, ModalOverlay
+from ....db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
+from ....db import import_routines, export_routines
+from ....archive import load_run, delete_run, get_base_run_filename
+from ....utils import get_header, strtobool
+from ....settings import read_value
 
 
 stylesheet = """
@@ -63,6 +77,7 @@ QPushButton
     background-color: #A9444E;
 }
 """
+
 
 
 class BadgerHomePage(QWidget):
@@ -250,10 +265,12 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
         self.run_monitor.sig_new_run.connect(self.new_run)
+        self.run_monitor.sig_run_started.connect(self.uncover_page)
         self.run_monitor.sig_run_name.connect(self.run_name)
         self.run_monitor.sig_status.connect(self.update_status)
         self.run_monitor.sig_progress.connect(self.progress)
         self.run_monitor.sig_del.connect(self.delete_run)
+        self.run_monitor.sig_stop_run.connect(self.cover_page)
 
         self.routine_editor.sig_saved.connect(self.routine_saved)
         self.routine_editor.sig_canceled.connect(self.done_create_routine)
@@ -408,6 +425,8 @@ class BadgerHomePage(QWidget):
                 routine = _routine  # make do w/ the routine saved in run
             else:
                 routine.data = _routine.data
+                routine.vocs = _routine.vocs
+                routine.initial_points = _routine.initial_points
                 del _routine  # release the resource
                 gc.collect()
         except IndexError:
@@ -480,8 +499,12 @@ class BadgerHomePage(QWidget):
             self.tabs.setTabEnabled(0, True)
             self.tabs.setTabEnabled(1, True)
 
+            self.uncover_page()
+
     def new_run(self):
-        self.cb_history.insertItem(0, "Optimization in progress...")
+        self.cover_page()
+
+        self.cb_history.insertItem(0, 'Optimization in progress...')
         self.cb_history.setCurrentIndex(0)
 
         header = get_header(self.current_routine)
@@ -623,8 +646,26 @@ class BadgerHomePage(QWidget):
                 f"Import success: imported all routines from {filename}",
             )
         except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Heads-up!",
-                f"Failed to import the following routines since they already existed: \n{str(e)}",
-            )
+            QMessageBox.warning(self, 'Heads-up!', f'Failed to import the following routines since they already existed: \n{str(e)}')
+
+    def cover_page(self):
+        return  # disable overlay for now
+
+        try:
+            self.overlay
+        except AttributeError:
+            # Set parent to the main window
+            try:
+                main_window = self.parent().parent()
+            except AttributeError:  # in test mode
+                return
+            self.overlay = ModalOverlay(main_window)
+        self.overlay.show()
+
+    def uncover_page(self):
+        return  # disable overlay for now
+
+        try:
+            self.overlay.hide()
+        except AttributeError:  # in test mode
+            pass

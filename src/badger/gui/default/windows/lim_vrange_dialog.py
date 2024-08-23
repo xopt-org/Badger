@@ -20,7 +20,7 @@ class BadgerLimitVariableRangeDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
-        self.setWindowTitle('Limit variable range')
+        self.setWindowTitle('Set variable range')
         self.setMinimumWidth(360)
 
         vbox = QVBoxLayout(self)
@@ -30,8 +30,8 @@ class BadgerLimitVariableRangeDialog(QDialog):
         hbox = QHBoxLayout(action_bar)
         hbox.setContentsMargins(0, 0, 0, 0)
 
-        lbl = QLabel('Limit variable range by')
-        lbl.setFixedWidth(128)
+        lbl = QLabel('Set range by')
+        # lbl.setFixedWidth(128)
         self.cb = cb = QComboBox()
         tooltip = '''Ratio wrt current value will set the limit
 with [ratio * current value] span,
@@ -55,7 +55,7 @@ will be clipped by the variable range.'''
         hbox.addWidget(cb, 1)
 
         # Config group
-        group_config = QGroupBox('Limit Config')
+        group_config = QGroupBox('Parameters')
         vbox_config = QVBoxLayout(group_config)
 
         self.stacks = stacks = QStackedWidget()
