@@ -159,7 +159,7 @@ class BadgerRoutinePage(QWidget):
         vbox.addWidget(self.generator_box)
 
         # Env box
-        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        BADGER_PLUGIN_ROOT = config_singleton.read_value('BADGER_PLUGIN_ROOT')
         env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
         try:
             with open(env_dict_dir, 'r') as stream:

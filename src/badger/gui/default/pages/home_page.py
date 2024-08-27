@@ -60,7 +60,6 @@ from ....db import list_routine, load_routine, remove_routine, get_runs_by_routi
 from ....db import import_routines, export_routines
 from ....archive import load_run, delete_run, get_base_run_filename
 from ....utils import get_header, strtobool
-from ....settings import read_value
 
 
 stylesheet = """

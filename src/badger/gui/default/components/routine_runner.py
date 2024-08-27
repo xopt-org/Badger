@@ -12,7 +12,7 @@ from ....core import run_routine, Routine
 from ....errors import BadgerRunTerminatedError
 from ....tests.utils import get_current_vars
 from ....routine import calculate_variable_bounds, calculate_initial_points
-from ....settings import AUTO_REFRESH
+from ....settings import init_settings
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
 
@@ -75,6 +75,7 @@ class BadgerRoutineSubprocess:
         self.routine_process = None
         self.is_killed = False
         self.interval = 100
+        self.config_singleton = init_settings()
 
     def set_termination_condition(self, termination_condition: dict) -> None:
         """
@@ -95,7 +96,7 @@ class BadgerRoutineSubprocess:
 
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
-
+        
         # Patch for converting dtype str to torch object
         try:
             dtype = self.routine.generator.turbo_controller.tkwargs["dtype"]
@@ -132,7 +133,7 @@ class BadgerRoutineSubprocess:
 
             self.routine.data = None  # reset data
             # Recalculate the bounds and initial points if asked
-            if AUTO_REFRESH and self.routine.relative_to_current:
+            if self.config_singleton.read_value("AUTO_REFRESH") and self.routine.relative_to_current:
                 variables_updated = calculate_variable_bounds(
                     self.routine.vrange_limit_options,
                     self.routine.vocs,
