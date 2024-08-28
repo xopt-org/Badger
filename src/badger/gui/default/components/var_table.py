@@ -45,7 +45,8 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
 
-        self.variables = []
+        self.all_variables = []  # store all variables
+        self.variables = []  # store variables to be displayed
         self.selected = {}  # track var selected status
         self.bounds = {}  # track var bounds
         self.checked_only = False
@@ -162,7 +163,8 @@ class VariableTable(QTableWidget):
         self.horizontalHeader().setVisible(False)
 
         if not filtered:
-            self.variables = variables or []
+            self.all_variables = variables or []
+            self.variables = self.all_variables[:]  # make a copy
             self.selected = {}
             self.bounds = {}
             self.addtl_vars = []
@@ -343,12 +345,13 @@ class VariableTable(QTableWidget):
     def add_variable(self, name, lb, ub):
         var = {name: [lb, ub]}
 
+        self.all_variables.append(var)
         self.variables.append(var)
         self.bounds[name] = [lb, ub]
 
     def export_variables(self) -> dict:
         variables_exported = {}
-        for var in self.variables:
+        for var in self.all_variables:
             name = next(iter(var))
             if self.is_checked(name):
                 variables_exported[name] = self.bounds[name]
