@@ -22,6 +22,7 @@ from badger.utils import curr_ts
 
 
 class Routine(Xopt):
+    id: str
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[Environment]

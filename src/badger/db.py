@@ -5,6 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 import yaml
 import sqlite3
+import uuid
 from .routine import Routine
 from .settings import read_value
 from .utils import get_yaml_string
@@ -20,7 +21,6 @@ elif not os.path.exists(BADGER_DB_ROOT):
     logger.info(
         f'Badger database root {BADGER_DB_ROOT} created')
 
-
 def maybe_create_routines_db(func):
 
     def func_safe(*args, **kwargs):
@@ -29,7 +29,7 @@ def maybe_create_routines_db(func):
         con = sqlite3.connect(db_routine)
         cur = con.cursor()
 
-        cur.execute('create table if not exists routine (name not null primary key, config, savedAt timestamp)')
+        cur.execute('create table if not exists routine (id text primary key, name text, config, savedAt timestamp)')
 
         con.commit()
         con.close()
@@ -47,7 +47,7 @@ def maybe_create_runs_db(func):
         con = sqlite3.connect(db_run)
         cur = con.cursor()
 
-        cur.execute('create table if not exists run (id integer primary key, savedAt timestamp, finishedAt timestamp, routine, filename)')
+        cur.execute('create table if not exists run (id integer primary key, savedAt timestamp, finishedAt timestamp, routine_id, filename)')
 
         con.commit()
         con.close()
@@ -61,7 +61,7 @@ def filter_routines(records, tags):
     records_filtered = []
     for record in records:
         try:
-            _tags = yaml.safe_load(record[1])['config']['tags']
+            _tags = yaml.safe_load(record[2])['config']['tags']
             if tags.items() <= _tags.items():
                 records_filtered.append(record)
         except:
@@ -75,7 +75,7 @@ def extract_metadata(records):
     descr_list = []
     for record in records:
         try:
-            metadata = yaml.safe_load(record[1])
+            metadata = yaml.safe_load(record[2])
             env = metadata['environment']['name']
             env_list.append(env)
             descr = metadata['description']
@@ -94,18 +94,19 @@ def save_routine(routine: Routine):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute('select * from routine where name=:name',
-                {'name': routine.name})
+    cur.execute('select * from routine where id=:id',
+                {'id': routine.id})
     record = cur.fetchone()
 
-    runs = get_runs_by_routine(routine.name)
+    runs = get_runs_by_routine(routine.id)
 
     if record and len(runs) == 0:  # update the record
-        cur.execute('update routine set config = ?, savedAt = ? where name = ?',
-                    (routine.yaml(), datetime.now(), routine.name))
+        cur.execute('update routine set name = ?, config = ?, savedAt = ? where id = ?',
+                    (routine.name, routine.yaml(), datetime.now(), routine.id))
     else:  # insert a record
+        id = str(uuid.uuid4())
         cur.execute('insert into routine values (?, ?, ?)',
-                    (routine.name, routine.yaml(), datetime.now()))
+                    (id, routine.name, routine.yaml(), datetime.now()))
 
     con.commit()
     con.close()
@@ -119,13 +120,13 @@ def update_routine(routine: Routine):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute('select * from routine where name=:name',
-                {'name': routine.name})
+    cur.execute('select * from routine where id=:id',
+                {'id': routine.id})
     record = cur.fetchone()
 
     if record:  # update the record
-        cur.execute('update routine set config = ?, savedAt = ? where name = ?',
-                    (routine.yaml(), datetime.now(), routine.name))
+        cur.execute('update routine set name = ?, config = ?, savedAt = ? where id = ?',
+                    (routine.name, routine.yaml(), datetime.now(), routine.id))
 
     con.commit()
     con.close()
@@ -133,13 +134,13 @@ def update_routine(routine: Routine):
 
 @maybe_create_routines_db
 @maybe_create_runs_db
-def remove_routine(name, remove_runs=False):
+def remove_routine(id: str, remove_runs=False):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute(f'delete from routine where name = "{name}"')
+    cur.execute(f'delete from routine where id = "{id}"')
 
     con.commit()
     con.close()
@@ -151,26 +152,26 @@ def remove_routine(name, remove_runs=False):
         con = sqlite3.connect(db_run)
         cur = con.cursor()
 
-        cur.execute(f'delete from run where routine = "{name}"')
+        cur.execute(f'delete from run where routine_id = "{id}"')
 
         con.commit()
         con.close()
 
 
 @maybe_create_routines_db
-def load_routine(name: str):
+def load_routine(id: str):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute('select * from routine where name=:name', {'name': name})
+    cur.execute('select * from routine where id=:id', {'id': id})
 
     records = cur.fetchall()
     con.close()
 
     if len(records) == 1:
         # return yaml.safe_load(records[0][1]), records[0][2]
-        routine_dict = yaml.safe_load(records[0][1])
+        routine_dict = yaml.safe_load(records[0][2])
         # routine_dict['evaluator'] = None
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(**routine_dict)
@@ -182,13 +183,13 @@ def load_routine(name: str):
                 else:
                     print(f"Caught user warning: {warning.message}")
 
-            return routine, records[0][2]
+            return routine, records[0][3]
     elif len(records) == 0:
         # logger.warning(f'Routine {name} not found in the database!')
         return None, None
     else:
         raise BadgerDBError(
-            f'Multiple routines with name {name} found in the database!')
+            f'Multiple routines with id {id} found in the database!')
 
 
 @maybe_create_routines_db
@@ -201,8 +202,8 @@ def list_routine(keyword='', tags={}):
     records = cur.fetchall()
     if tags:
         records = filter_routines(records, tags)
-    names = [record[0] for record in records]
-    timestamps = [record[2] for record in records]
+    names = [record[1] for record in records]
+    timestamps = [record[3] for record in records]
     environments, descriptions = extract_metadata(records)
     con.close()
 
@@ -217,7 +218,7 @@ def save_run(run):
     cur = con.cursor()
 
     # Insert or update a record
-    routine_name = run['routine'].name
+    routine_id = run['routine'].id
     run_filename = run['filename']
     timestamps = run['data']['timestamp']
     time_start = datetime.fromtimestamp(timestamps[0])
@@ -233,7 +234,7 @@ def save_run(run):
         rid = existing_row[0]
     else:
         cur.execute('insert into run values (?, ?, ?, ?, ?)',
-                    (None, time_start, time_finish, routine_name, run_filename))
+                    (None, time_start, time_finish, routine_id, run_filename))
         rid = cur.lastrowid
 
     con.commit()
@@ -243,13 +244,13 @@ def save_run(run):
 
 
 @maybe_create_runs_db
-def get_runs_by_routine(routine: str):
+def get_runs_by_routine(routine_id: str):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
     con = sqlite3.connect(db_run)
     cur = con.cursor()
 
-    cur.execute(f'select filename from run where routine = "{routine}" order by savedAt desc')
+    cur.execute(f'select filename from run where routine_id = "{routine_id}" order by savedAt desc')
     records = cur.fetchall()
     con.close()
 
@@ -276,13 +277,13 @@ def get_runs():
 
 
 @maybe_create_runs_db
-def remove_run_by_filename(name):
+def remove_run_by_filename(filename):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
     con = sqlite3.connect(db_run)
     cur = con.cursor()
 
-    cur.execute(f'delete from run where filename = "{name}"')
+    cur.execute(f'delete from run where filename = "{filename}"')
 
     con.commit()
     con.close()
@@ -306,7 +307,7 @@ def import_routines(filename):
     cur = con.cursor()
 
     # Deal with empty db file
-    cur.execute('create table if not exists routine (name not null primary key, config, savedAt timestamp)')
+    cur.execute('create table if not exists routine (id text primary key, name text, config, savedAt timestamp)')
 
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
     con_db = sqlite3.connect(db_routine)
@@ -318,7 +319,7 @@ def import_routines(filename):
     failed_list = []
     for record in records:
         try:
-            cur_db.execute('insert into routine values (?, ?, ?)', record)
+            cur_db.execute('insert into routine values (?, ?, ?, ?)', record)
         except:
             failed_list.append(record[0])
 
@@ -331,22 +332,22 @@ def import_routines(filename):
         raise BadgerDBError(get_yaml_string(failed_list))
 
 
-def export_routines(filename, routine_name_list):
+def export_routines(filename, routine_id_list):
     con = sqlite3.connect(filename)
     cur = con.cursor()
 
-    cur.execute('create table if not exists routine (name not null primary key, config, savedAt timestamp)')
+    cur.execute('create table if not exists routine (id text primary key, name text, config, savedAt timestamp)')
 
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
     con_db = sqlite3.connect(db_routine)
     cur_db = con_db.cursor()
 
-    for name in routine_name_list:
-        cur_db.execute('select * from routine where name=:name', {'name': name})
+    for id in routine_id_list:
+        cur_db.execute('select * from routine where id=:id', {'id': id})
         records = cur_db.fetchall()
         record = records[0]  # should only have one hit
 
-        cur.execute('insert into routine values (?, ?, ?)', record)
+        cur.execute('insert into routine values (?, ?, ?, ?)', record)
 
     con_db.close()
 
