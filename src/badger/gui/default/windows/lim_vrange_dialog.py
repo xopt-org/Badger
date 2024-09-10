@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QDoubleSpinBox
 from PyQt5.QtWidgets import QGroupBox, QLabel, QComboBox, QStyledItemDelegate, QStackedWidget
+from PyQt5.QtCore import Qt
 
 
 class BadgerLimitVariableRangeDialog(QDialog):
@@ -132,6 +133,10 @@ will be clipped by the variable range.'''
 
         # Update configs
         self.configs['limit_option_idx'] = i
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            self.set()
 
     def closeEvent(self, event):
         self.save_config(self.configs)
