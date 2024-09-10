@@ -3,6 +3,7 @@ import sqlite3
 import traceback
 import os
 import yaml
+import json
 
 import numpy as np
 import pandas as pd
@@ -775,9 +776,18 @@ class BadgerRoutinePage(QWidget):
             return
 
         try:
-            if self.routine and routine.name != self.routine.name:
-                update_routine(routine, old_name=self.routine.name)
-                self.name_updated.emit(self.routine.name, routine.name)
+            if self.routine and routine != self.routine:
+                old_dict = json.loads(self.routine.json())
+                old_dict.pop('data')
+                new_dict = json.loads(routine.json())
+                new_dict.pop('data')
+                new_dict['name'] = old_dict['name']
+                new_dict['description'] = new_dict['description']
+                if old_dict == new_dict:
+                    update_routine(routine, old_name=self.routine.name)
+                    self.name_updated.emit(self.routine.name, routine.name)
+                else:
+                    save_routine(routine)
             else:
                 save_routine(routine)
         except sqlite3.IntegrityError:

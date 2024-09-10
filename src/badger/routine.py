@@ -150,3 +150,17 @@ class Routine(Xopt):
             pass
 
         return json.dumps(dict_result)
+    
+    def __eq__(self, routine):
+        if not isinstance(routine, Routine):
+            return False
+        self_dict = json.loads(self.json())
+        self_dict.pop('data')
+        routine_dict = json.loads(routine.json())
+        routine_dict.pop('data')
+        return self_dict == routine_dict
+    
+    def __hash__(self):
+        self_dict = json.loads(self.json())
+        self_dict.pop('data')
+        return hash(tuple(sorted(self_dict)))
