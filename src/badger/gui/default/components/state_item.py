@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from PyQt5.QtWidgets import QComboBox, QStyledItemDelegate
+from ..utils import NoHoverFocusComboBox
 
 
 def state_item(options, remove_item, name=None):
@@ -7,7 +8,7 @@ def state_item(options, remove_item, name=None):
     hbox = QHBoxLayout(widget)
     hbox.setContentsMargins(2, 2, 2, 2)
     # hbox.setSpacing(0)
-    widget.cb_sta = cb_sta = QComboBox()
+    widget.cb_sta = cb_sta = NoHoverFocusComboBox()
     # cb_sta.setFixedWidth(200)
     cb_sta.setItemDelegate(QStyledItemDelegate())
     cb_sta.addItems(options)

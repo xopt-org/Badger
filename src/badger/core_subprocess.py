@@ -216,6 +216,9 @@ def run_routine_subprocess(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
+    except BadgerRunTerminatedError:
+        opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
+        evaluate_queue[0].close()
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
