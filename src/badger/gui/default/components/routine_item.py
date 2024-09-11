@@ -197,3 +197,7 @@ class BadgerRoutineItem(QWidget):
     def update_description(self, descr):
         self.description = descr
         self.update_tooltip()
+
+    def update_name(self, name):
+        self.name = name
+        self.update_tooltip()
