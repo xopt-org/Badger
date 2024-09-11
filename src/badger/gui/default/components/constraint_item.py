@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QDoubleSpinBox, QAbstractSpinBox
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate
 from PyQt5.QtCore import Qt
-from ..utils import MouseWheelWidgetAdjustmentGuard
+from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
 
 
 def constraint_item(options, remove_item, name=None, relation=0, threshold=0, critical=False, decimals=4):
@@ -10,7 +10,7 @@ def constraint_item(options, remove_item, name=None, relation=0, threshold=0, cr
     hbox = QHBoxLayout(widget)
     hbox.setContentsMargins(2, 2, 2, 2)
     # hbox.setSpacing(0)
-    widget.cb_obs = cb_obs = QComboBox()
+    widget.cb_obs = cb_obs = NoHoverFocusComboBox()
     cb_obs.setFixedWidth(200)
     cb_obs.setItemDelegate(QStyledItemDelegate())
     cb_obs.addItems(options)

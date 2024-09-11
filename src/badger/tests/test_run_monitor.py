@@ -618,7 +618,23 @@ class TestRunMonitor:
         assert len(monitor.plot_obj.items) == 0
         window.process_manager.close_proccesses()
 
-    # TODO: Test if logbook entry is created correctly and put into the
-    # correct location when the logbook button is clicked
-    def test_send_to_logbook(qtbot):
-        pass
+        # Should have no constraints/observables monitor
+        with pytest.raises(AttributeError):
+            _ = monitor.plot_con
+        with pytest.raises(AttributeError):
+            _ = monitor.plot_obs
+        # Variables/objectives monitor should be cleared
+        assert len(monitor.plot_var.items) == 0
+        assert len(monitor.plot_obj.items) == 0
+
+
+# TODO: Test if logbook entry is created correctly and put into the
+# correct location when the logbook button is clicked
+def test_send_to_logbook(qtbot):
+    pass
+
+
+# TODO: Test if the overlay is shown/hiden correctly
+# when start/stop run button is clicked
+def test_run_stop_overlay(qtbot):
+    pass

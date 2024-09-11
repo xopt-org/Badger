@@ -5,6 +5,9 @@ from PyQt5.QtCore import QSettings
 from .utils import get_datadir
 
 
+AUTO_REFRESH = False
+
+
 BADGER_PATH_DICT = {
     "BADGER_PLUGIN_ROOT": {
         "display name": "plugin root",

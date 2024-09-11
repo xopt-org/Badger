@@ -128,7 +128,12 @@ class TestRoutineRunner:
         assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
         editor = window.home_page.routine_editor
-        qtbot.keyClicks(editor.routine_page.generator_box.cb, "expected_improvement")
+
+        # Turn off relative to current
+        editor.routine_page.env_box.relative_to_curr.setChecked(False)
+
+        qtbot.keyClicks(editor.routine_page.generator_box.cb,
+                        "expected_improvement")
         params = editor.routine_page.generator_box.edit.toPlainText()
         # Turn on turbo controller
         params = params.replace("turbo_controller: null", "turbo_controller: optimize")
@@ -201,7 +206,7 @@ class TestRoutineRunner:
                 "tc_idx": 0,
                 "max_eval": 2,
              }
-            
+
             home_page.go_run(-1)
             home_page.run_monitor.start(True)
 
