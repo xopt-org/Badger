@@ -109,6 +109,10 @@ def run_routine_subprocess(
     except TypeError:
         pass
 
+    # Assign the initial points and bounds
+    routine.vocs.variables = args["variable_ranges"]
+    routine.initial_points = args["initial_points"]
+
     # set optional arguments
     evaluate = args.pop("evaluate", None)
     save_states = args.pop("save_states", None)
