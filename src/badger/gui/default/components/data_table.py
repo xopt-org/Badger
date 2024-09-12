@@ -94,7 +94,7 @@ def data_table(data=None):
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
     table.setStyleSheet(stylesheet)
-    table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+    # table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
     return update_table(table, data)
 
 
@@ -102,7 +102,7 @@ def init_data_table(variable_names=None):
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
     table.setStyleSheet(stylesheet)
-    table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+    # table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     table.setRowCount(10)
     if variable_names is None:
