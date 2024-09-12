@@ -44,6 +44,12 @@ class TableWithCopy(QTableWidget):
 
             QApplication.clipboard().setText(copy_text)
 
+    def set_uneditable(self):
+        self.setEditTriggers(QTableWidget.NoEditTriggers)
+
+    def set_editable(self):
+        self.setEditTriggers(QTableWidget.DoubleClicked)
+
 
 def update_table(table, data=None):
     table.setRowCount(0)
@@ -60,7 +66,7 @@ def update_table(table, data=None):
     for i in range(m):
         for j in range(n):
             v = _data.iloc[i, j]
-            table.setItem(i, j, QTableWidgetItem(f'{v:g}'))
+            table.setItem(i, j, QTableWidgetItem(f'{v:.4g}'))
     table.setHorizontalHeaderLabels(list(_data.columns))
     table.setVerticalHeaderLabels(list(map(str, _data.index)))  # row index starts from 0
     table.horizontalHeader().setVisible(True)
@@ -84,7 +90,7 @@ def add_row(table, row):
     r = table.rowCount()
     table.insertRow(r)
     for i, v in enumerate(row):
-        table.setItem(r, i, QTableWidgetItem(f'{v:g}'))
+        table.setItem(r, i, QTableWidgetItem(f'{v:.4g}'))
     table.setVerticalHeaderItem(r, QTableWidgetItem(str(r)))
 
     return table
@@ -177,4 +183,4 @@ def set_init_data_table(table, data: DataFrame):
     # Fill the table
     for col, name in enumerate(variable_names):
         for row in range(len(data_dict[name])):
-            table.setItem(row, col, QTableWidgetItem(f'{data_dict[name][row]:g}'))
+            table.setItem(row, col, QTableWidgetItem(f'{data_dict[name][row]:.4g}'))

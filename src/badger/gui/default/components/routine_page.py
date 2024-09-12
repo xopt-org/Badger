@@ -541,7 +541,7 @@ class BadgerRoutinePage(QWidget):
             if np.all([not table.item(row, col).text() for col in range(table.columnCount())]):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(str(var_curr[name]))
+                    item = QTableWidgetItem(f'{var_curr[name]:.4g}')
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
@@ -586,7 +586,7 @@ class BadgerRoutinePage(QWidget):
                 try:
                     point = random_points.pop(0)
                     for col, name in enumerate(vname_selected):
-                        item = QTableWidgetItem(str(point[name]))
+                        item = QTableWidgetItem(f'{point[name]:.4g}')
                         table.setItem(row, col, item)
                 except IndexError:  # No more points to add
                     break
@@ -782,12 +782,12 @@ class BadgerRoutinePage(QWidget):
                 self.try_populate_init_table()
 
             self.env_box.var_table.lock_bounds()
-            self.env_box.init_table.setDisabled(True)
+            self.env_box.init_table.set_uneditable()
         else:
             self.env_box.switch_var_panel_style(False)
 
             self.env_box.var_table.unlock_bounds()
-            self.env_box.init_table.setDisabled(False)
+            self.env_box.init_table.set_editable()
 
     def try_populate_init_table(self):
         if (self.env_box.relative_to_curr.isChecked() and
