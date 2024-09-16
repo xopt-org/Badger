@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    if: ${{ github.repository == 'slaclab/Badger' }}
+    if: ${{ github.repository == 'xopt-org/Badger' }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
