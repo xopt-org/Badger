@@ -1,4 +1,3 @@
-# test
 import time
 from typing import Callable
 
@@ -17,7 +16,7 @@ def check_run_status(active_callback):
         if status == 2:
             raise BadgerRunTerminatedError
         elif status == 1:
-            time.sleep(0)
+            time.sleep( 0 )
             continue
         else:
             break
