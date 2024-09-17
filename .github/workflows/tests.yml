@@ -34,10 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Mambaforge
-        uses: conda-incubator/setup-miniconda@v2
+      - name: Setup Miniforge
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          miniforge-variant: Mambaforge
           miniforge-version: latest
           activate-environment: badger-dev
           use-mamba: true
@@ -50,18 +49,18 @@ jobs:
         run: |
             pip install PyQt5
 
-      # TODO: Have to install xopt with pip for now
-      # should put xopt>=2.1 in the environment.yml later
-      # to install xopt with conda
-      - name: Install Xopt v2.1+
-        shell: bash -el {0}
-        run: |
-            pip install xopt
+#      # TODO: Have to install xopt with pip for now
+#      # should put xopt>=2.1 in the environment.yml later
+#      # to install xopt with conda
+#      - name: Install Xopt v2.1+
+#        shell: bash -el {0}
+#        run: |
+#            pip install xopt
 
       - name: Install python packages
         shell: bash -el {0}
         run: |
-          mamba install --file env/requirements.txt
+          conda install --file env/requirements.txt
 
       - name: Install libs for testing a pyqt app on linux
         shell: bash -el {0}
