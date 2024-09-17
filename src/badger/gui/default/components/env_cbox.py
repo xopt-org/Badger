@@ -2,6 +2,9 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QPla
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel, QListWidget, QFrame
 from PyQt5.QtCore import QRegExp
 
+from badger.gui.default.components.traces_table import FormulaDialog
+from badger.gui.default.components.archive_search import ArchiveSearchWidget
+
 from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
@@ -231,11 +234,17 @@ class BadgerEnvBox(CollapsibleBox):
         self.edit_obj = edit_obj = QLineEdit()
         edit_obj.setPlaceholderText('Filter objectives...')
         edit_obj.setFixedWidth(192)
+        extra_obs = QPushButton("Add Observable")
+        extra_obs.clicked.connect(self.formulaMenu)
         self.check_only_obj = check_only_obj = QCheckBox('Show Checked Only')
         check_only_obj.setChecked(False)
         hbox_action_obj.addWidget(edit_obj)
+        hbox_action_obj.addWidget(extra_obs)
         hbox_action_obj.addStretch()
         hbox_action_obj.addWidget(check_only_obj)
+
+
+        
 
         self.obj_table = ObjectiveTable()
         vbox_obj_edit.addWidget(self.obj_table)
@@ -292,7 +301,6 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_lbl_sta.addWidget(lbl_sta)
         vbox_lbl_sta.addStretch(1)
         hbox_sta.addWidget(lbl_sta_col)
-
         edit_sta_col = QWidget()
         vbox_sta_edit = QVBoxLayout(edit_sta_col)
         vbox_sta_edit.setContentsMargins(0, 0, 0, 0)
@@ -315,6 +323,15 @@ class BadgerEnvBox(CollapsibleBox):
         cbox_more.setContentLayout(vbox_more)
 
         self.setContentLayout(vbox)
+
+    def formulaMenu(self):
+        self.formula= FormulaDialog(self)
+        self.formula.show()
+    
+    def archiveSearchMenu(self):
+        self.archive_search = ArchiveSearchWidget()
+        self.archive_search.show()
+    
 
     def config_logic(self):
         self.dict_con = {}

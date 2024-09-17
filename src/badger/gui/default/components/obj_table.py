@@ -32,7 +32,7 @@ class ObjectiveTable(QTableWidget):
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 192)
-
+        self.addtl_obs = []
         self.all_objectives = []
         self.objectives = []
         self.selected = {}  # track obj selected status

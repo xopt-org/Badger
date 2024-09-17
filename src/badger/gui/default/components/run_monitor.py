@@ -648,6 +648,7 @@ class BadgerOptMonitor(QWidget):
         -------
         None
         """
+        print("ok")
         self.update_curves(results)
         self.update_analysis_extensions()
         self.extensions_palette.update_palette()
