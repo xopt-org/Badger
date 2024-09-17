@@ -13,7 +13,7 @@ on:
     - cron: '0 0 * * *'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  group: ${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -62,10 +62,11 @@ jobs:
 #        run: |
 #          mamba install -n badger-dev python=${{ matrix.python-version }}
 #
-#      - name: Install python packages
-#        shell: bash -el {0}
-#        run: |
-#          mamba install --file env/requirements.txt
+      - name: Install python packages
+        # Qt related packages after pyqt5 is installed
+        shell: bash -el {0}
+        run: |
+          mamba install --file env/requirements.txt 
 
       - name: Install libs for testing a pyqt app on linux
         shell: bash -el {0}
