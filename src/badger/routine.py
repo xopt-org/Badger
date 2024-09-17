@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Any, List, Optional
 
 import numpy as np
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pydantic import (
@@ -17,6 +18,8 @@ from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
 from xopt.utils import get_local_region
 from badger.utils import curr_ts
+from xopt.utils import get_local_region
+from badger.utils import curr_ts
 from badger.environment import Environment, instantiate_env
 from badger.utils import curr_ts
 
@@ -29,6 +32,11 @@ class Routine(Xopt):
     critical_constraint_names: Optional[List[str]] = Field([])
     tags: Optional[List] = Field(None)
     script: Optional[str] = Field(None)
+    # Store relative to current params
+    relative_to_current: Optional[bool] = Field(False)
+    vrange_limit_options: Optional[dict] = Field(None)
+    initial_point_actions: Optional[List] = Field(None)
+    additional_variables: Optional[List[str]] = Field([])
     # Store relative to current params
     relative_to_current: Optional[bool] = Field(False)
     vrange_limit_options: Optional[dict] = Field(None)
@@ -156,7 +164,21 @@ class Routine(Xopt):
         except AttributeError:
             pass
 
-        return json.dumps(dict_result)
+        return json.dumps(dict_result)    
+
+    def __eq__(self, routine):
+        if not isinstance(routine, Routine):
+            return False
+        self_dict = json.loads(self.json())
+        self_dict.pop('data')
+        routine_dict = json.loads(routine.json())
+        routine_dict.pop('data')
+        return self_dict == routine_dict
+    
+    def __hash__(self):
+        self_dict = json.loads(self.json())
+        self_dict.pop('data')
+        return hash(tuple(sorted(self_dict)))
 
 
 def calculate_variable_bounds(limit_options, vocs, env):
