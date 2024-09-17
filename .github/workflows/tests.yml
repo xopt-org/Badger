@@ -57,15 +57,15 @@ jobs:
 #        run: |
 #            pip install xopt
 
-      - name: Update environment
-        shell: bash -l {0}
-        run: |
-          mamba install -n badger-dev python=${{ matrix.python-version }}
-
-      - name: Install python packages
-        shell: bash -el {0}
-        run: |
-          mamba install --file env/requirements.txt
+#      - name: Update environment
+#        shell: bash -l {0}
+#        run: |
+#          mamba install -n badger-dev python=${{ matrix.python-version }}
+#
+#      - name: Install python packages
+#        shell: bash -el {0}
+#        run: |
+#          mamba install --file env/requirements.txt
 
       - name: Install libs for testing a pyqt app on linux
         shell: bash -el {0}
@@ -81,7 +81,7 @@ jobs:
       - name: Install Badger
         shell: bash -l {0}
         run: |
-          pip install --no-dependencies .
+          pip install .
 
       - name: Run Tests
         shell: bash -l {0}
