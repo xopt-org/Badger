@@ -49,13 +49,13 @@ jobs:
         run: |
             pip install PyQt5
 
-#      # TODO: Have to install xopt with pip for now
-#      # should put xopt>=2.1 in the environment.yml later
-#      # to install xopt with conda
-#      - name: Install Xopt v2.1+
-#        shell: bash -el {0}
-#        run: |
-#            pip install xopt
+      # TODO: Have to install xopt with pip for now
+      # should put xopt>=2.1 in the environment.yml later
+      # to install xopt with conda
+      - name: Install Xopt v2.1+
+        shell: bash -el {0}
+        run: |
+            conda install xopt -c conda-forge
 
 #      - name: Update environment
 #        shell: bash -l {0}
