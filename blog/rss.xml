@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
     <channel>
         <title>Badger Blog</title>
-        <link>https://xopt-org.github.io/Badger/blog</link>
+        <link>https://xopt-org.github.io/blog</link>
         <description>Badger Blog</description>
         <lastBuildDate>Wed, 24 Nov 2021 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
@@ -10,11 +10,11 @@
         <language>en</language>
         <item>
             <title><![CDATA[Welcome]]></title>
-            <link>https://xopt-org.github.io/Badger/blog/welcome</link>
-            <guid>https://xopt-org.github.io/Badger/blog/welcome</guid>
+            <link>https://xopt-org.github.io/blog/welcome</link>
+            <guid>https://xopt-org.github.io/blog/welcome</guid>
             <pubDate>Wed, 24 Nov 2021 00:00:00 GMT</pubDate>
             <description><![CDATA[Badger Banner]]></description>
-            <content:encoded><![CDATA[<p><img loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/Badger/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
+            <content:encoded><![CDATA[<p><img loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
 <p>Hello world from Badger!</p>]]></content:encoded>
             <category>SLAC</category>
             <category>hello</category>
