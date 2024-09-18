@@ -4,8 +4,8 @@
   <ShortName>Badger</ShortName>
   <Description>Search Badger</Description>
   <InputEncoding>UTF-8</InputEncoding>
-  <Image width="16" height="16" type="image/x-icon">https://xopt-org.github.io/img/favicon.ico</Image>
-  <Url type="text/html" method="get" template="https://xopt-org.github.io/search?q={searchTerms}"/>
-  <Url type="application/opensearchdescription+xml" rel="self" template="https://xopt-org.github.io/opensearch.xml" />
-  <moz:SearchForm>https://xopt-org.github.io/</moz:SearchForm>
+  <Image width="16" height="16" type="image/x-icon">https://xopt-org.github.io/Badger/img/favicon.ico</Image>
+  <Url type="text/html" method="get" template="https://xopt-org.github.io/Badger/search?q={searchTerms}"/>
+  <Url type="application/opensearchdescription+xml" rel="self" template="https://xopt-org.github.io/Badger/opensearch.xml" />
+  <moz:SearchForm>https://xopt-org.github.io/Badger/</moz:SearchForm>
 </OpenSearchDescription>

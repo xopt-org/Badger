@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://xopt-org.github.io/blog</id>
+    <id>https://xopt-org.github.io/Badger/blog</id>
     <title>Badger Blog</title>
     <updated>2021-11-24T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://xopt-org.github.io/blog"/>
+    <link rel="alternate" href="https://xopt-org.github.io/Badger/blog"/>
     <subtitle>Badger Blog</subtitle>
-    <icon>https://xopt-org.github.io/img/favicon.ico</icon>
+    <icon>https://xopt-org.github.io/Badger/img/favicon.ico</icon>
     <entry>
         <title type="html"><![CDATA[Welcome]]></title>
-        <id>https://xopt-org.github.io/blog/welcome</id>
-        <link href="https://xopt-org.github.io/blog/welcome"/>
+        <id>https://xopt-org.github.io/Badger/blog/welcome</id>
+        <link href="https://xopt-org.github.io/Badger/blog/welcome"/>
         <updated>2021-11-24T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Badger Banner]]></summary>
-        <content type="html"><![CDATA[<p><img loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
+        <content type="html"><![CDATA[<p><img loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/Badger/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
 <p>Hello world from Badger!</p>]]></content>
         <author>
             <name>Zhe Zhang</name>
