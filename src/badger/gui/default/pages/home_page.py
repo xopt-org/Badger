@@ -221,6 +221,7 @@ class BadgerHomePage(QWidget):
 
         # Data table
         self.run_table = run_table = data_table()
+        run_table.set_uneditable()  # should not be editable
 
         splitter_run.addWidget(run_view)
         splitter_run.addWidget(run_table)
@@ -605,7 +606,7 @@ class BadgerHomePage(QWidget):
                 if routine_item.name == name:
                     routine_item.update_description(descr)
                     break
-    
+
     def routine_name_updated(self, old_name, new_name):
         for i in range(self.routine_list.count()):
             item = self.routine_list.item(i)
