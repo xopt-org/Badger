@@ -3,7 +3,7 @@ requires = ["setuptools>=64.0", "setuptools_scm[toml]"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "badger"
+name = "badger-opt"
 description = "Interface for optimization of arbitrary problems in Python."
 readme = "README.md"
 authors = [
