@@ -1,4 +1,3 @@
-include versioneer.py
 include src/badger/_version.py
 include src/badger/gui/default/images/*.png
 graft src/badger/tests

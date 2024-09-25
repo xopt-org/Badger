@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=64.0", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "badger"
+description = "Interface for optimization of arbitrary problems in Python."
+readme = "README.md"
+authors = [
+  { name = "Zhe Zhang", email = "zhezhang@slac.stanford.edu" },
+]
+keywords = ["optimization", "machine learning", "GUI"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pandas",
+    "pyyaml",
+    "coolname",
+    "pyqt5",
+    "pyqtgraph",
+    "qdarkstyle",
+    "pillow",
+    "requests",
+    "tqdm",
+    "xopt"
+]
+dynamic = ["version"]
+[tool.setuptools_scm]
+version_file = "src/badger/_version.py"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-qt",
+    "pytest-mock"
+]
+
+[project.urls]
+Homepage = "https://github.com/xopt-org/Badger"
+Documentation = "https://xopt-org.github.io/Badger/"
+"Bug Tracker" = "https://github.com/xopt-org/Badger/issues"
+
+[project.scripts]
+badger = "badger.__main__:main"
+
+[project.license]
+file = "LICENSE"
+
+[options]
+zip_safe = false
+include_package_data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [ "badger", ]
+namespaces = false
+
+[tool.ruff]
+# select = []
+# ignore = []
+
+[tool.pytest.ini_options]
+addopts = "--cov=badger/"
+log_cli_level = "info"
+log_level = "debug"
+testpaths = ["src/badger/tests"]

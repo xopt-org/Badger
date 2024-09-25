@@ -39,24 +39,24 @@ jobs:
           python-version: ${{ matrix.python-version }}
           environment-file: env/environment.yml
 
-      # Have to install pyqt5 with pip
-      - name: Install pyqt5
-        shell: bash -el {0}
-        run: |
-            pip install PyQt5
+#      # Have to install pyqt5 with pip
+#      - name: Install pyqt5
+#        shell: bash -el {0}
+#        run: |
+#            pip install PyQt5
 
-      - name: Update environment
-        # Mainly need Xopt
-        # TODO: evaluate need for this env file
-        shell: bash -l {0}
-        run: |
-          mamba install -n badger-dev python=${{ matrix.python-version }}
+#      - name: Update environment
+#        # Mainly need Xopt
+#        # TODO: evaluate need for this env file
+#        shell: bash -l {0}
+#        run: |
+#          mamba install -n badger-dev python=${{ matrix.python-version }}
 
-      - name: Install python packages
-        # Qt related packages after pyqt5 is installed
-        shell: bash -el {0}
-        run: |
-          mamba install --file env/requirements.txt 
+#      - name: Install python packages
+#        # Qt related packages after pyqt5 is installed
+#        shell: bash -el {0}
+#        run: |
+#          mamba install --file env/requirements.txt
 
       - name: Install libs for testing a pyqt app on linux
         shell: bash -el {0}
@@ -72,7 +72,7 @@ jobs:
       - name: Install Badger
         shell: bash -l {0}
         run: |
-          pip install .
+          pip install ".[dev]"
 
       - name: Run Tests
         shell: bash -l {0}
