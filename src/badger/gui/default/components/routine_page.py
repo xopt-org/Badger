@@ -40,7 +40,7 @@ from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..windows.expandable_message_box import ExpandableMessageBox
 from ..utils import filter_generator_config
-from ....db import save_routine, remove_routine, update_routine
+from ....db import save_routine, remove_routine, update_routine, get_runs_by_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
 from ....factory import list_generators, list_env, get_env
@@ -1006,7 +1006,8 @@ class BadgerRoutinePage(QWidget):
                 old_dict = {k: v for k, v in old_dict.items() if k not in keys_to_exclude}
                 new_dict = json.loads(routine.json())
                 new_dict = {k: v for k, v in new_dict.items() if k not in keys_to_exclude}
-                if old_dict == new_dict:
+                runs = get_runs_by_routine(self.routine.id)
+                if len(runs) == 0 or old_dict == new_dict:
                     routine.id = self.routine.id
                     update_routine(routine)
                 else:
