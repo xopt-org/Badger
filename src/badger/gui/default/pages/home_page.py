@@ -31,7 +31,7 @@ from ....db import (
     import_routines,
     list_routine,
     load_routine,
-    remove_routine,
+    remove_routine
 )
 from ....settings import read_value
 from ....utils import get_header, strtobool
@@ -218,6 +218,7 @@ class BadgerHomePage(QWidget):
 
         # Data table
         self.run_table = run_table = data_table()
+        run_table.set_uneditable()  # should not be editable
 
         splitter_run.addWidget(run_view)
         splitter_run.addWidget(run_table)

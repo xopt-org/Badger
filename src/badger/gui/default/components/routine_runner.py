@@ -107,6 +107,27 @@ class BadgerRoutineSubprocess:
         except TypeError:
             pass
 
+        self.routine.data = None  # reset data
+        # Recalculate the bounds and initial points if asked
+        if AUTO_REFRESH and self.routine.relative_to_current:
+            variables_updated = calculate_variable_bounds(
+                self.routine.vrange_limit_options,
+                self.routine.vocs,
+                self.routine.environment)
+
+            self.routine.vocs.variables = variables_updated
+
+            init_points = calculate_initial_points(
+                self.routine.initial_point_actions,
+                self.routine.vocs,
+                self.routine.environment)
+            try:
+                init_points = pd.DataFrame(init_points)
+            except IndexError:
+                init_points = pd.DataFrame(init_points, index=[0])
+
+            self.routine.initial_points = init_points
+
         try:
             self.save_init_vars()
             process_with_args = self.process_manager.remove_from_queue()
@@ -120,6 +141,8 @@ class BadgerRoutineSubprocess:
             arg_dict = {
                 "routine_id": self.routine.id,
                 "routine_name": self.routine.name,
+                "variable_ranges": self.routine.vocs.variables,
+                "initial_points": self.routine.initial_points,
                 "evaluate": True,
                 "termination_condition": self.termination_condition,
                 "start_time": self.start_time,
@@ -130,35 +153,6 @@ class BadgerRoutineSubprocess:
             self.pause_event.set()
             self.setup_timer()
             # self.signals.finished.emit(self.routine.states)
-
-            self.routine.data = None  # reset data
-            # Recalculate the bounds and initial points if asked
-            if AUTO_REFRESH and self.routine.relative_to_current:
-                variables_updated = calculate_variable_bounds(
-                    self.routine.vrange_limit_options,
-                    self.routine.vocs,
-                    self.routine.environment)
-
-                self.routine.vocs.variables = variables_updated
-
-                init_points = calculate_initial_points(
-                    self.routine.initial_point_actions,
-                    self.routine.vocs,
-                    self.routine.environment)
-                try:
-                    init_points = pd.DataFrame(init_points)
-                except IndexError:
-                    init_points = pd.DataFrame(init_points, index=[0])
-
-                self.routine.initial_points = init_points
-
-            # run_routine(
-            #     self.routine,
-            #     active_callback=self.check_run_status,
-            #     generate_callback=self.before_evaluate,
-            #     evaluate_callback=self.after_evaluate,
-            #     states_callback=self.states_ready
-            # )
         except BadgerRunTerminatedError as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))

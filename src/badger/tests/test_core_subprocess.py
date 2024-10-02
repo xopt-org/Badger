@@ -83,6 +83,9 @@ class TestCore:
 
         arg_dict = {
             "routine_id": self.routine.id,
+            "routine_name": self.routine.name,
+            "variable_ranges": self.routine.vocs.variables,
+            "initial_points": self.routine.initial_points,
             "evaluate": True,
             "termination_condition": self.termination_condition,
             "start_time": time.time(),

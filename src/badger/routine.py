@@ -17,6 +17,8 @@ from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
 from xopt.utils import get_local_region
 from badger.utils import curr_ts
+from xopt.utils import get_local_region
+from badger.utils import curr_ts
 from badger.environment import Environment, instantiate_env
 from badger.utils import curr_ts
 
@@ -30,6 +32,11 @@ class Routine(Xopt):
     critical_constraint_names: Optional[List[str]] = Field([])
     tags: Optional[List] = Field(None)
     script: Optional[str] = Field(None)
+    # Store relative to current params
+    relative_to_current: Optional[bool] = Field(False)
+    vrange_limit_options: Optional[dict] = Field(None)
+    initial_point_actions: Optional[List] = Field(None)
+    additional_variables: Optional[List[str]] = Field([])
     # Store relative to current params
     relative_to_current: Optional[bool] = Field(False)
     vrange_limit_options: Optional[dict] = Field(None)
