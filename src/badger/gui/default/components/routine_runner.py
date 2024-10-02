@@ -118,6 +118,7 @@ class BadgerRoutineSubprocess:
             self.wait_event = process_with_args["wait_event"]
 
             arg_dict = {
+                "routine_id": self.routine.id,
                 "routine_name": self.routine.name,
                 "evaluate": True,
                 "termination_condition": self.termination_condition,

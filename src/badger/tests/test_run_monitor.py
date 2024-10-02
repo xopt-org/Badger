@@ -42,7 +42,7 @@ class TestRunMonitor:
 
         fix_db_path_issue()
         routine = create_routine()
-        save_routine(routine)
+        routine.id = save_routine(routine)
         monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
         monitor.routine = routine
@@ -98,7 +98,7 @@ class TestRunMonitor:
         # qtbot.addWidget(monitor)
 
         routine = create_routine()
-        save_routine(routine)
+        routine.id = save_routine(routine)
 
         # Feed in the sample routine
         monitor.routine = routine
@@ -363,7 +363,7 @@ class TestRunMonitor:
 
         # Run a routine
         routine = create_routine()
-        save_routine(routine)
+        routine.id = save_routine(routine)
         home_page = window.home_page
         home_page.current_routine = routine
         monitor = home_page.run_monitor
@@ -482,7 +482,7 @@ class TestRunMonitor:
         from badger.tests.utils import create_routine
 
         routine = create_routine()
-        save_routine(routine)
+        routine.id = save_routine(routine)
 
         routine.vocs.objectives = {"f1": "MINIMIZE", "f2": "MAXIMIZE"}
 
@@ -525,7 +525,7 @@ class TestRunMonitor:
         monitor.testing = True
 
         routine = create_routine_critical()
-        save_routine(routine)
+        routine.id = save_routine(routine)
         monitor.routine = routine
         monitor.init_plots(routine)
 
@@ -577,7 +577,7 @@ class TestRunMonitor:
 
         # Run a routine
         routine = create_routine()
-        save_routine(routine)
+        routine.id = save_routine(routine)
         home_page = window.home_page
         home_page.current_routine = routine
         monitor = home_page.run_monitor

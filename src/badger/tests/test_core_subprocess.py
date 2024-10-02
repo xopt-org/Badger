@@ -67,7 +67,7 @@ class TestCore:
 
         self.routine = create_routine()
         time.sleep(1)
-        save_routine(self.routine)
+        self.routine.id = save_routine(self.routine)
         self.termination_condition = {
             "tc_idx": 0,
             "max_eval": 3,
@@ -82,7 +82,7 @@ class TestCore:
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
-            "routine_name": self.routine.name,
+            "routine_id": self.routine.id,
             "evaluate": True,
             "termination_condition": self.termination_condition,
             "start_time": time.time(),
@@ -150,7 +150,7 @@ class TestCore:
         self.routine = create_routine_turbo()
         time.sleep(1)
         assert self.routine.generator.turbo_controller.best_value is None
-        save_routine(self.routine)
+        self.routine.id = save_routine(self.routine)
         self.termination_condition = {
             "tc_idx": 0,
             "max_eval": 3,
@@ -165,7 +165,7 @@ class TestCore:
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
-            "routine_name": self.routine.name,
+            "routine_id": self.routine.id,
             "evaluate": True,
             "termination_condition": self.termination_condition,
             "start_time": time.time(),

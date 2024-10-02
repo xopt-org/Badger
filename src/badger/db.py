@@ -61,7 +61,7 @@ def filter_routines(records, tags):
     records_filtered = []
     for record in records:
         try:
-            _tags = yaml.safe_load(record[2])['config']['tags']
+            _tags = yaml.safe_load(record[3])['config']['tags']
             if tags.items() <= _tags.items():
                 records_filtered.append(record)
         except:
@@ -94,27 +94,21 @@ def save_routine(routine: Routine):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute('select * from routine where id=:id',
-                {'id': routine.id})
-    record = cur.fetchone()
-
-    runs = get_runs_by_routine(routine.id)
-
-    if record and len(runs) == 0:  # update the record
-        cur.execute('update routine set name = ?, config = ?, savedAt = ? where id = ?',
-                    (routine.name, routine.yaml(), datetime.now(), routine.id))
-    else:  # insert a record
-        id = str(uuid.uuid4())
-        cur.execute('insert into routine values (?, ?, ?)',
-                    (id, routine.name, routine.yaml(), datetime.now()))
+    id = str(uuid.uuid4())
+    routine.id = id
+    cur.execute('insert into routine values (?, ?, ?, ?)',
+                (routine.id, routine.name, routine.yaml(), datetime.now()))
 
     con.commit()
     con.close()
+
+    return routine.id
 
 
 # This function is not safe and might break database! Use with caution!
 @maybe_create_routines_db
 def update_routine(routine: Routine):
+
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
     con = sqlite3.connect(db_routine)
@@ -198,16 +192,17 @@ def list_routine(keyword='', tags={}):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute(f'select name, config, savedAt from routine where name like "%{keyword}%" order by savedAt desc')
+    cur.execute(f'select id, name, config, savedAt from routine where name like "%{keyword}%" order by savedAt desc')
     records = cur.fetchall()
     if tags:
         records = filter_routines(records, tags)
+    ids = [record[0] for record in records]
     names = [record[1] for record in records]
     timestamps = [record[3] for record in records]
     environments, descriptions = extract_metadata(records)
     con.close()
 
-    return names, timestamps, environments, descriptions
+    return ids, names, timestamps, environments, descriptions
 
 
 @maybe_create_runs_db

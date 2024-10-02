@@ -1,3 +1,4 @@
+import json
 import warnings
 import sqlite3
 import traceback
@@ -991,17 +992,23 @@ class BadgerRoutinePage(QWidget):
             )
 
         try:
-            save_routine(routine)
+            if self.routine:
+                keys_to_exclude = ['data', 'id', 'name', 'description']
+                old_dict = json.loads(self.routine.json())
+                old_dict = {k: v for k, v in old_dict.items() if k not in keys_to_exclude}
+                new_dict = json.loads(routine.json())
+                new_dict = {k: v for k, v in new_dict.items() if k not in keys_to_exclude}
+                if old_dict == new_dict:
+                    routine.id = self.routine.id
+                    update_routine(routine)
+                else:
+                    save_routine(routine)
+            else:
+                save_routine(routine)
         except sqlite3.IntegrityError:
             return QMessageBox.critical(
                 self, 'Error!',
                 f'Routine {routine.name} already existed in the database! Please '
                 f'choose another name.')
-
-        return 0
-
-    def delete(self):
-        name = self.edit_save.text() or self.edit_save.placeholderText()
-        remove_routine(name)
 
         return 0
