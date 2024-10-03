@@ -207,6 +207,8 @@ class PVContextMenu(QMenu):
 class FormulaDialog(QDialog):
     """Formula Dialog - when a user right clicks on a row in the list of curves, they have the option to input a formula
     They could opt to type it instead, but this opens a box that is a nicer UI for inputting a formula."""
+    formula_saved = pyqtSignal(tuple)
+
     def __init__(self, parent: QObject) -> None:
         super().__init__(parent)
         self.setWindowTitle("Formula Input")
@@ -287,6 +289,7 @@ class FormulaDialog(QDialog):
         # Add an "OK" button to accept the formula and close the dialog
         ok_button = QPushButton("OK", self)
         ok_button.clicked.connect(self.saveFormula)
+
         layout.addWidget(ok_button)
         self.showPVList()
         self.pv_list.show()
@@ -340,10 +343,19 @@ class FormulaDialog(QDialog):
     
     @pyqtSlot()
     def saveFormula(self):
-        data_dict = self.model.getData()
+        """
+        This method emits the saved formula information and then closes the formula editor.
 
-        print(self.name_field.text(), self.field.text(), data_dict)
-        return (self.name_field.text(), self.field.text(), data_dict)
+        Return
+        ------
+        result: a tuple comprising the name (str), formula (str) and dictionary of the PVs (dict)   
+        """
+        data_dict = self.model.getData()
+        result = self.name_field.text(), self.field.text(), data_dict
+        self.formula_saved.emit(result)
+        self.close()
+
+        return result
 
 class PVTableModel(QAbstractTableModel):
     headerDataChanged = pyqtSignal(Qt.Orientation, int, int)

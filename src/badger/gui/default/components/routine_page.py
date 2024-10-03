@@ -317,7 +317,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(True)
         self.env_box.edit_obj.clear()
         self.env_box.obj_table.set_selected(objectives)
-        self.env_box.obj_table.addtl_obs(routine.additional_observables)
+        self.env_box.obj_table.addtl_obs = routine.additional_observables
         self.env_box.obj_table.set_rules(routine.vocs.objectives)
 
         constraints = routine.vocs.constraints
