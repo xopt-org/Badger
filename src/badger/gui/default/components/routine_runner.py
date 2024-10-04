@@ -175,14 +175,6 @@ class BadgerRoutineSubprocess:
 
                 self.routine.initial_points = init_points
 
-            # run_routine(
-            #     self.routine,
-            #     active_callback=self.check_run_status,
-            #     generate_callback=self.before_evaluate,
-            #     evaluate_callback=self.after_evaluate,
-            #     states_callback=self.states_ready
-            # )
-
         except BadgerRunTerminatedError as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
