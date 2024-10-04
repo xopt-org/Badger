@@ -33,9 +33,7 @@ dependencies = [
     "pillow",
     "requests",
     "tqdm",
-    "xopt",
-#    "flake8",
-#    "zipp"
+    "xopt"
 ]
 dynamic = ["version"]
 [tool.setuptools_scm]
