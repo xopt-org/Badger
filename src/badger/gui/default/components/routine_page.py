@@ -5,6 +5,7 @@ import copy
 from functools import partial
 import os
 import yaml
+import json
 
 import numpy as np
 import pandas as pd
@@ -36,6 +37,7 @@ from ..windows.review_dialog import BadgerReviewDialog
 from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..windows.expandable_message_box import ExpandableMessageBox
 from ..utils import filter_generator_config
 from ....db import save_routine, remove_routine, update_routine
 from ....environment import instantiate_env
@@ -53,7 +55,8 @@ CONS_RELATION_DICT = {
 
 
 class BadgerRoutinePage(QWidget):
-    sig_updated = pyqtSignal(str, str)  # routine name, routine description
+    name_updated = pyqtSignal(str, str) # routine name, routine new name
+    descr_updated = pyqtSignal(str, str)  # routine name, routine description
 
     def __init__(self):
         super().__init__()
@@ -540,7 +543,7 @@ class BadgerRoutinePage(QWidget):
             if np.all([not table.item(row, col).text() for col in range(table.columnCount())]):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(str(var_curr[name]))
+                    item = QTableWidgetItem(f'{var_curr[name]:.4g}')
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
@@ -585,7 +588,7 @@ class BadgerRoutinePage(QWidget):
                 try:
                     point = random_points.pop(0)
                     for col, name in enumerate(vname_selected):
-                        item = QTableWidgetItem(str(point[name]))
+                        item = QTableWidgetItem(f'{point[name]:.4g}')
                         table.setItem(row, col, item)
                 except IndexError:  # No more points to add
                     break
@@ -781,12 +784,12 @@ class BadgerRoutinePage(QWidget):
                 self.try_populate_init_table()
 
             self.env_box.var_table.lock_bounds()
-            self.env_box.init_table.setDisabled(True)
+            self.env_box.init_table.set_uneditable()
         else:
             self.env_box.switch_var_panel_style(False)
 
             self.env_box.var_table.unlock_bounds()
-            self.env_box.init_table.setDisabled(False)
+            self.env_box.init_table.set_editable()
 
     def try_populate_init_table(self):
         if (self.env_box.relative_to_curr.isChecked() and
@@ -969,7 +972,7 @@ class BadgerRoutinePage(QWidget):
         try:
             update_routine(routine)
             # Notify routine list to update
-            self.sig_updated.emit(routine.name, routine.description)
+            self.descr_updated.emit(routine.name, routine.description)
             QMessageBox.information(
                 self,
                 'Update success!',
@@ -985,15 +988,34 @@ class BadgerRoutinePage(QWidget):
     def save(self):
         try:
             routine = self._compose_routine()
-        except ValidationError:
-            return QMessageBox.critical(
-                self,
-                'Error!',
-                traceback.format_exc()
+        except ValidationError as e:
+            error_message = "".join([error['msg']+'\n\n' for error in e.errors()]).strip()
+            details = traceback.format_exc()
+            dialog = ExpandableMessageBox(
+                title="Error!",
+                text=error_message,
+                detailedText=details,
+                parent=self
             )
+            dialog.setIcon(QMessageBox.Critical)
+            dialog.exec_()
+            return
 
         try:
-            save_routine(routine)
+            if self.routine and routine != self.routine:
+                old_dict = json.loads(self.routine.json())
+                old_dict.pop('data')
+                new_dict = json.loads(routine.json())
+                new_dict.pop('data')
+                new_dict['name'] = old_dict['name']
+                new_dict['description'] = new_dict['description']
+                if old_dict == new_dict:
+                    update_routine(routine, old_name=self.routine.name)
+                    self.name_updated.emit(self.routine.name, routine.name)
+                else:
+                    save_routine(routine)
+            else:
+                save_routine(routine)
         except sqlite3.IntegrityError:
             return QMessageBox.critical(
                 self, 'Error!',

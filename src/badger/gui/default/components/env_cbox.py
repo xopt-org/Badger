@@ -200,9 +200,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_init.addWidget(btn_clear)
         vbox_init.addWidget(action_init)
         self.init_table = init_data_table()
-        # TODO: should allow scrolling, so better to set each cell ineditable
-        # rather than disable the whole table
-        self.init_table.setDisabled(True)
+        self.init_table.set_uneditable()
         vbox_init.addWidget(self.init_table)
         cbox_init.setContentLayout(vbox_init)
         cbox_init.expand()
@@ -339,7 +337,7 @@ class BadgerEnvBox(CollapsibleBox):
         rx = QRegExp(keyword)
 
         _variables = []
-        for var in self.var_table.variables:
+        for var in self.var_table.all_variables:
             vname = next(iter(var))
             if rx.indexIn(vname, 0) != -1:
                 _variables.append(var)

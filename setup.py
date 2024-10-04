@@ -6,7 +6,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description='Core of the Badger optimizer',
-    url='https://github.com/SLAC-ML/Badger',
+    url='https://github.com/xopt-org/Badger',
     author='Zhe Zhang',
     author_email='zhezhang@slac.stanford.edu',
     license='GPL',
