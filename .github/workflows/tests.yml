@@ -37,7 +37,7 @@ jobs:
           activate-environment: badger-dev
           use-mamba: true
           python-version: ${{ matrix.python-version }}
-          environment-file: env/environment.yml
+#          environment-file: env/environment.yml
 
 #      # Have to install pyqt5 with pip
 #      - name: Install pyqt5
