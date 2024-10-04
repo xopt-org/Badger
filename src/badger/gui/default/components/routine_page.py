@@ -34,7 +34,6 @@ from ..windows.docs_window import BadgerDocsWindow
 from ..windows.edit_script_dialog import BadgerEditScriptDialog
 from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
-from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..windows.expandable_message_box import ExpandableMessageBox
@@ -45,7 +44,10 @@ from ....errors import BadgerRoutineError
 from ....factory import list_generators, list_env, get_env
 from ....routine import Routine
 from ....settings import read_value
-from ....utils import get_yaml_string, load_config, strtobool
+from ....utils import (
+    get_yaml_string, load_config, strtobool,
+    get_badger_version, get_xopt_version
+)
 
 CONS_RELATION_DICT = {
     '>': 'GREATER_THAN',
@@ -925,6 +927,9 @@ class BadgerRoutinePage(QWidget):
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(
+                # Metadata
+                badger_version=get_badger_version(),
+                xopt_version=get_xopt_version(),
                 # Xopt part
                 vocs=vocs,
                 generator={"name": generator_name} | generator_params,
