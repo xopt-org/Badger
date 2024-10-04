@@ -28,7 +28,7 @@ jobs:
       DISPLAY: ':99.0'
       QT_MAC_WANTS_LAYER: 1  # PyQT gui tests involving qtbot interaction on macOS will fail without this
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
