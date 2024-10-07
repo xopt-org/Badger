@@ -1,6 +1,0 @@
-include src/badger/_version.py
-include src/badger/gui/default/images/*.png
-graft src/badger/tests
-prune src/badger/tests/**/__pycache__
-recursive-exclude src/badger/tests **/.DS_Store
-graft src/badger/built_in_plugins
