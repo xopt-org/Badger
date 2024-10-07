@@ -12,4 +12,4 @@ __pycache__
 *.db
 config.yaml
 .vscode
-
+src/badger/_version.py
