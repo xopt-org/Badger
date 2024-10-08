@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
-    QAbstractItemView,
     QCheckBox,
     QMessageBox,
 )

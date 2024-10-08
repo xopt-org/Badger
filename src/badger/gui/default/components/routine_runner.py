@@ -6,9 +6,9 @@ import time
 import traceback
 import pandas as pd
 from pandas import DataFrame
-import torch  # for converting dtype str to torch object
+import torch  # noqa: F401. For converting dtype str to torch object.
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
-from ....core import run_routine, Routine
+from ....core import Routine
 from ....errors import BadgerRunTerminatedError
 from ....tests.utils import get_current_vars
 from ....routine import calculate_variable_bounds, calculate_initial_points

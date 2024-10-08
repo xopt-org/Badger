@@ -34,7 +34,6 @@ from ..windows.docs_window import BadgerDocsWindow
 from ..windows.edit_script_dialog import BadgerEditScriptDialog
 from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
-from ..windows.var_dialog import BadgerVariableDialog
 from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..windows.expandable_message_box import ExpandableMessageBox

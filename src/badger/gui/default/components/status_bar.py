@@ -1,6 +1,5 @@
 from importlib import resources
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QSize
 from ..windows.settings_dialog import BadgerSettingsDialog

@@ -1,8 +1,8 @@
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QWidget
+from PyQt5.QtWidgets import QDialog, QVBoxLayout
 
 from badger.core import Routine
 

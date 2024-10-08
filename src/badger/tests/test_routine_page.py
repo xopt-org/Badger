@@ -50,7 +50,6 @@ def test_routine_generation(qtbot):
 
 
 def test_add_additional_vars(qtbot):
-    from badger.db import load_routine, remove_routine
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()

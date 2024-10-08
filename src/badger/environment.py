@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from badger.errors import (
     BadgerEnvObsError,
     BadgerEnvVarError,
-    BadgerInterfaceChannelError,
     BadgerNoInterfaceError,
 )
 from badger.interface import Interface

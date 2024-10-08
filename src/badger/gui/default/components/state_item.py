@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from PyQt5.QtWidgets import QComboBox, QStyledItemDelegate
+from PyQt5.QtWidgets import QStyledItemDelegate
 from ..utils import NoHoverFocusComboBox
 
 

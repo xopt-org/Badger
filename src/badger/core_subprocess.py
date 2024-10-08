@@ -1,9 +1,7 @@
 import logging
 import time
-import typing
 
 import pkg_resources
-import torch
 from pandas import concat, DataFrame
 
 logger = logging.getLogger(__name__)
@@ -46,7 +44,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
     except IndexError:  # no feasible data
-        logger.info(f"no feasible solutions found")
+        logger.info("no feasible solutions found")
         is_optimal = False
 
     vars = list(result[vocs.variable_names].to_numpy()[0])

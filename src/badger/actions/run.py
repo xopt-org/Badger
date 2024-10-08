@@ -6,9 +6,7 @@ import sys
 import time
 import signal
 from pandas import DataFrame
-from coolname import generate_slug
-from ..utils import load_config, merge_params
-from ..utils import config_list_to_dict, curr_ts
+from ..utils import curr_ts
 from ..core import run_routine as run
 from ..routine import Routine
 from ..settings import read_value

@@ -22,7 +22,7 @@ class BadgerVariableDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
-        self.setWindowTitle(f"Add variable")
+        self.setWindowTitle("Add variable")
         self.setMinimumWidth(360)
 
         vbox = QVBoxLayout(self)

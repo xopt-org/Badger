@@ -295,7 +295,7 @@ def get_runs():
     con = sqlite3.connect(db_run)
     cur = con.cursor()
 
-    cur.execute(f"select filename from run order by savedAt desc")
+    cur.execute("select filename from run order by savedAt desc")
     records = cur.fetchall()
 
     con.close()

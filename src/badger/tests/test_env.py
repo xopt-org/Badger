@@ -64,7 +64,6 @@ def test_get_variables():
     from badger.factory import get_env, get_intf
     from badger.errors import (
         BadgerNoInterfaceError,
-        BadgerInterfaceChannelError,
     )
 
     Interface, _ = get_intf("test")
@@ -96,7 +95,6 @@ def test_get_variables():
 def test_set_variables():
     from badger.factory import get_env, get_intf
     from badger.errors import (
-        BadgerInterfaceChannelError,
         BadgerEnvVarError,
         BadgerNoInterfaceError,
     )

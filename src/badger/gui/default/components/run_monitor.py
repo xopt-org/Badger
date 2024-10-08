@@ -1,13 +1,12 @@
 import os
 import traceback
-from copy import deepcopy
 from importlib import resources
 from typing import List
 
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSignal, QThreadPool
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QAction,
@@ -17,10 +16,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QMenu,
     QMessageBox,
-    QPushButton,
-    QScrollArea,
     QStyledItemDelegate,
-    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,

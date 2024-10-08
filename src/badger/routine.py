@@ -3,7 +3,6 @@ from copy import deepcopy
 from typing import Any, List, Optional
 
 import numpy as np
-import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pydantic import (
@@ -18,10 +17,7 @@ from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
 from xopt.utils import get_local_region
 from badger.utils import curr_ts
-from xopt.utils import get_local_region
-from badger.utils import curr_ts
 from badger.environment import Environment, instantiate_env
-from badger.utils import curr_ts
 
 
 class Routine(Xopt):
