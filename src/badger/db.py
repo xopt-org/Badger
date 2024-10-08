@@ -102,8 +102,6 @@ def save_routine(routine: Routine):
     con.commit()
     con.close()
 
-    return routine.id
-
 
 # This function is not safe and might break database! Use with caution!
 @maybe_create_routines_db
@@ -158,7 +156,10 @@ def load_routine(id: str):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
-    cur.execute('select * from routine where id=:id', {'id': id})
+    if isinstance(id, str) and id.strip():
+        cur.execute('select * from routine where id=:id', {'id': id})
+    else:
+        raise ValueError("Expected id to be a non-empty string.")
 
     records = cur.fetchall()
     con.close()
@@ -179,8 +180,8 @@ def load_routine(id: str):
 
             return routine, records[0][3]
     elif len(records) == 0:
-        # logger.warning(f'Routine {name} not found in the database!')
-        return None, None
+        raise BadgerDBError(
+            f'Routine id {id} not found in the database!')
     else:
         raise BadgerDBError(
             f'Multiple routines with id {id} found in the database!')

@@ -57,7 +57,7 @@ def test_close_main(qtbot, init_multiprocessing):
     routine = create_routine()
     home_page = window.home_page
     home_page.current_routine = routine
-    routine.id = save_routine(routine)
+    save_routine(routine)
     home_page.run_monitor.testing = True
     home_page.run_monitor.termination_condition = {
         "tc_idx": 0,

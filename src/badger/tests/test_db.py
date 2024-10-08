@@ -9,9 +9,9 @@ class TestDB:
         fix_db_path_issue()
 
         routine = create_routine()
-        id = save_routine(routine)
+        save_routine(routine)
 
-        remove_routine(id)
+        remove_routine(routine.id)
 
     def test_load_routine(self):
         from badger.db import save_routine, load_routine, remove_routine
@@ -20,10 +20,10 @@ class TestDB:
         fix_db_path_issue()
 
         routine = create_routine()
-        id = save_routine(routine)
+        save_routine(routine)
 
-        new_routine, _ = load_routine(id)
+        new_routine, _ = load_routine(routine.id)
         assert new_routine.generator == routine.generator
         assert new_routine.vocs == routine.vocs
 
-        remove_routine(id)
+        remove_routine(routine.id)

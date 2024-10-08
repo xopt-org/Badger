@@ -36,7 +36,7 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
     ]
 
     for ele in routines:
-        ele.id = save_routine(ele)
+        save_routine(ele)
         home_page.current_routine = ele
         home_page.run_monitor.testing = True
         home_page.run_monitor.termination_condition = {

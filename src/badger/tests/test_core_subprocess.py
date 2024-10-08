@@ -67,7 +67,7 @@ class TestCore:
 
         self.routine = create_routine()
         time.sleep(1)
-        self.routine.id = save_routine(self.routine)
+        save_routine(self.routine)
         self.termination_condition = {
             "tc_idx": 0,
             "max_eval": 3,
@@ -153,7 +153,7 @@ class TestCore:
         self.routine = create_routine_turbo()
         time.sleep(1)
         assert self.routine.generator.turbo_controller.best_value is None
-        self.routine.id = save_routine(self.routine)
+        save_routine(self.routine)
         self.termination_condition = {
             "tc_idx": 0,
             "max_eval": 3,

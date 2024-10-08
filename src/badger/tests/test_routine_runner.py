@@ -41,7 +41,7 @@ class TestRoutineRunner:
         fix_db_path_issue()
 
         routine = create_routine()
-        routine.id = save_routine(routine)
+        save_routine(routine)
         instance = BadgerRoutineSubprocess(process_manager, routine)
         instance.pause_event = multiprocessing.Event()
         return instance
