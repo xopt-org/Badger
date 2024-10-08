@@ -11,3 +11,4 @@ __pycache__
 *.pickle
 *.db
 .vscode
+src/badger/_version.py
