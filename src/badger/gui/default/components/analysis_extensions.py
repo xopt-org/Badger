@@ -30,7 +30,7 @@ class ParetoFrontViewer(AnalysisExtension):
 
         self.plot_widget = pg.PlotWidget()
 
-        self.scatter_plot = self.plot_widget.plot(pen=None, symbol='o', symbolSize=10)
+        self.scatter_plot = self.plot_widget.plot(pen=None, symbol="o", symbolSize=10)
 
         layout = QVBoxLayout()
         layout.addWidget(self.plot_widget)
@@ -38,8 +38,9 @@ class ParetoFrontViewer(AnalysisExtension):
 
     def update_window(self, routine: Routine):
         if len(routine.vocs.objective_names) != 2:
-            raise ValueError("cannot use pareto front viewer unless there are 2 "
-                             "objectives")
+            raise ValueError(
+                "cannot use pareto front viewer unless there are 2 " "objectives"
+            )
 
         x_name = routine.vocs.objective_names[0]
         y_name = routine.vocs.objective_names[1]

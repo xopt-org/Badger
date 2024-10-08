@@ -52,7 +52,7 @@ class MyTableView(QtWidgets.QTableView):
         self.model = MyModel()
         self.setModel(self.model)
 
-        for (idx, data) in enumerate(["foo", "bar", "baz"]):
+        for idx, data in enumerate(["foo", "bar", "baz"]):
             item_1 = QtGui.QStandardItem("Item {}".format(idx))
             item_1.setEditable(False)
             item_1.setDropEnabled(False)

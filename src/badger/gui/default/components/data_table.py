@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem, QHeade
 from PyQt5.QtCore import Qt
 
 
-stylesheet = '''
+stylesheet = """
     QTableWidget
     {
         alternate-background-color: #262E38;
@@ -13,7 +13,7 @@ stylesheet = '''
         background-color: #B3E5FC;
         color: #000000;
     }
-'''
+"""
 
 
 # https://stackoverflow.com/questions/60715462/how-to-copy-and-paste-multiple-cells-in-qtablewidget-in-pyqt5
@@ -30,17 +30,19 @@ class TableWithCopy(QTableWidget):
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
-        if event.key() == Qt.Key.Key_C and (event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+        if event.key() == Qt.Key.Key_C and (
+            event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
             copied_cells = sorted(self.selectedIndexes())
 
-            copy_text = ''
+            copy_text = ""
             max_column = copied_cells[-1].column()
             for c in copied_cells:
                 copy_text += self.item(c.row(), c.column()).text()
                 if c.column() == max_column:
-                    copy_text += '\n'
+                    copy_text += "\n"
                 else:
-                    copy_text += '\t'
+                    copy_text += "\t"
 
             QApplication.clipboard().setText(copy_text)
 
@@ -58,7 +60,7 @@ def update_table(table, data=None):
     if data is None:
         return table
 
-    _data = data.drop(columns=['timestamp', 'xopt_error', 'xopt_runtime'])
+    _data = data.drop(columns=["timestamp", "xopt_error", "xopt_runtime"])
 
     m, n = _data.shape
     table.setRowCount(m)
@@ -66,9 +68,11 @@ def update_table(table, data=None):
     for i in range(m):
         for j in range(n):
             v = _data.iloc[i, j]
-            table.setItem(i, j, QTableWidgetItem(f'{v:.4g}'))
+            table.setItem(i, j, QTableWidgetItem(f"{v:.4g}"))
     table.setHorizontalHeaderLabels(list(_data.columns))
-    table.setVerticalHeaderLabels(list(map(str, _data.index)))  # row index starts from 0
+    table.setVerticalHeaderLabels(
+        list(map(str, _data.index))
+    )  # row index starts from 0
     table.horizontalHeader().setVisible(True)
 
     return table
@@ -90,7 +94,7 @@ def add_row(table, row):
     r = table.rowCount()
     table.insertRow(r)
     for i, v in enumerate(row):
-        table.setItem(r, i, QTableWidgetItem(f'{v:.4g}'))
+        table.setItem(r, i, QTableWidgetItem(f"{v:.4g}"))
     table.setVerticalHeaderItem(r, QTableWidgetItem(str(r)))
 
     return table
@@ -124,7 +128,10 @@ def init_data_table(variable_names=None):
 
 def get_horizontal_header_as_list(table):
     header = table.horizontalHeader()
-    header_labels = [header.model().headerData(i, header.orientation()) for i in range(header.count())]
+    header_labels = [
+        header.model().headerData(i, header.orientation())
+        for i in range(header.count())
+    ]
     return header_labels
 
 
@@ -141,7 +148,7 @@ def get_table_content_as_dict(table):
             if item is not None:
                 column_values.append(item.text())
             else:
-                column_values.append('')
+                column_values.append("")
 
         table_content[column_name] = column_values
 
@@ -162,20 +169,20 @@ def update_init_data_table(table, variable_names):
                 table.setItem(row, col, QTableWidgetItem(current_init_data[name][row]))
         else:
             for row in range(table.rowCount()):
-                table.setItem(row, col, QTableWidgetItem(''))
+                table.setItem(row, col, QTableWidgetItem(""))
 
 
 def set_init_data_table(table, data: DataFrame):
     variable_names = get_horizontal_header_as_list(table)
     try:
-        data_dict = data.to_dict('list')
+        data_dict = data.to_dict("list")
     except AttributeError:
         data_dict = None
 
     # Clear the table
     for col, name in enumerate(variable_names):
         for row in range(table.rowCount()):
-            table.setItem(row, col, QTableWidgetItem(''))
+            table.setItem(row, col, QTableWidgetItem(""))
 
     if data_dict is None:
         return
@@ -183,4 +190,4 @@ def set_init_data_table(table, data: DataFrame):
     # Fill the table
     for col, name in enumerate(variable_names):
         for row in range(len(data_dict[name])):
-            table.setItem(row, col, QTableWidgetItem(f'{data_dict[name][row]:.4g}'))
+            table.setItem(row, col, QTableWidgetItem(f"{data_dict[name][row]:.4g}"))

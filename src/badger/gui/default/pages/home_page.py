@@ -32,7 +32,7 @@ from ....db import (
     list_routine,
     load_routine,
     remove_routine,
-    get_routine_name_by_filename
+    get_routine_name_by_filename,
 )
 from ....settings import read_value
 from ....utils import get_header, strtobool
@@ -57,7 +57,13 @@ from ..components.routine_editor import BadgerRoutineEditor
 from ..components.status_bar import BadgerStatusBar
 from ..components.filter_cbox import BadgerFilterBox
 from ..utils import create_button, ModalOverlay
-from ....db import list_routine, load_routine, remove_routine, get_runs_by_routine, get_runs
+from ....db import (
+    list_routine,
+    load_routine,
+    remove_routine,
+    get_runs_by_routine,
+    get_runs,
+)
 from ....db import import_routines, export_routines
 from ....archive import load_run, delete_run, get_base_run_filename
 from ....utils import get_header, strtobool
@@ -78,7 +84,6 @@ QPushButton
     background-color: #A9444E;
 }
 """
-
 
 
 class BadgerHomePage(QWidget):
@@ -347,7 +352,11 @@ class BadgerHomePage(QWidget):
             self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(
-        self, routine_names: List[str], timestamps: List[str], environments: List[str], descriptions: List[str]
+        self,
+        routine_names: List[str],
+        timestamps: List[str],
+        environments: List[str],
+        descriptions: List[str],
     ):
         try:
             if self.prev_routine_item.routine_name in routine_names:
@@ -358,15 +367,24 @@ class BadgerHomePage(QWidget):
         except Exception:
             selected_routine = None
         self.routine_list.clear()
-        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
-        env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
+        BADGER_PLUGIN_ROOT = read_value("BADGER_PLUGIN_ROOT")
+        env_dict_dir = os.path.join(
+            BADGER_PLUGIN_ROOT, "environments", "env_colors.yaml"
+        )
         try:
-            with open(env_dict_dir, 'r') as stream:
+            with open(env_dict_dir, "r") as stream:
                 env_dict = yaml.safe_load(stream)
         except (FileNotFoundError, yaml.YAMLError):
             env_dict = {}
         for i, routine_name in enumerate(routine_names):
-            _item = BadgerRoutineItem(routine_name, timestamps[i], environments[i], env_dict, descriptions[i], self)
+            _item = BadgerRoutineItem(
+                routine_name,
+                timestamps[i],
+                environments[i],
+                env_dict,
+                descriptions[i],
+                self,
+            )
             _item.sig_del.connect(self.delete_routine)
             item = QListWidgetItem(self.routine_list)
             item.routine_name = routine_name  # dirty trick
@@ -388,13 +406,17 @@ class BadgerHomePage(QWidget):
         if tag_reg:
             tags["region"] = tag_reg
         if tag_gain:
-            tags['gain'] = tag_gain
-        routine_names, timestamps, environments, descriptions = list_routine(keyword, tags)
+            tags["gain"] = tag_gain
+        routine_names, timestamps, environments, descriptions = list_routine(
+            keyword, tags
+        )
 
         return routine_names, timestamps, environments, descriptions
 
     def refresh_routine_list(self):
-        routine_names, timestamps, environments, descriptions = self.get_current_routines()
+        routine_names, timestamps, environments, descriptions = (
+            self.get_current_routines()
+        )
 
         self.build_routine_list(routine_names, timestamps, environments, descriptions)
 
@@ -426,7 +448,9 @@ class BadgerHomePage(QWidget):
         run_filename = get_base_run_filename(self.cb_history.currentText())
         try:
             _routine = load_run(run_filename)
-            _routine.name = get_routine_name_by_filename(run_filename) # in case name changed
+            _routine.name = get_routine_name_by_filename(
+                run_filename
+            )  # in case name changed
             # if self.current_routine:
             #     _routine.name = self.current_routine.name
             routine, _ = load_routine(_routine.name)  # get the initial routine
@@ -514,7 +538,7 @@ class BadgerHomePage(QWidget):
     def new_run(self):
         self.cover_page()
 
-        self.cb_history.insertItem(0, 'Optimization in progress...')
+        self.cb_history.insertItem(0, "Optimization in progress...")
         self.cb_history.setCurrentIndex(0)
 
         header = get_header(self.current_routine)
@@ -665,7 +689,11 @@ class BadgerHomePage(QWidget):
                 f"Import success: imported all routines from {filename}",
             )
         except Exception as e:
-            QMessageBox.warning(self, 'Heads-up!', f'Failed to import the following routines since they already existed: \n{str(e)}')
+            QMessageBox.warning(
+                self,
+                "Heads-up!",
+                f"Failed to import the following routines since they already existed: \n{str(e)}",
+            )
 
     def cover_page(self):
         return  # disable overlay for now

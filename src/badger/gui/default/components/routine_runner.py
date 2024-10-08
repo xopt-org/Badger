@@ -113,14 +113,16 @@ class BadgerRoutineSubprocess:
             variables_updated = calculate_variable_bounds(
                 self.routine.vrange_limit_options,
                 self.routine.vocs,
-                self.routine.environment)
+                self.routine.environment,
+            )
 
             self.routine.vocs.variables = variables_updated
 
             init_points = calculate_initial_points(
                 self.routine.initial_point_actions,
                 self.routine.vocs,
-                self.routine.environment)
+                self.routine.environment,
+            )
             try:
                 init_points = pd.DataFrame(init_points)
             except IndexError:

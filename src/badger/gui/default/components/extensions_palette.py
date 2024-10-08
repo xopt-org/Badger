@@ -1,10 +1,19 @@
 import traceback
 
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, \
-    QWidget, QLabel, QMessageBox, QSizePolicy
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+    QLabel,
+    QMessageBox,
+    QSizePolicy,
+)
 from PyQt5.QtCore import Qt
-from badger.gui.default.components.analysis_extensions import AnalysisExtension, \
-    ParetoFrontViewer
+from badger.gui.default.components.analysis_extensions import (
+    AnalysisExtension,
+    ParetoFrontViewer,
+)
 
 
 class ExtensionsPalette(QMainWindow):
@@ -37,6 +46,7 @@ class ExtensionsPalette(QMainWindow):
         Add a child window to the run monitor.
 
     """
+
     def __init__(self, run_monitor):
         """
         Initialize the ExtensionsPalette.
@@ -51,7 +61,7 @@ class ExtensionsPalette(QMainWindow):
 
         self.run_monitor = run_monitor
 
-        self.setWindowTitle('Badger Extensions Palette')
+        self.setWindowTitle("Badger Extensions Palette")
         self.resize(320, 240)
 
         central_widget = QWidget()
@@ -61,13 +71,10 @@ class ExtensionsPalette(QMainWindow):
 
         self.base_text = "Number of active exensions: "
         self.text_box = QLabel(self.base_text + "0", self)
-        self.text_box.setSizePolicy(
-            QSizePolicy.Expanding,
-            QSizePolicy.Preferred
-        )
+        self.text_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.text_box.setAlignment(Qt.AlignCenter)
 
-        self.btn_data_viewer = QPushButton('ParetoFrontViewer')
+        self.btn_data_viewer = QPushButton("ParetoFrontViewer")
 
         layout.addWidget(self.btn_data_viewer)
         layout.addStretch()
@@ -91,8 +98,7 @@ class ExtensionsPalette(QMainWindow):
         return len(self.run_monitor.active_extensions)
 
     def update_palette(self):
-        self.text_box.setText(
-            self.base_text + str(self.n_active_extensions))
+        self.text_box.setText(self.base_text + str(self.n_active_extensions))
 
     def add_pf_viewer(self):
         """
@@ -115,15 +121,12 @@ class ExtensionsPalette(QMainWindow):
 
         if self.run_monitor.routine is not None:
             try:
-                child_window.update_window(
-                    self.run_monitor.routine
-                )
+                child_window.update_window(self.run_monitor.routine)
                 self.run_monitor.active_extensions.append(child_window)
                 child_window.show()
             except ValueError:
                 QMessageBox.warning(
-                    self, 'Extension is not applicable!',
-                    traceback.format_exc()
+                    self, "Extension is not applicable!", traceback.format_exc()
                 )
 
         self.update_palette()

@@ -11,7 +11,6 @@ class BadgerNotImplementedError(Exception):
 
 
 class BadgerRunTerminatedError(Exception):
-
     def __init__(self, message="Optimization run has been terminated!"):
         super().__init__(message)
 
@@ -29,7 +28,6 @@ class BadgerEnvObsError(Exception):
 
 
 class BadgerNoInterfaceError(Exception):
-
     def __init__(self, message="Must provide an interface!"):
         super().__init__(message)
 

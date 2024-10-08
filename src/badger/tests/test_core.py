@@ -116,9 +116,11 @@ class TestCore:
         }
         evaluate_points_result = routine.evaluate_data(self.points)
 
-        vocs_list = ['x0', 'x1', 'x2', 'x3', 'f']
-        assert evaluate_points_result[vocs_list].astype(float).equals(
-            self.points_eval_target.astype(float)
+        vocs_list = ["x0", "x1", "x2", "x3", "f"]
+        assert (
+            evaluate_points_result[vocs_list]
+            .astype(float)
+            .equals(self.points_eval_target.astype(float))
         )
 
     def test_run_turbo(self) -> None:

@@ -132,8 +132,7 @@ class TestRoutineRunner:
         # Turn off relative to current
         editor.routine_page.env_box.relative_to_curr.setChecked(False)
 
-        qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                        "expected_improvement")
+        qtbot.keyClicks(editor.routine_page.generator_box.cb, "expected_improvement")
         params = editor.routine_page.generator_box.edit.toPlainText()
         # Turn on turbo controller
         params = params.replace("turbo_controller: null", "turbo_controller: optimize")

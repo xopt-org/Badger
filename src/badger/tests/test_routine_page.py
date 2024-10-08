@@ -82,10 +82,7 @@ def test_add_additional_vars(qtbot):
     window.env_box.var_table.cellChanged.emit(20, 1)
 
     # Why isn't this updating the table after changing the value?
-    variables = {
-        "x0": [-1, 1],
-        "x20": [-1, 1]
-    }
+    variables = {"x0": [-1, 1], "x20": [-1, 1]}
 
     # Check that new variable was added
     # Its checkbox checked by default when added
@@ -122,8 +119,10 @@ def test_initial_points(qtbot):
     # test routine generation with fake current values selected
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
     routine = window._compose_routine()
-    assert routine.initial_points.to_dict() == pd.DataFrame(
-        {"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
+    assert (
+        routine.initial_points.to_dict()
+        == pd.DataFrame({"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
+    )
 
 
 def test_ui_update(qtbot):

@@ -1,6 +1,7 @@
 """
 observers...
 """
+
 from datetime import datetime
 from .event import Events
 
@@ -35,5 +36,5 @@ class _Tracker(object):
         return (
             now.strftime("%Y-%m-%d %H:%M:%S"),
             time_elapsed.total_seconds(),
-            time_delta.total_seconds()
+            time_delta.total_seconds(),
         )

@@ -602,7 +602,7 @@ class BadgerOptMonitor(QWidget):
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.sig_run_started.emit()
         self.btn_stop.setDisabled(False)
-        self.run_action.setText('Stop')
+        self.run_action.setText("Stop")
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText("Stop")
         self.run_until_action.setIcon(self.icon_stop)
@@ -1100,7 +1100,7 @@ class BadgerOptMonitor(QWidget):
         if self.btn_stop.defaultAction() is not self.run_action:
             self.btn_stop.setDefaultAction(self.run_action)
 
-        if self.run_action.text() == 'Run':
+        if self.run_action.text() == "Run":
             self.btn_stop.setDisabled(True)
             self.start()
         else:
@@ -1161,7 +1161,6 @@ def create_cursor_line():
 
 
 def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
-
     for name in names:
         if ts is not None:
             curves[name].setData(ts, data[name].to_numpy(dtype=np.double))

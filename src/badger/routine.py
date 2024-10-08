@@ -164,20 +164,20 @@ class Routine(Xopt):
         except AttributeError:
             pass
 
-        return json.dumps(dict_result)    
+        return json.dumps(dict_result)
 
     def __eq__(self, routine):
         if not isinstance(routine, Routine):
             return False
         self_dict = json.loads(self.json())
-        self_dict.pop('data')
+        self_dict.pop("data")
         routine_dict = json.loads(routine.json())
-        routine_dict.pop('data')
+        routine_dict.pop("data")
         return self_dict == routine_dict
-    
+
     def __hash__(self):
         self_dict = json.loads(self.json())
-        self_dict.pop('data')
+        self_dict.pop("data")
         return hash(tuple(sorted(self_dict)))
 
 
@@ -193,20 +193,22 @@ def calculate_variable_bounds(limit_options, vocs, env):
         except KeyError:
             continue
 
-        option_idx = limit_option['limit_option_idx']
+        option_idx = limit_option["limit_option_idx"]
         if option_idx:
-            ratio = limit_option['ratio_full']
+            ratio = limit_option["ratio_full"]
             hard_bounds = var_range[name]
             delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
             bounds = [var_curr[name] - delta, var_curr[name] + delta]
             bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
             variables_updated[name] = bounds
         else:
-            ratio = limit_option['ratio_curr']
+            ratio = limit_option["ratio_curr"]
             hard_bounds = var_range[name]
             sign = np.sign(var_curr[name])
-            bounds = [var_curr[name] * (1 - 0.5 * sign * ratio),
-                      var_curr[name] * (1 + 0.5 * sign * ratio)]
+            bounds = [
+                var_curr[name] * (1 - 0.5 * sign * ratio),
+                var_curr[name] * (1 + 0.5 * sign * ratio),
+            ]
             bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
             variables_updated[name] = bounds
 
@@ -218,18 +220,18 @@ def calculate_initial_points(init_actions, vocs, env):
     init_points = {k: [] for k in vnames}
 
     for action in init_actions:
-        if action['type'] == 'add_curr':
+        if action["type"] == "add_curr":
             var_curr = env._get_variables(vnames)
             for name in vnames:
                 init_points[name].append(var_curr[name])
-        elif action['type'] == 'add_rand':
+        elif action["type"] == "add_rand":
             var_curr = env._get_variables(vnames)
-            n_point = action['config']['n_points']
-            fraction = action['config']['fraction']
-            random_sample_region = get_local_region(
-                var_curr, vocs, fraction=fraction)
+            n_point = action["config"]["n_points"]
+            fraction = action["config"]["fraction"]
+            random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
             random_points = vocs.random_inputs(
-                n_point, custom_bounds=random_sample_region)
+                n_point, custom_bounds=random_sample_region
+            )
             for point in random_points:
                 for name in vnames:
                     init_points[name].append(point[name])

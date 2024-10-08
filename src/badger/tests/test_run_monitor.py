@@ -457,7 +457,6 @@ class TestRunMonitor:
         # assert new_x_view_range != not_time_x_view_range
 
     def test_run_until(self, qtbot, monitor):
-
         def handle_dialog():
             while monitor.tc_dialog is None:
                 QApplication.processEvents()

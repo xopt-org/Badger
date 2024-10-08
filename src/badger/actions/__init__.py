@@ -35,12 +35,12 @@ def show_info(args):
     BADGER_ARCHIVE_ROOT = read_value("BADGER_ARCHIVE_ROOT")
 
     info = {
-        'name': 'Badger the optimizer',
-        'version': metadata.version('badger-opt'),
-        'plugin root': BADGER_PLUGIN_ROOT,
-        'database root': BADGER_DB_ROOT,
-        'logbook root': BADGER_LOGBOOK_ROOT,
-        'archive root': BADGER_ARCHIVE_ROOT,
+        "name": "Badger the optimizer",
+        "version": metadata.version("badger-opt"),
+        "plugin root": BADGER_PLUGIN_ROOT,
+        "database root": BADGER_DB_ROOT,
+        "logbook root": BADGER_LOGBOOK_ROOT,
+        "archive root": BADGER_ARCHIVE_ROOT,
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
     }
 
