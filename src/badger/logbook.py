@@ -2,11 +2,11 @@ import os
 from datetime import datetime
 import logging
 
-logger = logging.getLogger(__name__)
 from .settings import read_value
 from .archive import BADGER_ARCHIVE_ROOT
 from .errors import BadgerConfigError, BadgerLogbookError
 
+logger = logging.getLogger(__name__)
 
 # Check badger logbook root
 BADGER_LOGBOOK_ROOT = read_value("BADGER_LOGBOOK_ROOT")

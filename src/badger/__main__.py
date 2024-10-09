@@ -1,8 +1,5 @@
 import argparse
 
-from .log import config_log
-
-config_log()  # has to happen here to make sure the config taking effect
 from .settings import init_settings
 from .actions import show_info
 from .actions.doctor import self_check
@@ -14,6 +11,9 @@ from .actions.uninstall import plugin_remove
 from .actions.intf import show_intf
 from .actions.run import run_routine
 from .actions.config import config_settings
+from .log import config_log
+
+config_log()  # Has to happen here to make sure the config taking effect
 
 
 def main():

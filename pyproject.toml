@@ -65,6 +65,7 @@ include = [ "badger", ]
 namespaces = false
 
 [tool.ruff]
+lint.ignore = ["E722"] # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
 addopts = "--cov=src/badger/"

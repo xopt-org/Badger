@@ -2,12 +2,13 @@ import os
 import warnings
 import logging
 
-logger = logging.getLogger(__name__)
 from .db import save_run, remove_run_by_filename
 from .utils import ts_float_to_str
 from .settings import read_value
 from .routine import Routine
 from .errors import BadgerConfigError
+
+logger = logging.getLogger(__name__)
 
 
 # Check badger optimization run archive root
@@ -118,7 +119,7 @@ def load_run(run_fname):
 
         # Check if any user warnings were caught
         for warning in caught_warnings:
-            if warning.category == UserWarning:
+            if isinstance(warning.category, UserWarning):
                 pass
             else:
                 print(f"Caught user warning: {warning.message}")

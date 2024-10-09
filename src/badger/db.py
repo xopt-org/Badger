@@ -3,14 +3,15 @@ import warnings
 from datetime import datetime
 import logging
 
-logger = logging.getLogger(__name__)
 import yaml
 import sqlite3
+
 from .routine import Routine
 from .settings import read_value
 from .utils import get_yaml_string
 from .errors import BadgerConfigError, BadgerDBError
 
+logger = logging.getLogger(__name__)
 
 # Check badger database root
 BADGER_DB_ROOT = read_value("BADGER_DB_ROOT")
@@ -198,7 +199,7 @@ def load_routine(name: str):
 
             # Check if any user warnings were caught
             for warning in caught_warnings:
-                if warning.category == UserWarning:
+                if isinstance(warning.category, UserWarning):
                     pass
                 else:
                     print(f"Caught user warning: {warning.message}")
