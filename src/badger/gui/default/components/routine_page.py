@@ -31,6 +31,7 @@ from .env_cbox import BadgerEnvBox
 from .filter_cbox import BadgerFilterBox
 from .state_item import state_item
 from ..windows.docs_window import BadgerDocsWindow
+from ..windows.env_docs_window import BadgerEnvDocsWindow
 from ..windows.edit_script_dialog import BadgerEditScriptDialog
 from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
@@ -69,6 +70,7 @@ class BadgerRoutinePage(QWidget):
         self.routine = None
         self.script = ''
         self.window_docs = BadgerDocsWindow(self, '')
+        self.window_env_docs = BadgerEnvDocsWindow(self, '')
         self.vars_env = None  # needed for passing env vars to the var table
 
         # Limit variable ranges
@@ -185,6 +187,7 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.cb.currentIndexChanged.connect(self.select_env)
         self.env_box.btn_env_play.clicked.connect(self.open_playground)
+        self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_con.clicked.connect(self.add_constraint)
@@ -520,6 +523,9 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.update_stylesheets(env.name)
 
+        # Update the docs
+        self.window_env_docs.update_docs(env.name)
+
     def get_init_table_header(self):
         table = self.env_box.init_table
         header_list = []
@@ -635,6 +641,9 @@ class BadgerRoutinePage(QWidget):
 
     def open_generator_docs(self):
         self.window_docs.show()
+
+    def open_environment_docs(self):
+        self.window_env_docs.show()
 
     def add_var(self):
         # TODO: Use a cached env
