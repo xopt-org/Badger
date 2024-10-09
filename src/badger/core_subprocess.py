@@ -2,6 +2,7 @@ import logging
 import time
 
 import pkg_resources
+import torch # noqa: F401. For converting dtype str to torch object.
 from pandas import concat, DataFrame
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ def run_routine_subprocess(
     routine, _ = load_routine(args["routine_name"])
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
+    # Patch for converting dtype str to torch object
     try:
         dtype = routine.generator.turbo_controller.tkwargs["dtype"]
         routine.generator.turbo_controller.tkwargs["dtype"] = eval(dtype)
