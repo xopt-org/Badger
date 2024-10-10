@@ -44,7 +44,7 @@ from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
 from ....factory import list_generators, list_env, get_env
 from ....routine import Routine
-from ....settings import read_value
+from ....settings import init_settings
 from ....utils import get_yaml_string, load_config, strtobool
 
 CONS_RELATION_DICT = {
@@ -93,6 +93,8 @@ class BadgerRoutinePage(QWidget):
         self.config_logic()
 
     def init_ui(self):
+        config_singleton = init_settings()
+
         # Set up the layout
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(11, 11, 19, 11)
@@ -147,7 +149,7 @@ class BadgerRoutinePage(QWidget):
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=' Tags')
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             cbox_tags.hide()
         vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
         # vbox_meta.addStretch()
@@ -160,7 +162,7 @@ class BadgerRoutinePage(QWidget):
         vbox.addWidget(self.generator_box)
 
         # Env box
-        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        BADGER_PLUGIN_ROOT = config_singleton.read_value('BADGER_PLUGIN_ROOT')
         env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
         try:
             with open(env_dict_dir, 'r') as stream:

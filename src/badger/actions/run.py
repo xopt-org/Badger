@@ -10,7 +10,7 @@ from ..utils import load_config, merge_params
 from ..utils import config_list_to_dict, curr_ts
 from ..core import run_routine as run
 from ..routine import Routine
-from ..settings import read_value
+from ..settings import init_settings
 from ..errors import BadgerRunTerminatedError
 
 
@@ -60,9 +60,9 @@ def run_n_archive(routine: Routine, yes=False, save=False, verbose=2,
         # stas: list
         ts = curr_ts()
         ts_float = ts.timestamp()
-
+        config = init_settings()
         # Try dump the run data and interface log to the disk
-        dump_period = float(read_value('BADGER_DATA_DUMP_PERIOD'))
+        dump_period = float(config.read_value('BADGER_DATA_DUMP_PERIOD'))
         ts_last_dump = storage['ts_last_dump']
         if (ts_last_dump is None) or (ts_float - ts_last_dump > dump_period):
             storage['ts_last_dump'] = ts_float

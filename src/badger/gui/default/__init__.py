@@ -7,7 +7,7 @@ from PyQt5 import QtCore
 import sys
 # import ctypes
 from qdarkstyle import load_stylesheet, LightPalette, DarkPalette
-from ...settings import read_value
+from ...settings import init_settings
 from .windows.main_window import BadgerMainWindow
 
 # Fix the scaling issue on multiple monitors w/ different scaling settings
@@ -50,7 +50,7 @@ def on_timeout():
 
 def launch_gui():
     app = QApplication(sys.argv)
-
+    config_singleton = init_settings()
     # Set app metainfo
     app.setApplicationName('Badger')
     icon_ref = resources.files(__name__) / 'images/icon.png'
@@ -63,7 +63,7 @@ def launch_gui():
     app.setFont(font)
 
     # Set up stylesheet
-    theme = read_value('BADGER_THEME')
+    theme = config_singleton.read_value('BADGER_THEME')
     if theme == 'dark':
         app.setStyleSheet(load_stylesheet(palette=DarkPalette))
     elif theme == 'light':

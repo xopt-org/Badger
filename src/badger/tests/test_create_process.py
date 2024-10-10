@@ -11,7 +11,7 @@ app = QApplication(sys.argv)
 @pytest.fixture
 def process_creator():
     from badger.gui.default.components.create_process import CreateProcess
-
+    
     return CreateProcess()
 
 
