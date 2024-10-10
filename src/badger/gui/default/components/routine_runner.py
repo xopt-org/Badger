@@ -110,7 +110,7 @@ class BadgerRoutineSubprocess:
 
         self.routine.data = None  # reset data
         # Recalculate the bounds and initial points if asked
-        if AUTO_REFRESH and self.routine.relative_to_current:
+        if  self.config_singleton.read_value('AUTO_REFRESH') and self.routine.relative_to_current:
             variables_updated = calculate_variable_bounds(
                 self.routine.vrange_limit_options,
                 self.routine.vocs,
