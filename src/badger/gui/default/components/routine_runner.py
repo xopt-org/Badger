@@ -1,20 +1,19 @@
 import logging
-
-logger = logging.getLogger(__name__)
-
 import time
 import traceback
+
 import pandas as pd
-from pandas import DataFrame
 import torch  # noqa: F401. For converting dtype str to torch object.
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
-from ....core import Routine
-from ....errors import BadgerRunTerminatedError
-from ....tests.utils import get_current_vars
-from ....routine import calculate_variable_bounds, calculate_initial_points
-from ....settings import AUTO_REFRESH
+
+from badger.errors import BadgerRunTerminatedError
+from badger.tests.utils import get_current_vars
+from badger.routine import calculate_variable_bounds, calculate_initial_points
+from badger.settings import AUTO_REFRESH
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
+
+logger = logging.getLogger(__name__)
 
 
 class BadgerRoutineSignals(QObject):
@@ -28,7 +27,8 @@ class BadgerRoutineSignals(QObject):
 
 class BadgerRoutineSubprocess:
     """
-    This class takes the users choosen routine and then grabs a suprocess to run the routine using code in core_subprocess.py.
+    This class takes the users chosen routine and then grabs a subprocess to run the routine
+    using code in core_subprocess.py.
     """
 
     def __init__(
@@ -187,7 +187,7 @@ class BadgerRoutineSubprocess:
             self.close()
             self.evaluate_queue[1].close()
 
-    def after_evaluate(self, results: DataFrame) -> None:
+    def after_evaluate(self, results: pd.DataFrame) -> None:
         """
         This method emits updates sent over from the subprocess running the routine on the evaluate_queue.
 
@@ -208,7 +208,8 @@ class BadgerRoutineSubprocess:
     def stop_routine(self) -> None:
         """
         This method will attempt to close the subprocess running the routine.
-        If the process does not close withing the timeout time (0.1 seconds) then the method will terminate the process.
+        If the process does not close withing the timeout time (0.1 seconds)
+        then the method will terminate the process.
         The method then emits a signal that the process has been stopped.
         """
         self.stop_event.set()

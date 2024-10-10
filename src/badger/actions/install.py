@@ -1,14 +1,16 @@
 import logging
-
-logger = logging.getLogger(__name__)
-import requests
 import tarfile
 import os
-import yaml
-from tqdm.auto import tqdm
 import shutil
 from os.path import exists
-from ..settings import read_value
+
+import requests
+import yaml
+from tqdm.auto import tqdm
+
+from badger.settings import read_value
+
+logger = logging.getLogger(__name__)
 
 
 def plugin_install(args):

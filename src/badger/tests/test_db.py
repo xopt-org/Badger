@@ -1,5 +1,3 @@
-
-
 class TestDB:
     def test_save_routine(self):
         from badger.db import save_routine, remove_routine

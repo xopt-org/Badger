@@ -58,7 +58,7 @@ class TestRoutineRunner:
     def test_stop_routine(self, instance):
         instance.run()
         instance.stop_routine()
-        assert instance.stop_event.is_set() == True
+        assert instance.stop_event.is_set()
 
     def test_save_init_vars(self, instance):
         sig_env_ready_spy = QSignalSpy(instance.signals.env_ready)
@@ -103,7 +103,7 @@ class TestRoutineRunner:
 
     def test_set_termination_condition(self, instance):
         instance.set_termination_condition(True)
-        assert instance.termination_condition == True
+        assert instance.termination_condition
 
     # TODO: check for signal emit message
 

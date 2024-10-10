@@ -1,9 +1,11 @@
 import logging
 
-logger = logging.getLogger(__name__)
 import pandas as pd
 import yaml
-from ..utils import yprint
+
+from badger.utils import yprint
+
+logger = logging.getLogger(__name__)
 
 
 def show_routine(args):

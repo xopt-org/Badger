@@ -1,16 +1,16 @@
 import logging
-
-logger = logging.getLogger(__name__)
 import os
 import sys
 import time
 import signal
 from pandas import DataFrame
-from ..utils import curr_ts
-from ..core import run_routine as run
-from ..routine import Routine
-from ..settings import read_value
-from ..errors import BadgerRunTerminatedError
+from badger.utils import curr_ts
+from badger.core import run_routine as run
+from badger.routine import Routine
+from badger.settings import read_value
+from badger.errors import BadgerRunTerminatedError
+
+logger = logging.getLogger(__name__)
 
 
 def run_n_archive(

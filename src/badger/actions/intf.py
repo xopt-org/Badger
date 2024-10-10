@@ -1,7 +1,8 @@
 import logging
 
+from badger.utils import yprint
+
 logger = logging.getLogger(__name__)
-from ..utils import yprint
 
 
 def show_intf(args):

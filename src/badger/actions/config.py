@@ -1,15 +1,16 @@
-from ..settings import (
+import os
+import logging
+
+from badger.settings import (
     list_settings,
     read_value,
     write_value,
     BADGER_PATH_DICT,
     BADGER_CORE_DICT,
 )
-import os
-import logging
+from badger.utils import yprint, convert_str_to_value
 
 logger = logging.getLogger(__name__)
-from ..utils import yprint, convert_str_to_value
 
 
 def config_settings(args):

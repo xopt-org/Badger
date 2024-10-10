@@ -2,7 +2,7 @@ import logging
 import time
 
 import pkg_resources
-import torch # noqa: F401. For converting dtype str to torch object.
+import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import concat, DataFrame
 import multiprocessing as mp
 

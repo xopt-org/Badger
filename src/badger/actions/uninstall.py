@@ -1,8 +1,8 @@
+import shutil
+from os.path import exists
 import logging
 
 logger = logging.getLogger(__name__)
-import shutil
-from os.path import exists
 
 
 def plugin_remove(args):
