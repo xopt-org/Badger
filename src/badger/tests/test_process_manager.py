@@ -1,5 +1,4 @@
 import pytest
-from PyQt5.QtCore import pyqtSignal, QObject
 
 
 @pytest.fixture
@@ -34,7 +33,7 @@ class TestProcessManager:
         removed_process = process_manager.remove_from_queue()
         assert removed_process == process_with_args2
         removed_process = process_manager.remove_from_queue()
-        assert removed_process == None
+        assert removed_process is None
         assert len(process_manager.processes_queue) == 0
 
         process_manager.add_to_queue(process_with_args1)

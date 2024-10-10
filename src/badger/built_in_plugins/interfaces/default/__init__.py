@@ -2,8 +2,7 @@ from badger import interface
 
 
 class Interface(interface.Interface):
-
-    name = 'default'
+    name = "default"
     # If params not specified, it would be an empty dict
 
     # Private variables

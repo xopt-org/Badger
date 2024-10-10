@@ -15,7 +15,7 @@ class BadgerReviewDialog(QDialog):
 
     def init_ui(self):
         name = self.routine.name
-        self.setWindowTitle(f'Review routine {name}')
+        self.setWindowTitle(f"Review routine {name}")
 
         vbox = QVBoxLayout(self)
 

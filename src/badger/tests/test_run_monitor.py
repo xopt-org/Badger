@@ -1,16 +1,11 @@
 import multiprocessing
-import os
-import sys
 import time
 import warnings
 from unittest.mock import patch
 
 import numpy as np
-
 import pytest
-
 from PyQt5.QtCore import QEventLoop, QPointF, Qt, QTimer
-
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtTest import QSignalSpy, QTest
 from PyQt5.QtWidgets import QApplication, QMessageBox
@@ -55,17 +50,24 @@ class TestRunMonitor:
 
         assert len(monitor.routine.data) == 10
 
-    def test_run_monitor(self, qtbot, monitor):
-        from badger.tests.utils import fix_db_path_issue
+    def test_run_monitor(self, process_manager):
+        from badger.gui.default.components.run_monitor import BadgerOptMonitor
+        from badger.tests.utils import create_routine, fix_db_path_issue
 
         fix_db_path_issue()
+
+        monitor = BadgerOptMonitor(process_manager)
+        monitor.testing = True
+        # qtbot.addWidget(monitor)
+
+        routine = create_routine()
 
         # test initialization - first w/o routine
         monitor.init_plots()
         assert monitor.btn_stop.text() == "Run"
 
         # test initialization - then w/ routine
-        monitor.init_plots(monitor.routine)
+        monitor.init_plots(routine)
         assert monitor.btn_stop.text() == "Run"
 
         # add some data
@@ -159,51 +161,9 @@ class TestRunMonitor:
 
         return monitor
 
-    def test_run_monitor(self, qtbot, process_manager):
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
-
-        monitor = BadgerOptMonitor(process_manager)
-        monitor.testing = True
-        # qtbot.addWidget(monitor)
-
-        routine = create_routine()
-
-        # test initialization - first w/o routine
-        monitor.init_plots()
-        assert monitor.btn_stop.text() == "Run"
-
-        # test initialization - then w/ routine
-        monitor.init_plots(routine)
-        assert monitor.btn_stop.text() == "Run"
-
-        # add some data
-        monitor.routine.step()
-        assert len(monitor.routine.data) == 1
-
-        # test updating plots
-        monitor.update_curves()
-        assert set(monitor.curves_variable.keys()) == {"x0", "x1", "x2", "x3"}
-        assert set(monitor.curves_objective.keys()) == {"f"}
-        assert set(monitor.curves_constraint.keys()) == {"c"}
-
-        # set up run monitor and test it
-        monitor.init_routine_runner()
-        monitor.routine_runner.set_termination_condition({"tc_idx": 0, "max_eval": 2})
-        spy = QSignalSpy(monitor.routine_runner.signals.progress)
-        assert spy.isValid()
-        QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
-        time.sleep(1)
-        QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
-
     def test_x_axis_specification(self, qtbot, monitor, mocker):
         # check iteration/time drop down menu
         self.add_data(monitor)
-
-        # read time stamp
-        time_value = monitor.inspector_variable.value()
 
         # set inspector line index 1
         monitor.inspector_variable.setValue(1)
@@ -457,7 +417,6 @@ class TestRunMonitor:
         # assert new_x_view_range != not_time_x_view_range
 
     def test_run_until(self, qtbot, monitor):
-
         def handle_dialog():
             while monitor.tc_dialog is None:
                 QApplication.processEvents()
@@ -556,7 +515,7 @@ class TestRunMonitor:
 
             # Check if the user warning is caught
             assert len(caught_warnings) == 1
-            assert caught_warnings[0].category == UserWarning
+            assert isinstance(caught_warnings[0].message, UserWarning)
 
     # Note: this test will delete all the previous runs
     # you might want to run this test last

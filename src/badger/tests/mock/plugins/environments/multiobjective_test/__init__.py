@@ -4,10 +4,9 @@ from badger.errors import BadgerNoInterfaceError
 
 
 class Environment(environment.Environment):
-
-    name = 'multiobjective_test'
-    variables = {f'x{i}': [-1, 1] for i in range(20)}
-    observables = ['f1', "f2"]
+    name = "multiobjective_test"
+    variables = {f"x{i}": [-1, 1] for i in range(20)}
+    observables = ["f1", "f2"]
 
     flag: int = 0
 
@@ -19,8 +18,10 @@ class Environment(environment.Environment):
         full_outputs = self.interface.get_values(self.variable_names)
 
         # Filling up the observations
-        x = torch.tensor([full_outputs[f'x{i}'] for i in range(20)])
-        self.interface.set_values({
-            'f1': float((x ** 2).sum().numpy()),
-            'f2': float((x ** 3).sum().numpy()),
-        })
+        x = torch.tensor([full_outputs[f"x{i}"] for i in range(20)])
+        self.interface.set_values(
+            {
+                "f1": float((x**2).sum().numpy()),
+                "f2": float((x**3).sum().numpy()),
+            }
+        )

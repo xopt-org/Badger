@@ -1,33 +1,32 @@
-from ..settings import read_value, BADGER_PATH_DICT, \
-    reset_settings, mock_settings
+from ..settings import read_value, BADGER_PATH_DICT, reset_settings, mock_settings
 from .config import _config_path_var
 
 
 def self_check(args):
-
     # Reset Badger
     if args.reset:
         while True:
             _res = input(
-                'Badger will be reset to the factory settings.\n'
-                'Only the configurations and built-in plugins will be reset,\n'
-                'your saved routines and data will not be touched.\n\n'
-                'proceed (y/[n])? ')
-            if _res == 'y':
+                "Badger will be reset to the factory settings.\n"
+                "Only the configurations and built-in plugins will be reset,\n"
+                "your saved routines and data will not be touched.\n\n"
+                "proceed (y/[n])? "
+            )
+            if _res == "y":
                 break
-            elif (not _res) or (_res == 'n'):
-                print('Reset cancelled.')
+            elif (not _res) or (_res == "n"):
+                print("Reset cancelled.")
                 return
             else:
-                print(f'Invalid choice: {_res}')
+                print(f"Invalid choice: {_res}")
 
         reset_settings()
-        print('Badger has been reset to the factory settings.')
+        print("Badger has been reset to the factory settings.")
         return
 
     good = check_n_config_paths()
     if good:
-        print('Badger is healthy!')
+        print("Badger is healthy!")
 
 
 def check_n_config_paths():
@@ -48,16 +47,17 @@ def check_n_config_paths():
         init = True
         while False:
             _res = input(
-                'If this is your first time launching Badger, you should initialize it now.\n'
-                'Proceed ([y]/n)? ')
-            if (not _res) or (_res == 'y'):
+                "If this is your first time launching Badger, you should initialize it now.\n"
+                "Proceed ([y]/n)? "
+            )
+            if (not _res) or (_res == "y"):
                 init = True
                 break
-            elif _res == 'n':
+            elif _res == "n":
                 init = False
                 break
             else:
-                print(f'Invalid choice: {_res}')
+                print(f"Invalid choice: {_res}")
 
         if init:  # fill in the mock up settings so user can go immediately
             mock_settings()
@@ -67,18 +67,19 @@ def check_n_config_paths():
         # Let the users deal with the issues
         while True:
             _res = input(
-                f'\nFound {len(issue_list)} issue(s).\n'
-                'Fix the issue(s) now ([y]/n)? ')
-            if (not _res) or (_res == 'y'):
+                f"\nFound {len(issue_list)} issue(s).\n"
+                "Fix the issue(s) now ([y]/n)? "
+            )
+            if (not _res) or (_res == "y"):
                 break
-            elif _res == 'n':
+            elif _res == "n":
                 return good
             else:
-                print(f'Invalid choice: {_res}')
+                print(f"Invalid choice: {_res}")
 
         for pname in issue_list:
             try:
-                print('')
+                print("")
                 _config_path_var(pname)
             except KeyboardInterrupt:
                 pass

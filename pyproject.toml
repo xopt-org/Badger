@@ -24,15 +24,12 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "pandas",
-    "pyyaml",
     "coolname",
     "pyqt5",
     "pyqtgraph",
     "qdarkstyle",
     "pillow",
     "requests",
-    "tqdm",
     "xopt"
 ]
 dynamic = ["version"]
@@ -68,11 +65,10 @@ include = [ "badger", ]
 namespaces = false
 
 [tool.ruff]
-# select = []
-# ignore = []
+lint.ignore = ["E722"] # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
-addopts = "--cov=badger/"
+addopts = "--cov=src/badger/"
 log_cli_level = "info"
 log_level = "debug"
 testpaths = ["src/badger/tests"]

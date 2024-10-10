@@ -6,8 +6,7 @@ from PyQt5.QtGui import QIcon
 import copy
 
 
-def preventAnnoyingSpinboxScrollBehaviour(
-        self, control: QAbstractSpinBox) -> None:
+def preventAnnoyingSpinboxScrollBehaviour(self, control: QAbstractSpinBox) -> None:
     control.setFocusPolicy(Qt.StrongFocus)
     control.installEventFilter(self.MouseWheelWidgetAdjustmentGuard(control))
 
@@ -24,9 +23,8 @@ class MouseWheelWidgetAdjustmentGuard(QObject):
         return super().eventFilter(o, e)
 
 
-def create_button(icon_file, tooltip,
-                  stylesheet=None, size=(32, 32), icon_size=None):
-    icon_ref = resources.files(__package__) / f'./images/{icon_file}'
+def create_button(icon_file, tooltip, stylesheet=None, size=(32, 32), icon_size=None):
+    icon_ref = resources.files(__package__) / f"./images/{icon_file}"
     with resources.as_file(icon_ref) as icon_path:
         icon = QIcon(str(icon_path))
 
@@ -46,19 +44,19 @@ def create_button(icon_file, tooltip,
 
 def filter_generator_config(name, config):
     filtered_config = {}
-    if name == 'neldermead':
-        filtered_config['xatol'] = config['xatol']
-        filtered_config['fatol'] = config['fatol']
-        filtered_config['adaptive'] = config['adaptive']
-    elif name == 'expected_improvement':
-        filtered_config['turbo_controller'] = config['turbo_controller']
-        filtered_config['numerical_optimizer'] = config['numerical_optimizer']
-        filtered_config['max_travel_distances'] = config['max_travel_distances']
-        filtered_config['n_interpolate_points'] = config['n_interpolate_points']
-    elif name == 'rcds':
-        filtered_config['noise'] = config['noise']
-        filtered_config['step'] = config['step']
-        filtered_config['tol'] = config['tol']
+    if name == "neldermead":
+        filtered_config["xatol"] = config["xatol"]
+        filtered_config["fatol"] = config["fatol"]
+        filtered_config["adaptive"] = config["adaptive"]
+    elif name == "expected_improvement":
+        filtered_config["turbo_controller"] = config["turbo_controller"]
+        filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
+        filtered_config["max_travel_distances"] = config["max_travel_distances"]
+        filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
+    elif name == "rcds":
+        filtered_config["noise"] = config["noise"]
+        filtered_config["step"] = config["step"]
+        filtered_config["tol"] = config["tol"]
     else:
         filtered_config = config
 
