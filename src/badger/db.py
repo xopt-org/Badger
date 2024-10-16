@@ -126,7 +126,7 @@ def update_routine(routine: Routine):
 
 @maybe_create_routines_db
 @maybe_create_runs_db
-def remove_routine(id: str, remove_runs=False):
+def remove_routine(id: str, remove_runs=True):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
     con = sqlite3.connect(db_routine)

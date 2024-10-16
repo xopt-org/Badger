@@ -61,7 +61,7 @@ QPushButton
 
 
 class BadgerRoutineItem(QWidget):
-    # add id so sig_del gets id
+    # sig_del carries an id
     sig_del = pyqtSignal(str)
 
     def __init__(self, id, name, timestamp, environment, env_dict, description='', parent=None):
