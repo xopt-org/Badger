@@ -96,7 +96,7 @@ def run_routine_subprocess(
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 
     # set required arguments
-    routine, _ = load_routine(args["routine_name"])
+    routine, _ = load_routine(args["routine_id"])
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
     try:
