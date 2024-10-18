@@ -14,8 +14,8 @@ def show_routine(args):
         return
 
     # List routines
-    if args.routine_name is None:
-        routines = list_routine()[0]
+    if args.routine_id is None:
+        routines = list_routine()[1]
         if routines:
             yprint(routines)
         else:
@@ -23,9 +23,9 @@ def show_routine(args):
         return
 
     try:
-        routine, _ = load_routine(args.routine_name)
+        routine, _ = load_routine(args.routine_id)
         if routine is None:
-            print(f'Routine {args.routine_name} not found')
+            print(f'Routine {args.routine_id} not found')
             return
     except Exception as e:
         print(e)

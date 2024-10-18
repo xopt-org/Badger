@@ -11,7 +11,7 @@ class TestDB:
         routine = create_routine()
         save_routine(routine)
 
-        remove_routine("test")
+        remove_routine(routine.id)
 
     def test_load_routine(self):
         from badger.db import save_routine, load_routine, remove_routine
@@ -22,8 +22,8 @@ class TestDB:
         routine = create_routine()
         save_routine(routine)
 
-        new_routine, _ = load_routine("test")
+        new_routine, _ = load_routine(routine.id)
         assert new_routine.generator == routine.generator
         assert new_routine.vocs == routine.vocs
 
-        remove_routine("test")
+        remove_routine(routine.id)
