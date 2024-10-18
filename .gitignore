@@ -12,3 +12,4 @@ __pycache__
 *.db
 .vscode
 src/badger/_version.py
+.coverage*
