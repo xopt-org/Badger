@@ -48,6 +48,10 @@ def test_routine_generation(qtbot):
     assert routine.vocs.objectives == {"f": "MINIMIZE"}
     assert routine.initial_points.empty
 
+    # test if badger and xopt version are embedded
+    assert routine.badger_version is not None
+    assert routine.xopt_version is not None
+
 
 def test_add_additional_vars(qtbot):
     from badger.db import load_routine, remove_routine
