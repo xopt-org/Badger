@@ -8,17 +8,9 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
 )
 
-
-class ObjectiveTable(QTableWidget):
+class AdditionalObservblesTable(QTableWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Reorder the rows by dragging around
-        # self.setSelectionBehavior(self.SelectRows)
-        # self.setSelectionMode(self.SingleSelection)
-        # self.setShowGrid(False)
-        # self.setDragDropMode(self.InternalMove)
-        # self.setDragDropOverwriteMode(False)
 
         self.setRowCount(0)
         self.setColumnCount(3)
@@ -155,7 +147,7 @@ class ObjectiveTable(QTableWidget):
         self.setRowCount(n)
         for i, obj in enumerate(_objectives):
             name = next(iter(obj))
-            
+            print("yeah")
             self.setCellWidget(i, 0, QCheckBox())
 
             _cb = self.cellWidget(i, 0)
@@ -171,7 +163,7 @@ class ObjectiveTable(QTableWidget):
             cb_rule.currentIndexChanged.connect(self.update_rules)
             self.setCellWidget(i, 2, cb_rule)
 
-        self.setHorizontalHeaderLabels(["", "Name", "Rule"])
+        self.setHorizontalHeaderLabels(["", "Name", "Formula", "Key"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
         header = self.horizontalHeader()
@@ -185,3 +177,14 @@ class ObjectiveTable(QTableWidget):
                 objectives_exported[name] = self.rules[name]
 
         return objectives_exported
+
+    def add_row(self, row_data):
+        # Get the current number of rows
+        row_position = self.rowCount()
+
+        # Insert a new row at the end
+        self.insertRow(row_position)
+
+        # Add data from the tuple to the new row
+        for column, data in enumerate(row_data):
+            self.setItem(row_position, column, QTableWidgetItem(str(data)))

@@ -448,6 +448,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.var_table.update_variables(None)
             self.env_box.edit_obj.clear()
             self.env_box.obj_table.update_objectives(None)
+            self.env_box.obsv_table.update_objectives(None)
             self.configs = None
             self.env = None
             self.env_box.btn_add_con.setDisabled(True)
@@ -509,8 +510,19 @@ class BadgerRoutinePage(QWidget):
             obj = {}
             obj[name] = 'MINIMIZE'  # default rule
             objs_env.append(obj)
+
         self.env_box.check_only_obj.setChecked(False)
         self.env_box.obj_table.update_objectives(objs_env)
+        
+        _obsv_env = configs['additional observations']
+        obsv_env = []
+        for name in _obsv_env:
+            obj = {}
+            obj[name] = ''  # default formula
+            obsv_env.append(obj)
+        
+        self.env_box.check_only_obsv.setChecked(False)
+        self.env_box.obsv_table.update_objectives(obsv_env)
 
         self.env_box.list_con.clear()
         self.env_box.list_obs.clear()
