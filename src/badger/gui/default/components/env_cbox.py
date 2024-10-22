@@ -58,9 +58,12 @@ class BadgerEnvBox(CollapsibleBox):
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
             btn_env_play.hide()
+        self.btn_docs = btn_docs = QPushButton('Open Docs')
+        btn_docs.setFixedSize(128, 24)
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         hbox_name.addWidget(btn_env_play)
+        hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
         params = QWidget()
