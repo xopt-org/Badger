@@ -13,3 +13,4 @@ __pycache__
 config.yaml
 .vscode
 src/badger/_version.py
+.coverage*

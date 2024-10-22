@@ -1,3 +1,4 @@
+from importlib import metadata
 import json
 import logging
 import os
@@ -314,3 +315,11 @@ def get_datadir() -> pathlib.Path:
         return home / ".local/share"
     elif sys.platform == "darwin":
         return home / "Library/Application Support"
+
+
+def get_badger_version():
+    return metadata.version('badger-opt')
+
+
+def get_xopt_version():
+    return metadata.version('xopt')
