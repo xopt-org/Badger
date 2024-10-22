@@ -183,6 +183,10 @@ def get_generator_docs(name):
     return generators[name].__doc__
 
 
+def get_env_docs(name):
+    return load_docs(BADGER_PLUGIN_ROOT, name, 'environment')
+
+
 def get_intf(name):
     return get_plug(BADGER_PLUGIN_ROOT, name, 'interface')
 
