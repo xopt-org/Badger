@@ -1,3 +1,6 @@
+from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
+from PyQt5.QtWidgets import QMessageBox
+
 class BadgerConfigError(Exception):
     pass
 
@@ -59,4 +62,16 @@ class BadgerLoadConfigError(Exception):
 
 
 class BadgerRoutineError(Exception):
-    pass
+    def __init__(self, message="", detailed_text=""):
+        super().__init__(message)
+        self.detailed_text = detailed_text
+        self.show_message_box()
+
+    def show_message_box(self):
+        """
+        Method to create and display a popup window with the error message. 
+        """
+        error_message = str(self)
+        dialog = ExpandableMessageBox(text=error_message, detailedText=self.detailed_text)
+        dialog.setIcon(QMessageBox.Critical)
+        dialog.exec_()
