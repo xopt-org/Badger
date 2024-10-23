@@ -21,8 +21,10 @@ elif not os.path.exists(BADGER_DB_ROOT):
     logger.info(
         f'Badger database root {BADGER_DB_ROOT} created')
 
-def maybe_create_routines_db(func):
-
+def ensure_routines_db_exists(func):
+    """
+    Create the routines database (a SQL table) if it does not already exist.
+    """
     def func_safe(*args, **kwargs):
         db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
@@ -39,8 +41,10 @@ def maybe_create_routines_db(func):
     return func_safe
 
 
-def maybe_create_runs_db(func):
-
+def ensure_runs_db_exists(func):
+    """
+    Create the runs database (a SQL table) if it does not already exist.
+    """
     def func_safe(*args, **kwargs):
         db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
@@ -87,7 +91,7 @@ def extract_metadata(records):
     return env_list, descr_list
 
 
-@maybe_create_routines_db
+@ensure_routines_db_exists
 def save_routine(routine: Routine):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
@@ -104,7 +108,7 @@ def save_routine(routine: Routine):
 
 
 # This function is not safe and might break database! Use with caution!
-@maybe_create_routines_db
+@ensure_routines_db_exists
 def update_routine(routine: Routine):
 
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
@@ -124,8 +128,8 @@ def update_routine(routine: Routine):
     con.close()
 
 
-@maybe_create_routines_db
-@maybe_create_runs_db
+@ensure_routines_db_exists
+@ensure_runs_db_exists
 def remove_routine(id: str, remove_runs=True):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
 
@@ -150,7 +154,7 @@ def remove_routine(id: str, remove_runs=True):
         con.close()
 
 
-@maybe_create_routines_db
+@ensure_routines_db_exists
 def load_routine(id: str):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
     con = sqlite3.connect(db_routine)
@@ -187,7 +191,7 @@ def load_routine(id: str):
             f'Multiple routines with id {id} found in the database!')
 
 
-@maybe_create_routines_db
+@ensure_routines_db_exists
 def list_routine(keyword='', tags={}):
     db_routine = os.path.join(BADGER_DB_ROOT, 'routines.db')
     con = sqlite3.connect(db_routine)
@@ -206,7 +210,7 @@ def list_routine(keyword='', tags={}):
     return ids, names, timestamps, environments, descriptions
 
 
-@maybe_create_runs_db
+@ensure_runs_db_exists
 def save_run(run):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
@@ -239,7 +243,7 @@ def save_run(run):
     return rid
 
 
-@maybe_create_runs_db
+@ensure_runs_db_exists
 def get_runs_by_routine(routine_id: str):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
@@ -255,7 +259,7 @@ def get_runs_by_routine(routine_id: str):
     return filenames
 
 
-@maybe_create_runs_db
+@ensure_runs_db_exists
 def get_runs():
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
@@ -272,7 +276,7 @@ def get_runs():
     return filenames
 
 
-@maybe_create_runs_db
+@ensure_runs_db_exists
 def remove_run_by_filename(filename):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
@@ -285,7 +289,7 @@ def remove_run_by_filename(filename):
     con.close()
 
 
-@maybe_create_runs_db
+@ensure_runs_db_exists
 def remove_run_by_id(rid):
     db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
 
