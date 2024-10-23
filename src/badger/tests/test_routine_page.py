@@ -2,7 +2,6 @@ import pandas as pd
 import pytest
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
-from unittest.mock import patch
 
 def test_routine_page_init(qtbot):
     from badger.gui.default.components.routine_page import BadgerRoutinePage
