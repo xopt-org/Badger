@@ -44,7 +44,7 @@ from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
 from ....factory import list_generators, list_env, get_env
 from ....routine import Routine
-from ....settings import read_value
+from ....settings import init_settings
 from ....utils import (
     get_yaml_string, load_config, strtobool,
     get_badger_version, get_xopt_version
