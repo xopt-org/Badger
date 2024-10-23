@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
-
+from unittest.mock import patch
 
 def test_routine_page_init(qtbot):
     from badger.gui.default.components.routine_page import BadgerRoutinePage
@@ -11,13 +11,15 @@ def test_routine_page_init(qtbot):
 
     qtbot.addWidget(window)
 
-
-def test_routine_generation(qtbot):
+def test_routine_generation(qtbot, mocker):
     from badger.errors import BadgerRoutineError
     from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
+
+    mock_exec = mocker.patch('badger.gui.default.windows.expandable_message_box.ExpandableMessageBox.exec_')
+    mock_exec.return_value = None
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
