@@ -6,8 +6,8 @@ from .collapsible_box import CollapsibleBox
 from .var_table import VariableTable
 from .obj_table import ObjectiveTable
 from .data_table import init_data_table, update_init_data_table
+from ....settings import init_settings
 from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
-from ....settings import read_value, AUTO_REFRESH
 from ....utils import strtobool
 
 LABEL_WIDTH = 80
@@ -40,6 +40,7 @@ class BadgerEnvBox(CollapsibleBox):
         self.config_logic()
 
     def init_ui(self):
+        config_singleton = init_settings()
         vbox = QVBoxLayout()
 
         self.content_area.setObjectName('EnvBox')
@@ -56,7 +57,7 @@ class BadgerEnvBox(CollapsibleBox):
         cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(cb))
         self.btn_env_play = btn_env_play = QPushButton('Open Playground')
         btn_env_play.setFixedSize(128, 24)
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             btn_env_play.hide()
         self.btn_docs = btn_docs = QPushButton('Open Docs')
         btn_docs.setFixedSize(128, 24)
@@ -109,7 +110,7 @@ class BadgerEnvBox(CollapsibleBox):
                           ' run. The real values would be regenerated based on'
                           ' the machine state before running the optimization '
                           'again.')
-        if not AUTO_REFRESH:
+        if not config_singleton.read_value("AUTO_REFRESH"):
             msg_auto = QLabel('Auto mode is on.  To explicitly set the '
                               'variable ranges and/or initial points,  please '
                               'uncheck the "Automatic" check box.')
@@ -163,7 +164,7 @@ class BadgerEnvBox(CollapsibleBox):
         self.btn_add_var = btn_add_var = QPushButton('Add')
         btn_add_var.setFixedSize(96, 24)
         btn_add_var.setDisabled(True)
-        if not strtobool(read_value('BADGER_ENABLE_ADVANCED')):
+        if not strtobool(config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             btn_add_var.hide()
         self.btn_lim_vrange = btn_lim_vrange = QPushButton('Set Variable Range')
         btn_lim_vrange.setFixedSize(144, 24)

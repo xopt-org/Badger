@@ -4,13 +4,14 @@ import logging
 logger = logging.getLogger(__name__)
 from .db import save_run, remove_run_by_filename
 from .utils import ts_float_to_str
-from .settings import read_value
+from .settings import init_settings
 from .routine import Routine
 from .errors import BadgerConfigError
 
 
 # Check badger optimization run archive root
-BADGER_ARCHIVE_ROOT = read_value('BADGER_ARCHIVE_ROOT')
+config_singleton = init_settings()
+BADGER_ARCHIVE_ROOT = config_singleton.read_value('BADGER_ARCHIVE_ROOT')
 if BADGER_ARCHIVE_ROOT is None:
     raise BadgerConfigError('Please set the BADGER_ARCHIVE_ROOT env var!')
 elif not os.path.exists(BADGER_ARCHIVE_ROOT):
