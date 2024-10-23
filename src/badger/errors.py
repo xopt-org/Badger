@@ -1,4 +1,3 @@
-from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 from PyQt5.QtWidgets import QMessageBox
 
 class BadgerConfigError(Exception):
@@ -71,6 +70,8 @@ class BadgerRoutineError(Exception):
         """
         Method to create and display a popup window with the error message. 
         """
+        from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
+
         error_message = str(self)
         dialog = ExpandableMessageBox(text=error_message, detailedText=self.detailed_text)
         dialog.setIcon(QMessageBox.Critical)
