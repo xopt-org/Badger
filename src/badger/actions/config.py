@@ -31,8 +31,14 @@ def config_settings(args):
 
 def _config_path_var(var_name):
     config_singleton = init_settings()
-    display_name = config_singleton[var_name]['display name']
-    desc = config_singleton[var_name]['description']
+
+    is_path = config_singleton.read_is_path(var_name)    
+    
+    if not is_path:
+        raise KeyError
+    
+    display_name = config_singleton.read_display_name(var_name)
+    desc = config_singleton.read_description(var_name)
 
     print(f'=== Configure {display_name} ===')
     print(f'*** {desc} ***\n')
