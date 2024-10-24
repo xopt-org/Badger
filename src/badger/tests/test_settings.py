@@ -10,13 +10,13 @@ class TestBadgerConfig:
 
     def setup_method(self, method):
         self.mock_badger_config = BadgerConfig(
-            BADGER_PLUGIN_ROOT=Setting(display_name="plugin root", description="Mock plugin root", value="/mock/plugin/root"),
-            BADGER_DB_ROOT=Setting(display_name="database root", description="Mock database root", value="/mock/db/root"),
-            BADGER_LOGBOOK_ROOT=Setting(display_name="logbook root", description="Mock logbook root", value="/mock/logbook/root"),
-            BADGER_ARCHIVE_ROOT=Setting(display_name="archive root", description="Mock archive root", value="/mock/archive/root"),
-            BADGER_DATA_DUMP_PERIOD=Setting(display_name="data dump period", description="Mock data dump period", value=5),
-            BADGER_THEME=Setting(display_name="theme", description="Mock theme", value="light"),
-            BADGER_ENABLE_ADVANCED=Setting(display_name="enable advanced", description="Mock enable advanced", value=True),
+            BADGER_PLUGIN_ROOT=Setting(display_name="plugin root", description="Mock plugin root", value="/mock/plugin/root", is_path=True),
+            BADGER_DB_ROOT=Setting(display_name="database root", description="Mock database root", value="/mock/db/root", is_path=True),
+            BADGER_LOGBOOK_ROOT=Setting(display_name="logbook root", description="Mock logbook root", value="/mock/logbook/root", is_path=True),
+            BADGER_ARCHIVE_ROOT=Setting(display_name="archive root", description="Mock archive root", value="/mock/archive/root", is_path=True),
+            BADGER_DATA_DUMP_PERIOD=Setting(display_name="data dump period", description="Mock data dump period", value=5, is_path=False),
+            BADGER_THEME=Setting(display_name="theme", description="Mock theme", value="light", is_path=False),
+            BADGER_ENABLE_ADVANCED=Setting(display_name="enable advanced", description="Mock enable advanced", value=True, is_path=False),
         )
 
     def teardown_method(self, method):
@@ -97,6 +97,27 @@ class TestBadgerConfig:
                 config_singleton = ConfigSingleton(self.config_file)
                 value = config_singleton.read_value('BADGER_PLUGIN_ROOT')
                 assert value == '/mock/plugin/root'
+
+    def test_read_display_name(self):
+        with patch('os.path.exists', return_value=True):
+            with patch("builtins.open", mock_open(read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True)))):
+                config_singleton = ConfigSingleton(self.config_file)
+                display_name = config_singleton.read_display_name('BADGER_PLUGIN_ROOT')
+                assert display_name == 'plugin root'
+
+    def test_read_description(self):
+        with patch('os.path.exists', return_value=True):
+            with patch("builtins.open", mock_open(read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True)))):
+                config_singleton = ConfigSingleton(self.config_file)
+                description = config_singleton.read_description('BADGER_PLUGIN_ROOT')
+                assert description == 'Mock plugin root'
+
+    def test_read_is_path(self):
+        with patch('os.path.exists', return_value=True):
+            with patch("builtins.open", mock_open(read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True)))):
+                config_singleton = ConfigSingleton(self.config_file)
+                is_path = config_singleton.read_is_path('BADGER_PLUGIN_ROOT')
+                assert is_path == True
 
     def test_write_value(self):
         with patch('os.path.exists', return_value=True):
