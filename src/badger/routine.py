@@ -3,7 +3,6 @@ from copy import deepcopy
 from typing import Any, List, Optional
 
 import numpy as np
-import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pydantic import (
@@ -25,6 +24,7 @@ from badger.utils import curr_ts
 
 
 class Routine(Xopt):
+    id: Optional[str] = Field(None)
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[Environment]
@@ -163,20 +163,6 @@ class Routine(Xopt):
             pass
 
         return json.dumps(dict_result)
-
-    def __eq__(self, routine):
-        if not isinstance(routine, Routine):
-            return False
-        self_dict = json.loads(self.json())
-        self_dict.pop('data')
-        routine_dict = json.loads(routine.json())
-        routine_dict.pop('data')
-        return self_dict == routine_dict
-
-    def __hash__(self):
-        self_dict = json.loads(self.json())
-        self_dict.pop('data')
-        return hash(tuple(sorted(self_dict)))
 
 
 def calculate_variable_bounds(limit_options, vocs, env):
