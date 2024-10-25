@@ -1,7 +1,12 @@
 from PyQt5.QtWidgets import QMessageBox
+import traceback
+import sys
 
 class BadgerError(Exception):
-    def __init__(self, message="", detailed_text=""):
+    def __init__(self, message="", detailed_text=None):
+        if detailed_text is None:
+            detailed_text = self.capture_traceback_or_stack()
+        
         super().__init__(message)
         self.detailed_text = detailed_text
         self.show_message_box()
@@ -16,6 +21,17 @@ class BadgerError(Exception):
         dialog = ExpandableMessageBox(text=error_message, detailedText=self.detailed_text)
         dialog.setIcon(QMessageBox.Critical)
         dialog.exec_()
+
+    def capture_traceback_or_stack(self):
+        """
+        Captures the current traceback if an exception is active, otherwise captures the call stack.
+        """
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        if exc_traceback:
+            return ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        else:
+            return ''.join(traceback.format_stack())
+
 
 
 class BadgerConfigError(BadgerError):
