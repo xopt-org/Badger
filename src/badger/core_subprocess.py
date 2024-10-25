@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 import multiprocessing as mp
 
 from badger.db import load_routine
-from badger.errors import BadgerRunTerminated
+from badger.errors import BadgerRunTerminated, BadgerError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
@@ -226,4 +226,5 @@ def run_routine_subprocess(
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
-        raise e
+        raise BadgerError(f"An error occurred: {str(e)}")
+
