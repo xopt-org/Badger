@@ -3,14 +3,12 @@ import pytest
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 
-
 def test_routine_page_init(qtbot):
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
 
     qtbot.addWidget(window)
-
 
 def test_routine_generation(qtbot):
     from badger.errors import BadgerRoutineError

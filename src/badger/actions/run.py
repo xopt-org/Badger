@@ -11,7 +11,7 @@ from ..utils import config_list_to_dict, curr_ts
 from ..core import run_routine as run
 from ..routine import Routine
 from ..settings import init_settings
-from ..errors import BadgerRunTerminatedError
+from ..errors import BadgerRunTerminated
 
 
 def run_n_archive(routine: Routine, yes=False, save=False, verbose=2,
@@ -34,7 +34,7 @@ def run_n_archive(routine: Routine, yes=False, save=False, verbose=2,
             print('')  # start a new line
             if flush_prompt:  # erase the last prompt
                 sys.stdout.write('\033[F')
-            raise BadgerRunTerminatedError
+            raise BadgerRunTerminated
         storage['paused'] = True
 
     signal.signal(signal.SIGINT, handler)
