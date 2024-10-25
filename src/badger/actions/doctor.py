@@ -77,6 +77,7 @@ def check_n_config_paths():
             try:
                 print('')
                 _config_path_var(pname)
+                #TODO potential keyError here 
             except KeyboardInterrupt:
                 pass
 
