@@ -1,9 +1,15 @@
 from PyQt5.QtWidgets import QMessageBox
 import traceback
 import sys
+from PyQt5.QtWidgets import QApplication
 
 class BadgerError(Exception):
     def __init__(self, message="", detailed_text=None):
+        if QApplication.instance() is None:
+            self.app = QApplication([])  
+        else:
+            self.app = QApplication.instance()
+
         if detailed_text is None:
             detailed_text = self.capture_traceback_or_stack()
         
