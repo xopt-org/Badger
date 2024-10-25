@@ -1,7 +1,7 @@
 import os
 import pytest
 import pandas as pd
-from badger.errors import BadgerRunTerminatedError
+from badger.errors import BadgerRunTerminated
 
 
 class TestCore:
@@ -82,7 +82,7 @@ class TestCore:
 
         self.count = 0
 
-        with pytest.raises(BadgerRunTerminatedError):
+        with pytest.raises(BadgerRunTerminated):
             run_routine(
                 routine,
                 self.mock_active_callback,
@@ -133,7 +133,7 @@ class TestCore:
 
         self.count = 0
 
-        with pytest.raises(BadgerRunTerminatedError):
+        with pytest.raises(BadgerRunTerminated):
             run_routine(
                 routine,
                 self.mock_active_callback,

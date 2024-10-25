@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 import multiprocessing as mp
 
 from badger.db import load_routine
-from badger.errors import BadgerRunTerminatedError
+from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
@@ -165,7 +165,7 @@ def run_routine_subprocess(
         while True:
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif not pause_process.is_set():
                 pause_process.wait()
 
@@ -176,12 +176,12 @@ def run_routine_subprocess(
                 if idx == 0:
                     max_eval = tc_config["max_eval"]
                     if len(routine.data) >= max_eval:
-                        raise BadgerRunTerminatedError
+                        raise BadgerRunTerminated
                 elif idx == 1:
                     max_time = tc_config["max_time"]
                     dt = time.time() - start_time
                     if dt >= max_time:
-                        raise BadgerRunTerminatedError
+                        raise BadgerRunTerminated
 
             # TODO give user a message that a solution is being worked on.
 
@@ -195,7 +195,7 @@ def run_routine_subprocess(
             # External triggers
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif not pause_process.is_set():
                 pause_process.wait()
 
@@ -220,7 +220,7 @@ def run_routine_subprocess(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
-    except BadgerRunTerminatedError:
+    except BadgerRunTerminated:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
     except Exception as e:

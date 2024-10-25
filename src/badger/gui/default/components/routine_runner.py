@@ -9,7 +9,7 @@ from pandas import DataFrame
 import torch  # for converting dtype str to torch object
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 from ....core import run_routine, Routine
-from ....errors import BadgerRunTerminatedError
+from ....errors import BadgerRunTerminated
 from ....tests.utils import get_current_vars
 from ....routine import calculate_variable_bounds, calculate_initial_points
 from ....settings import init_settings
@@ -175,7 +175,7 @@ class BadgerRoutineSubprocess:
 
                 self.routine.initial_points = init_points
 
-        except BadgerRunTerminatedError as e:
+        except BadgerRunTerminated as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:

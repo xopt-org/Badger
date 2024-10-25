@@ -2,6 +2,10 @@ import os
 import shutil
 import pytest
 
+@pytest.fixture(autouse=True)
+def suppress_popups(mocker):
+    mocker.patch('badger.gui.default.windows.expandable_message_box.ExpandableMessageBox.exec_', return_value=None)
+
 
 @pytest.fixture(scope='module', autouse=True)
 def config_test_settings(mock_plugin_root, mock_db_root,
