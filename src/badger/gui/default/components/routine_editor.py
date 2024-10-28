@@ -83,10 +83,6 @@ class BadgerRoutineEditor(QWidget):
     def edit_routine(self):
         self.stacks.setCurrentIndex(1)
 
-    def del_routine(self):
-        if self.routine_page.delete() == 0:
-            self.sig_deleted.emit()
-
     def cancel_create_routine(self):
         self.sig_canceled.emit()
 

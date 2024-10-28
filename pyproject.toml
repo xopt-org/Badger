@@ -69,7 +69,7 @@ namespaces = false
 # ignore = []
 
 [tool.pytest.ini_options]
-addopts = "--cov=badger/"
+addopts = "--cov=src/badger/"
 log_cli_level = "info"
 log_level = "debug"
 testpaths = ["src/badger/tests"]

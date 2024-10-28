@@ -1,3 +1,4 @@
+import json
 import warnings
 import sqlite3
 import traceback
@@ -39,7 +40,7 @@ from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..windows.expandable_message_box import ExpandableMessageBox
 from ..utils import filter_generator_config
-from ....db import save_routine, remove_routine, update_routine
+from ....db import save_routine, remove_routine, update_routine, get_runs_by_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
 from ....factory import list_generators, list_env, get_env
@@ -58,8 +59,7 @@ CONS_RELATION_DICT = {
 
 
 class BadgerRoutinePage(QWidget):
-    name_updated = pyqtSignal(str, str) # routine name, routine new name
-    descr_updated = pyqtSignal(str, str)  # routine name, routine description
+    sig_updated = pyqtSignal(str, str)  # routine name, routine description
 
     def __init__(self):
         super().__init__()
@@ -986,7 +986,7 @@ class BadgerRoutinePage(QWidget):
         try:
             update_routine(routine)
             # Notify routine list to update
-            self.descr_updated.emit(routine.name, routine.description)
+            self.sig_updated.emit(routine.name, routine.description)
             QMessageBox.information(
                 self,
                 'Update success!',
@@ -1016,16 +1016,16 @@ class BadgerRoutinePage(QWidget):
             return
 
         try:
-            if self.routine and routine != self.routine:
+            if self.routine:
+                keys_to_exclude = ['data', 'id', 'name', 'description']
                 old_dict = json.loads(self.routine.json())
-                old_dict.pop('data')
+                old_dict = {k: v for k, v in old_dict.items() if k not in keys_to_exclude}
                 new_dict = json.loads(routine.json())
-                new_dict.pop('data')
-                new_dict['name'] = old_dict['name']
-                new_dict['description'] = new_dict['description']
-                if old_dict == new_dict:
-                    update_routine(routine, old_name=self.routine.name)
-                    self.name_updated.emit(self.routine.name, routine.name)
+                new_dict = {k: v for k, v in new_dict.items() if k not in keys_to_exclude}
+                runs = get_runs_by_routine(self.routine.id)
+                if len(runs) == 0 or old_dict == new_dict:
+                    routine.id = self.routine.id
+                    update_routine(routine)
                 else:
                     save_routine(routine)
             else:
@@ -1035,11 +1035,5 @@ class BadgerRoutinePage(QWidget):
                 self, 'Error!',
                 f'Routine {routine.name} already existed in the database! Please '
                 f'choose another name.')
-
-        return 0
-
-    def delete(self):
-        name = self.edit_save.text() or self.edit_save.placeholderText()
-        remove_routine(name)
 
         return 0
