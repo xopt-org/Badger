@@ -2,31 +2,37 @@ import os
 import shutil
 import pytest
 
+@pytest.fixture(autouse=True)
+def suppress_popups(mocker):
+    mocker.patch('badger.gui.default.windows.expandable_message_box.ExpandableMessageBox.exec_', return_value=None)
+
 
 @pytest.fixture(scope='module', autouse=True)
 def config_test_settings(mock_plugin_root, mock_db_root,
                          mock_logbook_root, mock_archive_root):
-    from badger.settings import read_value, write_value
+    from badger.settings import init_settings
+
+    config_singleton = init_settings()
 
     # Store the old values
-    old_root = read_value('BADGER_PLUGIN_ROOT')
-    old_db = read_value('BADGER_DB_ROOT')
-    old_logbook = read_value('BADGER_LOGBOOK_ROOT')
-    old_archived = read_value('BADGER_ARCHIVE_ROOT')
+    old_root = config_singleton.read_value('BADGER_PLUGIN_ROOT')
+    old_db = config_singleton.read_value('BADGER_DB_ROOT')
+    old_logbook = config_singleton.read_value('BADGER_LOGBOOK_ROOT')
+    old_archived = config_singleton.read_value('BADGER_ARCHIVE_ROOT')
 
     # Assign values for test
-    write_value('BADGER_PLUGIN_ROOT', mock_plugin_root)
-    write_value('BADGER_DB_ROOT', mock_db_root)
-    write_value('BADGER_LOGBOOK_ROOT', mock_logbook_root)
-    write_value('BADGER_ARCHIVE_ROOT', mock_archive_root)
+    config_singleton.write_value('BADGER_PLUGIN_ROOT', mock_plugin_root)
+    config_singleton.write_value('BADGER_DB_ROOT', mock_db_root)
+    config_singleton.write_value('BADGER_LOGBOOK_ROOT', mock_logbook_root)
+    config_singleton.write_value('BADGER_ARCHIVE_ROOT', mock_archive_root)
 
     yield
 
     # Restoring the original settings
-    write_value('BADGER_PLUGIN_ROOT', old_root)
-    write_value('BADGER_DB_ROOT', old_db)
-    write_value('BADGER_LOGBOOK_ROOT', old_logbook)
-    write_value('BADGER_ARCHIVE_ROOT', old_archived)
+    config_singleton.write_value('BADGER_PLUGIN_ROOT', old_root)
+    config_singleton.write_value('BADGER_DB_ROOT', old_db)
+    config_singleton.write_value('BADGER_LOGBOOK_ROOT', old_logbook)
+    config_singleton.write_value('BADGER_ARCHIVE_ROOT', old_archived)
 
 
 @pytest.fixture(scope='module', autouse=True)

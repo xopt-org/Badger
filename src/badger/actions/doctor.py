@@ -1,10 +1,9 @@
-from ..settings import read_value, BADGER_PATH_DICT, \
-    reset_settings, mock_settings
+from ..settings import init_settings, mock_settings
 from .config import _config_path_var
 
 
 def self_check(args):
-
+    config = init_settings()
     # Reset Badger
     if args.reset:
         while True:
@@ -21,7 +20,7 @@ def self_check(args):
             else:
                 print(f'Invalid choice: {_res}')
 
-        reset_settings()
+        config.reset_settings()
         print('Badger has been reset to the factory settings.')
         return
 
@@ -31,22 +30,20 @@ def self_check(args):
 
 
 def check_n_config_paths():
-    good = True
+    config = init_settings()
 
+    good = True
     issue_list = []
 
-    for pname in BADGER_PATH_DICT.keys():
-        if not read_value(pname):
+    for pname in config._config.dict(by_alias=True):
+        if config.read_value(pname) == None:
             good = False
-            # dname = BADGER_PATH_DICT[pname]['display name']
-            # print(f'\n{dname} needs to be configured!')
-
             issue_list.append(pname)
 
     if not good:
         # Initial setup
         init = True
-        while False:
+        while True:
             _res = input(
                 'If this is your first time launching Badger, you should initialize it now.\n'
                 'Proceed ([y]/n)? ')

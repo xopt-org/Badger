@@ -33,8 +33,6 @@ from ....db import (
     load_routine,
     remove_routine
 )
-from ....settings import read_value
-from ....utils import get_header, strtobool
 from ..components.data_table import add_row, data_table, reset_table, update_table
 from ..components.filter_cbox import BadgerFilterBox
 from ..components.history_navigator import HistoryNavigator
@@ -44,6 +42,8 @@ from ..components.run_monitor import BadgerOptMonitor
 from ..components.search_bar import search_bar
 from ..components.status_bar import BadgerStatusBar
 from ..utils import create_button
+from ....utils import get_header, strtobool
+from ....settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
 from ..windows.message_dialog import BadgerScrollableMessageBox
@@ -58,7 +58,6 @@ from ..components.filter_cbox import BadgerFilterBox
 from ..utils import create_button, ModalOverlay
 from ....archive import load_run, delete_run, get_base_run_filename
 from ....utils import get_header, strtobool
-from ....settings import read_value
 
 
 stylesheet = """
@@ -96,7 +95,9 @@ class BadgerHomePage(QWidget):
         self.load_all_runs()
 
     def init_ui(self):
-        icon_ref = resources.files(__package__) / "../images/add.png"
+        self.config_singleton = init_settings()
+        icon_ref = resources.files(__package__) / '../images/add.png'
+
         with resources.as_file(icon_ref) as icon_path:
             self.icon_add = QIcon(str(icon_path))
         icon_ref = resources.files(__package__) / "../images/import.png"
@@ -139,8 +140,8 @@ class BadgerHomePage(QWidget):
         vbox_routine.addWidget(panel_search)
 
         # Filters
-        self.filter_box = filter_box = BadgerFilterBox(self, title=" Filters")
-        if not strtobool(read_value("BADGER_ENABLE_ADVANCED")):
+        self.filter_box = filter_box = BadgerFilterBox(self, title=' Filters')
+        if not strtobool(self.config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
             filter_box.hide()
         vbox_routine.addWidget(filter_box)
 
@@ -351,7 +352,7 @@ class BadgerHomePage(QWidget):
         except Exception:
             selected_routine = None
         self.routine_list.clear()
-        BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+        BADGER_PLUGIN_ROOT = self.config_singleton.read_value('BADGER_PLUGIN_ROOT')
         env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
         try:
             with open(env_dict_dir, 'r') as stream:

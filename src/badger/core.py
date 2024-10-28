@@ -3,7 +3,7 @@ from typing import Callable
 
 from pandas import concat, DataFrame
 
-from badger.errors import BadgerRunTerminatedError
+from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
@@ -14,7 +14,7 @@ def check_run_status(active_callback):
     while True:
         status = active_callback()
         if status == 2:
-            raise BadgerRunTerminatedError
+            raise BadgerRunTerminated
         elif status == 1:
             time.sleep(0)
             continue
@@ -143,7 +143,7 @@ def run_routine(
         while True:
             status = active_callback()
             if status == 2:
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif status == 1:
                 time.sleep(0)
                 continue

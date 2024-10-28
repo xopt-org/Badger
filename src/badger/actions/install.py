@@ -7,7 +7,7 @@ import yaml
 from tqdm.auto import tqdm
 import shutil
 from os.path import exists
-from ..settings import read_value
+from ..settings import init_settings
 
 
 def plugin_install(args):
@@ -44,7 +44,8 @@ def plugin_install(args):
         print(f"{args.plugin_type} is an invalid option. Choose one of the following:  generator, env, ext, intf, local")
         return
 
-    plugins_url = read_value('BADGER_PLUGINS_URL')
+    config = init_settings()
+    plugins_url = config.read_value('BADGER_PLUGINS_URL')
 
     if args.plugin_specific is None:
         if args.plugin_type == 'local':
