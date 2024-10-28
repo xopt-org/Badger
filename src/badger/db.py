@@ -197,6 +197,42 @@ def list_routine(keyword='', tags={}):
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
 
+    # check if id column is in database
+    # if not, add it and update routine and run entries accordingly
+    cur.execute('pragma table_info(routine)')
+    columns = [row[1] for row in cur.fetchall()]
+    if 'id' not in columns:
+        cur.execute('''
+        create table new_table (
+            id text primary key,
+            name text,
+            config,
+            savedAt timestamp
+        )
+        ''')
+        db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
+        con_run = sqlite3.connect(db_run)
+        cur_run = con_run.cursor()
+        cur_run.execute('alter table run rename column routine to routine_id')
+        con_run.commit()
+        con_run.close()
+        cur.execute('select * from routine')
+        rows = cur.fetchall()
+        for row in rows:
+            id = str(uuid.uuid4())
+            cur.execute('insert into new_table (id, name, config, savedAt) values (?, ?, ?, ?)',
+                        (id, row[0], row[1], row[2]))
+            db_run = os.path.join(BADGER_DB_ROOT, 'runs.db')
+            con_run = sqlite3.connect(db_run)
+            cur_run = con_run.cursor()
+            # now the column in run table is called 'routine_id' but they are still routine names
+            cur_run.execute('update run set routine_id = ? where routine_id = ?', (id, row[0]))
+            con_run.commit()
+            con_run.close()
+        cur.execute('drop table routine')
+        cur.execute('alter table new_table rename to routine')
+        con.commit()
+
     cur.execute(f'select id, name, config, savedAt from routine where name like "%{keyword}%" order by savedAt desc')
     records = cur.fetchall()
     if tags:

@@ -64,7 +64,7 @@ def test_modify_routine_name(qtbot):
     window.refresh_ui(routine)
 
     run = {
-        'filename': 'test_run.yaml',
+        'filename': 'BadgerOpt-2024-09-10-155408.yaml',
         'routine': routine,
         'data': {
             'f': [0.051416649999999994],
@@ -102,7 +102,7 @@ def test_modify_routine_algorithm(qtbot):
     window.refresh_ui(routine)
 
     run = {
-        'filename': 'test_run.yaml',
+        'filename': 'BadgerOpt-2024-09-10-155408.yaml',
         'routine': routine,
         'data': {
             'f': [0.051416649999999994],
