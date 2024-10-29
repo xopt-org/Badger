@@ -2,9 +2,9 @@ from __future__ import print_function
 import os
 import json
 
-from .observer import _Tracker
-from .event import Events
-from .util import Colours
+from badger.logger.observer import _Tracker
+from badger.logger.event import Events
+from badger.logger.util import Colours
 
 
 def _get_default_logger(verbose):
@@ -43,18 +43,15 @@ class ScreenLogger(_Tracker):
 
         if len(s) > self._default_cell_size:
             if "." in s:
-                return s[:self._default_cell_size]
+                return s[: self._default_cell_size]
             else:
-                return s[:self._default_cell_size - 3] + "..."
+                return s[: self._default_cell_size - 3] + "..."
         return s
 
     def _format_key(self, key):
-        s = "{key:^{s}}".format(
-            key=key,
-            s=self._default_cell_size
-        )
+        s = "{key:^{s}}".format(key=key, s=self._default_cell_size)
         if len(s) > self._default_cell_size:
-            return s[:self._default_cell_size - 3] + "..."
+            return s[: self._default_cell_size - 3] + "..."
         return s
 
     def _step(self, solution, colour=Colours.black):
@@ -132,11 +129,11 @@ class JSONLogger(_Tracker):
     def update(self, event, solution):
         if event == Events.OPTIMIZATION_STEP:
             data = {
-                'x': solution[0],
-                'y': solution[1],
-                'c': solution[2],
-                's': solution[3],
-                'is_optimal': solution[4]
+                "x": solution[0],
+                "y": solution[1],
+                "c": solution[2],
+                "s": solution[3],
+                "is_optimal": solution[4],
             }
 
             now, time_elapsed, time_delta = self._time_metrics()

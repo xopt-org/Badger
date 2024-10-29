@@ -1,13 +1,9 @@
 import logging
 import time
-import typing
 
 import pkg_resources
-import torch
+import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import concat, DataFrame
-
-logger = logging.getLogger(__name__)
-
 import multiprocessing as mp
 
 from badger.db import load_routine
@@ -16,6 +12,8 @@ from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
+
+logger = logging.getLogger(__name__)
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
@@ -46,7 +44,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
     except IndexError:  # no feasible data
-        logger.info(f"no feasible solutions found")
+        logger.info("no feasible solutions found")
         is_optimal = False
 
     vars = list(result[vocs.variable_names].to_numpy()[0])
@@ -99,6 +97,7 @@ def run_routine_subprocess(
     routine, _ = load_routine(args["routine_id"])
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
+    # Patch for converting dtype str to torch object
     try:
         dtype = routine.generator.turbo_controller.tkwargs["dtype"]
         routine.generator.turbo_controller.tkwargs["dtype"] = eval(dtype)
@@ -115,14 +114,12 @@ def run_routine_subprocess(
 
     # set optional arguments
     evaluate = args.pop("evaluate", None)
-    save_states = args.pop("save_states", None)
     dump_file_callback = args.pop("dump_file_callback", None)
     termination_condition = args.pop("termination_condition", None)
     start_time = args.pop("start_time", None)
     verbose = args.pop("verbose", 2)
 
     # setup variables of routine properties for code readablilty
-    environment = routine.environment
     initial_points = routine.initial_points
 
     # Log the optimization progress in terminal
@@ -227,4 +224,3 @@ def run_routine_subprocess(
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
         raise BadgerError(f"An error occurred: {str(e)}")
-

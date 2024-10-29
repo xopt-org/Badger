@@ -58,7 +58,7 @@ class TestRoutineRunner:
     def test_stop_routine(self, instance):
         instance.run()
         instance.stop_routine()
-        assert instance.stop_event.is_set() == True
+        assert instance.stop_event.is_set()
 
     def test_save_init_vars(self, instance):
         sig_env_ready_spy = QSignalSpy(instance.signals.env_ready)
@@ -103,7 +103,7 @@ class TestRoutineRunner:
 
     def test_set_termination_condition(self, instance):
         instance.set_termination_condition(True)
-        assert instance.termination_condition == True
+        assert instance.termination_condition
 
     # TODO: check for signal emit message
 
@@ -132,8 +132,7 @@ class TestRoutineRunner:
         # Turn off relative to current
         editor.routine_page.env_box.relative_to_curr.setChecked(False)
 
-        qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                        "expected_improvement")
+        qtbot.keyClicks(editor.routine_page.generator_box.cb, "expected_improvement")
         params = editor.routine_page.generator_box.edit.toPlainText()
         # Turn on turbo controller
         params = params.replace("turbo_controller: null", "turbo_controller: optimize")

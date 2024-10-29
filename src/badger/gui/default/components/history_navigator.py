@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QComboBox, QTreeWidget, QTreeWidgetItem
 from PyQt5.QtCore import QModelIndex, Qt
-from ....archive import get_base_run_filename
-from ....utils import run_names_to_dict
+from badger.archive import get_base_run_filename
+from badger.utils import run_names_to_dict
 
 
 # Modified based on the following solution

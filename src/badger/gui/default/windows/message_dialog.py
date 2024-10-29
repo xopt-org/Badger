@@ -1,11 +1,21 @@
-from PyQt5.QtWidgets import (QDialog, QMessageBox, QVBoxLayout, QHBoxLayout,
-                             QLabel, QPushButton, QScrollArea, QTextEdit)
+from PyQt5.QtWidgets import (
+    QDialog,
+    QMessageBox,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QTextEdit,
+)
 from PyQt5.QtGui import QTextOption, QFont, QFontDatabase
 # from ..components.eliding_label import ElidingLabel
 
 
 class BadgerScrollableMessageBox(QDialog):
-    def __init__(self, icon=None, title="Message", text="", detailedText="", parent=None):
+    def __init__(
+        self, icon=None, title="Message", text="", detailedText="", parent=None
+    ):
         super().__init__(parent)
 
         # Main layout
