@@ -11,7 +11,6 @@ from badger.settings import init_settings
 from badger.gui.default.windows.main_window import BadgerMainWindow
 
 import traceback
-import sys
 from badger.errors import BadgerError
 from types import TracebackType
 from typing import Type, NoReturn
@@ -54,7 +53,9 @@ def on_timeout():
         print("Timeout, resume the operation...")
 
 
-def error_handler(etype: Type[BaseException], value: BaseException, tb: TracebackType) -> NoReturn:
+def error_handler(
+    etype: Type[BaseException], value: BaseException, tb: TracebackType
+) -> NoReturn:
     """
     Custom exception handler that formats uncaught exceptions and raises a BadgerError.
 
@@ -72,12 +73,12 @@ def error_handler(etype: Type[BaseException], value: BaseException, tb: Tracebac
     BadgerError
         An exception that includes the error title and detailed traceback.
     """
-    error_msg = ''.join(traceback.format_exception(etype, value, tb))
+    error_msg = "".join(traceback.format_exception(etype, value, tb))
     error_title = f"{etype.__name__}: {value}"
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui():    
+def launch_gui():
     sys.excepthook = error_handler
     app = QApplication(sys.argv)
     config_singleton = init_settings()

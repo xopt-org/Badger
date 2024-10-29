@@ -1,6 +1,5 @@
 import logging
 import time
-import typing
 import traceback
 import pkg_resources
 import torch  # noqa: F401. For converting dtype str to torch object.
@@ -95,7 +94,13 @@ def run_routine_subprocess(
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 
     # set required arguments
-    routine, _ = load_routine(args["routine_id"])
+    try:
+        routine, _ = load_routine(args["routine_id"])
+    except Exception as e:
+        error_title = f"{type(e).__name__}: {e}"
+        error_traceback = traceback.format_exc()
+        queue.put((error_title, error_traceback))
+        raise e
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
     # Patch for converting dtype str to torch object
@@ -228,4 +233,3 @@ def run_routine_subprocess(
         queue.put((error_title, error_traceback))
         evaluate_queue[0].close()
         raise e
-

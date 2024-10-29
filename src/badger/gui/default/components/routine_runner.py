@@ -94,7 +94,7 @@ class BadgerRoutineSubprocess:
         The method grabs a subprocess from self.process_manager queue.
         Then the method unpauses the process along with passing the selected routine name.
         """
-    
+
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
@@ -209,7 +209,7 @@ class BadgerRoutineSubprocess:
     def check_queue(self) -> None:
         """
         This method checks the subprocess for updates in the evaluate_queue.
-        It also checks the self.data_and_error_queue to see if an exception was thrown during the routine. 
+        It also checks the self.data_and_error_queue to see if an exception was thrown during the routine.
         It is called by a QTimer every 100 miliseconds.
         """
         if self.evaluate_queue[1].poll():

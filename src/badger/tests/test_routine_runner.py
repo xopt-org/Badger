@@ -6,6 +6,7 @@ from PyQt5.QtTest import QSignalSpy
 from PyQt5.QtWidgets import QApplication
 from unittest.mock import Mock
 
+
 class TestRoutineRunner:
     @pytest.fixture(scope="session")
     def init_multiprocessing(self):
@@ -80,7 +81,7 @@ class TestRoutineRunner:
         instance.stop_routine()
         assert len(sig_finished_spy) == 1
         assert not instance.timer.isActive()
-    
+
         # sig_progress_spy = QSignalSpy(instance.signals.progress)
         # instance.run()
         # nstance.check_queue()
@@ -182,7 +183,6 @@ class TestRoutineRunner:
         assert len(monitor.routine.data) == 2
 
         window.process_manager.close_proccesses()
-    
 
     """
         def test_turbo_with_routine_runner_alt(self, qtbot, init_multiprocessing_alt):
