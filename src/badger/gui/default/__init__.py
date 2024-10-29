@@ -1,14 +1,19 @@
 from importlib import resources
 import signal
 import time
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5 import QtCore
 import sys
-# import ctypes
 from qdarkstyle import load_stylesheet, LightPalette, DarkPalette
 from ...settings import init_settings
 from .windows.main_window import BadgerMainWindow
+
+import traceback
+import sys
+from badger.errors import BadgerError
+from types import TracebackType
+from typing import Type, NoReturn
 
 # Fix the scaling issue on multiple monitors w/ different scaling settings
 # if sys.platform == 'win32':
@@ -48,7 +53,31 @@ def on_timeout():
         print('Timeout, resume the operation...')
 
 
-def launch_gui():
+def error_handler(etype: Type[BaseException], value: BaseException, tb: TracebackType) -> NoReturn:
+    """
+    Custom exception handler that formats uncaught exceptions and raises a BadgerError.
+
+    Parameters
+    ----------
+    etype : Type[BaseException]
+        The class of the exception that was raised.
+    value : BaseException
+        The exception instance.
+    tb : TracebackType
+        The traceback object associated with the exception.
+
+    Raises
+    ------
+    BadgerError
+        An exception that includes the error title and detailed traceback.
+    """
+    error_msg = ''.join(traceback.format_exception(etype, value, tb))
+    error_title = f"{etype.__name__}: {value}"
+    raise BadgerError(error_title, error_msg)
+
+
+def launch_gui():    
+    sys.excepthook = error_handler
     app = QApplication(sys.argv)
     config_singleton = init_settings()
     # Set app metainfo

@@ -15,7 +15,7 @@ from ....routine import calculate_variable_bounds, calculate_initial_points
 from ....settings import init_settings
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
-
+from badger.errors import BadgerError
 
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
@@ -69,7 +69,7 @@ class BadgerRoutineSubprocess:
         )
         self.start_time = None  # track the time cost of the run
         self.last_dump_time = None  # track the time the run data got dumped
-        self.data_queue = None
+        self.data_and_error_queue = None
         self.stop_event = None
         self.pause_event = None
         self.routine_process = None
@@ -93,7 +93,7 @@ class BadgerRoutineSubprocess:
         The method grabs a subprocess from self.process_manager queue.
         Then the method unpauses the process along with passing the selected routine name.
         """
-
+    
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
         
@@ -135,7 +135,7 @@ class BadgerRoutineSubprocess:
             self.routine_process = process_with_args["process"]
             self.stop_event = process_with_args["stop_event"]
             self.pause_event = process_with_args["pause_event"]
-            self.data_queue = process_with_args["data_queue"]
+            self.data_and_error_queue = process_with_args["data_queue"]
             self.evaluate_queue = process_with_args["evaluate_queue"]
             self.wait_event = process_with_args["wait_event"]
 
@@ -148,7 +148,7 @@ class BadgerRoutineSubprocess:
                 "start_time": self.start_time,
             }
 
-            self.data_queue.put(arg_dict)
+            self.data_and_error_queue.put(arg_dict)
             self.wait_event.set()
             self.pause_event.set()
             self.setup_timer()
@@ -203,6 +203,10 @@ class BadgerRoutineSubprocess:
             while self.evaluate_queue[1].poll():
                 results = self.evaluate_queue[1].recv()
                 self.after_evaluate(results)
+
+        while not self.data_and_error_queue.empty():
+            error_title, error_traceback = self.data_and_error_queue.get()
+            BadgerError(error_title, error_traceback)
 
         if not self.routine_process.is_alive():
             self.close()
