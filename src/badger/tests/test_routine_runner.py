@@ -4,7 +4,7 @@ import pytest
 from PyQt5.QtCore import QEventLoop, Qt, QTimer
 from PyQt5.QtTest import QSignalSpy
 from PyQt5.QtWidgets import QApplication
-
+from unittest.mock import Mock
 
 class TestRoutineRunner:
     @pytest.fixture(scope="session")
@@ -75,11 +75,12 @@ class TestRoutineRunner:
     def test_check_queue(self, instance):
         sig_finished_spy = QSignalSpy(instance.signals.finished)
         instance.run()
+        instance.data_and_error_queue.empty = Mock(return_value=True)
         instance.check_queue()
         instance.stop_routine()
         assert len(sig_finished_spy) == 1
         assert not instance.timer.isActive()
-
+    
         # sig_progress_spy = QSignalSpy(instance.signals.progress)
         # instance.run()
         # nstance.check_queue()
@@ -173,6 +174,7 @@ class TestRoutineRunner:
         )
 
         monitor.run_until_action.trigger()
+        monitor.routine_runner.data_and_error_queue.empty = Mock(return_value=True)
 
         # Wait until the run is done
         while monitor.running:
@@ -181,6 +183,7 @@ class TestRoutineRunner:
         assert len(monitor.routine.data) == 2
 
         window.process_manager.close_proccesses()
+    
 
     """
         def test_turbo_with_routine_runner_alt(self, qtbot, init_multiprocessing_alt):

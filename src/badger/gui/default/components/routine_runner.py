@@ -197,6 +197,7 @@ class BadgerRoutineSubprocess:
     def check_queue(self) -> None:
         """
         This method checks the subprocess for updates in the evaluate_queue.
+        It also checks the self.data_and_error_queue to see if an exception was thrown during the routine. 
         It is called by a QTimer every 100 miliseconds.
         """
         if self.evaluate_queue[1].poll():
@@ -204,7 +205,7 @@ class BadgerRoutineSubprocess:
                 results = self.evaluate_queue[1].recv()
                 self.after_evaluate(results)
 
-        while not self.data_and_error_queue.empty():
+        if not self.data_and_error_queue.empty():
             error_title, error_traceback = self.data_and_error_queue.get()
             BadgerError(error_title, error_traceback)
 
