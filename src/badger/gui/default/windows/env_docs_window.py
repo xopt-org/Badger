@@ -1,4 +1,11 @@
-from PyQt5.QtWidgets import QTextEdit, QHBoxLayout, QVBoxLayout, QCheckBox, QWidget, QMainWindow
+from PyQt5.QtWidgets import (
+    QTextEdit,
+    QHBoxLayout,
+    QVBoxLayout,
+    QCheckBox,
+    QWidget,
+    QMainWindow,
+)
 from ....factory import get_env_docs
 
 
@@ -15,7 +22,7 @@ class BadgerEnvDocsWindow(QMainWindow):
         self.load_docs()
 
     def init_ui(self):
-        self.setWindowTitle(f'Docs for environment {self.env_name}')
+        self.setWindowTitle(f"Docs for environment {self.env_name}")
         self.resize(640, 640)
 
         doc_panel = QWidget(self)
@@ -25,7 +32,7 @@ class BadgerEnvDocsWindow(QMainWindow):
         toolbar = QWidget()
         hbox_tool = QHBoxLayout(toolbar)
         hbox_tool.setContentsMargins(0, 0, 0, 0)
-        self.cb_md = cb_md = QCheckBox('Render as Markdown')
+        self.cb_md = cb_md = QCheckBox("Render as Markdown")
         cb_md.setChecked(True)
         hbox_tool.addStretch()
         hbox_tool.addWidget(cb_md)
@@ -53,7 +60,7 @@ class BadgerEnvDocsWindow(QMainWindow):
 
     def update_docs(self, env_name):
         self.env_name = env_name
-        self.setWindowTitle(f'Docs for environment {env_name}')
+        self.setWindowTitle(f"Docs for environment {env_name}")
         self.load_docs()
 
     def switch_render_mode(self):
