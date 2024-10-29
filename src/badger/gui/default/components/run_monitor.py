@@ -23,18 +23,20 @@ from PyQt5.QtWidgets import (
 )
 from xopt import VOCS
 
-from ....archive import archive_run, BADGER_ARCHIVE_ROOT
+from badger.archive import archive_run, BADGER_ARCHIVE_ROOT
 
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
-from ....logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
-from ....routine import Routine
-from ....tests.utils import get_current_vars
-from ..utils import create_button
-from ..windows.message_dialog import BadgerScrollableMessageBox
-from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
+from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
+from badger.routine import Routine
+from badger.tests.utils import get_current_vars
+from badger.gui.default.utils import create_button
+from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.default.windows.terminition_condition_dialog import (
+    BadgerTerminationConditionDialog,
+)
 
-from .extensions_palette import ExtensionsPalette
-from .routine_runner import BadgerRoutineSubprocess
+from badger.gui.default.components.extensions_palette import ExtensionsPalette
+from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
 
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'

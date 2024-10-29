@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def show_generator(args):
     try:
-        from ..factory import list_generators, get_generator
+        from badger.factory import list_generators, get_generator
     except Exception as e:
         logger.error(e)
         return

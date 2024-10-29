@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QDoubleSpinBox, QAbstractSpinBox
 from PyQt5.QtCore import Qt
-from ..utils import MouseWheelWidgetAdjustmentGuard
+from badger.gui.default.utils import MouseWheelWidgetAdjustmentGuard
 
 
 class RobustSpinBox(QDoubleSpinBox):

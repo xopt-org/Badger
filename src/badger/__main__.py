@@ -1,16 +1,16 @@
 import argparse
 
-from .actions import show_info
-from .actions.doctor import self_check
-from .actions.routine import show_routine
-from .actions.generator import show_generator
-from .actions.env import show_env
-from .actions.install import plugin_install
-from .actions.uninstall import plugin_remove
-from .actions.intf import show_intf
-from .actions.run import run_routine
-from .actions.config import config_settings
-from .log import config_log
+from badger.actions import show_info
+from badger.actions.doctor import self_check
+from badger.actions.routine import show_routine
+from badger.actions.generator import show_generator
+from badger.actions.env import show_env
+from badger.actions.install import plugin_install
+from badger.actions.uninstall import plugin_remove
+from badger.actions.intf import show_intf
+from badger.actions.run import run_routine
+from badger.actions.config import config_settings
+from badger.log import config_log
 
 config_log()
 

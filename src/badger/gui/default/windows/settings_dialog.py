@@ -16,8 +16,8 @@ from PyQt5.QtWidgets import (
     QCheckBox,
 )
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
-from ....settings import init_settings
-from ....utils import strtobool
+from badger.settings import init_settings
+from badger.utils import strtobool
 
 
 class BadgerSettingsDialog(QDialog):

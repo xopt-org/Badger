@@ -15,13 +15,16 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QRegExp
 
-from .collapsible_box import CollapsibleBox
-from .var_table import VariableTable
-from .obj_table import ObjectiveTable
-from .data_table import init_data_table
-from ....settings import init_settings
-from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
-from ....utils import strtobool
+from badger.gui.default.components.collapsible_box import CollapsibleBox
+from badger.gui.default.components.var_table import VariableTable
+from badger.gui.default.components.obj_table import ObjectiveTable
+from badger.gui.default.components.data_table import init_data_table
+from badger.settings import init_settings
+from badger.gui.default.utils import (
+    MouseWheelWidgetAdjustmentGuard,
+    NoHoverFocusComboBox,
+)
+from badger.utils import strtobool
 
 LABEL_WIDTH = 80
 

@@ -2,9 +2,9 @@ from __future__ import print_function
 import os
 import json
 
-from .observer import _Tracker
-from .event import Events
-from .util import Colours
+from badger.logger.observer import _Tracker
+from badger.logger.event import Events
+from badger.logger.util import Colours
 
 
 def _get_default_logger(verbose):

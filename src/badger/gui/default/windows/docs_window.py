@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QMainWindow,
 )
-from ....factory import get_generator_docs
+from badger.factory import get_generator_docs
 
 
 class BadgerDocsWindow(QMainWindow):

@@ -7,8 +7,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 from PyQt5.QtWidgets import QGroupBox, QMessageBox
-from ..components.labeled_lineedit import labeled_lineedit
-from ....environment import instantiate_env
+from badger.gui.default.components.labeled_lineedit import labeled_lineedit
+from badger.environment import instantiate_env
 
 
 class BadgerVariableDialog(QDialog):

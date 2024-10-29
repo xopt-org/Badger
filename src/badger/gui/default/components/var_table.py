@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
-from .robust_spinbox import RobustSpinBox
+from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError

@@ -1,4 +1,4 @@
-from ..settings import init_settings
+from badger.settings import init_settings
 import os
 import logging
 

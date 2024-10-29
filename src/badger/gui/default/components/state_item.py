@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from PyQt5.QtWidgets import QStyledItemDelegate
-from ..utils import NoHoverFocusComboBox
+from badger.gui.default.utils import NoHoverFocusComboBox
 
 
 def state_item(options, remove_item, name=None):

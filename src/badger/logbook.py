@@ -2,9 +2,9 @@ import os
 from datetime import datetime
 import logging
 
-from .settings import init_settings
-from .archive import BADGER_ARCHIVE_ROOT
-from .errors import BadgerConfigError, BadgerLogbookError
+from badger.settings import init_settings
+from badger.archive import BADGER_ARCHIVE_ROOT
+from badger.errors import BadgerConfigError, BadgerLogbookError
 
 logger = logging.getLogger(__name__)
 

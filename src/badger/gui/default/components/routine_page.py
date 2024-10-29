@@ -20,32 +20,32 @@ from xopt import VOCS
 from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
 
-from .generator_cbox import BadgerAlgoBox
-from .constraint_item import constraint_item
-from .data_table import (
+from badger.gui.default.components.generator_cbox import BadgerAlgoBox
+from badger.gui.default.components.constraint_item import constraint_item
+from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
     update_init_data_table,
 )
-from .env_cbox import BadgerEnvBox
-from .filter_cbox import BadgerFilterBox
-from .state_item import state_item
-from ..windows.docs_window import BadgerDocsWindow
-from ..windows.env_docs_window import BadgerEnvDocsWindow
-from ..windows.edit_script_dialog import BadgerEditScriptDialog
-from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
-from ..windows.review_dialog import BadgerReviewDialog
-from ..windows.add_random_dialog import BadgerAddRandomDialog
-from ..windows.message_dialog import BadgerScrollableMessageBox
-from ..windows.expandable_message_box import ExpandableMessageBox
-from ..utils import filter_generator_config
-from ....db import save_routine, update_routine, get_runs_by_routine
-from ....environment import instantiate_env
-from ....errors import BadgerRoutineError
-from ....factory import list_generators, list_env, get_env
-from ....routine import Routine
-from ....settings import init_settings
-from ....utils import (
+from badger.gui.default.components.env_cbox import BadgerEnvBox
+from badger.gui.default.components.filter_cbox import BadgerFilterBox
+from badger.gui.default.components.state_item import state_item
+from badger.gui.default.windows.docs_window import BadgerDocsWindow
+from badger.gui.default.windows.env_docs_window import BadgerEnvDocsWindow
+from badger.gui.default.windows.edit_script_dialog import BadgerEditScriptDialog
+from badger.gui.default.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
+from badger.gui.default.windows.review_dialog import BadgerReviewDialog
+from badger.gui.default.windows.add_random_dialog import BadgerAddRandomDialog
+from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
+from badger.gui.default.utils import filter_generator_config
+from badger.db import save_routine, update_routine, get_runs_by_routine
+from badger.environment import instantiate_env
+from badger.errors import BadgerRoutineError
+from badger.factory import list_generators, list_env, get_env
+from badger.routine import Routine
+from badger.settings import init_settings
+from badger.utils import (
     get_yaml_string,
     load_config,
     strtobool,

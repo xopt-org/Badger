@@ -8,8 +8,8 @@ from PyQt5.QtGui import QFont, QIcon
 from PyQt5 import QtCore
 from qdarkstyle import load_stylesheet, LightPalette, DarkPalette
 
-from ...settings import init_settings
-from .windows.main_window import BadgerMainWindow
+from badger.settings import init_settings
+from badger.gui.default.windows.main_window import BadgerMainWindow
 
 # Fix the scaling issue on multiple monitors w/ different scaling settings
 # if sys.platform == 'win32':

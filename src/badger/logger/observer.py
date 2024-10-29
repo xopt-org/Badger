@@ -3,7 +3,7 @@ observers...
 """
 
 from datetime import datetime
-from .event import Events
+from badger.logger.event import Events
 
 
 class Observer:

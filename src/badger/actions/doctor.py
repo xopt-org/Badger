@@ -1,5 +1,5 @@
-from ..settings import init_settings, mock_settings
-from .config import _config_path_var
+from badger.settings import init_settings, mock_settings
+from badger.actions.config import _config_path_var
 
 
 def self_check(args):

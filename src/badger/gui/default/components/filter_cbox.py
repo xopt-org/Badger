@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget
 from PyQt5.QtWidgets import QComboBox, QStyledItemDelegate, QLabel
-from .collapsible_box import CollapsibleBox
+from badger.gui.default.components.collapsible_box import CollapsibleBox
 
 
 class BadgerFilterBox(CollapsibleBox):

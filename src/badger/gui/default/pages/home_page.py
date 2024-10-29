@@ -23,8 +23,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from ....archive import delete_run, get_base_run_filename, load_run
-from ....db import (
+from badger.archive import delete_run, get_base_run_filename, load_run
+from badger.db import (
     export_routines,
     get_runs,
     get_runs_by_routine,
@@ -33,21 +33,26 @@ from ....db import (
     load_routine,
     remove_routine,
 )
-from ..components.data_table import add_row, data_table, reset_table, update_table
-from ..components.filter_cbox import BadgerFilterBox
-from ..components.history_navigator import HistoryNavigator
-from ..components.routine_editor import BadgerRoutineEditor
-from ..components.routine_item import BadgerRoutineItem
-from ..components.run_monitor import BadgerOptMonitor
-from ..components.search_bar import search_bar
-from ..components.status_bar import BadgerStatusBar
-from ..utils import create_button
-from ....utils import get_header, strtobool
-from ....settings import init_settings
+from badger.gui.default.components.data_table import (
+    add_row,
+    data_table,
+    reset_table,
+    update_table,
+)
+from badger.gui.default.components.filter_cbox import BadgerFilterBox
+from badger.gui.default.components.history_navigator import HistoryNavigator
+from badger.gui.default.components.routine_editor import BadgerRoutineEditor
+from badger.gui.default.components.routine_item import BadgerRoutineItem
+from badger.gui.default.components.run_monitor import BadgerOptMonitor
+from badger.gui.default.components.search_bar import search_bar
+from badger.gui.default.components.status_bar import BadgerStatusBar
+from badger.gui.default.utils import create_button
+from badger.utils import get_header, strtobool
+from badger.settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
-from ..windows.message_dialog import BadgerScrollableMessageBox
-from ..utils import ModalOverlay
+from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.default.utils import ModalOverlay
 
 stylesheet = """
 QPushButton:hover:pressed

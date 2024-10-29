@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
 from PyQt5.QtWidgets import QSizePolicy, QMessageBox
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
-from .eliding_label import ElidingLabel
-from ..utils import create_button
+from badger.gui.default.components.eliding_label import ElidingLabel
+from badger.gui.default.utils import create_button
 
 stylesheet_normal_default = """
     background-color: #4C566A;

@@ -8,14 +8,14 @@ from os.path import exists
 import yaml
 from tqdm.auto import tqdm
 
-from ..settings import init_settings
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
 
 def plugin_install(args):
     try:
-        from ..factory import BADGER_PLUGIN_ROOT
+        from badger.factory import BADGER_PLUGIN_ROOT
     except Exception as e:
         logger.error(e)
         return

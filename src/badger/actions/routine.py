@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 def show_routine(args):
     try:
-        from ..db import load_routine, list_routine
-        from .run import run_n_archive
+        from badger.db import load_routine, list_routine
+        from badger.actions.run import run_n_archive
     except Exception as e:
         logger.error(e)
         return

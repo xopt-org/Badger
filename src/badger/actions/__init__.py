@@ -1,7 +1,7 @@
 from importlib import metadata
-from .doctor import check_n_config_paths
-from ..utils import yprint
-from ..log import set_log_level
+from badger.actions.doctor import check_n_config_paths
+from badger.utils import yprint
+from badger.log import set_log_level
 
 
 def show_info(args):
@@ -10,7 +10,7 @@ def show_info(args):
 
     if args.gui:
         if check_n_config_paths():
-            from ..gui.default import launch_gui
+            from badger.gui.default import launch_gui
 
             launch_gui()
 
@@ -18,7 +18,7 @@ def show_info(args):
 
     if args.gui_acr:
         if check_n_config_paths():
-            from ..gui.default import launch_gui
+            from badger.gui.default import launch_gui
 
             launch_gui()
 
@@ -27,7 +27,7 @@ def show_info(args):
     if not check_n_config_paths():
         return
 
-    from ..settings import init_settings
+    from badger.settings import init_settings
 
     config_singleton = init_settings()
     BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")

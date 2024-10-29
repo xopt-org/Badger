@@ -7,10 +7,10 @@ import yaml
 import sqlite3
 import uuid
 
-from .routine import Routine
-from .settings import init_settings
-from .utils import get_yaml_string
-from .errors import BadgerConfigError, BadgerDBError
+from badger.routine import Routine
+from badger.settings import init_settings
+from badger.utils import get_yaml_string
+from badger.errors import BadgerConfigError, BadgerDBError
 
 logger = logging.getLogger(__name__)
 

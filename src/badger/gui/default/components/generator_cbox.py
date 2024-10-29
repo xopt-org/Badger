@@ -6,10 +6,13 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit,
 )
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
-from .collapsible_box import CollapsibleBox
-from ....settings import init_settings
-from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
-from ....utils import strtobool
+from badger.gui.default.components.collapsible_box import CollapsibleBox
+from badger.settings import init_settings
+from badger.gui.default.utils import (
+    MouseWheelWidgetAdjustmentGuard,
+    NoHoverFocusComboBox,
+)
+from badger.utils import strtobool
 
 
 class BadgerAlgoBox(CollapsibleBox):

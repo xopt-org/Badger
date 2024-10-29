@@ -6,10 +6,10 @@ import pandas as pd
 import torch  # noqa: F401. For converting dtype str to torch object.
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
-from ....errors import BadgerRunTerminated
-from ....tests.utils import get_current_vars
-from ....routine import calculate_variable_bounds, calculate_initial_points
-from ....settings import init_settings
+from badger.errors import BadgerRunTerminated
+from badger.tests.utils import get_current_vars
+from badger.routine import calculate_variable_bounds, calculate_initial_points
+from badger.settings import init_settings
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
 

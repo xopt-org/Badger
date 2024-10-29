@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QStackedWidget
 from PyQt5.QtWidgets import QVBoxLayout, QSpinBox, QPushButton
 from PyQt5.QtWidgets import QGroupBox, QLabel, QComboBox, QStyledItemDelegate
-from ..components.robust_spinbox import RobustSpinBox
+from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 
 class BadgerAddRandomDialog(QDialog):

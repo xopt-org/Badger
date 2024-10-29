@@ -7,7 +7,10 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate
 from PyQt5.QtCore import Qt
-from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
+from badger.gui.default.utils import (
+    MouseWheelWidgetAdjustmentGuard,
+    NoHoverFocusComboBox,
+)
 
 
 def constraint_item(

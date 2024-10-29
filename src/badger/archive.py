@@ -2,11 +2,11 @@ import os
 import warnings
 import logging
 
-from .db import save_run, remove_run_by_filename
-from .utils import ts_float_to_str
-from .settings import init_settings
-from .routine import Routine
-from .errors import BadgerConfigError
+from badger.db import save_run, remove_run_by_filename
+from badger.utils import ts_float_to_str
+from badger.settings import init_settings
+from badger.routine import Routine
+from badger.errors import BadgerConfigError
 
 logger = logging.getLogger(__name__)
 

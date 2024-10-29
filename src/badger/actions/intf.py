@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def show_intf(args):
     try:
-        from ..factory import list_intf, get_intf
+        from badger.factory import list_intf, get_intf
     except Exception as e:
         logger.error(e)
         return

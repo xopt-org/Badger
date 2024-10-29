@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def show_env(args):
     try:
-        from ..factory import list_env, get_env
+        from badger.factory import list_env, get_env
     except Exception as e:
         logger.error(e)
         return

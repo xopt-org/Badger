@@ -8,7 +8,7 @@ from datetime import datetime
 
 import yaml
 
-from .errors import BadgerLoadConfigError
+from badger.errors import BadgerLoadConfigError
 
 logger = logging.getLogger(__name__)
 

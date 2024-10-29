@@ -3,7 +3,7 @@ import platform
 import yaml
 import shutil
 from importlib import resources
-from .utils import get_datadir
+from badger.utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 

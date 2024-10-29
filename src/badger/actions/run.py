@@ -6,11 +6,11 @@ import signal
 
 from pandas import DataFrame
 
-from ..utils import curr_ts
-from ..core import run_routine as run
-from ..routine import Routine
-from ..settings import init_settings
-from ..errors import BadgerRunTerminated
+from badger.utils import curr_ts
+from badger.core import run_routine as run
+from badger.routine import Routine
+from badger.settings import init_settings
+from badger.errors import BadgerRunTerminated
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def run_n_archive(
     routine: Routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
 ):
     try:
-        from ..archive import archive_run
+        from badger.archive import archive_run
     except Exception as e:
         logger.error(e)
         return

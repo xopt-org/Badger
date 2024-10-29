@@ -1,6 +1,6 @@
-from .settings import init_settings
-from .utils import get_value_or_none
-from .errors import (
+from badger.settings import init_settings
+from badger.utils import get_value_or_none
+from badger.errors import (
     BadgerConfigError,
     BadgerInvalidPluginError,
     BadgerInvalidDocsError,
