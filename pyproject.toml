@@ -64,9 +64,9 @@ where = ["src"]
 include = [ "badger", ]
 namespaces = false
 
-[tool.ruff]
-# select = []
-# ignore = []
+[tool.ruff.lint]
+extend-select = ["TID252"] # Defaults + check imports
+ignore = ["E722"] # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
 addopts = "--cov=badger/"
