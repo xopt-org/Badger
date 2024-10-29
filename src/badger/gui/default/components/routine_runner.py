@@ -6,10 +6,10 @@ import pandas as pd
 import torch  # noqa: F401. For converting dtype str to torch object.
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
-from badger.errors import BadgerRunTerminatedError
-from badger.tests.utils import get_current_vars
-from badger.routine import calculate_variable_bounds, calculate_initial_points
-from badger.settings import AUTO_REFRESH
+from ....errors import BadgerRunTerminated
+from ....tests.utils import get_current_vars
+from ....routine import calculate_variable_bounds, calculate_initial_points
+from ....settings import init_settings
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
 
@@ -75,6 +75,7 @@ class BadgerRoutineSubprocess:
         self.routine_process = None
         self.is_killed = False
         self.interval = 100
+        self.config_singleton = init_settings()
 
     def set_termination_condition(self, termination_condition: dict) -> None:
         """
@@ -109,7 +110,10 @@ class BadgerRoutineSubprocess:
 
         self.routine.data = None  # reset data
         # Recalculate the bounds and initial points if asked
-        if AUTO_REFRESH and self.routine.relative_to_current:
+        if (
+            self.config_singleton.read_value("AUTO_REFRESH")
+            and self.routine.relative_to_current
+        ):
             variables_updated = calculate_variable_bounds(
                 self.routine.vrange_limit_options,
                 self.routine.vocs,
@@ -141,6 +145,7 @@ class BadgerRoutineSubprocess:
             self.wait_event = process_with_args["wait_event"]
 
             arg_dict = {
+                "routine_id": self.routine.id,
                 "routine_name": self.routine.name,
                 "variable_ranges": self.routine.vocs.variables,
                 "initial_points": self.routine.initial_points,
@@ -154,7 +159,34 @@ class BadgerRoutineSubprocess:
             self.pause_event.set()
             self.setup_timer()
             # self.signals.finished.emit(self.routine.states)
-        except BadgerRunTerminatedError as e:
+
+            self.routine.data = None  # reset data
+            # Recalculate the bounds and initial points if asked
+            if (
+                self.config_singleton.read_value("AUTO_REFRESH")
+                and self.routine.relative_to_current
+            ):
+                variables_updated = calculate_variable_bounds(
+                    self.routine.vrange_limit_options,
+                    self.routine.vocs,
+                    self.routine.environment,
+                )
+
+                self.routine.vocs.variables = variables_updated
+
+                init_points = calculate_initial_points(
+                    self.routine.initial_point_actions,
+                    self.routine.vocs,
+                    self.routine.environment,
+                )
+                try:
+                    init_points = pd.DataFrame(init_points)
+                except IndexError:
+                    init_points = pd.DataFrame(init_points, index=[0])
+
+                self.routine.initial_points = init_points
+
+        except BadgerRunTerminated as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:

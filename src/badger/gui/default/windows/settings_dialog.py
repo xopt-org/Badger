@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
 )
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
-from ....settings import list_settings, read_value, write_value
+from ....settings import init_settings
 from ....utils import strtobool
 
 
@@ -31,7 +31,10 @@ class BadgerSettingsDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.settings = list_settings()  # store the current settings
+        self.config_singleton = init_settings()
+        self.settings = (
+            self.config_singleton.list_settings()
+        )  # store the current settings
 
         self.init_ui()
         self.config_logic()
@@ -49,7 +52,7 @@ class BadgerSettingsDialog(QDialog):
         grid.setContentsMargins(0, 0, 0, 0)
 
         # Theme selector
-        theme = self.settings["BADGER_THEME"]
+        theme = self.settings["BADGER_THEME"]["value"]
         self.lbl_theme = lbl_theme = QLabel("Theme")
         self.cb_theme = cb_theme = QComboBox()
         cb_theme.setItemDelegate(QStyledItemDelegate())
@@ -61,21 +64,23 @@ class BadgerSettingsDialog(QDialog):
         # Plugin Root
         self.plugin_root = plugin_root = QLabel("Plugin Root")
         self.plugin_root_path = plugin_root_path = QLineEdit(
-            read_value("BADGER_PLUGIN_ROOT")
+            self.config_singleton.read_value("BADGER_PLUGIN_ROOT")
         )
         grid.addWidget(plugin_root, 1, 0)
         grid.addWidget(plugin_root_path, 1, 1)
 
         # DB Root
         self.db_root = db_root = QLabel("Database Root")
-        self.db_root_path = db_root_path = QLineEdit(read_value("BADGER_DB_ROOT"))
+        self.db_root_path = db_root_path = QLineEdit(
+            self.config_singleton.read_value("BADGER_DB_ROOT")
+        )
         grid.addWidget(db_root, 2, 0)
         grid.addWidget(db_root_path, 2, 1)
 
         # Logbook Root
         self.logbook_root = logbook_root = QLabel("Logbook Root")
         self.logbook_root_path = logbook_root_path = QLineEdit(
-            read_value("BADGER_LOGBOOK_ROOT")
+            self.config_singleton.read_value("BADGER_LOGBOOK_ROOT")
         )
         grid.addWidget(logbook_root, 3, 0)
         grid.addWidget(logbook_root_path, 3, 1)
@@ -83,7 +88,7 @@ class BadgerSettingsDialog(QDialog):
         # Archive Root
         self.archive_root = archive_root = QLabel("Archive Root")
         self.archive_root_path = archive_root_path = QLineEdit(
-            read_value("BADGER_ARCHIVE_ROOT")
+            self.config_singleton.read_value("BADGER_ARCHIVE_ROOT")
         )
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
@@ -111,7 +116,7 @@ class BadgerSettingsDialog(QDialog):
         # Badger data dump period
         self.dump_period = dump_period = QLabel("Data dump period")
         self.dump_period_val = dump_period_val = QLineEdit(
-            str(read_value("BADGER_DATA_DUMP_PERIOD"))
+            str(self.config_singleton.read_value("BADGER_DATA_DUMP_PERIOD"))
         )
         self.dump_period_val.setValidator(validator)
         grid.addWidget(dump_period, 8, 0)
@@ -120,7 +125,9 @@ class BadgerSettingsDialog(QDialog):
         # Advanced settings
         self.adv_features = adv_features = QLabel("Enable Advanced Features")
         self.enable_adv_features = enable_adv_features = QCheckBox()
-        enable_adv_features.setChecked(strtobool(read_value("BADGER_ENABLE_ADVANCED")))
+        enable_adv_features.setChecked(
+            strtobool(self.config_singleton.read_value("BADGER_ENABLE_ADVANCED"))
+        )
         grid.addWidget(adv_features, 9, 0)
         grid.addWidget(enable_adv_features, 9, 1)
 
@@ -151,28 +158,38 @@ class BadgerSettingsDialog(QDialog):
         theme = self.theme_list[i]
         self.set_theme(theme)
         # Update the internal settings
-        write_value("BADGER_THEME", theme)
+        self.config_singleton.write_value("BADGER_THEME", theme)
 
     def apply_settings(self):
         self.accept()
-        write_value("BADGER_PLUGIN_ROOT", self.plugin_root_path.text())
-        write_value("BADGER_DB_ROOT", self.db_root_path.text())
-        write_value("BADGER_LOGBOOK_ROOT", self.logbook_root_path.text())
-        write_value("BADGER_ARCHIVE_ROOT", self.archive_root_path.text())
+        self.config_singleton.write_value(
+            "BADGER_PLUGIN_ROOT", self.plugin_root_path.text()
+        )
+        self.config_singleton.write_value("BADGER_DB_ROOT", self.db_root_path.text())
+        self.config_singleton.write_value(
+            "BADGER_LOGBOOK_ROOT", self.logbook_root_path.text()
+        )
+        self.config_singleton.write_value(
+            "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
+        )
         # write_value('BADGER_CHECK_VAR_INTERVAL', self.var_int_val.text())
         # write_value('BADGER_CHECK_VAR_TIMEOUT', self.var_time_val.text())
         # write_value('BADGER_PLUGINS_URL', self.plugin_url_name.text())
-        write_value("BADGER_DATA_DUMP_PERIOD", float(self.dump_period_val.text()))
-        write_value("BADGER_ENABLE_ADVANCED", self.enable_adv_features.isChecked())
+        self.config_singleton.write_value(
+            "BADGER_DATA_DUMP_PERIOD", float(self.dump_period_val.text())
+        )
+        self.config_singleton.write_value(
+            "BADGER_ENABLE_ADVANCED", self.enable_adv_features.isChecked()
+        )
 
     def restore_settings(self):
         # Reset theme if needed
-        theme_curr = read_value("BADGER_THEME")
-        theme_prev = self.settings["BADGER_THEME"]
+        theme_curr = self.config_singleton.read_value("BADGER_THEME")
+        theme_prev = self.settings["BADGER_THEME"]["value"]
         if theme_prev != theme_curr:
             self.set_theme(theme_prev)
 
         for key in self.settings.keys():
-            write_value(key, self.settings[key])
+            self.config_singleton.write_value(key, self.settings[key]["value"])
 
         self.reject()

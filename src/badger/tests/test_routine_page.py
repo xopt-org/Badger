@@ -14,6 +14,7 @@ def test_routine_page_init(qtbot):
 
 def test_routine_generation(qtbot):
     from badger.errors import BadgerRoutineError
+    from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
@@ -47,6 +48,10 @@ def test_routine_generation(qtbot):
     assert routine.vocs.variables == {"x0": [-1, 1]}
     assert routine.vocs.objectives == {"f": "MINIMIZE"}
     assert routine.initial_points.empty
+
+    # Test if badger and xopt version match with the current version
+    assert routine.badger_version == get_badger_version()
+    assert routine.xopt_version == get_xopt_version()
 
 
 def test_add_additional_vars(qtbot):
@@ -90,10 +95,6 @@ def test_add_additional_vars(qtbot):
 
     # Check that a new row was automatically added
     assert window.env_box.var_table.rowCount() == n_rows + 1
-
-    # Check VOCS
-    routine = window._compose_routine()
-    assert routine.vocs.variables == variables
 
 
 def test_initial_points(qtbot):

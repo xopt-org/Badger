@@ -7,7 +7,7 @@ from pandas import concat, DataFrame
 import multiprocessing as mp
 
 from badger.db import load_routine
-from badger.errors import BadgerRunTerminatedError
+from badger.errors import BadgerRunTerminated, BadgerError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
@@ -94,7 +94,7 @@ def run_routine_subprocess(
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 
     # set required arguments
-    routine, _ = load_routine(args["routine_name"])
+    routine, _ = load_routine(args["routine_id"])
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
     # Patch for converting dtype str to torch object
@@ -162,7 +162,7 @@ def run_routine_subprocess(
         while True:
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif not pause_process.is_set():
                 pause_process.wait()
 
@@ -173,12 +173,12 @@ def run_routine_subprocess(
                 if idx == 0:
                     max_eval = tc_config["max_eval"]
                     if len(routine.data) >= max_eval:
-                        raise BadgerRunTerminatedError
+                        raise BadgerRunTerminated
                 elif idx == 1:
                     max_time = tc_config["max_time"]
                     dt = time.time() - start_time
                     if dt >= max_time:
-                        raise BadgerRunTerminatedError
+                        raise BadgerRunTerminated
 
             # TODO give user a message that a solution is being worked on.
 
@@ -192,7 +192,7 @@ def run_routine_subprocess(
             # External triggers
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif not pause_process.is_set():
                 pause_process.wait()
 
@@ -217,10 +217,10 @@ def run_routine_subprocess(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
-    except BadgerRunTerminatedError:
+    except BadgerRunTerminated:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
-        raise e
+        raise BadgerError(f"An error occurred: {str(e)}")

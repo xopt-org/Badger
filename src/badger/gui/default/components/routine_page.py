@@ -1,3 +1,4 @@
+import json
 import warnings
 import sqlite3
 import traceback
@@ -5,7 +6,6 @@ import copy
 from functools import partial
 import os
 import yaml
-import json
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,7 @@ from .env_cbox import BadgerEnvBox
 from .filter_cbox import BadgerFilterBox
 from .state_item import state_item
 from ..windows.docs_window import BadgerDocsWindow
+from ..windows.env_docs_window import BadgerEnvDocsWindow
 from ..windows.edit_script_dialog import BadgerEditScriptDialog
 from ..windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from ..windows.review_dialog import BadgerReviewDialog
@@ -38,13 +39,19 @@ from ..windows.add_random_dialog import BadgerAddRandomDialog
 from ..windows.message_dialog import BadgerScrollableMessageBox
 from ..windows.expandable_message_box import ExpandableMessageBox
 from ..utils import filter_generator_config
-from ....db import save_routine, remove_routine, update_routine
+from ....db import save_routine, update_routine, get_runs_by_routine
 from ....environment import instantiate_env
 from ....errors import BadgerRoutineError
 from ....factory import list_generators, list_env, get_env
 from ....routine import Routine
-from ....settings import read_value
-from ....utils import get_yaml_string, load_config, strtobool
+from ....settings import init_settings
+from ....utils import (
+    get_yaml_string,
+    load_config,
+    strtobool,
+    get_badger_version,
+    get_xopt_version,
+)
 
 CONS_RELATION_DICT = {
     ">": "GREATER_THAN",
@@ -54,8 +61,7 @@ CONS_RELATION_DICT = {
 
 
 class BadgerRoutinePage(QWidget):
-    name_updated = pyqtSignal(str, str)  # routine name, routine new name
-    descr_updated = pyqtSignal(str, str)  # routine name, routine description
+    sig_updated = pyqtSignal(str, str)  # routine name, routine description
 
     def __init__(self):
         super().__init__()
@@ -66,6 +72,7 @@ class BadgerRoutinePage(QWidget):
         self.routine = None
         self.script = ""
         self.window_docs = BadgerDocsWindow(self, "")
+        self.window_env_docs = BadgerEnvDocsWindow(self, "")
         self.vars_env = None  # needed for passing env vars to the var table
 
         # Limit variable ranges
@@ -92,6 +99,8 @@ class BadgerRoutinePage(QWidget):
         self.config_logic()
 
     def init_ui(self):
+        config_singleton = init_settings()
+
         # Set up the layout
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(11, 11, 19, 11)
@@ -146,7 +155,7 @@ class BadgerRoutinePage(QWidget):
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
-        if not strtobool(read_value("BADGER_ENABLE_ADVANCED")):
+        if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_tags.hide()
         vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
         # vbox_meta.addStretch()
@@ -159,7 +168,7 @@ class BadgerRoutinePage(QWidget):
         vbox.addWidget(self.generator_box)
 
         # Env box
-        BADGER_PLUGIN_ROOT = read_value("BADGER_PLUGIN_ROOT")
+        BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
         env_dict_dir = os.path.join(
             BADGER_PLUGIN_ROOT, "environments", "env_colors.yaml"
         )
@@ -182,6 +191,7 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.cb.currentIndexChanged.connect(self.select_env)
         self.env_box.btn_env_play.clicked.connect(self.open_playground)
+        self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_con.clicked.connect(self.add_constraint)
@@ -513,6 +523,9 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.update_stylesheets(env.name)
 
+        # Update the docs
+        self.window_env_docs.update_docs(env.name)
+
     def get_init_table_header(self):
         table = self.env_box.init_table
         header_list = []
@@ -636,6 +649,9 @@ class BadgerRoutinePage(QWidget):
 
     def open_generator_docs(self):
         self.window_docs.show()
+
+    def open_environment_docs(self):
+        self.window_env_docs.show()
 
     def add_var(self):
         # TODO: Use a cached env
@@ -939,6 +955,9 @@ class BadgerRoutinePage(QWidget):
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(
+                # Metadata
+                badger_version=get_badger_version(),
+                xopt_version=get_xopt_version(),
                 # Xopt part
                 vocs=vocs,
                 generator={"name": generator_name} | generator_params,
@@ -982,7 +1001,7 @@ class BadgerRoutinePage(QWidget):
         try:
             update_routine(routine)
             # Notify routine list to update
-            self.descr_updated.emit(routine.name, routine.description)
+            self.sig_updated.emit(routine.name, routine.description)
             QMessageBox.information(
                 self,
                 "Update success!",
@@ -1007,16 +1026,20 @@ class BadgerRoutinePage(QWidget):
             return
 
         try:
-            if self.routine and routine != self.routine:
+            if self.routine:
+                keys_to_exclude = ["data", "id", "name", "description"]
                 old_dict = json.loads(self.routine.json())
-                old_dict.pop("data")
+                old_dict = {
+                    k: v for k, v in old_dict.items() if k not in keys_to_exclude
+                }
                 new_dict = json.loads(routine.json())
-                new_dict.pop("data")
-                new_dict["name"] = old_dict["name"]
-                new_dict["description"] = new_dict["description"]
-                if old_dict == new_dict:
-                    update_routine(routine, old_name=self.routine.name)
-                    self.name_updated.emit(self.routine.name, routine.name)
+                new_dict = {
+                    k: v for k, v in new_dict.items() if k not in keys_to_exclude
+                }
+                runs = get_runs_by_routine(self.routine.id)
+                if len(runs) == 0 or old_dict == new_dict:
+                    routine.id = self.routine.id
+                    update_routine(routine)
                 else:
                     save_routine(routine)
             else:
@@ -1028,11 +1051,5 @@ class BadgerRoutinePage(QWidget):
                 f"Routine {routine.name} already existed in the database! Please "
                 f"choose another name.",
             )
-
-        return 0
-
-    def delete(self):
-        name = self.edit_save.text() or self.edit_save.placeholderText()
-        remove_routine(name)
 
         return 0

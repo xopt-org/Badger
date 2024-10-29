@@ -21,6 +21,7 @@ from badger.environment import Environment, instantiate_env
 
 
 class Routine(Xopt):
+    id: Optional[str] = Field(None)
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[Environment]
@@ -33,11 +34,9 @@ class Routine(Xopt):
     vrange_limit_options: Optional[dict] = Field(None)
     initial_point_actions: Optional[List] = Field(None)
     additional_variables: Optional[List[str]] = Field([])
-    # Store relative to current params
-    relative_to_current: Optional[bool] = Field(False)
-    vrange_limit_options: Optional[dict] = Field(None)
-    initial_point_actions: Optional[List] = Field(None)
-    additional_variables: Optional[List[str]] = Field([])
+    # Other meta data
+    badger_version: Optional[str] = Field(None)
+    xopt_version: Optional[str] = Field(None)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -161,20 +160,6 @@ class Routine(Xopt):
             pass
 
         return json.dumps(dict_result)
-
-    def __eq__(self, routine):
-        if not isinstance(routine, Routine):
-            return False
-        self_dict = json.loads(self.json())
-        self_dict.pop("data")
-        routine_dict = json.loads(routine.json())
-        routine_dict.pop("data")
-        return self_dict == routine_dict
-
-    def __hash__(self):
-        self_dict = json.loads(self.json())
-        self_dict.pop("data")
-        return hash(tuple(sorted(self_dict)))
 
 
 def calculate_variable_bounds(limit_options, vocs, env):

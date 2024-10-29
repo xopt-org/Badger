@@ -1,14 +1,14 @@
 import logging
+import requests
 import tarfile
-import os
 import shutil
+import os
 from os.path import exists
 
-import requests
 import yaml
 from tqdm.auto import tqdm
 
-from badger.settings import read_value
+from ..settings import init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,8 @@ def plugin_install(args):
         )
         return
 
-    plugins_url = read_value("BADGER_PLUGINS_URL")
+    config = init_settings()
+    plugins_url = config.read_value("BADGER_PLUGINS_URL")
 
     if args.plugin_specific is None:
         if args.plugin_type == "local":

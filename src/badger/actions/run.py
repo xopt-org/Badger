@@ -3,12 +3,14 @@ import os
 import sys
 import time
 import signal
+
 from pandas import DataFrame
-from badger.utils import curr_ts
-from badger.core import run_routine as run
-from badger.routine import Routine
-from badger.settings import read_value
-from badger.errors import BadgerRunTerminatedError
+
+from ..utils import curr_ts
+from ..core import run_routine as run
+from ..routine import Routine
+from ..settings import init_settings
+from ..errors import BadgerRunTerminated
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ def run_n_archive(
             print("")  # start a new line
             if flush_prompt:  # erase the last prompt
                 sys.stdout.write("\033[F")
-            raise BadgerRunTerminatedError
+            raise BadgerRunTerminated
         storage["paused"] = True
 
     signal.signal(signal.SIGINT, handler)
@@ -64,9 +66,9 @@ def run_n_archive(
         # stas: list
         ts = curr_ts()
         ts_float = ts.timestamp()
-
+        config = init_settings()
         # Try dump the run data and interface log to the disk
-        dump_period = float(read_value("BADGER_DATA_DUMP_PERIOD"))
+        dump_period = float(config.read_value("BADGER_DATA_DUMP_PERIOD"))
         ts_last_dump = storage["ts_last_dump"]
         if (ts_last_dump is None) or (ts_float - ts_last_dump > dump_period):
             storage["ts_last_dump"] = ts_float
@@ -95,7 +97,7 @@ def run_n_archive(
             evaluate_callback=after_evaluate,
             states_callback=states_ready,
         )
-    except BadgerRunTerminatedError as e:
+    except BadgerRunTerminated as e:
         logger.info(e)
     except Exception as e:
         logger.error(e)

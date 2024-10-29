@@ -80,6 +80,7 @@ class TestCore:
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
+            "routine_id": self.routine.id,
             "routine_name": self.routine.name,
             "variable_ranges": self.routine.vocs.variables,
             "initial_points": self.routine.initial_points,
@@ -164,7 +165,7 @@ class TestCore:
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
-            "routine_name": self.routine.name,
+            "routine_id": self.routine.id,
             "evaluate": True,
             "termination_condition": self.termination_condition,
             "start_time": time.time(),

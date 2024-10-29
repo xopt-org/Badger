@@ -61,15 +61,17 @@ QPushButton
 
 
 class BadgerRoutineItem(QWidget):
+    # sig_del carries an id
     sig_del = pyqtSignal(str)
 
     def __init__(
-        self, name, timestamp, environment, env_dict, description="", parent=None
+        self, id, name, timestamp, environment, env_dict, description="", parent=None
     ):
         super().__init__(parent)
 
         self.activated = False
         self.hover = False
+        self.id = id
         self.name = name
         self.timestamp = timestamp
         self.description = description
@@ -194,7 +196,7 @@ class BadgerRoutineItem(QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        self.sig_del.emit(self.name)
+        self.sig_del.emit(self.id)
 
     def update_tooltip(self):
         _timestamp = datetime.fromisoformat(self.timestamp)
@@ -205,8 +207,4 @@ class BadgerRoutineItem(QWidget):
 
     def update_description(self, descr):
         self.description = descr
-        self.update_tooltip()
-
-    def update_name(self, name):
-        self.name = name
         self.update_tooltip()

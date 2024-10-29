@@ -1,4 +1,4 @@
-from .settings import read_value
+from .settings import init_settings
 from .utils import get_value_or_none
 from .errors import (
     BadgerConfigError,
@@ -29,7 +29,8 @@ ALGO_EXCLUDED = [
 ]
 
 # Check badger plugin root
-BADGER_PLUGIN_ROOT = read_value("BADGER_PLUGIN_ROOT")
+config_singleton = init_settings()
+BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
 if BADGER_PLUGIN_ROOT is None:
     raise BadgerConfigError("Please set the BADGER_PLUGIN_ROOT env var!")
 elif not os.path.exists(BADGER_PLUGIN_ROOT):
@@ -199,6 +200,10 @@ def scan_extensions(root):
 
 def get_generator_docs(name):
     return generators[name].__doc__
+
+
+def get_env_docs(name):
+    return load_docs(BADGER_PLUGIN_ROOT, name, "environment")
 
 
 def get_intf(name):

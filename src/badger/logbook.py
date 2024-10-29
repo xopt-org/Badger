@@ -2,14 +2,15 @@ import os
 from datetime import datetime
 import logging
 
-from .settings import read_value
+from .settings import init_settings
 from .archive import BADGER_ARCHIVE_ROOT
 from .errors import BadgerConfigError, BadgerLogbookError
 
 logger = logging.getLogger(__name__)
 
 # Check badger logbook root
-BADGER_LOGBOOK_ROOT = read_value("BADGER_LOGBOOK_ROOT")
+config_singleton = init_settings()
+BADGER_LOGBOOK_ROOT = config_singleton.read_value("BADGER_LOGBOOK_ROOT")
 if BADGER_LOGBOOK_ROOT is None:
     raise BadgerConfigError("Please set the BADGER_LOGBOOK_ROOT env var!")
 elif not os.path.exists(BADGER_LOGBOOK_ROOT):

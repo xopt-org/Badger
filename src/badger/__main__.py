@@ -1,6 +1,5 @@
 import argparse
 
-from .settings import init_settings
 from .actions import show_info
 from .actions.doctor import self_check
 from .actions.routine import show_routine
@@ -13,13 +12,10 @@ from .actions.run import run_routine
 from .actions.config import config_settings
 from .log import config_log
 
-config_log()  # Has to happen here to make sure the config taking effect
+config_log()
 
 
 def main():
-    # Initialize the Badger settings
-    init_settings()
-
     # Create the top-level parser
     parser = argparse.ArgumentParser(description="Badger the optimizer")
     parser.add_argument("-g", "--gui", action="store_true", help="launch the GUI")
