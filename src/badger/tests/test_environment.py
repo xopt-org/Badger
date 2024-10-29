@@ -5,13 +5,14 @@ from xopt.resources.testing import TEST_VOCS_BASE
 
 
 class TestEnv:
+
     def test_basic_env(self):
         from badger.environment import Environment
 
         class Environment(Environment):
-            name = "test"
-            variables = {f"x{i}": [-1, 1] for i in range(20)}
-            observables = ["f"]
+            name = 'test'
+            variables = {f'x{i}': [-1, 1] for i in range(20)}
+            observables = ['f']
 
             my_flag: int = 0
 
@@ -36,9 +37,9 @@ class TestEnv:
         from badger.environment import Environment
 
         class Environment(Environment):
-            name = "test"
-            variables = {f"x{i}": [-1, 1] for i in range(20)}
-            observables = ["f"]
+            name = 'test'
+            variables = {f'x{i}': [-1, 1] for i in range(20)}
+            observables = ['f']
 
             my_flag: int = 0
 
@@ -54,7 +55,10 @@ class TestEnv:
         vocs = TEST_VOCS_BASE
 
         routine = Routine(
-            name="test_routine", environment=env, vocs=vocs, generator="random"
+            name="test_routine",
+            environment=env,
+            vocs=vocs,
+            generator="random"
         )
         result = json.loads(routine.json())
         assert result["environment"]["my_flag"] == 0
@@ -75,7 +79,7 @@ class TestEnv:
             name="test_routine",
             environment=env(**config),
             vocs=vocs,
-            generator="random",
+            generator="random"
         )
         result = json.loads(routine.json())
         assert result["environment"]["flag"] == 0

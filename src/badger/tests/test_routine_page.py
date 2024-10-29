@@ -3,14 +3,12 @@ import pytest
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 
-
 def test_routine_page_init(qtbot):
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
 
     qtbot.addWidget(window)
-
 
 def test_routine_generation(qtbot):
     from badger.errors import BadgerRoutineError
@@ -55,6 +53,7 @@ def test_routine_generation(qtbot):
 
 
 def test_add_additional_vars(qtbot):
+    from badger.db import load_routine, remove_routine
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
@@ -86,7 +85,10 @@ def test_add_additional_vars(qtbot):
     window.env_box.var_table.cellChanged.emit(20, 1)
 
     # Why isn't this updating the table after changing the value?
-    variables = {"x0": [-1, 1], "x20": [-1, 1]}
+    variables = {
+        "x0": [-1, 1],
+        "x20": [-1, 1]
+    }
 
     # Check that new variable was added
     # Its checkbox checked by default when added
@@ -95,7 +97,7 @@ def test_add_additional_vars(qtbot):
 
     # Check that a new row was automatically added
     assert window.env_box.var_table.rowCount() == n_rows + 1
-
+    
 
 def test_initial_points(qtbot):
     # test to make sure initial points widget works properly
@@ -119,10 +121,8 @@ def test_initial_points(qtbot):
     # test routine generation with fake current values selected
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
     routine = window._compose_routine()
-    assert (
-        routine.initial_points.to_dict()
-        == pd.DataFrame({"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
-    )
+    assert routine.initial_points.to_dict() == pd.DataFrame(
+        {"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
 
 
 def test_ui_update(qtbot):

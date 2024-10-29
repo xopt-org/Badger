@@ -15,11 +15,21 @@ def create_routine():
         "generator_params": {},
         "env_params": {},
         "vocs": {
-            "variables": {"x0": [-1, 1], "x1": [-1, 1], "x2": [-1, 1], "x3": [-1, 1]},
+            "variables": {
+                "x0": [-1, 1],
+                "x1": [-1, 1],
+                "x2": [-1, 1],
+                "x3": [-1, 1]
+            },
             "objectives": {"f": "MAXIMIZE"},
-            "constraints": {"c": ["GREATER_THAN", 0]},
+            "constraints": {"c": ["GREATER_THAN", 0]}
         },
-        "init_points": {"x0": [0.5], "x1": [0.5], "x2": [0.5], "x3": [0.5]},
+        "init_points": {
+            "x0": [0.5],
+            "x1": [0.5],
+            "x2": [0.5],
+            "x3": [0.5]
+        },
     }
 
     vocs = VOCS(**test_routine["vocs"])
@@ -31,7 +41,7 @@ def create_routine():
         vocs=vocs,
         generator=generator,
         environment={"name": "test"},
-        initial_points=pd.DataFrame(test_routine["init_points"]),
+        initial_points=pd.DataFrame(test_routine["init_points"])
     )
 
 
@@ -44,9 +54,14 @@ def create_multiobjective_routine():
         "generator_params": {},
         "env_params": {},
         "vocs": {
-            "variables": {"x0": [-1, 1], "x1": [-1, 1], "x2": [-1, 1], "x3": [-1, 1]},
+            "variables": {
+                "x0": [-1, 1],
+                "x1": [-1, 1],
+                "x2": [-1, 1],
+                "x3": [-1, 1]
+            },
             "objectives": {"f1": "MAXIMIZE", "f2": "MINIMIZE"},
-            "constraints": {},
+            "constraints": {}
         },
         "init_points": {"x0": [0.5], "x1": [0.5], "x2": [0.5], "x3": [0.5]},
     }
@@ -60,7 +75,7 @@ def create_multiobjective_routine():
         vocs=vocs,
         generator=generator,
         environment={"name": "multiobjective_test"},
-        initial_points=pd.DataFrame(test_routine["init_points"]),
+        initial_points=pd.DataFrame(test_routine["init_points"])
     )
 
 
@@ -81,9 +96,19 @@ def create_routine_turbo():
         },
         "env_params": {},
         "config": {
-            "variables": {"x0": [-1, 1], "x1": [-1, 1], "x2": [-1, 1], "x3": [-1, 1]},
+            "variables": {
+                "x0": [-1, 1],
+                "x1": [-1, 1],
+                "x2": [-1, 1],
+                "x3": [-1, 1]
+            },
             "objectives": {"f": "MAXIMIZE"},
-            "init_points": {"x0": [0.5], "x1": [0.5], "x2": [0.5], "x3": [0.5]},
+            "init_points": {
+                "x0": [0.5],
+                "x1": [0.5],
+                "x2": [0.5],
+                "x3": [0.5]
+            },
         },
     }
 
@@ -93,15 +118,14 @@ def create_routine_turbo():
     )
 
     generator = UpperConfidenceBoundGenerator(
-        vocs=vocs, **test_routine["generator_params"]
-    )
+        vocs=vocs, **test_routine["generator_params"])
 
     return Routine(
         name="test-turbo",
         vocs=vocs,
         generator=generator,
         environment={"name": "test"},
-        initial_points=pd.DataFrame(test_routine["config"]["init_points"]),
+        initial_points=pd.DataFrame(test_routine["config"]["init_points"])
     )
 
 
@@ -115,11 +139,21 @@ def create_routine_critical():
         "generator_params": {},
         "env_params": {},
         "vocs": {
-            "variables": {"x0": [-1, 1], "x1": [-1, 1], "x2": [-1, 1], "x3": [-1, 1]},
+            "variables": {
+                "x0": [-1, 1],
+                "x1": [-1, 1],
+                "x2": [-1, 1],
+                "x3": [-1, 1]
+            },
             "objectives": {"f": "MAXIMIZE"},
-            "constraints": {"c": ["LESS_THAN", 0]},
+            "constraints": {"c": ["LESS_THAN", 0]}
         },
-        "init_points": {"x0": [0.5], "x1": [0.5], "x2": [0.5], "x3": [0.5]},
+        "init_points": {
+            "x0": [0.5],
+            "x1": [0.5],
+            "x2": [0.5],
+            "x3": [0.5]
+        },
     }
 
     vocs = VOCS(**test_routine["vocs"])
@@ -132,7 +166,7 @@ def create_routine_critical():
         generator=generator,
         environment={"name": "test"},
         initial_points=pd.DataFrame(test_routine["init_points"]),
-        critical_constraint_names=["c"],
+        critical_constraint_names=["c"]
     )
 
 
@@ -153,25 +187,34 @@ def create_routine_constrained_ucb():
         },
         "env_params": {},
         "vocs": {
-            "variables": {"x0": [-1, 1], "x1": [-1, 1], "x2": [-1, 1], "x3": [-1, 1]},
+            "variables": {
+                "x0": [-1, 1],
+                "x1": [-1, 1],
+                "x2": [-1, 1],
+                "x3": [-1, 1]
+            },
             "objectives": {"f": "MAXIMIZE"},
-            "constraints": {"c": ["GREATER_THAN", 0]},
+            "constraints": {"c": ["GREATER_THAN", 0]}
         },
-        "init_points": {"x0": [0.5], "x1": [0.5], "x2": [0.5], "x3": [0.5]},
+        "init_points": {
+            "x0": [0.5],
+            "x1": [0.5],
+            "x2": [0.5],
+            "x3": [0.5]
+        },
     }
 
     vocs = VOCS(**test_routine["vocs"])
 
     generator = UpperConfidenceBoundGenerator(
-        vocs=vocs, **test_routine["generator_params"]
-    )
+        vocs=vocs, **test_routine["generator_params"])
 
     return Routine(
         name="test",
         vocs=vocs,
         generator=generator,
         environment={"name": "test"},
-        initial_points=pd.DataFrame(test_routine["init_points"]),
+        initial_points=pd.DataFrame(test_routine["init_points"])
     )
 
 

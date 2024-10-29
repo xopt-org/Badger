@@ -15,6 +15,7 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
     from badger.tests.utils import (
         create_multiobjective_routine,
         create_routine,
+        create_routine_turbo,
         fix_db_path_issue,
     )
 

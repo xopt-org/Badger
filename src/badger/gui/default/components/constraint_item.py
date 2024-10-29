@@ -1,21 +1,10 @@
-from PyQt5.QtWidgets import (
-    QHBoxLayout,
-    QPushButton,
-    QWidget,
-    QDoubleSpinBox,
-    QAbstractSpinBox,
-)
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QDoubleSpinBox, QAbstractSpinBox
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate
 from PyQt5.QtCore import Qt
-from badger.gui.default.utils import (
-    MouseWheelWidgetAdjustmentGuard,
-    NoHoverFocusComboBox,
-)
+from ..utils import MouseWheelWidgetAdjustmentGuard, NoHoverFocusComboBox
 
 
-def constraint_item(
-    options, remove_item, name=None, relation=0, threshold=0, critical=False, decimals=4
-):
+def constraint_item(options, remove_item, name=None, relation=0, threshold=0, critical=False, decimals=4):
     # relation: 0 for >, 1 for <, 2 for =
     widget = QWidget()
     hbox = QHBoxLayout(widget)
@@ -33,7 +22,7 @@ def constraint_item(
 
     widget.cb_rel = cb_rel = QComboBox()
     cb_rel.setItemDelegate(QStyledItemDelegate())
-    cb_rel.addItems([">", "<", "="])
+    cb_rel.addItems(['>', '<', '='])
     cb_rel.setFixedWidth(64)
     cb_rel.setCurrentIndex(relation)
 
@@ -48,10 +37,10 @@ def constraint_item(
     sb.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
     sb.setValue(default_value)
 
-    widget.check_crit = check_crit = QCheckBox("Critical")
+    widget.check_crit = check_crit = QCheckBox('Critical')
     check_crit.setChecked(critical)
 
-    widget.btn_del = btn_del = QPushButton("Remove")
+    widget.btn_del = btn_del = QPushButton('Remove')
     btn_del.setFixedSize(72, 24)
     btn_del.hide()
 

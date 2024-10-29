@@ -1,12 +1,5 @@
-from PyQt5.QtWidgets import (
-    QTextEdit,
-    QHBoxLayout,
-    QVBoxLayout,
-    QCheckBox,
-    QWidget,
-    QMainWindow,
-)
-from badger.factory import get_generator_docs
+from PyQt5.QtWidgets import QTextEdit, QHBoxLayout, QVBoxLayout, QCheckBox, QWidget, QMainWindow
+from ....factory import get_generator_docs
 
 
 class BadgerDocsWindow(QMainWindow):
@@ -22,7 +15,7 @@ class BadgerDocsWindow(QMainWindow):
         self.load_docs()
 
     def init_ui(self):
-        self.setWindowTitle(f"Docs for generator {self.generator}")
+        self.setWindowTitle(f'Docs for generator {self.generator}')
         self.resize(640, 640)
 
         doc_panel = QWidget(self)
@@ -32,7 +25,7 @@ class BadgerDocsWindow(QMainWindow):
         toolbar = QWidget()
         hbox_tool = QHBoxLayout(toolbar)
         hbox_tool.setContentsMargins(0, 0, 0, 0)
-        self.cb_md = cb_md = QCheckBox("Render as Markdown")
+        self.cb_md = cb_md = QCheckBox('Render as Markdown')
         cb_md.setChecked(True)
         hbox_tool.addStretch()
         hbox_tool.addWidget(cb_md)
@@ -60,7 +53,7 @@ class BadgerDocsWindow(QMainWindow):
 
     def update_docs(self, generator):
         self.generator = generator
-        self.setWindowTitle(f"Docs for generator {generator}")
+        self.setWindowTitle(f'Docs for generator {generator}')
         self.load_docs()
 
     def switch_render_mode(self):

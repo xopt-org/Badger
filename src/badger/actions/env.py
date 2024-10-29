@@ -1,13 +1,11 @@
 import logging
-
-from badger.utils import range_to_str, yprint
-
 logger = logging.getLogger(__name__)
+from ..utils import range_to_str, yprint
 
 
 def show_env(args):
     try:
-        from badger.factory import list_env, get_env
+        from ..factory import list_env, get_env
     except Exception as e:
         logger.error(e)
         return
@@ -27,7 +25,7 @@ def show_env(args):
             return
 
     try:
-        configs["variables"] = range_to_str(configs["variables"])
+        configs['variables'] = range_to_str(configs['variables'])
         yprint(configs)
     except:
         pass

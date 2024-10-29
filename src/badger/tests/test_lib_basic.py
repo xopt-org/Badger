@@ -10,8 +10,8 @@ def test_env_api():
 
     assert len(list_env()) == 2
 
-    _, configs = get_env("test")
-    assert configs["name"] == "test"
+    _, configs = get_env('test')
+    assert configs['name'] == 'test'
 
 
 def test_intf_api():
@@ -19,8 +19,8 @@ def test_intf_api():
 
     assert len(list_intf()) == 1
 
-    _, configs = get_intf("test")
-    assert configs["name"] == "test"
+    _, configs = get_intf('test')
+    assert configs['name'] == 'test'
 
 
 # def test_run(mock_config_root):

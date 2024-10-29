@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from badger.errors import (
     BadgerEnvObsError,
     BadgerEnvVarError,
+    BadgerInterfaceChannelError,
     BadgerNoInterfaceError,
 )
 from badger.interface import Interface
@@ -36,7 +37,8 @@ def validate_observable_names(func):
         ]
         if len(observable_names_invalid):
             raise BadgerEnvObsError(
-                f"Observables {observable_names_invalid} " + "not found in environment"
+                f"Observables {observable_names_invalid} "
+                + "not found in environment"
             )
 
         return func(cls, observable_names)
@@ -64,7 +66,9 @@ def validate_setpoints(func):
 
 class Environment(BaseModel, ABC):
     model_config = ConfigDict(
-        validate_assignment=True, use_enum_values=True, arbitrary_types_allowed=True
+        validate_assignment=True,
+        use_enum_values=True,
+        arbitrary_types_allowed=True
     )
 
     # Class variables
@@ -165,7 +169,9 @@ class Environment(BaseModel, ABC):
     def _set_variables(self, variable_inputs: Dict[str, float]):
         # Deal with variables defined in env
         # TODO: check these with the interface through routine page/var table?
-        variable_inputs_def = dict([v for v in variable_inputs.items()])
+        variable_inputs_def = dict(
+            [v for v in variable_inputs.items()]
+        )
         self._set_variables_def(variable_inputs_def)
 
     # Optimizer will only call this method to get observable values

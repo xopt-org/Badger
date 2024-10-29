@@ -3,15 +3,16 @@ from importlib import metadata
 
 
 def capture(command):
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
-    out = out.decode("utf-8")
-    err = err.decode("utf-8")
+    out = out.decode('utf-8')
+    err = err.decode('utf-8')
     return out, err, proc.returncode
 
 
 def test_cli_main():
-    command = ["badger"]
+    command = ['badger']
     out, err, exitcode = capture(command)
 
     assert exitcode == 0
@@ -21,30 +22,30 @@ def test_cli_main():
     assert len(outlines) == 6
 
     # Check name
-    assert outlines[0] == "name: Badger the optimizer"
+    assert outlines[0] == 'name: Badger the optimizer'
 
     # Check version
-    version = metadata.version("badger-opt")
+    version = metadata.version('badger-opt')
     try:  # yaml encoding number-like string differently
         _ = float(version)
         assert outlines[1] == f"version: '{version}'"
     except ValueError:
-        assert outlines[1] == f"version: {version}"
+        assert outlines[1] == f'version: {version}'
 
 
 def test_list_algo():
     from badger.factory import ALGO_EXCLUDED
 
-    command = ["badger", "generator"]
+    command = ['badger', 'generator']
     out, err, exitcode = capture(command)
 
     assert exitcode == 0
 
     # Check output lines
     outlines = out.splitlines()
-    for algo in ["expected_improvement", "neldermead", "rcds"]:
+    for algo in ['expected_improvement', 'neldermead', 'rcds']:
         if algo not in ALGO_EXCLUDED:
-            assert f"- {algo}" in outlines
+            assert f'- {algo}' in outlines
 
 
 # def test_cli_run(mock_config_root):

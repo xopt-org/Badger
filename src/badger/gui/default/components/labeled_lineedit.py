@@ -1,3 +1,4 @@
+from PyQt5.QtCore import QLine
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 

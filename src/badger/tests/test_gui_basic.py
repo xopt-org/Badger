@@ -235,9 +235,9 @@ def test_default_turbo_in_bo(qtbot):
     cb_generator = editor.routine_page.generator_box.cb
     algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
     for algo in algos:
-        if algo in all_generator_names["bo"]:
+        if algo in all_generator_names['bo']:
             qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
             params = editor.routine_page.generator_box.edit.toPlainText()
             params_dict = yaml.safe_load(params)
 
-            assert params_dict["turbo_controller"] == "optimize"
+            assert params_dict['turbo_controller'] == 'optimize'

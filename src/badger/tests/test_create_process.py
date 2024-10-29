@@ -11,23 +11,23 @@ app = QApplication(sys.argv)
 @pytest.fixture
 def process_creator():
     from badger.gui.default.components.create_process import CreateProcess
-
+    
     return CreateProcess()
 
 
 def test_create_subprocess_emits_signals(qtbot, process_creator):
-    with (
-        patch("badger.gui.default.components.create_process.Process") as mock_process,
-        patch("badger.gui.default.components.create_process.run_routine_subprocess"),
+    with patch(
+        "badger.gui.default.components.create_process.Process"
+    ) as mock_process, patch(
+        "badger.gui.default.components.create_process.run_routine_subprocess"
     ):
         mock_process.return_value = MagicMock()
 
-        with (
-            qtbot.waitSignal(
-                process_creator.subprocess_prepared
-            ) as blocker_subprocess_prepared,
-            qtbot.waitSignal(process_creator.finished) as blocker_finished,
-        ):
+        with qtbot.waitSignal(
+            process_creator.subprocess_prepared
+        ) as blocker_subprocess_prepared, qtbot.waitSignal(
+            process_creator.finished
+        ) as blocker_finished:
             process_creator.create_subprocess()
 
         assert blocker_subprocess_prepared.signal_triggered

@@ -2,12 +2,13 @@ from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
+    QAbstractItemView,
     QCheckBox,
-    QMessageBox,
+    QMessageBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
-from badger.gui.default.components.robust_spinbox import RobustSpinBox
+from .robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError
@@ -111,7 +112,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
-            if name != "Enter new PV here...":  # TODO: fix...
+            if name != "Enter new PV here...": # TODO: fix...
                 self.selected[name] = _cb.isChecked()
 
         self.sig_sel_changed.emit()
@@ -201,7 +202,7 @@ class VariableTable(QTableWidget):
             item = QTableWidgetItem(name)
             if name in self.addtl_vars:
                 # Make new PVs a different color
-                item.setForeground(QColor("darkCyan"))
+                item.setForeground(QColor('darkCyan'))
             else:
                 # Make non-new PVs not editable
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
@@ -229,8 +230,8 @@ class VariableTable(QTableWidget):
         # Make extra editable row
         item = QTableWidgetItem("Enter new PV here...")
         item.setFlags(item.flags() | Qt.ItemIsEditable)
-        item.setForeground(QColor("gray"))
-        self.setItem(n - 1, 1, item)
+        item.setForeground(QColor('gray'))
+        self.setItem(n-1, 1, item)
 
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
@@ -247,11 +248,7 @@ class VariableTable(QTableWidget):
         column = item.column()
         name = item.text()
 
-        if (
-            row != self.rowCount() - 1
-            and column == 1
-            and name != "Enter new PV here..."
-        ):
+        if row != self.rowCount() - 1 and column == 1 and name != "Enter new PV here...":
             # check that the new text is not equal to the previous value at that cell
             prev_name = self.previous_values.get((row, column), "")
             if name == prev_name:
@@ -260,26 +257,20 @@ class VariableTable(QTableWidget):
                 # delete row and additional variable
                 self.removeRow(row)
                 self.addtl_vars.remove(prev_name)
-                self.variables = [
-                    var for var in self.variables if next(iter(var)) != prev_name
-                ]
+                self.variables = [var for var in self.variables if next(iter(var)) != prev_name]
                 del self.bounds[prev_name]
                 del self.selected[prev_name]
 
                 self.update_variables(self.variables, 2)
             return
 
-        if (
-            row == self.rowCount() - 1
-            and column == 1
-            and name != "Enter new PV here..."
-        ):
+        if row == self.rowCount() - 1 and column == 1 and name != "Enter new PV here...":
+
             # Check that variables doesn't already exist in table
             if name in [list(d.keys())[0] for d in self.variables]:
                 self.update_variables(self.variables, 2)
-                QMessageBox.warning(
-                    self, "Variable already exists!", f"Variable {name} already exists!"
-                )
+                QMessageBox.warning(self, 'Variable already exists!',
+                                    f'Variable {name} already exists!')
                 return
 
             # Get bounds from interface, if PV exists on interface
@@ -292,11 +283,9 @@ class VariableTable(QTableWidget):
                     # Raised when PV does not exist after attempting to call value
                     # Revert table to previous state
                     self.update_variables(self.variables, 2)
-                    QMessageBox.critical(
-                        self,
-                        "Variable Not Found!",
-                        f"Variable {name} cannot be found through the interface!",
-                    )
+                    QMessageBox.critical(self, 'Variable Not Found!',
+                                         f'Variable {name} cannot be found through the interface!'
+                                         )
                     return
                 # except Exception as e: # TODO: fix this
                 #     print(e)

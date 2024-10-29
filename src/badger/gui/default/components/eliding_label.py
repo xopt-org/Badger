@@ -38,14 +38,12 @@ class ElidingLabel(QtWidgets.QLabel):
 
     elision_changed = QtCore.pyqtSignal(bool)
 
-    def __init__(self, text="", mode=QtCore.Qt.ElideMiddle, **kwargs):
+    def __init__(self, text='', mode=QtCore.Qt.ElideMiddle, **kwargs):
         super().__init__(**kwargs)
 
         self._mode = mode
         self.is_elided = False
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
-        )
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.setText(text)
 
     def setText(self, text):
@@ -85,11 +83,9 @@ class ElidingLabel(QtWidgets.QLabel):
 
             if text_width >= self.width():
                 self._elided_line = font_metrics.elidedText(
-                    self._contents, self._mode, self.width()
-                )
+                    self._contents, self._mode, self.width())
                 painter.drawText(
-                    QtCore.QPoint(0, font_metrics.ascent()), self._elided_line
-                )
+                    QtCore.QPoint(0, font_metrics.ascent()), self._elided_line)
                 did_elide = line.isValid()
                 break
             else:
@@ -117,5 +113,6 @@ class SimpleElidedLabel(QtWidgets.QLabel):
 
     def elidedText(self):
         metrics = QtGui.QFontMetrics(self.font())
-        elided = metrics.elidedText(self._text, QtCore.Qt.ElideRight, self.width())
+        elided = metrics.elidedText(
+            self._text, QtCore.Qt.ElideRight, self.width())
         return elided

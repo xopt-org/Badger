@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout, QWidget
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton
 from PyQt5.QtGui import QFont
-from badger.gui.default.components.syntax import PythonHighlighter
+from ..components.syntax import PythonHighlighter
 
 
 class BadgerEditScriptDialog(QDialog):
@@ -16,14 +16,14 @@ class BadgerEditScriptDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
-        self.setWindowTitle(f"Edit Script for {self.generator}")
+        self.setWindowTitle(f'Edit Script for {self.generator}')
         self.resize(640, 640)
 
         vbox = QVBoxLayout(self)
 
         self.script_editor = script_editor = QPlainTextEdit()
         self.highlighter = PythonHighlighter(script_editor.document())
-        font = QFont("Menlo", 13)
+        font = QFont('Menlo', 13)
         font.setFixedPitch(True)
         script_editor.setFont(font)
         script_editor.setPlainText(self.script)
@@ -32,8 +32,8 @@ class BadgerEditScriptDialog(QDialog):
         button_set = QWidget()
         hbox_set = QHBoxLayout(button_set)
         hbox_set.setContentsMargins(0, 0, 0, 0)
-        self.btn_cancel = btn_cancel = QPushButton("Cancel")
-        self.btn_save = btn_save = QPushButton("Save")
+        self.btn_cancel = btn_cancel = QPushButton('Cancel')
+        self.btn_save = btn_save = QPushButton('Save')
         btn_save.setDisabled(True)
         btn_cancel.setFixedSize(96, 24)
         btn_save.setFixedSize(96, 24)

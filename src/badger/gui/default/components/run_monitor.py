@@ -1,12 +1,13 @@
 import os
 import traceback
+from copy import deepcopy
 from importlib import resources
 from typing import List
 
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QThreadPool
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QAction,
@@ -16,27 +17,28 @@ from PyQt5.QtWidgets import (
     QLabel,
     QMenu,
     QMessageBox,
+    QPushButton,
+    QScrollArea,
     QStyledItemDelegate,
+    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 from xopt import VOCS
 
-from badger.archive import archive_run, BADGER_ARCHIVE_ROOT
+from ....archive import archive_run, BADGER_ARCHIVE_ROOT
 
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
-from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
-from badger.routine import Routine
-from badger.tests.utils import get_current_vars
-from badger.gui.default.utils import create_button
-from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.default.windows.terminition_condition_dialog import (
-    BadgerTerminationConditionDialog,
-)
+from ....logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
+from ....routine import Routine
+from ....tests.utils import get_current_vars
+from ..utils import create_button
+from ..windows.message_dialog import BadgerScrollableMessageBox
+from ..windows.terminition_condition_dialog import BadgerTerminationConditionDialog
 
-from badger.gui.default.components.extensions_palette import ExtensionsPalette
-from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
+from .extensions_palette import ExtensionsPalette
+from .routine_runner import BadgerRoutineSubprocess
 
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -600,7 +602,7 @@ class BadgerOptMonitor(QWidget):
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.sig_run_started.emit()
         self.btn_stop.setDisabled(False)
-        self.run_action.setText("Stop")
+        self.run_action.setText('Stop')
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText("Stop")
         self.run_until_action.setIcon(self.icon_stop)
@@ -1098,7 +1100,7 @@ class BadgerOptMonitor(QWidget):
         if self.btn_stop.defaultAction() is not self.run_action:
             self.btn_stop.setDefaultAction(self.run_action)
 
-        if self.run_action.text() == "Run":
+        if self.run_action.text() == 'Run':
             self.btn_stop.setDisabled(True)
             self.start()
         else:
@@ -1159,6 +1161,7 @@ def create_cursor_line():
 
 
 def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
+
     for name in names:
         if ts is not None:
             curves[name].setData(ts, data[name].to_numpy(dtype=np.double))

@@ -1,13 +1,11 @@
 import logging
-
-from badger.utils import yprint
-
 logger = logging.getLogger(__name__)
+from ..utils import yprint
 
 
 def show_generator(args):
     try:
-        from badger.factory import list_generators, get_generator
+        from ..factory import list_generators, get_generator
     except Exception as e:
         logger.error(e)
         return

@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
 
-from badger.routine import Routine
-from badger.utils import get_yaml_string
+from ....routine import Routine
+from ....utils import get_yaml_string
 
 
 class BadgerReviewDialog(QDialog):
@@ -15,7 +15,7 @@ class BadgerReviewDialog(QDialog):
 
     def init_ui(self):
         name = self.routine.name
-        self.setWindowTitle(f"Review routine {name}")
+        self.setWindowTitle(f'Review routine {name}')
 
         vbox = QVBoxLayout(self)
 

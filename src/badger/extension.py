@@ -3,6 +3,7 @@ from typing import List
 
 
 class Extension(ABC):
+
     @property
     @abstractmethod
     def name(self) -> str:
