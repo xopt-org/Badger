@@ -40,62 +40,60 @@ class BadgerError(Exception):
             return "".join(traceback.format_stack())
 
 
-class BadgerConfigError(BadgerError):
+class BadgerConfigError(Exception):
     pass
 
 
-class VariableRangeError(BadgerError):
+class VariableRangeError(Exception):
     pass
 
 
-class BadgerNotImplementedError(BadgerError):
+class BadgerNotImplementedError(Exception):
     pass
 
 
-class BadgerDBError(BadgerError):
+class BadgerDBError(Exception):
     pass
 
 
-class BadgerEnvVarError(BadgerError):
+class BadgerEnvVarError(Exception):
     pass
 
 
-class BadgerEnvObsError(BadgerError):
+class BadgerEnvObsError(Exception):
     pass
 
 
-class BadgerNoInterfaceError(BadgerError):
-    def __init__(self, detailed_text=None):
-        super().__init__(
-            message="Must provide an interface!", detailed_text=detailed_text
-        )
+class BadgerNoInterfaceError(Exception):
+    def __init__(self, message="Must provide an interface!"):
+        super().__init__(message)
 
 
-class BadgerInterfaceChannelError(BadgerError):
+class BadgerInterfaceChannelError(Exception):
     pass
 
 
-class BadgerInvalidPluginError(BadgerError):
+class BadgerInvalidPluginError(Exception):
     pass
 
 
-class BadgerPluginNotFoundError(BadgerError):
+class BadgerPluginNotFoundError(Exception):
     pass
 
 
-class BadgerInvalidDocsError(BadgerError):
+class BadgerInvalidDocsError(Exception):
     pass
 
 
-class BadgerLogbookError(BadgerError):
+class BadgerLogbookError(Exception):
     pass
 
 
-class BadgerLoadConfigError(BadgerError):
+class BadgerLoadConfigError(Exception):
     pass
 
 
-class BadgerRoutineError(BadgerError):
+class BadgerRoutineError(Exception):
     pass
 
 
