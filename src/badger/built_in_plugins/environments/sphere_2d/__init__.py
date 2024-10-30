@@ -10,8 +10,8 @@ class Environment(environment.Environment):
     observables = ["f"]
 
     _variables = {
-        "x0": 0.0,
-        "x1": 0.0,
+        "x0": 0.5,
+        "x1": 0.5,
     }
     _observations = {
         "f": 0.0,
