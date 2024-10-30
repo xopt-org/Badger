@@ -155,7 +155,7 @@ class ObjectiveTable(QTableWidget):
         self.setRowCount(n)
         for i, obj in enumerate(_objectives):
             name = next(iter(obj))
-            
+
             self.setCellWidget(i, 0, QCheckBox())
 
             _cb = self.cellWidget(i, 0)

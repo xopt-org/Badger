@@ -1,8 +1,33 @@
 from typing import Dict, Any
 from PyQt5.QtGui import QKeyEvent, QPainter
-from PyQt5.QtCore import (pyqtSlot, QModelIndex, QObject, Qt, pyqtSignal, QAbstractItemModel, QAbstractTableModel, QVariant, QEvent)
-from PyQt5.QtWidgets import (QHeaderView, QMenu, QAction, QTableView, QDialog,
-                            QVBoxLayout, QGridLayout, QLineEdit, QPushButton, QAbstractItemView, QTableWidget, QStyleOptionViewItem, QWidget, QStyledItemDelegate, QLabel, QHBoxLayout)
+from PyQt5.QtCore import (
+    pyqtSlot,
+    QModelIndex,
+    QObject,
+    Qt,
+    pyqtSignal,
+    QAbstractItemModel,
+    QAbstractTableModel,
+    QVariant,
+    QEvent,
+)
+from PyQt5.QtWidgets import (
+    QHeaderView,
+    QMenu,
+    QAction,
+    QTableView,
+    QDialog,
+    QVBoxLayout,
+    QGridLayout,
+    QLineEdit,
+    QPushButton,
+    QAbstractItemView,
+    QStyleOptionViewItem,
+    QWidget,
+    QStyledItemDelegate,
+    QLabel,
+    QHBoxLayout,
+)
 from badger.gui.default.components.archive_search import ArchiveSearchWidget
 from abc import abstractmethod
 
@@ -18,13 +43,16 @@ class EditorDelegate(QStyledItemDelegate):
         The QTableView associated with the delegate. Used for opening
         persistent editors.
     """
+
     def __init__(self, parent: QTableView) -> None:
         super().__init__(parent)
         self.editor_list = []
         model = self.parent().model()
         model.modelAboutToBeReset.connect(self.reset_editors)
 
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> None:
         """Create a new persistent editor on the Table View at the given index.
 
         Parameters
@@ -41,7 +69,9 @@ class EditorDelegate(QStyledItemDelegate):
         return super().paint(painter, option, index)
 
     @abstractmethod
-    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+    def createEditor(
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> QWidget:
         """Editor creator function to be overridden by subclasses.
 
         Parameters
@@ -93,7 +123,9 @@ class EditorDelegate(QStyledItemDelegate):
         return super().setEditorData(editor, index)
 
     @abstractmethod
-    def setModelData(self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex) -> None:
+    def setModelData(
+        self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
+    ) -> None:
         """Abstract method to be overridden by subclasses. Sets the
         table's model data to match the delegate's editor.
 
@@ -121,7 +153,7 @@ class EditorDelegate(QStyledItemDelegate):
             editor.deleteLater()
             self.parent().closePersistentEditor(index)
         self.editor_list = []
-                           
+
 
 class InsertPVDelegate(QStyledItemDelegate):
     """InsertPVDelegate displays a persistent QPushButton widget that allows the user to insert the PV."""
@@ -163,7 +195,7 @@ class InsertPVDelegate(QStyledItemDelegate):
                 return True
         return False
 
-    
+
 class PVContextMenu(QMenu):
     # TODO: Change this QMenu so functions that change data stay in table object
     #   - Move functions to table widget
@@ -190,7 +222,7 @@ class PVContextMenu(QMenu):
 
         # Add "FORMULA" option
         formula_action = QAction("FORMULA", self)
-        #formula_action.triggered.connect(self._formula_dialog.exec_)
+        # formula_action.triggered.connect(self._formula_dialog.exec_)
         self.addAction(formula_action)
 
     @property
@@ -207,6 +239,7 @@ class PVContextMenu(QMenu):
 class FormulaDialog(QDialog):
     """Formula Dialog - when a user right clicks on a row in the list of curves, they have the option to input a formula
     They could opt to type it instead, but this opens a box that is a nicer UI for inputting a formula."""
+
     formula_saved = pyqtSignal(tuple)
 
     def __init__(self, parent: QObject) -> None:
@@ -219,30 +252,30 @@ class FormulaDialog(QDialog):
         self.field = QLineEdit(self)
         self.name_field = QLineEdit(self)
         self.name = QLabel("Name:")
-        #self.curveModel = self.parent().parent().curves_model
+        # self.curveModel = self.parent().parent().curves_model
         self.pv_list = QTableView(self)
-        
+
         self.model = PVTableModel()
         self.pv_list.setModel(self.model)
 
-        #We're going to copy the list of PVs from the curve model. We're also not going to allow the user to make edits to the list of PVs
-        #self.pv_list.setModel(self.curveModel)
-        #self.pv_list.setEditTriggers(QAbstractItemView.EditTriggers(0))
+        # We're going to copy the list of PVs from the curve model. We're also not going to allow the user to make edits to the list of PVs
+        # self.pv_list.setModel(self.curveModel)
+        # self.pv_list.setEditTriggers(QAbstractItemView.EditTriggers(0))
         self.pv_list.setMaximumWidth(1000)
         self.pv_list.setMaximumHeight(1000)
         header = self.pv_list.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
-        #for i in range(1, self.curveModel.columnCount() - 1):
-            # Hide all columns that arent useful, but keep one left over to add a button to
-            # self.pv_list.setColumnHidden(i, True)
+        # for i in range(1, self.curveModel.columnCount() - 1):
+        # Hide all columns that arent useful, but keep one left over to add a button to
+        # self.pv_list.setColumnHidden(i, True)
 
         insertButton = InsertPVDelegate(self.pv_list)
         insertButton.button_clicked.connect(self.field.insert)
         self.pv_list.setItemDelegateForColumn(1, insertButton)
 
-        #delete_delegate = DeleteButtonDelegate(self.pv_list)
-        #self.pv_list.setItemDelegateForColumn(2, delete_delegate)
-        
+        # delete_delegate = DeleteButtonDelegate(self.pv_list)
+        # self.pv_list.setItemDelegateForColumn(2, delete_delegate)
+
         self.pv_list.setAcceptDrops(True)
         self.pv_list.setDragDropMode(QAbstractItemView.DragDrop)
         self.pv_list.viewport().setAcceptDrops(True)
@@ -250,7 +283,7 @@ class FormulaDialog(QDialog):
         name_layout = QHBoxLayout()
         name_layout.addWidget(self.name)
         name_layout.addWidget(self.name_field)
-        
+
         layout.addWidget(self.pv_list)
         layout.addLayout(name_layout)
         layout.addWidget(self.field)
@@ -259,12 +292,44 @@ class FormulaDialog(QDialog):
 
         # Define the list of calculator buttons.
         # It's a bunch of preset buttons, but users can type other functions under math.
-        buttons = ["7",       "8",     "9",      "+",     "(",      ")",
-                   "4",       "5",     "6",      "-",    "^2", "sqrt()",
-                   "1",       "2",     "3",      "*",   "^-1",  "ln()",
-                   "0",       "e",    "pi",      "/", "sin()", "asin()",
-                   ".",   "abs()", "min()",      "^", "cos()", "acos()",
-                   "PV",  "Clear", "max()", "mean()", "tan()", "atan()"]
+        buttons = [
+            "7",
+            "8",
+            "9",
+            "+",
+            "(",
+            ")",
+            "4",
+            "5",
+            "6",
+            "-",
+            "^2",
+            "sqrt()",
+            "1",
+            "2",
+            "3",
+            "*",
+            "^-1",
+            "ln()",
+            "0",
+            "e",
+            "pi",
+            "/",
+            "sin()",
+            "asin()",
+            ".",
+            "abs()",
+            "min()",
+            "^",
+            "cos()",
+            "acos()",
+            "PV",
+            "Clear",
+            "max()",
+            "mean()",
+            "tan()",
+            "atan()",
+        ]
 
         # Create the calculator buttons and connect them to the input field
         grid_layout = QGridLayout()
@@ -283,7 +348,9 @@ class FormulaDialog(QDialog):
             elif button_text == "Clear":
                 button.clicked.connect(lambda _: self.field.clear())
             else:
-                button.clicked.connect(lambda _, text=button_text: self.field.insert(text))
+                button.clicked.connect(
+                    lambda _, text=button_text: self.field.insert(text)
+                )
         layout.addLayout(grid_layout)
 
         # Add an "OK" button to accept the formula and close the dialog
@@ -338,9 +405,9 @@ class FormulaDialog(QDialog):
         # pv_name = self.pv_name_input.text()
         # passed = self.curveModel.replaceToFormula(index = self.curveModel.index(self.parent().selected_index.row(), 0), formula = formula)
         # if passed:
-            # self.field.setText("")
-            # self.accept()
-    
+        # self.field.setText("")
+        # self.accept()
+
     @pyqtSlot()
     def saveFormula(self):
         """
@@ -348,7 +415,7 @@ class FormulaDialog(QDialog):
 
         Return
         ------
-        result: a tuple comprising the name (str), formula (str) and dictionary of the PVs (dict)   
+        result: a tuple comprising the name (str), formula (str) and dictionary of the PVs (dict)
         """
         data_dict = self.model.getData()
         result = self.name_field.text(), self.field.text(), data_dict
@@ -356,6 +423,7 @@ class FormulaDialog(QDialog):
         self.close()
 
         return result
+
 
 class PVTableModel(QAbstractTableModel):
     headerDataChanged = pyqtSignal(Qt.Orientation, int, int)
@@ -393,7 +461,7 @@ class PVTableModel(QAbstractTableModel):
             else:
                 if col == 2:
                     return ""  # No delete button in the empty row
-                return ''  # Empty string for the extra row
+                return ""  # Empty string for the extra row
         return QVariant()
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -403,7 +471,7 @@ class PVTableModel(QAbstractTableModel):
             if row == len(self._data):
                 # User is editing the extra empty row
                 self.beginInsertRows(QModelIndex(), row, row)
-                self._data.append([''] * self.columnCount())
+                self._data.append([""] * self.columnCount())
                 new_header = self.next_header()
                 self._row_names.append(new_header)
                 self.endInsertRows()
@@ -430,23 +498,23 @@ class PVTableModel(QAbstractTableModel):
 
     def next_header(self) -> str:
         if not self._row_names:
-            return 'A'
+            return "A"
 
         prev_header = self._row_names[-1]
         next_header = ""
 
-        if prev_header == 'Z' * len(prev_header):
-            return 'A' * (len(prev_header) + 1)
+        if prev_header == "Z" * len(prev_header):
+            return "A" * (len(prev_header) + 1)
 
         inc = 1
         for i in range(len(prev_header) - 1, -1, -1):
-            old_val = ord(prev_header[i]) - ord('A') + inc
+            old_val = ord(prev_header[i]) - ord("A") + inc
             inc = old_val // 26
-            new_val = chr((old_val % 26) + ord('A'))
+            new_val = chr((old_val % 26) + ord("A"))
             next_header = new_val + next_header
 
         if inc > 0 and i == 0:
-            next_header = 'A' + next_header
+            next_header = "A" + next_header
 
         return next_header
 
@@ -455,15 +523,17 @@ class PVTableModel(QAbstractTableModel):
             return Qt.ItemIsEnabled
         flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
         if index.column() == 0:
-            flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled  # First column is editable and droppable
+            flags |= (
+                Qt.ItemIsEditable | Qt.ItemIsDropEnabled
+            )  # First column is editable and droppable
         return flags
 
     def mimeTypes(self):
-        return ['text/plain']
+        return ["text/plain"]
 
     def dropMimeData(self, data, action, row, column, parent):
-        #print(f"dropMimeData called with action={action}, row={row}, column={column}, parent={parent}")
-        
+        # print(f"dropMimeData called with action={action}, row={row}, column={column}, parent={parent}")
+
         if action == Qt.IgnoreAction:
             return False
         if not data.hasText():
@@ -471,9 +541,9 @@ class PVTableModel(QAbstractTableModel):
 
         # Get the dropped text and split it by commas
         text = data.text().strip()
-        #print(f"Dropped text: {text}")
-        strings = text.split(',')  # Split by comma
-        #print(f"Strings to insert: {strings}")
+        # print(f"Dropped text: {text}")
+        strings = text.split(",")  # Split by comma
+        # print(f"Strings to insert: {strings}")
 
         # Determine the starting row and column
         if row == -1:
@@ -484,11 +554,11 @@ class PVTableModel(QAbstractTableModel):
 
         # Ensure we do not exceed row limits
         if row >= len(self._data):
-            #print(f"Row {row} exceeds current data length, adding new rows")
+            # print(f"Row {row} exceeds current data length, adding new rows")
             self.beginInsertRows(QModelIndex(), row, row + len(strings) - 1)
             # Add enough empty rows to accommodate all strings
             for _ in range(len(strings)):
-                self._data.append([''] * (self.columnCount() - 1))
+                self._data.append([""] * (self.columnCount() - 1))
                 self._row_names.append(self.next_header())
             self.endInsertRows()
 
@@ -504,7 +574,6 @@ class PVTableModel(QAbstractTableModel):
                 break
 
         return True
-
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction
@@ -525,7 +594,9 @@ class PVTableModel(QAbstractTableModel):
         data_dict = {}
         for row_index, row_name in enumerate(self._row_names):
             # Only include rows with non-empty 'Channel' column data
-            channel_data = self._data[row_index][0].strip()  # First column is the 'Channel' column
+            channel_data = self._data[row_index][
+                0
+            ].strip()  # First column is the 'Channel' column
             if channel_data:  # Only include rows with non-empty channel data
                 data_dict[row_name] = channel_data
         return data_dict

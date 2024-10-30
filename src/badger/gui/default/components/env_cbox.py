@@ -274,7 +274,7 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_obj_edit.addWidget(self.obj_table)
         hbox_obj.addWidget(edit_obj_col)
 
-         # Observable
+        # Observable
         obsv_panel = QWidget()
         vbox.addWidget(obsv_panel, 1)
         hbox_obsv = QHBoxLayout(obsv_panel)
@@ -282,10 +282,10 @@ class BadgerEnvBox(CollapsibleBox):
         lbl_obsv_col = QWidget()
         vbox_lbl_obsv = QVBoxLayout(lbl_obsv_col)
         vbox_lbl_obsv.setContentsMargins(0, 0, 0, 0)
-        lbl_obsv = QLabel('Additional Observables')
-        font = lbl_obsv.font() 
-        font.setPointSize(8)  
-        lbl_obsv.setFont(font)  
+        lbl_obsv = QLabel("Additional Observables")
+        font = lbl_obsv.font()
+        font.setPointSize(8)
+        lbl_obsv.setFont(font)
         lbl_obsv.setFixedWidth(100)
         vbox_lbl_obsv.addWidget(lbl_obsv)
         vbox_lbl_obsv.addStretch(1)
@@ -300,15 +300,15 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_obsv.setContentsMargins(0, 0, 0, 0)
         vbox_obsv_edit.addWidget(action_obsv)
         self.edit_obsv = edit_obsv = QLineEdit()
-        edit_obsv.setPlaceholderText('Filter objectives...')
+        edit_obsv.setPlaceholderText("Filter objectives...")
         edit_obsv.setFixedWidth(192)
 
-        self.check_only_obsv = check_only_obsv = QCheckBox('Show Checked Only')
+        self.check_only_obsv = check_only_obsv = QCheckBox("Show Checked Only")
         check_only_obsv.setChecked(False)
         hbox_action_obsv.addWidget(edit_obsv)
         hbox_action_obsv.addStretch()
         hbox_action_obsv.addWidget(check_only_obsv)
-        
+
         extra_obs = QPushButton("Add Observable")
         extra_obs.setFixedWidth(100)
         extra_obs.clicked.connect(self.formulaMenu)
@@ -401,11 +401,10 @@ class BadgerEnvBox(CollapsibleBox):
         # Slot to handle the saved formula data
         print(f"Formula received: {formula_data}")
         self.obsv_table.add_row(formula_data)
-    
+
     def archiveSearchMenu(self):
         self.archive_search = ArchiveSearchWidget()
         self.archive_search.show()
-    
 
     def config_logic(self):
         self.dict_con = {}
@@ -438,7 +437,7 @@ class BadgerEnvBox(CollapsibleBox):
 
     def toggle_obj_show_mode(self, _):
         self.obj_table.toggle_show_mode(self.check_only_obj.isChecked())
-    
+
     def toggle_obsv_show_mode(self, _):
         self.obsv_table.toggle_show_mode(self.check_only_obsv.isChecked())
 

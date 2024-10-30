@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
 )
 
+
 class AdditionalObservblesTable(QTableWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -158,8 +159,8 @@ class AdditionalObservblesTable(QTableWidget):
             _rule = self.rules[name]
             cb_rule = QComboBox()
             cb_rule.setItemDelegate(QStyledItemDelegate())
-            cb_rule.addItems(['MINIMIZE', 'MAXIMIZE'])
-            cb_rule.setCurrentIndex(0 if _rule == 'MINIMIZE' else 1)
+            cb_rule.addItems(["MINIMIZE", "MAXIMIZE"])
+            cb_rule.setCurrentIndex(0 if _rule == "MINIMIZE" else 1)
             cb_rule.currentIndexChanged.connect(self.update_rules)
             self.setCellWidget(i, 2, cb_rule)
 

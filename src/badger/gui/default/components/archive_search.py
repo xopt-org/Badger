@@ -1,11 +1,28 @@
 import logging
-from typing import (List, Optional)
+from typing import List
 from PyQt5.QtGui import QDrag, QKeyEvent
-from PyQt5.QtCore import (QAbstractTableModel, QMimeData, QModelIndex, QObject,
-                         Qt, QUrl, QVariant, pyqtSignal)
+from PyQt5.QtCore import (
+    QAbstractTableModel,
+    QMimeData,
+    QModelIndex,
+    QObject,
+    Qt,
+    QUrl,
+    QVariant,
+    pyqtSignal,
+)
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
-from PyQt5.QtWidgets import (QAbstractItemView, QHBoxLayout, QHeaderView, QLabel,
-                            QLineEdit, QPushButton, QTableView, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (
+    QAbstractItemView,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +78,9 @@ class ArchiveResultsTableModel(QAbstractTableModel):
 
     def append(self, pv: str) -> None:
         """Appends a row to this table given the PV name as input"""
-        self.beginInsertRows(QModelIndex(), len(self.results_list), len(self.results_list))
+        self.beginInsertRows(
+            QModelIndex(), len(self.results_list), len(self.results_list)
+        )
         self.results_list.append(pv)
         self.endInsertRows()
         self.layoutChanged.emit()
@@ -97,7 +116,9 @@ class ArchiveSearchWidget(QWidget):
     parent : QObject, optional
         The parent item of this widget
     """
+
     append_PVs_requested = pyqtSignal(str)
+
     def __init__(self, parent: QObject = None) -> None:
         super().__init__(parent=parent)
 
@@ -148,8 +169,12 @@ class ArchiveSearchWidget(QWidget):
         self.layout.addWidget(self.loading_label)
         self.layout.addWidget(self.results_view)
         self.insert_button = QPushButton("Add PVs")
-        self.insert_button.clicked.connect(lambda:self.append_PVs_requested.emit(self.selectedPVs()))
-        self.results_view.doubleClicked.connect(lambda:self.append_PVs_requested.emit(self.selectedPVs()))
+        self.insert_button.clicked.connect(
+            lambda: self.append_PVs_requested.emit(self.selectedPVs())
+        )
+        self.results_view.doubleClicked.connect(
+            lambda: self.append_PVs_requested.emit(self.selectedPVs())
+        )
         self.layout.addWidget(self.insert_button)
         self.setLayout(self.layout)
 

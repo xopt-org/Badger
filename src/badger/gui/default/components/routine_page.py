@@ -518,15 +518,15 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.check_only_obj.setChecked(False)
         self.env_box.obj_table.update_objectives(objs_env)
-        
-        '''
+
+        """
         _obsv_env = configs['additional observations']
         obsv_env = []
         for name in _obsv_env:
             obj = {}
             obj[name] = ''  # default formula
             obsv_env.append(obj)
-        '''
+        """
 
         self.env_box.check_only_obsv.setChecked(False)
 
@@ -989,7 +989,7 @@ class BadgerRoutinePage(QWidget):
                 vrange_limit_options=vrange_limit_options,
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
-                additional_observables=self.env_box.obj_table.addtl_obs
+                additional_observables=self.env_box.obj_table.addtl_obs,
             )
 
             # Check if any user warnings were caught
@@ -1070,6 +1070,3 @@ class BadgerRoutinePage(QWidget):
             )
 
         return 0
-
-
-    
