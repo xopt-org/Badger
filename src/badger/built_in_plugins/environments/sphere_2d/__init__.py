@@ -18,8 +18,6 @@ class Environment(environment.Environment):
         'f': 0.0,
     }
 
-    additionalObservables = ["formula test"]
-
     def get_variables(self, variable_names):
         variable_outputs = {v: self._variables[v] for v in variable_names}
 

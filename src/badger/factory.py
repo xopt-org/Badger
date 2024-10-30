@@ -106,7 +106,6 @@ def load_plugin(root, pname, ptype):
     elif ptype == 'environment':
         vars = module.Environment.variables
         obses = module.Environment.observables
-        add_obses = module.Environment.additionalObservables
         params = module.Environment.model_json_schema()['properties']
         params = {name: get_value_or_none(info, 'default')
                   for name, info in params.items()
@@ -133,7 +132,6 @@ def load_plugin(root, pname, ptype):
         configs['params'] = params
         configs['variables'] = vars_info
         configs['observations'] = obses
-        configs['additional observations'] = add_obses
         plugin = [module.Environment, configs]
     else:  # TODO: raise an exception here instead?
         return [None, None]
