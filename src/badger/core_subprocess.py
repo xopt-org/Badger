@@ -1,13 +1,13 @@
 import logging
 import time
-
+import traceback
 import pkg_resources
 import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import concat, DataFrame
 import multiprocessing as mp
 
 from badger.db import load_routine
-from badger.errors import BadgerRunTerminated, BadgerError
+from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
@@ -94,7 +94,13 @@ def run_routine_subprocess(
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 
     # set required arguments
-    routine, _ = load_routine(args["routine_id"])
+    try:
+        routine, _ = load_routine(args["routine_id"])
+    except Exception as e:
+        error_title = f"{type(e).__name__}: {e}"
+        error_traceback = traceback.format_exc()
+        queue.put((error_title, error_traceback))
+        raise e
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
     # Patch for converting dtype str to torch object
@@ -222,5 +228,8 @@ def run_routine_subprocess(
         evaluate_queue[0].close()
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
+        error_title = f"{type(e).__name__}: {e}"
+        error_traceback = traceback.format_exc()
+        queue.put((error_title, error_traceback))
         evaluate_queue[0].close()
-        raise BadgerError(f"An error occurred: {str(e)}")
+        raise e
