@@ -1,7 +1,14 @@
-from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QLineEdit, QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import (
+    QDialog,
+    QWidget,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+)
 from PyQt5.QtWidgets import QGroupBox, QMessageBox
-from ..components.labeled_lineedit import labeled_lineedit
-from ....environment import instantiate_env
+from badger.gui.default.components.labeled_lineedit import labeled_lineedit
+from badger.environment import instantiate_env
 
 
 class BadgerVariableDialog(QDialog):
@@ -15,7 +22,7 @@ class BadgerVariableDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
-        self.setWindowTitle(f'Add variable')
+        self.setWindowTitle("Add variable")
         self.setMinimumWidth(360)
 
         vbox = QVBoxLayout(self)
@@ -25,20 +32,20 @@ class BadgerVariableDialog(QDialog):
         hbox = QHBoxLayout(action_bar)
         hbox.setContentsMargins(0, 0, 0, 0)
         self.edit_name = edit_name = QLineEdit()
-        edit_name.setPlaceholderText('Variable name')
-        self.btn_check = btn_check = QPushButton('Check')
+        edit_name.setPlaceholderText("Variable name")
+        self.btn_check = btn_check = QPushButton("Check")
         btn_check.setDisabled(True)
         btn_check.setFixedSize(96, 24)
         hbox.addWidget(edit_name, 1)
         hbox.addWidget(btn_check)
 
         # Info group
-        group_info = QGroupBox('Variable Info')
+        group_info = QGroupBox("Variable Info")
         vbox_info = QVBoxLayout(group_info)
 
-        self.edit_value = labeled_lineedit('value', '', 48)
-        self.edit_min = labeled_lineedit('min', '', 48)
-        self.edit_max = labeled_lineedit('max', '', 48)
+        self.edit_value = labeled_lineedit("value", "", 48)
+        self.edit_min = labeled_lineedit("min", "", 48)
+        self.edit_max = labeled_lineedit("max", "", 48)
         vbox_info.addWidget(self.edit_value)
         vbox_info.addWidget(self.edit_min)
         vbox_info.addWidget(self.edit_max)
@@ -47,8 +54,8 @@ class BadgerVariableDialog(QDialog):
         button_set = QWidget()
         hbox_set = QHBoxLayout(button_set)
         hbox_set.setContentsMargins(0, 0, 0, 0)
-        self.btn_cancel = btn_cancel = QPushButton('Cancel')
-        self.btn_add = btn_add = QPushButton('Add')
+        self.btn_cancel = btn_cancel = QPushButton("Cancel")
+        self.btn_add = btn_add = QPushButton("Add")
         btn_add.setDisabled(True)
         btn_cancel.setFixedSize(96, 24)
         btn_add.setFixedSize(96, 24)
@@ -87,10 +94,10 @@ class BadgerVariableDialog(QDialog):
 
             self.btn_add.setDisabled(False)
         except Exception:
-            self.edit_value.edit.setText('')
-            self.edit_min.edit.setText('')
-            self.edit_max.edit.setText('')
-            QMessageBox.critical(self, 'Error!', f'Variable {name} cannot be found!')
+            self.edit_value.edit.setText("")
+            self.edit_min.edit.setText("")
+            self.edit_max.edit.setText("")
+            QMessageBox.critical(self, "Error!", f"Variable {name} cannot be found!")
 
             self.btn_add.setDisabled(True)
 

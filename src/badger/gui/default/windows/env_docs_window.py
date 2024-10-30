@@ -6,14 +6,14 @@ from PyQt5.QtWidgets import (
     QWidget,
     QMainWindow,
 )
-from badger.factory import get_generator_docs
+from badger.factory import get_env_docs
 
 
-class BadgerDocsWindow(QMainWindow):
-    def __init__(self, parent, generator):
+class BadgerEnvDocsWindow(QMainWindow):
+    def __init__(self, parent, env_name):
         super().__init__(parent=parent)
 
-        self.generator = generator
+        self.env_name = env_name
         self.render_md = True
         self.docs = None
 
@@ -22,7 +22,7 @@ class BadgerDocsWindow(QMainWindow):
         self.load_docs()
 
     def init_ui(self):
-        self.setWindowTitle(f"Docs for generator {self.generator}")
+        self.setWindowTitle(f"Docs for environment {self.env_name}")
         self.resize(640, 640)
 
         doc_panel = QWidget(self)
@@ -49,7 +49,7 @@ class BadgerDocsWindow(QMainWindow):
 
     def load_docs(self):
         try:
-            self.docs = docs = get_generator_docs(self.generator)
+            self.docs = docs = get_env_docs(self.env_name)
         except Exception as e:
             self.docs = docs = str(e)
 
@@ -58,9 +58,9 @@ class BadgerDocsWindow(QMainWindow):
         else:
             self.markdown_viewer.setText(docs)
 
-    def update_docs(self, generator):
-        self.generator = generator
-        self.setWindowTitle(f"Docs for generator {generator}")
+    def update_docs(self, env_name):
+        self.env_name = env_name
+        self.setWindowTitle(f"Docs for environment {env_name}")
         self.load_docs()
 
     def switch_render_mode(self):

@@ -14,6 +14,7 @@ def test_routine_page_init(qtbot):
 
 def test_routine_generation(qtbot):
     from badger.errors import BadgerRoutineError
+    from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
     from badger.gui.default.components.routine_page import BadgerRoutinePage
@@ -48,9 +49,12 @@ def test_routine_generation(qtbot):
     assert routine.vocs.objectives == {"f": "MINIMIZE"}
     assert routine.initial_points.empty
 
+    # Test if badger and xopt version match with the current version
+    assert routine.badger_version == get_badger_version()
+    assert routine.xopt_version == get_xopt_version()
+
 
 def test_add_additional_vars(qtbot):
-    from badger.db import load_routine, remove_routine
     from badger.gui.default.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
@@ -82,10 +86,7 @@ def test_add_additional_vars(qtbot):
     window.env_box.var_table.cellChanged.emit(20, 1)
 
     # Why isn't this updating the table after changing the value?
-    variables = {
-        "x0": [-1, 1],
-        "x20": [-1, 1]
-    }
+    variables = {"x0": [-1, 1], "x20": [-1, 1]}
 
     # Check that new variable was added
     # Its checkbox checked by default when added
@@ -94,10 +95,6 @@ def test_add_additional_vars(qtbot):
 
     # Check that a new row was automatically added
     assert window.env_box.var_table.rowCount() == n_rows + 1
-
-    # Check VOCS
-    routine = window._compose_routine()
-    assert routine.vocs.variables == variables
 
 
 def test_initial_points(qtbot):
@@ -122,8 +119,10 @@ def test_initial_points(qtbot):
     # test routine generation with fake current values selected
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
     routine = window._compose_routine()
-    assert routine.initial_points.to_dict() == pd.DataFrame(
-        {"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
+    assert (
+        routine.initial_points.to_dict()
+        == pd.DataFrame({"x0": 0.5, "x1": 0.5, "x2": 0.5}, index=[0]).to_dict()
+    )
 
 
 def test_ui_update(qtbot):

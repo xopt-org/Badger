@@ -1,21 +1,19 @@
 import logging
 import time
-import typing
-
+import traceback
 import pkg_resources
-import torch
+import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import concat, DataFrame
-
-logger = logging.getLogger(__name__)
-
 import multiprocessing as mp
 
 from badger.db import load_routine
-from badger.errors import BadgerRunTerminatedError
+from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
+
+logger = logging.getLogger(__name__)
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
@@ -46,7 +44,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
     except IndexError:  # no feasible data
-        logger.info(f"no feasible solutions found")
+        logger.info("no feasible solutions found")
         is_optimal = False
 
     vars = list(result[vocs.variable_names].to_numpy()[0])
@@ -96,9 +94,16 @@ def run_routine_subprocess(
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 
     # set required arguments
-    routine, _ = load_routine(args["routine_name"])
+    try:
+        routine, _ = load_routine(args["routine_id"])
+    except Exception as e:
+        error_title = f"{type(e).__name__}: {e}"
+        error_traceback = traceback.format_exc()
+        queue.put((error_title, error_traceback))
+        raise e
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
+    # Patch for converting dtype str to torch object
     try:
         dtype = routine.generator.turbo_controller.tkwargs["dtype"]
         routine.generator.turbo_controller.tkwargs["dtype"] = eval(dtype)
@@ -115,14 +120,12 @@ def run_routine_subprocess(
 
     # set optional arguments
     evaluate = args.pop("evaluate", None)
-    save_states = args.pop("save_states", None)
     dump_file_callback = args.pop("dump_file_callback", None)
     termination_condition = args.pop("termination_condition", None)
     start_time = args.pop("start_time", None)
     verbose = args.pop("verbose", 2)
 
     # setup variables of routine properties for code readablilty
-    environment = routine.environment
     initial_points = routine.initial_points
 
     # Log the optimization progress in terminal
@@ -165,7 +168,7 @@ def run_routine_subprocess(
         while True:
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif not pause_process.is_set():
                 pause_process.wait()
 
@@ -176,12 +179,12 @@ def run_routine_subprocess(
                 if idx == 0:
                     max_eval = tc_config["max_eval"]
                     if len(routine.data) >= max_eval:
-                        raise BadgerRunTerminatedError
+                        raise BadgerRunTerminated
                 elif idx == 1:
                     max_time = tc_config["max_time"]
                     dt = time.time() - start_time
                     if dt >= max_time:
-                        raise BadgerRunTerminatedError
+                        raise BadgerRunTerminated
 
             # TODO give user a message that a solution is being worked on.
 
@@ -195,7 +198,7 @@ def run_routine_subprocess(
             # External triggers
             if stop_process.is_set():
                 evaluate_queue[0].close()
-                raise BadgerRunTerminatedError
+                raise BadgerRunTerminated
             elif not pause_process.is_set():
                 pause_process.wait()
 
@@ -220,10 +223,13 @@ def run_routine_subprocess(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
-    except BadgerRunTerminatedError:
+    except BadgerRunTerminated:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
+        error_title = f"{type(e).__name__}: {e}"
+        error_traceback = traceback.format_exc()
+        queue.put((error_title, error_traceback))
         evaluate_queue[0].close()
         raise e

@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 import time
 
 import pandas as pd
@@ -76,12 +75,12 @@ class TestCore:
         pause_event = process_with_args["pause_event"]
         data_queue = process_with_args["data_queue"]
         wait_event = process_with_args["wait_event"]
-        stop_event = process_with_args["stop_event"]
         routine_process = process_with_args["process"]
         data_queue = process_with_args["data_queue"]
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
+            "routine_id": self.routine.id,
             "routine_name": self.routine.name,
             "variable_ranges": self.routine.vocs.variables,
             "initial_points": self.routine.initial_points,
@@ -161,13 +160,12 @@ class TestCore:
         pause_event = process_with_args["pause_event"]
         data_queue = process_with_args["data_queue"]
         wait_event = process_with_args["wait_event"]
-        stop_event = process_with_args["stop_event"]
         routine_process = process_with_args["process"]
         data_queue = process_with_args["data_queue"]
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
-            "routine_name": self.routine.name,
+            "routine_id": self.routine.id,
             "evaluate": True,
             "termination_condition": self.termination_condition,
             "start_time": time.time(),

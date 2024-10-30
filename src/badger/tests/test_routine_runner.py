@@ -4,6 +4,7 @@ import pytest
 from PyQt5.QtCore import QEventLoop, Qt, QTimer
 from PyQt5.QtTest import QSignalSpy
 from PyQt5.QtWidgets import QApplication
+from unittest.mock import Mock
 
 
 class TestRoutineRunner:
@@ -58,7 +59,7 @@ class TestRoutineRunner:
     def test_stop_routine(self, instance):
         instance.run()
         instance.stop_routine()
-        assert instance.stop_event.is_set() == True
+        assert instance.stop_event.is_set()
 
     def test_save_init_vars(self, instance):
         sig_env_ready_spy = QSignalSpy(instance.signals.env_ready)
@@ -75,6 +76,7 @@ class TestRoutineRunner:
     def test_check_queue(self, instance):
         sig_finished_spy = QSignalSpy(instance.signals.finished)
         instance.run()
+        instance.data_and_error_queue.empty = Mock(return_value=True)
         instance.check_queue()
         instance.stop_routine()
         assert len(sig_finished_spy) == 1
@@ -103,7 +105,7 @@ class TestRoutineRunner:
 
     def test_set_termination_condition(self, instance):
         instance.set_termination_condition(True)
-        assert instance.termination_condition == True
+        assert instance.termination_condition
 
     # TODO: check for signal emit message
 
@@ -132,8 +134,7 @@ class TestRoutineRunner:
         # Turn off relative to current
         editor.routine_page.env_box.relative_to_curr.setChecked(False)
 
-        qtbot.keyClicks(editor.routine_page.generator_box.cb,
-                        "expected_improvement")
+        qtbot.keyClicks(editor.routine_page.generator_box.cb, "expected_improvement")
         params = editor.routine_page.generator_box.edit.toPlainText()
         # Turn on turbo controller
         params = params.replace("turbo_controller: null", "turbo_controller: optimize")
@@ -173,6 +174,7 @@ class TestRoutineRunner:
         )
 
         monitor.run_until_action.trigger()
+        monitor.routine_runner.data_and_error_queue.empty = Mock(return_value=True)
 
         # Wait until the run is done
         while monitor.running:

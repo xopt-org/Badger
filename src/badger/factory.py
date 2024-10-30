@@ -1,6 +1,6 @@
-from .settings import read_value
-from .utils import get_value_or_none
-from .errors import (
+from badger.settings import init_settings
+from badger.utils import get_value_or_none
+from badger.errors import (
     BadgerConfigError,
     BadgerInvalidPluginError,
     BadgerInvalidDocsError,
@@ -13,31 +13,34 @@ import yaml
 from xopt.generators import generators, get_generator
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 LOAD_LOCAL_ALGO = False
 ALGO_EXCLUDED = [
-    'bayesian_exploration',
-    'cnsga',
-    'mggpo',
-    'time_dependent_upper_confidence_bound',
-    'multi_fidelity',
-    'neldermead',
-    'mobo',
-    'upper_confidence_bound',
+    "bayesian_exploration",
+    "cnsga",
+    "mggpo",
+    "time_dependent_upper_confidence_bound",
+    "multi_fidelity",
+    "neldermead",
+    "mobo",
+    "upper_confidence_bound",
 ]
 
 # Check badger plugin root
-BADGER_PLUGIN_ROOT = read_value('BADGER_PLUGIN_ROOT')
+config_singleton = init_settings()
+BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
 if BADGER_PLUGIN_ROOT is None:
-    raise BadgerConfigError('Please set the BADGER_PLUGIN_ROOT env var!')
+    raise BadgerConfigError("Please set the BADGER_PLUGIN_ROOT env var!")
 elif not os.path.exists(BADGER_PLUGIN_ROOT):
     raise BadgerConfigError(
-        f'The badger plugin root {BADGER_PLUGIN_ROOT} does not exist!')
+        f"The badger plugin root {BADGER_PLUGIN_ROOT} does not exist!"
+    )
 else:
-    module_file = os.path.join(BADGER_PLUGIN_ROOT, '__init__.py')
+    module_file = os.path.join(BADGER_PLUGIN_ROOT, "__init__.py")
     if not os.path.exists(module_file):
-        with open(module_file, 'w') as f:
+        with open(module_file, "w") as f:
             pass
 sys.path.append(BADGER_PLUGIN_ROOT)
 
@@ -47,19 +50,22 @@ def scan_plugins(root):
 
     # Do not scan local generators if option disabled
     if LOAD_LOCAL_ALGO:
-        ptype_list = ['generator', 'interface', 'environment']
+        ptype_list = ["generator", "interface", "environment"]
     else:
-        ptype_list = ['interface', 'environment']
-        factory['generator'] = {}
+        ptype_list = ["interface", "environment"]
+        factory["generator"] = {}
 
     for ptype in ptype_list:
         factory[ptype] = {}
 
-        proot = os.path.join(root, f'{ptype}s')
+        proot = os.path.join(root, f"{ptype}s")
 
         try:
-            plugins = [fname for fname in os.listdir(proot)
-                       if os.path.exists(os.path.join(proot, fname, '__init__.py'))]
+            plugins = [
+                fname
+                for fname in os.listdir(proot)
+                if os.path.exists(os.path.join(proot, fname, "__init__.py"))
+            ]
         except:
             plugins = []
 
@@ -72,47 +78,55 @@ def scan_plugins(root):
 
 
 def load_plugin(root, pname, ptype):
-    assert ptype in ['generator', 'interface',
-                     'environment'], f'Invalid plugin type {ptype}'
+    assert ptype in [
+        "generator",
+        "interface",
+        "environment",
+    ], f"Invalid plugin type {ptype}"
 
-    proot = os.path.join(root, f'{ptype}s')
+    proot = os.path.join(root, f"{ptype}s")
 
     # Load the params in the configs
     configs = None
-    with open(os.path.join(proot, pname, 'configs.yaml'), 'r') as f:
+    with open(os.path.join(proot, pname, "configs.yaml"), "r") as f:
         try:
             configs = yaml.safe_load(f)
         except yaml.YAMLError:
             raise BadgerInvalidPluginError(
-                f'Error loading plugin {ptype} {pname}: invalid config')
+                f"Error loading plugin {ptype} {pname}: invalid config"
+            )
 
     # Load module
     try:
-        module = importlib.import_module(f'{ptype}s.{pname}')
+        module = importlib.import_module(f"{ptype}s.{pname}")
     except ImportError as e:
         _e = BadgerInvalidPluginError(
-            f'{ptype} {pname} is not available due to missing dependencies: {e}')
+            f"{ptype} {pname} is not available due to missing dependencies: {e}"
+        )
         _e.configs = configs  # attach information to the exception
         raise _e
 
-    if ptype == 'generator':
+    if ptype == "generator":
         plugin = [module.optimize, configs]
-    elif ptype == 'interface':
-        params = module.Interface.model_json_schema()['properties']
-        params = {name: get_value_or_none(info, 'default')
-                  for name, info in params.items()}
-        configs['params'] = params
+    elif ptype == "interface":
+        params = module.Interface.model_json_schema()["properties"]
+        params = {
+            name: get_value_or_none(info, "default") for name, info in params.items()
+        }
+        configs["params"] = params
         plugin = [module.Interface, configs]
-    elif ptype == 'environment':
+    elif ptype == "environment":
         vars = module.Environment.variables
         obses = module.Environment.observables
-        params = module.Environment.model_json_schema()['properties']
-        params = {name: get_value_or_none(info, 'default')
-                  for name, info in params.items()
-                  if name != 'interface'}
+        params = module.Environment.model_json_schema()["properties"]
+        params = {
+            name: get_value_or_none(info, "default")
+            for name, info in params.items()
+            if name != "interface"
+        }
         # Get vranges by creating an env instance
         try:
-            intf_name = configs['interface'][0]
+            intf_name = configs["interface"][0]
             Interface, _ = get_intf(intf_name)
             intf = Interface()
         except KeyError:
@@ -129,9 +143,9 @@ def load_plugin(root, pname, ptype):
             var_info[var] = var_bounds[var]
             vars_info.append(var_info)
 
-        configs['params'] = params
-        configs['variables'] = vars_info
-        configs['observations'] = obses
+        configs["params"] = params
+        configs["variables"] = vars_info
+        configs["observations"] = obses
         plugin = [module.Environment, configs]
     else:  # TODO: raise an exception here instead?
         return [None, None]
@@ -142,20 +156,24 @@ def load_plugin(root, pname, ptype):
 
 
 def load_docs(root, pname, ptype):
-    assert ptype in ['generator', 'interface',
-                     'environment'], f'Invalid plugin type {ptype}'
+    assert ptype in [
+        "generator",
+        "interface",
+        "environment",
+    ], f"Invalid plugin type {ptype}"
 
-    proot = os.path.join(root, f'{ptype}s')
+    proot = os.path.join(root, f"{ptype}s")
 
     # Load the readme
     readme = None
     try:
-        with open(os.path.join(proot, pname, 'README.md'), 'r') as f:
+        with open(os.path.join(proot, pname, "README.md"), "r") as f:
             readme = f.read()
         return readme
     except:
         raise BadgerInvalidDocsError(
-            f'Error loading docs for {ptype} {pname}: docs not found')
+            f"Error loading docs for {ptype} {pname}: docs not found"
+        )
 
 
 def get_plug(root, name, ptype):
@@ -168,7 +186,8 @@ def get_plug(root, name, ptype):
         plug = [plug[0], plug[1].copy()]
     except KeyError:
         raise BadgerPluginNotFoundError(
-            f'Error loading plugin {ptype} {name}: plugin not found')
+            f"Error loading plugin {ptype} {name}: plugin not found"
+        )
 
     return plug
 
@@ -183,12 +202,16 @@ def get_generator_docs(name):
     return generators[name].__doc__
 
 
+def get_env_docs(name):
+    return load_docs(BADGER_PLUGIN_ROOT, name, "environment")
+
+
 def get_intf(name):
-    return get_plug(BADGER_PLUGIN_ROOT, name, 'interface')
+    return get_plug(BADGER_PLUGIN_ROOT, name, "interface")
 
 
 def get_env(name):
-    return get_plug(BADGER_PLUGIN_ROOT, name, 'environment')
+    return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 
 def list_generators():
@@ -208,11 +231,11 @@ get_generator = get_generator
 
 
 def list_intf():
-    return sorted(BADGER_FACTORY['interface'])
+    return sorted(BADGER_FACTORY["interface"])
 
 
 def list_env():
-    return sorted(BADGER_FACTORY['environment'])
+    return sorted(BADGER_FACTORY["environment"])
 
 
 BADGER_FACTORY = scan_plugins(BADGER_PLUGIN_ROOT)

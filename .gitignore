@@ -10,5 +10,7 @@ __pycache__
 /examples/*.yaml
 *.pickle
 *.db
+config.yaml
 .vscode
 src/badger/_version.py
+.coverage*

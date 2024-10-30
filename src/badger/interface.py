@@ -4,7 +4,7 @@ from typing import Any, ClassVar, Dict, List
 
 from pydantic import BaseModel
 
-from .utils import curr_ts
+from badger.utils import curr_ts
 
 
 def log(func):

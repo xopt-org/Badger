@@ -55,7 +55,8 @@ or `pip`
 pip install badger-opt
 ```
 
-Currently Badger only officially support Linux. Badger on MacOS and Windows could be potentially unstable.
+Currently, Badger only officially supports Linux. Badger on MacOS and
+Windows could be potentially unstable.
 
 ## Run an optimization
 
@@ -99,6 +100,40 @@ BibTex entry:
 }
 ```
 
+Developers
+==========
+
+Clone this repository:
+```shell
+git clone https://github.com/xopt-org/badger.git
+```
+
+Create a fresh Python environment, for example using conda:
+```shell
+conda env create -n badger-env python=3.12
+```
+
+Install Badger as editable:
+```shell
+conda activate badger-env
+pip install -e ".[dev]"
+```
+
+You'll also need to install `ruff` and `pre-commit` to be able to
+pass the linting and formatting checks:
+```
+pip install ruff pre-commit
+```
+
+Then install the pre-commit hooks:
+```
+pre-commit install
+```
+
+You can also do a run at any time to check your progress:
+```
+pre-commit run --all-files
+```
 ## Issues or questions?
 
 Please check out current Badger issues [here](https://github.com/xopt-org/Badger/issues) before [opening a new one](https://github.com/xopt-org/Badger/issues/new/). Alternatively, you are welcome to [shoot us an email](mailto:zhezhang@slac.stanford.edu), or join our [Slack channel](https://join.slack.com/share/enQtNjI3NjY0NDk0MzUxMC0zNThjYTdmNmZlOTA3MzM2NjFjZTVmNDY5MDk4NmQ2NmQxMjE1NjBjN2VhNzYxNjBjYjgxYzMwY2ExZTIxYzkw).

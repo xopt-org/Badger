@@ -1,3 +1,4 @@
+from importlib import metadata
 import json
 import logging
 import os
@@ -7,7 +8,7 @@ from datetime import datetime
 
 import yaml
 
-from .errors import BadgerLoadConfigError
+from badger.errors import BadgerLoadConfigError
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,7 @@ def get_yaml_string(content):
     if content is None:
         return ""
 
-    return yaml.dump(content, Dumper=Dumper, default_flow_style=False,
-                     sort_keys=False)
+    return yaml.dump(content, Dumper=Dumper, default_flow_style=False, sort_keys=False)
 
 
 def yprint(content):
@@ -286,9 +286,9 @@ def strtobool(val):
     except AttributeError:
         return val
 
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+    if val in ("y", "yes", "t", "true", "on", "1"):
         return True
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+    elif val in ("n", "no", "f", "false", "off", "0"):
         return False
     else:
         raise ValueError("invalid truth value %r" % (val,))
@@ -296,7 +296,6 @@ def strtobool(val):
 
 # https://stackoverflow.com/a/61901696/4263605
 def get_datadir() -> pathlib.Path:
-
     """
     Returns a parent directory path
     where persistent application data can be stored.
@@ -314,3 +313,11 @@ def get_datadir() -> pathlib.Path:
         return home / ".local/share"
     elif sys.platform == "darwin":
         return home / "Library/Application Support"
+
+
+def get_badger_version():
+    return metadata.version("badger-opt")
+
+
+def get_xopt_version():
+    return metadata.version("xopt")
