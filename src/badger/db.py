@@ -235,7 +235,7 @@ def list_routine(keyword="", tags={}):
             new_config = yaml.dump(sorted_config, default_flow_style=False)
             cur.execute(
                 "insert into new_table (id, name, config, savedAt) values (?, ?, ?, ?)",
-                (id, row[0], new_config, row[2])
+                (id, row[0], new_config, row[2]),
             )
             db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
             con_run = sqlite3.connect(db_run)
