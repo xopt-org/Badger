@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
 from PyQt5.QtWidgets import QTextEdit, QStackedWidget, QScrollArea
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QFont
-from .routine_page import BadgerRoutinePage
+from badger.gui.default.components.routine_page import BadgerRoutinePage
 
-from ....routine import Routine
+from badger.routine import Routine
 
 
 class BadgerRoutineEditor(QWidget):
@@ -56,12 +56,12 @@ class BadgerRoutineEditor(QWidget):
         # cool_font.setPixelSize(16)
 
         # Only show when create new routine
-        self.btn_cancel = btn_cancel = QPushButton('Cancel')
+        self.btn_cancel = btn_cancel = QPushButton("Cancel")
         btn_cancel.setFixedSize(64, 32)
         btn_cancel.setFont(cool_font)
         btn_cancel.hide()
 
-        self.btn_save = btn_save = QPushButton('Save')
+        self.btn_save = btn_save = QPushButton("Save")
         btn_save.setFixedSize(128, 32)
         btn_save.setFont(cool_font)
         hbox_action.addWidget(btn_cancel)
@@ -96,7 +96,7 @@ class BadgerRoutineEditor(QWidget):
         self.routine_edit.clear()
 
     def switch_mode(self, mode):
-        if mode == 'regular':
+        if mode == "regular":
             self.btn_cancel.hide()
-        elif mode == 'new routine':
+        elif mode == "new routine":
             self.btn_cancel.show()

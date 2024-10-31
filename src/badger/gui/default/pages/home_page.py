@@ -23,42 +23,36 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from ....archive import delete_run, get_base_run_filename, load_run
-from ....db import (
+from badger.archive import delete_run, get_base_run_filename, load_run
+from badger.db import (
     export_routines,
     get_runs,
     get_runs_by_routine,
     import_routines,
     list_routine,
     load_routine,
-    remove_routine
+    remove_routine,
 )
-from ..components.data_table import add_row, data_table, reset_table, update_table
-from ..components.filter_cbox import BadgerFilterBox
-from ..components.history_navigator import HistoryNavigator
-from ..components.routine_editor import BadgerRoutineEditor
-from ..components.routine_item import BadgerRoutineItem
-from ..components.run_monitor import BadgerOptMonitor
-from ..components.search_bar import search_bar
-from ..components.status_bar import BadgerStatusBar
-from ..utils import create_button
-from ....utils import get_header, strtobool
-from ....settings import init_settings
+from badger.gui.default.components.data_table import (
+    add_row,
+    data_table,
+    reset_table,
+    update_table,
+)
+from badger.gui.default.components.filter_cbox import BadgerFilterBox
+from badger.gui.default.components.history_navigator import HistoryNavigator
+from badger.gui.default.components.routine_editor import BadgerRoutineEditor
+from badger.gui.default.components.routine_item import BadgerRoutineItem
+from badger.gui.default.components.run_monitor import BadgerOptMonitor
+from badger.gui.default.components.search_bar import search_bar
+from badger.gui.default.components.status_bar import BadgerStatusBar
+from badger.gui.default.utils import create_button
+from badger.utils import get_header, strtobool
+from badger.settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
-from ..windows.message_dialog import BadgerScrollableMessageBox
-from ..components.search_bar import search_bar
-from ..components.data_table import data_table, update_table, reset_table, add_row
-from ..components.routine_item import BadgerRoutineItem
-from ..components.history_navigator import HistoryNavigator
-from ..components.run_monitor import BadgerOptMonitor
-from ..components.routine_editor import BadgerRoutineEditor
-from ..components.status_bar import BadgerStatusBar
-from ..components.filter_cbox import BadgerFilterBox
-from ..utils import create_button, ModalOverlay
-from ....archive import load_run, delete_run, get_base_run_filename
-from ....utils import get_header, strtobool
-
+from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.default.utils import ModalOverlay
 
 stylesheet = """
 QPushButton:hover:pressed
@@ -74,7 +68,6 @@ QPushButton
     background-color: #A9444E;
 }
 """
-
 
 
 class BadgerHomePage(QWidget):
@@ -96,7 +89,7 @@ class BadgerHomePage(QWidget):
 
     def init_ui(self):
         self.config_singleton = init_settings()
-        icon_ref = resources.files(__package__) / '../images/add.png'
+        icon_ref = resources.files(__package__) / "../images/add.png"
 
         with resources.as_file(icon_ref) as icon_path:
             self.icon_add = QIcon(str(icon_path))
@@ -140,8 +133,8 @@ class BadgerHomePage(QWidget):
         vbox_routine.addWidget(panel_search)
 
         # Filters
-        self.filter_box = filter_box = BadgerFilterBox(self, title=' Filters')
-        if not strtobool(self.config_singleton.read_value('BADGER_ENABLE_ADVANCED')):
+        self.filter_box = filter_box = BadgerFilterBox(self, title=" Filters")
+        if not strtobool(self.config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             filter_box.hide()
         vbox_routine.addWidget(filter_box)
 
@@ -344,7 +337,12 @@ class BadgerHomePage(QWidget):
             self.routine_list.itemWidget(routine_item).activate()
 
     def build_routine_list(
-        self, routine_ids: List[str], routine_names: List[str], timestamps: List[str], environments: List[str], descriptions: List[str]
+        self,
+        routine_ids: List[str],
+        routine_names: List[str],
+        timestamps: List[str],
+        environments: List[str],
+        descriptions: List[str],
     ):
         # use id instead of name where needed
         try:
@@ -352,15 +350,25 @@ class BadgerHomePage(QWidget):
         except Exception:
             selected_routine = None
         self.routine_list.clear()
-        BADGER_PLUGIN_ROOT = self.config_singleton.read_value('BADGER_PLUGIN_ROOT')
-        env_dict_dir = os.path.join(BADGER_PLUGIN_ROOT, 'environments', 'env_colors.yaml')
+        BADGER_PLUGIN_ROOT = self.config_singleton.read_value("BADGER_PLUGIN_ROOT")
+        env_dict_dir = os.path.join(
+            BADGER_PLUGIN_ROOT, "environments", "env_colors.yaml"
+        )
         try:
-            with open(env_dict_dir, 'r') as stream:
+            with open(env_dict_dir, "r") as stream:
                 env_dict = yaml.safe_load(stream)
         except (FileNotFoundError, yaml.YAMLError):
             env_dict = {}
         for i, routine_id in enumerate(routine_ids):
-            _item = BadgerRoutineItem(routine_id, routine_names[i], timestamps[i], environments[i], env_dict, descriptions[i], self)
+            _item = BadgerRoutineItem(
+                routine_id,
+                routine_names[i],
+                timestamps[i],
+                environments[i],
+                env_dict,
+                descriptions[i],
+                self,
+            )
             _item.sig_del.connect(self.delete_routine)
             item = QListWidgetItem(self.routine_list)
             item.routine_id = routine_id  # dirty trick
@@ -382,15 +390,21 @@ class BadgerHomePage(QWidget):
         if tag_reg:
             tags["region"] = tag_reg
         if tag_gain:
-            tags['gain'] = tag_gain
-        routine_ids, routine_names, timestamps, environments, descriptions = list_routine(keyword, tags)
+            tags["gain"] = tag_gain
+        routine_ids, routine_names, timestamps, environments, descriptions = (
+            list_routine(keyword, tags)
+        )
 
         return routine_ids, routine_names, timestamps, environments, descriptions
 
     def refresh_routine_list(self):
-        routine_ids, routine_names, timestamps, environments, descriptions = self.get_current_routines()
+        routine_ids, routine_names, timestamps, environments, descriptions = (
+            self.get_current_routines()
+        )
 
-        self.build_routine_list(routine_ids, routine_names, timestamps, environments, descriptions)
+        self.build_routine_list(
+            routine_ids, routine_names, timestamps, environments, descriptions
+        )
 
     def go_run(self, i: int):
         gc.collect()
@@ -505,7 +519,7 @@ class BadgerHomePage(QWidget):
     def new_run(self):
         self.cover_page()
 
-        self.cb_history.insertItem(0, 'Optimization in progress...')
+        self.cb_history.insertItem(0, "Optimization in progress...")
         self.cb_history.setCurrentIndex(0)
 
         header = get_header(self.current_routine)
@@ -647,7 +661,11 @@ class BadgerHomePage(QWidget):
                 f"Import success: imported all routines from {filename}",
             )
         except Exception as e:
-            QMessageBox.warning(self, 'Heads-up!', f'Failed to import the following routines since they already existed: \n{str(e)}')
+            QMessageBox.warning(
+                self,
+                "Heads-up!",
+                f"Failed to import the following routines since they already existed: \n{str(e)}",
+            )
 
     def cover_page(self):
         return  # disable overlay for now

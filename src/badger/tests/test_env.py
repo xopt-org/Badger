@@ -6,9 +6,9 @@ def test_find_env():
 
     assert len(list_env()) == 2
 
-    _, configs = get_env('test')
-    assert configs['name'] == 'test'
-    assert configs['version'] == '1.0'
+    _, configs = get_env("test")
+    assert configs["name"] == "test"
+    assert configs["version"] == "1.0"
 
 
 def test_get_params():
@@ -45,7 +45,7 @@ def test_list_variables():
     Environment, _ = get_env("test")
     env = Environment()
 
-    variables = {f'x{i}': [-1, 1] for i in range(20)}
+    variables = {f"x{i}": [-1, 1] for i in range(20)}
     assert env.variables == variables
 
     assert env.variable_names == list(variables.keys())
@@ -57,14 +57,13 @@ def test_list_observables():
     Environment, _ = get_env("test")
     env = Environment()
 
-    assert env.observables == ['f', "c"]
+    assert env.observables == ["f", "c"]
 
 
 def test_get_variables():
     from badger.factory import get_env, get_intf
     from badger.errors import (
         BadgerNoInterfaceError,
-        BadgerInterfaceChannelError,
     )
 
     Interface, _ = get_intf("test")
@@ -96,7 +95,6 @@ def test_get_variables():
 def test_set_variables():
     from badger.factory import get_env, get_intf
     from badger.errors import (
-        BadgerInterfaceChannelError,
         BadgerEnvVarError,
         BadgerNoInterfaceError,
     )

@@ -1,6 +1,3 @@
-import os
-
-
 class TestDB:
     def test_save_routine(self):
         from badger.db import save_routine, remove_routine
@@ -27,7 +24,7 @@ class TestDB:
         assert new_routine.vocs == routine.vocs
 
         # Test if xopt and badger version are defined in the routine
-        assert hasattr(new_routine, 'xopt_version')
-        assert hasattr(new_routine, 'badger_version')
+        assert hasattr(new_routine, "xopt_version")
+        assert hasattr(new_routine, "badger_version")
 
         remove_routine(routine.id)

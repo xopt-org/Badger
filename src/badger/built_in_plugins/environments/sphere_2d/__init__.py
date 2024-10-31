@@ -2,20 +2,19 @@ from badger import environment
 
 
 class Environment(environment.Environment):
-
-    name = 'sphere_2d'
+    name = "sphere_2d"
     variables = {
-        'x0': [-1, 1],
-        'x1': [-1, 1],
+        "x0": [-1, 1],
+        "x1": [-1, 1],
     }
-    observables = ['f']
+    observables = ["f"]
 
     _variables = {
-        'x0': 0.0,
-        'x1': 0.0,
+        "x0": 0.5,
+        "x1": 0.5,
     }
     _observations = {
-        'f': 0.0,
+        "f": 0.0,
     }
 
     def get_variables(self, variable_names):
@@ -28,9 +27,9 @@ class Environment(environment.Environment):
             self._variables[var] = x
 
         # Filling up the observations
-        f = self._variables['x0'] ** 2 + self._variables['x1'] ** 2
+        f = self._variables["x0"] ** 2 + self._variables["x1"] ** 2
 
-        self._observations['f'] = f
+        self._observations["f"] = f
 
     def get_observables(self, observable_names):
         return {k: self._observations[k] for k in observable_names}
