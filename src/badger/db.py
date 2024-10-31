@@ -233,8 +233,10 @@ def list_routine(keyword="", tags={}):
             config["id"] = id
             sorted_config = dict(sorted(config.items()))
             new_config = yaml.dump(sorted_config, default_flow_style=False)
-            cur.execute("insert into new_table (id, name, config, savedAt) values (?, ?, ?, ?)",
-                        (id, row[0], new_config, row[2]))
+            cur.execute(
+                "insert into new_table (id, name, config, savedAt) values (?, ?, ?, ?)",
+                (id, row[0], new_config, row[2])
+            )
             db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
             con_run = sqlite3.connect(db_run)
             cur_run = con_run.cursor()
@@ -252,19 +254,16 @@ def list_routine(keyword="", tags={}):
                 raise BadgerConfigError("Please set the BADGER_ARCHIVE_ROOT env var!")
             elif not os.path.exists(BADGER_ARCHIVE_ROOT):
                 os.makedirs(BADGER_ARCHIVE_ROOT)
-                logger.info(
-                    f"Badger run root {BADGER_ARCHIVE_ROOT} created")
+                logger.info(f"Badger run root {BADGER_ARCHIVE_ROOT} created")
             for i, fname in enumerate(filenames):
                 tokens = fname.split("-")
                 first_level = tokens[1]
                 second_level = f"{tokens[1]}-{tokens[2]}"
                 third_level = f"{tokens[1]}-{tokens[2]}-{tokens[3]}"
 
-                filename = os.path.join(BADGER_ARCHIVE_ROOT,
-                                        first_level,
-                                        second_level,
-                                        third_level,
-                                        fname)
+                filename = os.path.join(
+                    BADGER_ARCHIVE_ROOT, first_level, second_level, third_level, fname
+                )
                 filenames[i] = filename
             for filename in filenames:
                 with open(filename, "r") as file:
