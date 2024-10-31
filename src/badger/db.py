@@ -229,9 +229,13 @@ def list_routine(keyword="", tags={}):
         rows = cur.fetchall()
         for row in rows:
             id = str(uuid.uuid4())
+            config = yaml.safe_load(row[1])
+            config["id"] = id
+            sorted_config = dict(sorted(config.items()))
+            new_config = yaml.dump(sorted_config, default_flow_style=False)
             cur.execute(
                 "insert into new_table (id, name, config, savedAt) values (?, ?, ?, ?)",
-                (id, row[0], row[1], row[2]),
+                (id, row[0], new_config, row[2]),
             )
             db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
             con_run = sqlite3.connect(db_run)
@@ -242,12 +246,38 @@ def list_routine(keyword="", tags={}):
             )
             con_run.commit()
             con_run.close()
+            filenames = get_runs_by_routine(id)
+            # Check badger optimization run archive root
+            config_singleton = init_settings()
+            BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
+            if BADGER_ARCHIVE_ROOT is None:
+                raise BadgerConfigError("Please set the BADGER_ARCHIVE_ROOT env var!")
+            elif not os.path.exists(BADGER_ARCHIVE_ROOT):
+                os.makedirs(BADGER_ARCHIVE_ROOT)
+                logger.info(f"Badger run root {BADGER_ARCHIVE_ROOT} created")
+            for i, fname in enumerate(filenames):
+                tokens = fname.split("-")
+                first_level = tokens[1]
+                second_level = f"{tokens[1]}-{tokens[2]}"
+                third_level = f"{tokens[1]}-{tokens[2]}-{tokens[3]}"
+
+                filename = os.path.join(
+                    BADGER_ARCHIVE_ROOT, first_level, second_level, third_level, fname
+                )
+                filenames[i] = filename
+            for filename in filenames:
+                with open(filename, "r") as file:
+                    run = yaml.safe_load(file)
+                run["id"] = id
+                sorted_run = {key: run[key] for key in sorted(run.keys())}
+                with open(filename, "w") as file:
+                    yaml.dump(sorted_run, file, default_flow_style=False)
         cur.execute("drop table routine")
         cur.execute("alter table new_table rename to routine")
         con.commit()
 
     cur.execute(
-        f'select id, name, config, savedAt from routine where name like "%{keyword}%" order by savedAt desc'
+        f"select id, name, config, savedAt from routine where name like '%{keyword}%' order by savedAt desc"
     )
     records = cur.fetchall()
     if tags:
