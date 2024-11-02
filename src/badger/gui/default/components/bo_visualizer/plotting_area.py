@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
 from xopt.generators.bayesian.visualize import visualize_generator_model
 import torch
+import numpy as np
 
 
 class PlottingArea(QWidget):
@@ -14,6 +15,7 @@ class PlottingArea(QWidget):
         self.setLayout(self.layout)
 
     def update_plot(self, xopt_obj, variable_names, reference_point, show_acquisition, show_samples, show_prior_mean, show_feasibility, n_grid):
+
         # Clear the existing layout (remove previous plot if any)
         for i in reversed(range(self.layout.count())):
             widget_to_remove = self.layout.itemAt(i).widget()
@@ -32,30 +34,7 @@ class PlottingArea(QWidget):
         # Set generator data
         generator.data = xopt_obj.data
 
-       # Verify generator _tkwargs
-        #print(f"Generator _tkwargs before training: {generator._tkwargs}")
-        #print(f"dtype type: {type(generator._tkwargs.get('dtype'))}")
-
-        """
-        # Check and correct TurboController tkwargs
-        if generator.turbo_controller:
-            #print(f"TurboController tkwargs before training: {generator.turbo_controller.tkwargs}")
-            #print(f"TurboController dtype type: {type(generator.turbo_controller.tkwargs.get('dtype'))}")
-            if isinstance(generator.turbo_controller.tkwargs.get('dtype'), str):
-                # Correct dtype
-                generator.turbo_controller.tkwargs['dtype'] = torch.double
-                print("Corrected TurboController dtype to torch.double")
-            else:
-                #print("TurboController dtype is already correct.")
-                pass
-        else:
-            #print("No TurboController present in generator.")
-            pass
-        """
-
-        
-
-        # Alternatively, synchronize tkwargs
+        # Synchronize tkwargs
         if generator.turbo_controller:
             generator.turbo_controller.tkwargs = generator._tkwargs
 
@@ -87,7 +66,7 @@ class PlottingArea(QWidget):
         )
 
         # Adjust padding inside the figure
-        fig.tight_layout(pad=2)  # Adds padding between plot elements
+        fig.tight_layout(pad=1)  # Adds padding between plot elements
 
         # Set the new figure to the canvas and draw it
         canvas.figure = fig
@@ -98,3 +77,4 @@ class PlottingArea(QWidget):
 
         # Ensure the layout is updated
         self.updateGeometry()
+

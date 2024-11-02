@@ -18,7 +18,9 @@ class UIComponents:
         self.y_axis_checkbox = QCheckBox("Include Variable 2")
         self.y_axis_checkbox.setChecked(True)  # Set checked by default
         self.acq_func_checkbox = QCheckBox("Show Acquisition Function")
+        self.acq_func_checkbox.setChecked(True)  # Set checked by default
         self.show_samples_checkbox = QCheckBox("Show Samples")
+        self.show_samples_checkbox.setChecked(True)  # Set checked by default
         self.show_prior_mean_checkbox = QCheckBox("Show Prior Mean")
         self.show_feasibility_checkbox = QCheckBox("Show Feasibility")
         self.n_grid = QSpinBox()

@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
+    QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
 )
 from .ui_components import UIComponents
 from .plotting_area import PlottingArea
@@ -160,8 +160,28 @@ class BOPlotWidget(QWidget):
         feas_chk = self.ui_components.show_feasibility_checkbox.isChecked()
 
         # Adjust window size based on selected options
-        width = 1400 if prior_mean_chk and len(selected_variables) == 2 else 1250
-        height = 820 if acq_chk and feas_chk else 720
+        if self.ui_components.y_axis_checkbox.isChecked() == True:
+
+            # Set width based on prior_mean_chk
+            width = 1400 if prior_mean_chk else 1250
+
+            # Set height based on acq_chk and feas_chk
+            if acq_chk and not prior_mean_chk and feas_chk:
+                height = 820
+            elif acq_chk or feas_chk:
+                height = 780
+            else:
+                height = 720
+
+        else:
+
+            width = 1250
+
+            # Set height based on acq_chk and feas_chk
+            if acq_chk and feas_chk:
+                height = 780
+            else:
+                height = 720
 
         self.parent().resize(width, height)
 
