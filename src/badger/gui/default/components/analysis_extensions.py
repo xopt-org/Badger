@@ -3,7 +3,7 @@ from abc import abstractmethod, ABC
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QWidget
-from badger.bo_visualizer.bo_plotter import BOPlotWidget
+from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
 from badger.core import Routine
 
 
