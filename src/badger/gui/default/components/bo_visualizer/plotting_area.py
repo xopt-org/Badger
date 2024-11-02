@@ -67,7 +67,6 @@ class PlottingArea(QWidget):
                 generator.train_model()
             except Exception as e:
                 print(f"Failed to train model: {e}")
-                traceback.print_exc()
                 QMessageBox.warning(self, "Model Training Error", f"Failed to train model: {e}")
                 return
 

@@ -122,19 +122,18 @@ class ExtensionsPalette(QMainWindow):
 
         """
         child_window.window_closed.connect(self.run_monitor.extension_window_closed)
+        self.run_monitor.active_extensions.append(child_window)
 
-        if self.run_monitor.routine is not None:
-            try:
-                child_window.update_window(
-                    self.run_monitor.routine
-                )
-                self.run_monitor.active_extensions.append(child_window)
-                child_window.show()
-            except ValueError:
-                QMessageBox.warning(
-                    self, 'Extension is not applicable!',
-                    traceback.format_exc()
-                )
+        try:
+            if self.run_monitor.routine is not None:
+                child_window.update_window(self.run_monitor.routine)
+        except ValueError:
+            QMessageBox.warning(
+                self, 'Extension is not applicable!',
+                traceback.format_exc()
+            )
+            self.run_monitor.active_extensions.remove(child_window)
+            return
 
         child_window.show()
 

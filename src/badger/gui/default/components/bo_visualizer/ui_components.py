@@ -120,7 +120,7 @@ class UIComponents:
         layout.addWidget(self.show_feasibility_checkbox)
 
         grid_layout = QHBoxLayout()
-        n_grid_label = QLabel("No. of Grid Pts:")
+        n_grid_label = QLabel("No. of Grid Points:")
         grid_layout.addWidget(n_grid_label)
         grid_layout.addWidget(self.n_grid)
 
