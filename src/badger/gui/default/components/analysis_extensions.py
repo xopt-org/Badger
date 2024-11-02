@@ -1,9 +1,9 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
-
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QWidget
+from badger.bo_visualizer.bo_plotter import BOPlotWidget
 from badger.core import Routine
 
 
@@ -30,7 +30,7 @@ class ParetoFrontViewer(AnalysisExtension):
 
         self.plot_widget = pg.PlotWidget()
 
-        self.scatter_plot = self.plot_widget.plot(pen=None, symbol="o", symbolSize=10)
+        self.scatter_plot = self.plot_widget.plot(pen=None, symbol='o', symbolSize=10)
 
         layout = QVBoxLayout()
         layout.addWidget(self.plot_widget)
@@ -38,9 +38,8 @@ class ParetoFrontViewer(AnalysisExtension):
 
     def update_window(self, routine: Routine):
         if len(routine.vocs.objective_names) != 2:
-            raise ValueError(
-                "cannot use pareto front viewer unless there are 2 " "objectives"
-            )
+            raise ValueError("cannot use pareto front viewer unless there are 2 "
+                             "objectives")
 
         x_name = routine.vocs.objective_names[0]
         y_name = routine.vocs.objective_names[1]
@@ -55,3 +54,22 @@ class ParetoFrontViewer(AnalysisExtension):
         # set labels
         self.plot_widget.setLabel("left", y_name)
         self.plot_widget.setLabel("bottom", x_name)
+
+
+
+class BOVisualizer(AnalysisExtension):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.setWindowTitle("BO Visualizer")
+
+        # Initialize BOPlotWidget without an xopt_obj
+        self.bo_plot_widget = BOPlotWidget()
+
+        bo_layout = QVBoxLayout()
+        bo_layout.addWidget(self.bo_plot_widget)
+        self.setLayout(bo_layout)
+
+    def update_window(self, routine: Routine):
+        # Update the BOPlotWidget with the new routine
+        self.bo_plot_widget.update_routine(routine)
+
