@@ -1,10 +1,9 @@
 from importlib import resources
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QSizePolicy
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QSize
-from ..windows.settings_dialog import BadgerSettingsDialog
-from .eliding_label import SimpleElidedLabel
+from badger.gui.default.windows.settings_dialog import BadgerSettingsDialog
+from badger.gui.default.components.eliding_label import SimpleElidedLabel
 
 
 class BadgerStatusBar(QWidget):
@@ -15,7 +14,7 @@ class BadgerStatusBar(QWidget):
         self.config_logic()
 
     def init_ui(self):
-        icon_ref = resources.files(__package__) / '../images/gear.png'
+        icon_ref = resources.files(__package__) / "../images/gear.png"
         with resources.as_file(icon_ref) as icon_path:
             self.icon_settings = QIcon(str(icon_path))
 
@@ -30,7 +29,7 @@ class BadgerStatusBar(QWidget):
         btn_settings.setFixedSize(24, 24)
         btn_settings.setIcon(self.icon_settings)
         btn_settings.setIconSize(QSize(12, 12))
-        btn_settings.setToolTip('Badger settings')
+        btn_settings.setToolTip("Badger settings")
 
         hbox.addWidget(summary, 1)
         hbox.addWidget(btn_settings)

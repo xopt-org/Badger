@@ -1,20 +1,20 @@
 import logging
-
-logger = logging.getLogger(__name__)
-
 import time
 import traceback
+
 import pandas as pd
-from pandas import DataFrame
-import torch  # for converting dtype str to torch object
+import torch  # noqa: F401. For converting dtype str to torch object.
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
-from ....core import run_routine, Routine
-from ....errors import BadgerRunTerminatedError
-from ....tests.utils import get_current_vars
-from ....routine import calculate_variable_bounds, calculate_initial_points
-from ....settings import init_settings
+
+from badger.errors import BadgerRunTerminated
+from badger.tests.utils import get_current_vars
+from badger.routine import calculate_variable_bounds, calculate_initial_points
+from badger.settings import init_settings
 from badger.gui.default.components.process_manager import ProcessManager
 from badger.routine import Routine
+from badger.errors import BadgerError
+
+logger = logging.getLogger(__name__)
 
 
 class BadgerRoutineSignals(QObject):
@@ -28,7 +28,8 @@ class BadgerRoutineSignals(QObject):
 
 class BadgerRoutineSubprocess:
     """
-    This class takes the users choosen routine and then grabs a suprocess to run the routine using code in core_subprocess.py.
+    This class takes the users chosen routine and then grabs a subprocess to run the routine
+    using code in core_subprocess.py.
     """
 
     def __init__(
@@ -69,7 +70,7 @@ class BadgerRoutineSubprocess:
         )
         self.start_time = None  # track the time cost of the run
         self.last_dump_time = None  # track the time the run data got dumped
-        self.data_queue = None
+        self.data_and_error_queue = None
         self.stop_event = None
         self.pause_event = None
         self.routine_process = None
@@ -96,7 +97,7 @@ class BadgerRoutineSubprocess:
 
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
-        
+
         # Patch for converting dtype str to torch object
         try:
             dtype = self.routine.generator.turbo_controller.tkwargs["dtype"]
@@ -110,18 +111,23 @@ class BadgerRoutineSubprocess:
 
         self.routine.data = None  # reset data
         # Recalculate the bounds and initial points if asked
-        if  self.config_singleton.read_value('AUTO_REFRESH') and self.routine.relative_to_current:
+        if (
+            self.config_singleton.read_value("AUTO_REFRESH")
+            and self.routine.relative_to_current
+        ):
             variables_updated = calculate_variable_bounds(
                 self.routine.vrange_limit_options,
                 self.routine.vocs,
-                self.routine.environment)
+                self.routine.environment,
+            )
 
             self.routine.vocs.variables = variables_updated
 
             init_points = calculate_initial_points(
                 self.routine.initial_point_actions,
                 self.routine.vocs,
-                self.routine.environment)
+                self.routine.environment,
+            )
             try:
                 init_points = pd.DataFrame(init_points)
             except IndexError:
@@ -135,11 +141,12 @@ class BadgerRoutineSubprocess:
             self.routine_process = process_with_args["process"]
             self.stop_event = process_with_args["stop_event"]
             self.pause_event = process_with_args["pause_event"]
-            self.data_queue = process_with_args["data_queue"]
+            self.data_and_error_queue = process_with_args["data_queue"]
             self.evaluate_queue = process_with_args["evaluate_queue"]
             self.wait_event = process_with_args["wait_event"]
 
             arg_dict = {
+                "routine_id": self.routine.id,
                 "routine_name": self.routine.name,
                 "variable_ranges": self.routine.vocs.variables,
                 "initial_points": self.routine.initial_points,
@@ -148,7 +155,7 @@ class BadgerRoutineSubprocess:
                 "start_time": self.start_time,
             }
 
-            self.data_queue.put(arg_dict)
+            self.data_and_error_queue.put(arg_dict)
             self.wait_event.set()
             self.pause_event.set()
             self.setup_timer()
@@ -156,18 +163,23 @@ class BadgerRoutineSubprocess:
 
             self.routine.data = None  # reset data
             # Recalculate the bounds and initial points if asked
-            if self.config_singleton.read_value("AUTO_REFRESH") and self.routine.relative_to_current:
+            if (
+                self.config_singleton.read_value("AUTO_REFRESH")
+                and self.routine.relative_to_current
+            ):
                 variables_updated = calculate_variable_bounds(
                     self.routine.vrange_limit_options,
                     self.routine.vocs,
-                    self.routine.environment)
+                    self.routine.environment,
+                )
 
                 self.routine.vocs.variables = variables_updated
 
                 init_points = calculate_initial_points(
                     self.routine.initial_point_actions,
                     self.routine.vocs,
-                    self.routine.environment)
+                    self.routine.environment,
+                )
                 try:
                     init_points = pd.DataFrame(init_points)
                 except IndexError:
@@ -175,7 +187,7 @@ class BadgerRoutineSubprocess:
 
                 self.routine.initial_points = init_points
 
-        except BadgerRunTerminatedError as e:
+        except BadgerRunTerminated as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:
@@ -197,6 +209,7 @@ class BadgerRoutineSubprocess:
     def check_queue(self) -> None:
         """
         This method checks the subprocess for updates in the evaluate_queue.
+        It also checks the self.data_and_error_queue to see if an exception was thrown during the routine.
         It is called by a QTimer every 100 miliseconds.
         """
         if self.evaluate_queue[1].poll():
@@ -204,11 +217,15 @@ class BadgerRoutineSubprocess:
                 results = self.evaluate_queue[1].recv()
                 self.after_evaluate(results)
 
+        if not self.data_and_error_queue.empty():
+            error_title, error_traceback = self.data_and_error_queue.get()
+            BadgerError(error_title, error_traceback)
+
         if not self.routine_process.is_alive():
             self.close()
             self.evaluate_queue[1].close()
 
-    def after_evaluate(self, results: DataFrame) -> None:
+    def after_evaluate(self, results: pd.DataFrame) -> None:
         """
         This method emits updates sent over from the subprocess running the routine on the evaluate_queue.
 
@@ -229,7 +246,8 @@ class BadgerRoutineSubprocess:
     def stop_routine(self) -> None:
         """
         This method will attempt to close the subprocess running the routine.
-        If the process does not close withing the timeout time (0.1 seconds) then the method will terminate the process.
+        If the process does not close withing the timeout time (0.1 seconds)
+        then the method will terminate the process.
         The method then emits a signal that the process has been stopped.
         """
         self.stop_event.set()

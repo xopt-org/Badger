@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from PyQt5.QtWidgets import QComboBox, QStyledItemDelegate
-from ..utils import NoHoverFocusComboBox
+from PyQt5.QtWidgets import QStyledItemDelegate
+from badger.gui.default.utils import NoHoverFocusComboBox
 
 
 def state_item(options, remove_item, name=None):
@@ -18,7 +18,7 @@ def state_item(options, remove_item, name=None):
         idx = 0
     cb_sta.setCurrentIndex(idx)
 
-    widget.btn_del = btn_del = QPushButton('Remove')
+    widget.btn_del = btn_del = QPushButton("Remove")
     btn_del.setFixedSize(72, 24)
     btn_del.hide()
 

@@ -1,31 +1,25 @@
 import logging
 from logging.config import dictConfig
+
 from badger.utils import merge_params
 
 logger = logging.getLogger(__name__)
 
 
 LOG_CONFIG_DEFAULT = {
-    'version': 1,
-    'formatters': {
-        'simple': {
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    "version": 1,
+    "formatters": {
+        "simple": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "stream": "ext://sys.stdout",
         }
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'level': 'DEBUG',
-            'formatter': 'simple',
-            'stream': 'ext://sys.stdout'
-        }
-    },
-    'root': {
-        'level': 'WARNING',
-        'handlers': [
-            'console'
-        ]
-    }
+    "root": {"level": "WARNING", "handlers": ["console"]},
 }
 
 
