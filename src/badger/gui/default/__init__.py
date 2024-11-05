@@ -48,9 +48,14 @@ def on_timeout():
         print('Timeout, resume the operation...')
 
 
-def launch_gui():
+def launch_gui(config_path=None):
     app = QApplication(sys.argv)
     config_singleton = init_settings()
+
+    if config_path is not None: 
+        config_singleton._instance._config = config_singleton.load_or_create_config(config_path)
+        config_singleton._instance.config_path = config_path
+    
     # Set app metainfo
     app.setApplicationName('Badger')
     icon_ref = resources.files(__name__) / 'images/icon.png'

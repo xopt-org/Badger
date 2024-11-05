@@ -24,6 +24,7 @@ def main():
     parser.add_argument('-l', '--log', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
                         default='WARNING', const='WARNING', nargs='?',
                         help='change the log level')
+    parser.add_argument('-cf', '--config_filepath', type=str, default=None, help='Path to the config file')
     parser.set_defaults(func=show_info)
     subparsers = parser.add_subparsers(help='Badger commands help')
 
