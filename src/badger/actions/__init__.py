@@ -11,7 +11,6 @@ def show_info(args):
 
     if args.config_filepath:
         config_path = args.config_filepath
-        
 
     if args.gui:
         if check_n_config_paths():

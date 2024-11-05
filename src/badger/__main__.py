@@ -31,7 +31,13 @@ def main():
         nargs="?",
         help="change the log level",
     )
-    parser.add_argument('-cf', '--config_filepath', type=str, default=None, help='Path to the config file')
+    parser.add_argument(
+        "-cf",
+        "--config_filepath",
+        type=str,
+        default=None,
+        help="Path to the config file",
+    )
     parser.set_defaults(func=show_info)
     subparsers = parser.add_subparsers(help="Badger commands help")
 
