@@ -24,7 +24,7 @@ def show_info(args):
         if check_n_config_paths():
             from badger.gui.default import launch_gui
 
-            launch_gui()
+            launch_gui(config_path)
 
         return
 

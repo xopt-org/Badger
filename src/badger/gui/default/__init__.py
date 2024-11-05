@@ -85,10 +85,12 @@ def launch_gui(config_path=None):
     config_singleton = init_settings()
 
     if config_path is not None:
+        config_singleton._instance.user_flag = True
         config_singleton._instance._config = config_singleton.load_or_create_config(
             config_path
         )
         config_singleton._instance.config_path = config_path
+        
 
     # Set app metainfo
     app.setApplicationName("Badger")
