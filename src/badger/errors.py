@@ -90,7 +90,8 @@ class BadgerLogbookError(Exception):
 
 
 class BadgerLoadConfigError(Exception):
-    pass
+    def __init__(self, message="Config Error!"):
+        super().__init__(message)
 
 
 class BadgerRoutineError(Exception):

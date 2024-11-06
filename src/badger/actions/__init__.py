@@ -7,12 +7,16 @@ from badger.log import set_log_level
 def show_info(args):
     # Change log level for all existed loggers
     set_log_level(args.log)
+    config_path = None
+
+    if args.config_filepath:
+        config_path = args.config_filepath
 
     if args.gui:
-        if check_n_config_paths():
+        if check_n_config_paths(args.config_filepath):
             from badger.gui.default import launch_gui
 
-            launch_gui()
+            launch_gui(config_path)
 
         return
 
@@ -20,7 +24,7 @@ def show_info(args):
         if check_n_config_paths():
             from badger.gui.default import launch_gui
 
-            launch_gui()
+            launch_gui(config_path)
 
         return
 

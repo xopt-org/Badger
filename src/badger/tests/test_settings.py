@@ -109,7 +109,7 @@ class TestBadgerConfig:
             ) as mock_config_cls:
                 config_singleton = init_settings()
                 mock_config_cls.assert_called_once_with(
-                    "/mock/config/folder/config.yaml"
+                    "/mock/config/folder/config.yaml", False
                 )
                 assert config_singleton == mock_config_singleton
 
