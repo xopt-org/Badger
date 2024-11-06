@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 from badger.errors import BadgerLoadConfigError
 
+
 class Setting(BaseModel):
     """
     Setting model to store the configuration details.
@@ -162,12 +163,11 @@ class ConfigSingleton:
             except ValidationError as e:
                 print(f"Error validating config file: {e}")
                 raise
-        else:    
+        else:
             if cls._instance.user_flag:
                 err_msg = f"Error loading config {config_path}: invalid path."
-                raise BadgerLoadConfigError(err_msg) 
+                raise BadgerLoadConfigError(err_msg)
 
-            print("YES")
             return BadgerConfig()
 
     @property
@@ -354,23 +354,23 @@ class ConfigSingleton:
         )
 
 
-def init_settings(config_arg: bool=None) -> ConfigSingleton:
+def init_settings(config_arg: bool = None) -> ConfigSingleton:
     """
     Builds and returns an instance of the ConfigSingleton class.
 
     Parameters
     ----------
     config_arg: bool
-        a path to a config file passed through the --config__filepath argument 
+        a path to a config file passed through the --config__filepath argument
 
     Returns
     -------
     config_singleton: ConfigSingleton
         an instance of the ConfigSingleton class
     """
-    user_flag = False 
+    user_flag = False
 
-    if config_arg == None:
+    if config_arg is None:
         config_path = get_user_config_folder()
         file_name = "config.yaml"
         file_path = os.path.join(config_path, file_name)

@@ -13,7 +13,7 @@ def show_info(args):
         config_path = args.config_filepath
 
     if args.gui:
-        if check_n_config_paths():
+        if check_n_config_paths(args.config_filepath):
             from badger.gui.default import launch_gui
 
             launch_gui(config_path)
