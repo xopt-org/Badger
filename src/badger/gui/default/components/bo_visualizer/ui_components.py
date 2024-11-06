@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QComboBox, QLabel, QGroupBox, QTableWidget, QTableWidgetItem,
-    QSpinBox, QPushButton, QGridLayout, QCheckBox, QHeaderView, QWidget
+    QSpinBox, QPushButton, QCheckBox, QHeaderView
 )
 from PyQt5.QtCore import Qt
 
@@ -150,5 +150,5 @@ class UIComponents:
             self.y_axis_combo.addItems(self.vocs.variable_names)
 
             # Re-initialize variable checkboxes if needed
-            # self.initialize_variable_checkboxes(state_changed_callback)
+            self.initialize_variable_checkboxes(state_changed_callback)
             self.populate_reference_table()

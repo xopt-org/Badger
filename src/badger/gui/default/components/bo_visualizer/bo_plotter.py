@@ -25,8 +25,6 @@ class BOPlotWidget(QWidget):
 
         controls_layout.addLayout(self.ui_components.create_axis_layout())
         controls_layout.addWidget(self.ui_components.create_reference_inputs())
-        # Add variable checkboxes to the UI if needed
-        # controls_layout.addWidget(self.ui_components.create_variable_checkboxes())
         controls_layout.addWidget(self.ui_components.create_options_section())
         controls_layout.addLayout(self.ui_components.create_buttons())
 
