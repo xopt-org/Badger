@@ -78,10 +78,16 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui():
+def launch_gui(config_path=None):
     sys.excepthook = error_handler
+
     app = QApplication(sys.argv)
-    config_singleton = init_settings()
+
+    if config_path is not None:
+        config_singleton = init_settings(config_path)
+    else:
+        config_singleton = init_settings()
+
     # Set app metainfo
     app.setApplicationName("Badger")
     icon_ref = resources.files(__name__) / "images/icon.png"

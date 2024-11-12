@@ -6,6 +6,7 @@ from importlib import resources
 from badger.utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
+from badger.errors import BadgerLoadConfigError
 
 
 class Setting(BaseModel):
@@ -106,15 +107,16 @@ class BadgerConfig(BaseModel):
 class ConfigSingleton:
     _instance = None
 
-    def __new__(cls, config_path: str = None):
+    def __new__(cls, config_path: str = None, user_flag: bool = False):
         if cls._instance is None:
             cls._instance = super(ConfigSingleton, cls).__new__(cls)
+            cls._instance.user_flag = user_flag
             cls._instance._config = cls.load_or_create_config(config_path)
             cls._instance.config_path = config_path
         return cls._instance
 
-    @staticmethod
-    def load_or_create_config(config_path: str) -> BadgerConfig:
+    @classmethod
+    def load_or_create_config(cls, config_path: str) -> BadgerConfig:
         """
         Loads the config file from a given yaml file if it exists,
         otherwise creates an instance of BadgerConfig with default settings.
@@ -162,6 +164,10 @@ class ConfigSingleton:
                 print(f"Error validating config file: {e}")
                 raise
         else:
+            if cls._instance.user_flag:
+                err_msg = f"Error loading config {config_path}: invalid path."
+                raise BadgerLoadConfigError(err_msg)
+
             return BadgerConfig()
 
     @property
@@ -348,20 +354,31 @@ class ConfigSingleton:
         )
 
 
-def init_settings() -> ConfigSingleton:
+def init_settings(config_arg: bool = None) -> ConfigSingleton:
     """
     Builds and returns an instance of the ConfigSingleton class.
+
+    Parameters
+    ----------
+    config_arg: bool
+        a path to a config file passed through the --config__filepath argument
 
     Returns
     -------
     config_singleton: ConfigSingleton
         an instance of the ConfigSingleton class
     """
+    user_flag = False
 
-    config_path = get_user_config_folder()
-    file_name = "config.yaml"
-    file_path = os.path.join(config_path, file_name)
-    config_singleton = ConfigSingleton(file_path)
+    if config_arg is None:
+        config_path = get_user_config_folder()
+        file_name = "config.yaml"
+        file_path = os.path.join(config_path, file_name)
+    else:
+        file_path = config_arg
+        user_flag = True
+
+    config_singleton = ConfigSingleton(file_path, user_flag)
     return config_singleton
 
 

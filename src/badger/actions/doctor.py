@@ -5,6 +5,7 @@ from badger.actions.config import _config_path_var
 def self_check(args):
     config = init_settings()
     # Reset Badger
+
     if args.reset:
         while True:
             _res = input(
@@ -30,8 +31,11 @@ def self_check(args):
         print("Badger is healthy!")
 
 
-def check_n_config_paths():
-    config = init_settings()
+def check_n_config_paths(config_filepath=None):
+    if config_filepath is not None:
+        config = init_settings(config_filepath)
+    else:
+        config = init_settings()
 
     good = True
     issue_list = []
@@ -80,6 +84,7 @@ def check_n_config_paths():
             try:
                 print("")
                 _config_path_var(pname)
+                # TODO potential keyError here
             except KeyboardInterrupt:
                 pass
 
