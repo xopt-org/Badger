@@ -1,9 +1,15 @@
+from typing import Optional
+from xopt import VOCS
+
+from badger.routine import Routine
+
+
 class ModelLogic:
-    def __init__(self, xopt_obj, vocs):
+    def __init__(self, xopt_obj: Routine, vocs: VOCS):
         self.xopt_obj = xopt_obj
         self.vocs = vocs
 
-    def update_xopt(self, xopt_obj):
+    def update_xopt(self, xopt_obj: Optional[Routine]):
         if xopt_obj is not None:
             self.xopt_obj = xopt_obj
             self.vocs = xopt_obj.vocs
@@ -15,7 +21,9 @@ class ModelLogic:
     def get_reference_points(self, ref_inputs, variable_names):
         reference_point = {}
         if not self.vocs or not ref_inputs:
-            return reference_point  # Return empty if vocs or ref_inputs are not available
+            return (
+                reference_point  # Return empty if vocs or ref_inputs are not available
+            )
 
         # Create a mapping from variable names to ref_inputs
         ref_inputs_dict = dict(zip(self.vocs.variable_names, ref_inputs))

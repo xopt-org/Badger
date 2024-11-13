@@ -1,11 +1,29 @@
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QComboBox, QLabel, QGroupBox, QTableWidget, QTableWidgetItem,
-    QSpinBox, QPushButton, QCheckBox, QHeaderView
+    QVBoxLayout,
+    QHBoxLayout,
+    QComboBox,
+    QLabel,
+    QGroupBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QSpinBox,
+    QPushButton,
+    QCheckBox,
+    QHeaderView,
 )
 from PyQt5.QtCore import Qt
+from typing import Optional
+
+from xopt import VOCS
+
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 class UIComponents:
-    def __init__(self, vocs=None):
+    def __init__(self, vocs: Optional[VOCS] = None):
         self.vocs = vocs
         self.variable_checkboxes = {}
         self.ref_inputs = []
@@ -31,6 +49,7 @@ class UIComponents:
         self.variable_checkboxes_layout = None
 
     def initialize_variable_checkboxes(self, state_changed_callback):
+        logger.debug("Initializing variable checkboxes")
         if not self.vocs:
             return
 
@@ -44,7 +63,6 @@ class UIComponents:
                 checkbox.stateChanged.connect(state_changed_callback)
             self.variable_checkboxes[var] = checkbox
             self.variable_checkboxes_layout.addWidget(checkbox)
-
 
     def create_variable_checkboxes(self):
         group_box = QGroupBox("Select Variables")
@@ -85,7 +103,9 @@ class UIComponents:
         self.reference_table = QTableWidget()
         self.reference_table.setColumnCount(2)
         self.reference_table.setHorizontalHeaderLabels(["Variable", "Ref. Point"])
-        self.reference_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.reference_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Stretch
+        )
 
         self.ref_inputs = []
 
@@ -107,7 +127,9 @@ class UIComponents:
             self.reference_table.setItem(i, 0, variable_item)
 
             # Set default reference point to the midpoint of variable bounds
-            default_value = (self.vocs.variables[var_name][0] + self.vocs.variables[var_name][1]) / 2
+            default_value = (
+                self.vocs.variables[var_name][0] + self.vocs.variables[var_name][1]
+            ) / 2
             reference_point_item = QTableWidgetItem(str(default_value))
             self.ref_inputs.append(reference_point_item)
             self.reference_table.setItem(i, 1, reference_point_item)
@@ -140,15 +162,28 @@ class UIComponents:
 
         return layout
 
-    def update_vocs(self, vocs, state_changed_callback):
+    def update_vocs(self, vocs: Optional[VOCS], state_changed_callback):
         self.vocs = vocs
+        logger.debug(f"Updating UI components with new vocs: {vocs}")
+        logger.debug(f"type(vocs): {type(vocs)}")
+        logger.debug(f"x_axis_combo: {self.x_axis_combo.currentText()}")
+        logger.debug(f"y_axis_combo: {self.y_axis_combo.currentText()}")
         # Update axis combos after vocs is set
+        # FIX: Clearing the combo boxes triggers a signal that calls the state_changed_callback
         self.x_axis_combo.clear()
         self.y_axis_combo.clear()
+        logger.debug(f"x_axis_combo cleared: {self.x_axis_combo.currentText()}")
+        logger.debug(f"y_axis_combo cleared: {self.y_axis_combo.currentText()}")
         if self.vocs:
+            logger.debug(
+                f"Populating axis combos with variable names: {self.vocs.variable_names}"
+            )
             self.x_axis_combo.addItems(self.vocs.variable_names)
             self.y_axis_combo.addItems(self.vocs.variable_names)
+            logger.debug(f"x_axis_combo: {self.x_axis_combo.currentText()}")
+            logger.debug(f"y_axis_combo: {self.y_axis_combo.currentText()}")
 
             # Re-initialize variable checkboxes if needed
+
             self.initialize_variable_checkboxes(state_changed_callback)
             self.populate_reference_table()

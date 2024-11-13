@@ -1,16 +1,23 @@
-import sys
-from PyQt5.QtWidgets import (
-    QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
-)
+from typing import Optional
+from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
+
+from badger.routine import Routine
 from .ui_components import UIComponents
 from .plotting_area import PlottingArea
 from .model_logic import ModelLogic
 from PyQt5.QtCore import Qt
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
 class BOPlotWidget(QWidget):
-    def __init__(self, parent=None, xopt_obj=None):
+    def __init__(self, parent=None, xopt_obj: Optional[Routine] = None):
+        logger.debug("Initializing BOPlotWidget")
         super().__init__(parent)
-        self.selected_variables = []  # Initialize selected_variables
+        self.selected_variables: list[str] = []  # Initialize selected_variables
 
         # Initialize model logic and UI components with None or default values
         self.model_logic = ModelLogic(xopt_obj, xopt_obj.vocs if xopt_obj else None)
@@ -21,7 +28,9 @@ class BOPlotWidget(QWidget):
         controls_layout = QVBoxLayout()
 
         # Initialize variable checkboxes (if needed)
-        self.ui_components.initialize_variable_checkboxes(self.on_axis_selection_changed)
+        self.ui_components.initialize_variable_checkboxes(
+            self.on_axis_selection_changed
+        )
 
         controls_layout.addLayout(self.ui_components.create_axis_layout())
         controls_layout.addWidget(self.ui_components.create_reference_inputs())
@@ -36,14 +45,17 @@ class BOPlotWidget(QWidget):
         if xopt_obj:
             self.initialize_plot(xopt_obj)
         else:
+            logger.debug("xopt_obj is None. Defer setup until xopt_obj is available")
             # Defer setup until xopt_obj is available
             pass
 
         self.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
         self.resize(1250, 720)
 
-    def initialize_plot(self, xopt_obj):
+    def initialize_plot(self, xopt_obj: Routine):
+        logger.debug("Initializing plot with xopt_obj")
         self.model_logic.update_xopt(xopt_obj)
+        logger.debug("Update vocs in UI components")
         self.ui_components.update_vocs(xopt_obj.vocs, self.on_axis_selection_changed)
 
         # Set default selections for X-axis and Y-axis dropdowns
@@ -51,14 +63,16 @@ class BOPlotWidget(QWidget):
         self.ui_components.y_axis_combo.setCurrentIndex(1)  # Default to second variable
 
         # Set up connections
+        logger.debug("Setting up connections")
         self.setup_connections()
 
         # Trigger the axis selection changed to disable reference points for default selected variables
+        logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
 
         # Now it's safe to call update_plot
+        logger.debug("Calling update_plot")
         self.update_plot()
-
 
     def setup_connections(self):
         # Disconnect existing connections
@@ -74,19 +88,25 @@ class BOPlotWidget(QWidget):
             self.ui_components.x_axis_combo.currentIndexChanged.disconnect()
         except TypeError:
             pass
-        self.ui_components.x_axis_combo.currentIndexChanged.connect(self.on_axis_selection_changed)
+        self.ui_components.x_axis_combo.currentIndexChanged.connect(
+            self.on_axis_selection_changed
+        )
 
         try:
             self.ui_components.y_axis_combo.currentIndexChanged.disconnect()
         except TypeError:
             pass
-        self.ui_components.y_axis_combo.currentIndexChanged.connect(self.on_axis_selection_changed)
+        self.ui_components.y_axis_combo.currentIndexChanged.connect(
+            self.on_axis_selection_changed
+        )
 
         try:
             self.ui_components.y_axis_checkbox.stateChanged.disconnect()
         except TypeError:
             pass
-        self.ui_components.y_axis_checkbox.stateChanged.connect(self.on_axis_selection_changed)
+        self.ui_components.y_axis_checkbox.stateChanged.connect(
+            self.on_axis_selection_changed
+        )
 
         # If you have variable checkboxes
         for checkbox in self.ui_components.variable_checkboxes.values():
@@ -100,6 +120,8 @@ class BOPlotWidget(QWidget):
         if not self.model_logic.vocs or not self.ui_components.ref_inputs:
             return
 
+        logger.debug("Axis selection changed")
+
         previous_selected_variables = self.selected_variables.copy()
 
         # Start with an empty list of selected variables
@@ -107,31 +129,41 @@ class BOPlotWidget(QWidget):
 
         # Always include X-axis variable
         x_var = self.ui_components.x_axis_combo.currentText()
+        logger.debug(f"x_var: {x_var}")
         if x_var:
             self.selected_variables.append(x_var)
 
         # Include Y-axis variable only if the checkbox is checked
+        logger.debug(
+            f"y_axis_checkbox: {self.ui_components.y_axis_checkbox.isChecked()}"
+        )
         if self.ui_components.y_axis_checkbox.isChecked():
             y_var = self.ui_components.y_axis_combo.currentText()
             if y_var and y_var != x_var:
                 self.selected_variables.append(y_var)
 
+        logger.debug(f"previous_selected_variables: {previous_selected_variables}")
+        logger.debug(f"self.selected_variables: {self.selected_variables}")
         if previous_selected_variables != self.selected_variables:
             print("Selected variables for plotting:", self.selected_variables)
             # Update the reference point table based on the selected variables
             self.update_reference_point_table(self.selected_variables)
             # Only update plot if the selection has changed
             self.update_plot()
-        
 
     def update_plot(self):
+        logger.debug("Updating plot in BOPlotWidget")
         if not self.model_logic.xopt_obj or not self.model_logic.vocs:
             print("Cannot update plot: xopt_obj or vocs is not available.")
             return
 
         # Ensure selected_variables is not empty
-        if not self.selected_variables:
-            QMessageBox.warning(self, "No Variables Selected", "Please select at least one variable to plot.")
+        if len(self.selected_variables) == 0:
+            QMessageBox.warning(
+                self,
+                "No Variables Selected",
+                "Please select at least one variable to plot.",
+            )
             return
 
         # **Add validation for the number of variables**
@@ -139,7 +171,7 @@ class BOPlotWidget(QWidget):
             QMessageBox.warning(
                 self,
                 "Too Many Variables Selected",
-                "Visualization is only supported with respect to 1 or 2 variables. Please select up to 2 variables."
+                "Visualization is only supported with respect to 1 or 2 variables. Please select up to 2 variables.",
             )
             return
 
@@ -150,7 +182,9 @@ class BOPlotWidget(QWidget):
         self.update_reference_point_table(selected_variables)
 
         # Get reference points for non-selected variables
-        reference_point = self.model_logic.get_reference_points(self.ui_components.ref_inputs, selected_variables)
+        reference_point = self.model_logic.get_reference_points(
+            self.ui_components.ref_inputs, selected_variables
+        )
 
         # Resizing window to fit plots properly
         acq_chk = self.ui_components.acq_func_checkbox.isChecked()
@@ -158,8 +192,7 @@ class BOPlotWidget(QWidget):
         feas_chk = self.ui_components.show_feasibility_checkbox.isChecked()
 
         # Adjust window size based on selected options
-        if self.ui_components.y_axis_checkbox.isChecked() == True:
-
+        if self.ui_components.y_axis_checkbox.isChecked():
             # Set width based on prior_mean_chk
             width = 1400 if prior_mean_chk else 1250
 
@@ -172,7 +205,6 @@ class BOPlotWidget(QWidget):
                 height = 720
 
         else:
-
             width = 1250
 
             # Set height based on acq_chk and feas_chk
@@ -192,7 +224,7 @@ class BOPlotWidget(QWidget):
             self.ui_components.show_samples_checkbox.isChecked(),
             self.ui_components.show_prior_mean_checkbox.isChecked(),
             self.ui_components.show_feasibility_checkbox.isChecked(),
-            self.ui_components.n_grid.value()
+            self.ui_components.n_grid.value(),
         )
 
     def update_reference_point_table(self, selected_variables):
@@ -219,5 +251,7 @@ class BOPlotWidget(QWidget):
         # Force the table to refresh and update its view
         self.ui_components.reference_table.viewport().update()
 
-    def update_routine(self, xopt_obj):
+    def update_routine(self, xopt_obj: Routine):
+        logger.debug("Updating routine in BOPlotWidget")
+        logger.debug(f"xopt_obj: {xopt_obj}")
         self.initialize_plot(xopt_obj)

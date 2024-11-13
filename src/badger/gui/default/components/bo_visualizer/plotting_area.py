@@ -1,9 +1,10 @@
+from typing import Optional
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
 from xopt.generators.bayesian.visualize import visualize_generator_model
-import torch
-import numpy as np
+
+from badger.routine import Routine
 
 
 class PlottingArea(QWidget):
@@ -14,8 +15,17 @@ class PlottingArea(QWidget):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
-    def update_plot(self, xopt_obj, variable_names, reference_point, show_acquisition, show_samples, show_prior_mean, show_feasibility, n_grid):
-
+    def update_plot(
+        self,
+        xopt_obj: Optional[Routine],
+        variable_names,
+        reference_point,
+        show_acquisition,
+        show_samples,
+        show_prior_mean,
+        show_feasibility,
+        n_grid,
+    ):
         # Clear the existing layout (remove previous plot if any)
         for i in reversed(range(self.layout.count())):
             widget_to_remove = self.layout.itemAt(i).widget()
@@ -27,26 +37,24 @@ class PlottingArea(QWidget):
             return
 
         generator = xopt_obj.generator
-        
+
         # Ensure use_cuda is a boolean
         generator.use_cuda = False  # or True, depending on your setup
 
         # Set generator data
         generator.data = xopt_obj.data
 
-        # Synchronize tkwargs
-        if generator.turbo_controller:
-            generator.turbo_controller.tkwargs = generator._tkwargs
-
         # Check if the model exists
-        if not hasattr(generator, 'model') or generator.model is None:
+        if not hasattr(generator, "model") or generator.model is None:
             # Attempt to train the model
             print("Model not found. Training the model...")
             try:
                 generator.train_model()
             except Exception as e:
                 print(f"Failed to train model: {e}")
-                QMessageBox.warning(self, "Model Training Error", f"Failed to train model: {e}")
+                QMessageBox.warning(
+                    self, "Model Training Error", f"Failed to train model: {e}"
+                )
                 return
 
         # Create a new figure and canvas
@@ -62,7 +70,7 @@ class PlottingArea(QWidget):
             show_samples=show_samples,
             show_prior_mean=show_prior_mean,
             show_feasibility=show_feasibility,
-            n_grid=n_grid
+            n_grid=n_grid,
         )
 
         # Adjust padding inside the figure
@@ -77,4 +85,3 @@ class PlottingArea(QWidget):
 
         # Ensure the layout is updated
         self.updateGeometry()
-
