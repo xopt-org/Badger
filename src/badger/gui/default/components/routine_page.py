@@ -989,7 +989,7 @@ class BadgerRoutinePage(QWidget):
                 vrange_limit_options=vrange_limit_options,
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
-                additional_observables=self.env_box.obj_table.addtl_obs,
+                additional_observables=self.env_box.obsv_table.addtl_obs,
             )
 
             # Check if any user warnings were caught

@@ -401,6 +401,7 @@ class BadgerEnvBox(CollapsibleBox):
         # Slot to handle the saved formula data
         print(f"Formula received: {formula_data}")
         self.obsv_table.add_row(formula_data)
+        self.obsv_table.addtl_obs.append(formula_data)
 
     def archiveSearchMenu(self):
         self.archive_search = ArchiveSearchWidget()
