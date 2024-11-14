@@ -15,10 +15,13 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QRegExp
 
+from badger.gui.default.components.traces_table import FormulaDialog
+from badger.gui.default.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.data_table import init_data_table
+from badger.gui.default.components.obsv_table import AdditionalObservblesTable
 from badger.settings import init_settings
 from badger.gui.default.utils import (
     MouseWheelWidgetAdjustmentGuard,
@@ -272,6 +275,50 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_obj_edit.addWidget(self.obj_table)
         hbox_obj.addWidget(edit_obj_col)
 
+        # Observable
+        obsv_panel = QWidget()
+        vbox.addWidget(obsv_panel, 1)
+        hbox_obsv = QHBoxLayout(obsv_panel)
+        hbox_obsv.setContentsMargins(0, 0, 0, 0)
+        lbl_obsv_col = QWidget()
+        vbox_lbl_obsv = QVBoxLayout(lbl_obsv_col)
+        vbox_lbl_obsv.setContentsMargins(0, 0, 0, 0)
+        lbl_obsv = QLabel("Additional Observables")
+        font = lbl_obsv.font()
+        font.setPointSize(8)
+        lbl_obsv.setFont(font)
+        lbl_obsv.setFixedWidth(100)
+        vbox_lbl_obsv.addWidget(lbl_obsv)
+        vbox_lbl_obsv.addStretch(1)
+        hbox_obsv.addWidget(lbl_obsv_col)
+
+        edit_obsv_col = QWidget()
+        vbox_obsv_edit = QVBoxLayout(edit_obsv_col)
+        vbox_obsv_edit.setContentsMargins(0, 0, 0, 0)
+
+        action_obsv = QWidget()
+        hbox_action_obsv = QHBoxLayout(action_obsv)
+        hbox_action_obsv.setContentsMargins(0, 0, 0, 0)
+        vbox_obsv_edit.addWidget(action_obsv)
+        self.edit_obsv = edit_obsv = QLineEdit()
+        edit_obsv.setPlaceholderText("Filter objectives...")
+        edit_obsv.setFixedWidth(192)
+
+        self.check_only_obsv = check_only_obsv = QCheckBox("Show Checked Only")
+        check_only_obsv.setChecked(False)
+        hbox_action_obsv.addWidget(edit_obsv)
+        hbox_action_obsv.addStretch()
+        hbox_action_obsv.addWidget(check_only_obsv)
+
+        extra_obs = QPushButton("Add Observable")
+        extra_obs.setFixedWidth(100)
+        extra_obs.clicked.connect(self.formulaMenu)
+        hbox_action_obsv.addWidget(extra_obs)
+
+        self.obsv_table = AdditionalObservblesTable()
+        vbox_obsv_edit.addWidget(self.obsv_table)
+        hbox_obsv.addWidget(edit_obsv_col)
+
         cbox_more = CollapsibleBox(self, " More")
         vbox.addWidget(cbox_more)
         vbox_more = QVBoxLayout()
@@ -323,7 +370,6 @@ class BadgerEnvBox(CollapsibleBox):
         vbox_lbl_sta.addWidget(lbl_sta)
         vbox_lbl_sta.addStretch(1)
         hbox_sta.addWidget(lbl_sta_col)
-
         edit_sta_col = QWidget()
         vbox_sta_edit = QVBoxLayout(edit_sta_col)
         vbox_sta_edit.setContentsMargins(0, 0, 0, 0)
@@ -347,6 +393,21 @@ class BadgerEnvBox(CollapsibleBox):
 
         self.setContentLayout(vbox)
 
+    def formulaMenu(self):
+        self.formula = FormulaDialog(self)
+        self.formula.show()
+        self.formula.formula_saved.connect(self.handleFormulaSaved)
+
+    def handleFormulaSaved(self, formula_data):
+        # Slot to handle the saved formula data
+        print(f"Formula received: {formula_data}")
+        self.obsv_table.add_row(formula_data)
+        self.obsv_table.addtl_obs.append(formula_data)
+
+    def archiveSearchMenu(self):
+        self.archive_search = ArchiveSearchWidget()
+        self.archive_search.show()
+
     def config_logic(self):
         self.dict_con = {}
 
@@ -354,6 +415,8 @@ class BadgerEnvBox(CollapsibleBox):
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
+        self.edit_obsv.textChanged.connect(self.filter_obsv)
+        self.check_only_obsv.stateChanged.connect(self.toggle_obsv_show_mode)
 
     def toggle_var_show_mode(self, _):
         self.var_table.toggle_show_mode(self.check_only_var.isChecked())
@@ -377,6 +440,9 @@ class BadgerEnvBox(CollapsibleBox):
     def toggle_obj_show_mode(self, _):
         self.obj_table.toggle_show_mode(self.check_only_obj.isChecked())
 
+    def toggle_obsv_show_mode(self, _):
+        self.obsv_table.toggle_show_mode(self.check_only_obsv.isChecked())
+
     def filter_obj(self):
         keyword = self.edit_obj.text()
         rx = QRegExp(keyword)
@@ -388,6 +454,18 @@ class BadgerEnvBox(CollapsibleBox):
                 _objectives.append(obj)
 
         self.obj_table.update_objectives(_objectives, 1)
+
+    def filter_obsv(self):
+        keyword = self.edit_obsv.text()
+        rx = QRegExp(keyword)
+
+        _objectives = []
+        for obsv in self.obsv_table.all_objectives:
+            oname = next(iter(obsv))
+            if rx.indexIn(oname, 0) != -1:
+                _objectives.append(obsv)
+
+        self.obsv_table.update_objectives(_objectives, 1)
 
     def _fit_content(self, list):
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4

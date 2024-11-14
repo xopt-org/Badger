@@ -34,6 +34,7 @@ class Routine(Xopt):
     vrange_limit_options: Optional[dict] = Field(None)
     initial_point_actions: Optional[List] = Field(None)
     additional_variables: Optional[List[str]] = Field([])
+    additional_observables: Optional[List] = Field(None)
     # Other meta data
     badger_version: Optional[str] = Field(None)
     xopt_version: Optional[str] = Field(None)
