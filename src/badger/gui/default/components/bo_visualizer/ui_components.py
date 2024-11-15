@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QCheckBox,
     QHeaderView,
+    QWidget,
 )
 from PyQt5.QtCore import Qt
 from typing import Callable, Optional
@@ -18,7 +19,6 @@ from xopt import VOCS
 
 import logging
 
-from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -51,7 +51,7 @@ class UIComponents:
         self.variable_checkboxes_layout = None
 
     def initialize_variable_checkboxes(
-        self, state_changed_callback: Optional[Callable[[BOPlotWidget], None]] = None
+        self, state_changed_callback: Optional[Callable[[QWidget], None]] = None
     ):
         logger.debug("Initializing variable checkboxes")
         if not self.vocs:
@@ -169,7 +169,7 @@ class UIComponents:
     def update_vocs(
         self,
         vocs: Optional[VOCS],
-        state_changed_callback: Optional[Callable[[BOPlotWidget], None]] = None,
+        state_changed_callback: Optional[Callable[[QWidget], None]] = None,
     ):
         self.vocs = vocs
         logger.debug(f"Updating UI components with new vocs: {vocs}")

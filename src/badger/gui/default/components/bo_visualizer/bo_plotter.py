@@ -14,7 +14,9 @@ logger.setLevel(logging.DEBUG)
 
 
 class BOPlotWidget(QWidget):
-    def __init__(self, parent=None, xopt_obj: Optional[Routine] = None):
+    def __init__(
+        self, parent: Optional[QWidget] = None, xopt_obj: Optional[Routine] = None
+    ):
         logger.debug("Initializing BOPlotWidget")
         super().__init__(parent)
         self.selected_variables: list[str] = []  # Initialize selected_variables

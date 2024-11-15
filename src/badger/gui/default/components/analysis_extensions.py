@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Optional
 
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
@@ -15,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 class AnalysisExtension(QDialog):
     window_closed = pyqtSignal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QDialog] = None):
         super().__init__(parent=parent)
 
     @abstractmethod
@@ -28,7 +29,7 @@ class AnalysisExtension(QDialog):
 
 
 class ParetoFrontViewer(AnalysisExtension):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[AnalysisExtension] = None):
         super().__init__(parent=parent)
 
         self.setWindowTitle("Pareto Front Viewer")
@@ -63,7 +64,7 @@ class ParetoFrontViewer(AnalysisExtension):
 
 
 class BOVisualizer(AnalysisExtension):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BOVisualizer")
         super().__init__(parent=parent)
         self.setWindowTitle("BO Visualizer")
