@@ -12,11 +12,13 @@ from PyQt5.QtWidgets import (
     QHeaderView,
 )
 from PyQt5.QtCore import Qt
-from typing import Optional
+from typing import Callable, Optional
 
 from xopt import VOCS
 
 import logging
+
+from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -26,7 +28,7 @@ class UIComponents:
     def __init__(self, vocs: Optional[VOCS] = None):
         self.vocs = vocs
         self.variable_checkboxes = {}
-        self.ref_inputs = []
+        self.ref_inputs: list[QTableWidgetItem] = []
         self.reference_table = None  # Will be initialized later
 
         # Initialize other UI components
@@ -48,7 +50,9 @@ class UIComponents:
         # Initialize layouts
         self.variable_checkboxes_layout = None
 
-    def initialize_variable_checkboxes(self, state_changed_callback):
+    def initialize_variable_checkboxes(
+        self, state_changed_callback: Optional[Callable[[BOPlotWidget], None]] = None
+    ):
         logger.debug("Initializing variable checkboxes")
         if not self.vocs:
             return
@@ -162,7 +166,11 @@ class UIComponents:
 
         return layout
 
-    def update_vocs(self, vocs: Optional[VOCS], state_changed_callback):
+    def update_vocs(
+        self,
+        vocs: Optional[VOCS],
+        state_changed_callback: Optional[Callable[[BOPlotWidget], None]] = None,
+    ):
         self.vocs = vocs
         logger.debug(f"Updating UI components with new vocs: {vocs}")
         logger.debug(f"type(vocs): {type(vocs)}")

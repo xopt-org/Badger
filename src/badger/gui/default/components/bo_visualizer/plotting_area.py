@@ -8,7 +8,7 @@ from badger.routine import Routine
 
 
 class PlottingArea(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
 
         # Create a layout for the plot area without pre-filling it with a plot
@@ -18,13 +18,13 @@ class PlottingArea(QWidget):
     def update_plot(
         self,
         xopt_obj: Optional[Routine],
-        variable_names,
-        reference_point,
-        show_acquisition,
-        show_samples,
-        show_prior_mean,
-        show_feasibility,
-        n_grid,
+        variable_names: list[str],
+        reference_point: dict[str, float],
+        show_acquisition: bool,
+        show_samples: bool,
+        show_prior_mean: bool,
+        show_feasibility: bool,
+        n_grid: int,
     ):
         # Clear the existing layout (remove previous plot if any)
         for i in reversed(range(self.layout.count())):

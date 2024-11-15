@@ -1,6 +1,10 @@
 from typing import Optional
 from xopt import VOCS
 
+from PyQt5.QtWidgets import (
+    QTableWidgetItem,
+)
+
 from badger.routine import Routine
 
 
@@ -18,8 +22,10 @@ class ModelLogic:
             self.vocs = None
             print("Warning: xopt_obj is None in update_xopt")
 
-    def get_reference_points(self, ref_inputs, variable_names):
-        reference_point = {}
+    def get_reference_points(
+        self, ref_inputs: list[QTableWidgetItem], variable_names: list[str]
+    ):
+        reference_point: dict[str, float] = {}
         if not self.vocs or not ref_inputs:
             return (
                 reference_point  # Return empty if vocs or ref_inputs are not available

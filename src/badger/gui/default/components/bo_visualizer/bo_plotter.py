@@ -227,7 +227,7 @@ class BOPlotWidget(QWidget):
             self.ui_components.n_grid.value(),
         )
 
-    def update_reference_point_table(self, selected_variables):
+    def update_reference_point_table(self, selected_variables: list[str]):
         """Disable and gray out reference points for selected variables."""
         if not self.model_logic.vocs or not self.ui_components.ref_inputs:
             # vocs or ref_inputs is not yet set; skip processing
