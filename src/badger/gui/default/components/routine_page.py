@@ -582,7 +582,7 @@ class BadgerRoutinePage(QWidget):
 
             for warning in caught_warnings:
                 # Ignore runtime warnings (usually caused by clip by bounds)
-                if isinstance(warning.category, RuntimeWarning):
+                if warning.category is RuntimeWarning:
                     pass
                 else:
                     print(f"Caught user warning: {warning.message}")
