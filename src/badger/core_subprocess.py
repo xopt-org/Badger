@@ -1,7 +1,6 @@
 import logging
 import time
 import traceback
-import pkg_resources
 import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import DataFrame
 import multiprocessing as mp
@@ -26,13 +25,9 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     result : DataFrame
     routine : Routine
     """
-    xopt_package_version = pkg_resources.get_distribution("xopt").version
     vocs = routine.vocs
     try:
-        if xopt_package_version >= "2.2.2":
-            best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
-        else:
-            best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
+        best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
 
         if best_idx.size > 0:
             if best_idx[0] != len(routine.data) - 1:
