@@ -41,12 +41,11 @@ from badger.gui.default.components.data_table import (
 )
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
 from badger.gui.acr.components.history_navigator import HistoryNavigator
-from badger.gui.default.components.routine_editor import BadgerRoutineEditor
+from badger.gui.acr.components.routine_editor import BadgerRoutineEditor
 from badger.gui.default.components.routine_item import BadgerRoutineItem
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.default.components.search_bar import search_bar
 from badger.gui.acr.components.status_bar import BadgerStatusBar
-from badger.gui.default.utils import create_button
 from badger.utils import get_header, strtobool
 from badger.settings import init_settings
 
