@@ -393,7 +393,7 @@ class BadgerHomePage(QWidget):
                 pass
             self.run_monitor.init_plots(self.current_routine)
             if not self.current_routine:
-                self.routine_editor.clear()
+                self.routine_editor.set_routine(None)
                 self.status_bar.set_summary("No active routine")
             else:
                 self.status_bar.set_summary(
