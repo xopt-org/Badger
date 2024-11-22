@@ -40,7 +40,7 @@ from badger.gui.default.components.data_table import (
     update_table,
 )
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
-from badger.gui.default.components.history_navigator import HistoryNavigator
+from badger.gui.acr.components.history_navigator import HistoryNavigator
 from badger.gui.default.components.routine_editor import BadgerRoutineEditor
 from badger.gui.default.components.routine_item import BadgerRoutineItem
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
@@ -78,7 +78,6 @@ class BadgerHomePage(QWidget):
 
         self.mode = "regular"  # home page mode
         self.splitter_state = None  # store the run splitter state
-        self.tab_state = None  # store the tabs state before creating new routine
         self.process_manager = process_manager
         self.current_routine = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
@@ -105,25 +104,9 @@ class BadgerHomePage(QWidget):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
 
-        # History run nav
-        self.history_nav_bar = history_nav_bar = QWidget()
-        hbox_nav = QHBoxLayout(history_nav_bar)
-        hbox_nav.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(history_nav_bar)
-        label_nav = QLabel("History Run")
-        self.cb_history = cb_history = HistoryNavigator()
-        self.btn_prev = btn_prev = create_button(
-            "next.png", "Go to the next run", size=(24, 24)
-        )
-        self.btn_next = btn_next = create_button(
-            "previous.png", "Go to the previous run", size=(24, 24)
-        )
-        btn_prev.setDisabled(True)
-        btn_next.setDisabled(True)
-        hbox_nav.addWidget(label_nav)
-        hbox_nav.addWidget(cb_history, 1)
-        hbox_nav.addWidget(btn_next)
-        hbox_nav.addWidget(btn_prev)
+        # History run browser
+        self.history_browser = history_browser = HistoryNavigator()
+        history_browser.setMinimumWidth(360)
 
         # Splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -208,20 +191,20 @@ class BadgerHomePage(QWidget):
 
         # Routine view
         self.routine_view = routine_view = QWidget()  # for consistent bg
-        # routine_view.setMinimumWidth(480)
+        routine_view.setMinimumWidth(640)
         vbox_routine_view = QVBoxLayout(routine_view)
         vbox_routine_view.setContentsMargins(0, 0, 0, 10)
         self.routine_editor = routine_editor = BadgerRoutineEditor()
         vbox_routine_view.addWidget(routine_editor)
 
         # Add panels to splitter
-        splitter.addWidget(panel_routine)
+        splitter.addWidget(history_browser)
         splitter.addWidget(routine_view)
         splitter.addWidget(panel_monitor)
         splitter.addWidget(run_table)
         # Set initial sizes (left fixed, middle and right equal)
-        total_width = 1280  # Total width of the splitter
-        fixed_width = 0  # Fixed width for the left panel
+        total_width = 1640  # Total width of the splitter
+        fixed_width = 360  # Fixed width for the left panel
         remaining_width = total_width - fixed_width
         equal_width = remaining_width // 2
         splitter.setSizes([fixed_width, equal_width, equal_width, 0])
@@ -244,9 +227,7 @@ class BadgerHomePage(QWidget):
         self.filter_box.cb_reg.currentIndexChanged.connect(self.refresh_routine_list)
         self.filter_box.cb_gain.currentIndexChanged.connect(self.refresh_routine_list)
 
-        self.cb_history.currentIndexChanged.connect(self.go_run)
-        self.btn_prev.clicked.connect(self.go_prev_run)
-        self.btn_next.clicked.connect(self.go_next_run)
+        self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
@@ -278,13 +259,11 @@ class BadgerHomePage(QWidget):
 
     def load_all_runs(self):
         runs = get_runs()
-        self.cb_history.updateItems(runs)
+        self.history_browser.updateItems(runs)
 
     def create_new_routine(self):
         self.splitter_state = self.splitter_run.saveState()
         self.routine_editor.set_routine(None)
-        self.tab_state = self.tabs.currentIndex()
-        self.tabs.setCurrentIndex(1)
         self.mode = "new routine"
         self.routine_editor.switch_mode(self.mode)
         self.toggle_lock(True, 0)
@@ -305,7 +284,7 @@ class BadgerHomePage(QWidget):
                 self.prev_routine_item = None
                 self.current_routine = None
                 self.load_all_runs()
-                if not self.cb_history.count():
+                if not self.history_browser.count():
                     self.go_run(-1)  # sometimes we need to trigger this manually
                 self.sig_routine_activated.emit(False)
                 return
@@ -317,8 +296,9 @@ class BadgerHomePage(QWidget):
         self.current_routine = routine
         self.routine_editor.set_routine(routine)
         runs = get_runs_by_routine(routine.id)
-        self.cb_history.updateItems(runs)
-        if not self.cb_history.count():
+        self.history_browser.updateItems(runs)
+        print(self.history_browser.count())
+        if not self.history_browser.count():
             self.go_run(-1)  # sometimes we need to trigger this manually
 
         if not runs:  # auto plot will not be triggered
@@ -399,14 +379,11 @@ class BadgerHomePage(QWidget):
             routine_ids, routine_names, timestamps, environments, descriptions
         )
 
-    def go_run(self, i: int):
+    def go_run(self, i: int = None):
         gc.collect()
 
-        if self.cb_history.itemText(0) == "Optimization in progress...":
-            return
-
-        self.btn_prev.setDisabled(self.cb_history.currentIsFirst())
-        self.btn_next.setDisabled(self.cb_history.currentIsLast())
+        # if self.cb_history.itemText(0) == "Optimization in progress...":
+        #     return
 
         if i == -1:
             update_table(self.run_table)
@@ -424,7 +401,7 @@ class BadgerHomePage(QWidget):
                 )
             return
 
-        run_filename = get_base_run_filename(self.cb_history.currentText())
+        run_filename = get_base_run_filename(self.history_browser.currentText())
         try:
             _routine = load_run(run_filename)
             routine, _ = load_routine(_routine.id)  # get the initial routine
@@ -451,11 +428,11 @@ class BadgerHomePage(QWidget):
 
             # Show info in the nav bar
             # red_brush = QBrush(QColor(255, 0, 0))  # red color
-            self.cb_history.changeCurrentItem(
-                f"{run_filename} (failed to load)",
-                # color=red_brush)
-                color=None,
-            )
+            # self.cb_history.changeCurrentItem(
+            #     f"{run_filename} (failed to load)",
+            #     # color=red_brush)
+            #     color=None,
+            # )
 
             return
 
@@ -464,12 +441,6 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine, run_filename)
         self.routine_editor.set_routine(routine, silent=True)
         self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")
-
-    def go_prev_run(self):
-        self.cb_history.selectPreviousItem()
-
-    def go_next_run(self):
-        self.cb_history.selectNextItem()
 
     def inspect_solution(self, idx):
         self.run_table.selectRow(idx)
@@ -499,21 +470,18 @@ class BadgerHomePage(QWidget):
     def toggle_lock(self, lock, lock_tab=1):
         if lock:
             self.panel_routine.setDisabled(True)
-            self.history_nav_bar.setDisabled(True)
-            self.tabs.setTabEnabled(lock_tab, False)
+            self.history_browser.setDisabled(True)
         else:
             self.panel_routine.setDisabled(False)
-            self.history_nav_bar.setDisabled(False)
-            self.tabs.setTabEnabled(0, True)
-            self.tabs.setTabEnabled(1, True)
+            self.history_browser.setDisabled(False)
 
             self.uncover_page()
 
     def new_run(self):
         self.cover_page()
 
-        self.cb_history.insertItem(0, "Optimization in progress...")
-        self.cb_history.setCurrentIndex(0)
+        # self.cb_history.insertItem(0, "Optimization in progress...")
+        # self.cb_history.setCurrentIndex(0)
 
         header = get_header(self.current_routine)
         reset_table(self.run_table, header)
@@ -523,7 +491,8 @@ class BadgerHomePage(QWidget):
             runs = get_runs_by_routine(self.current_routine.id)
         else:
             runs = get_runs()
-        self.cb_history.updateItems(runs)
+        self.history_browser.updateItems(runs)
+        self.history_browser._selectItemByRun(name)
 
     def update_status(self, info):
         self.status_bar.set_summary(info)
@@ -537,7 +506,7 @@ class BadgerHomePage(QWidget):
         add_row(self.run_table, objs + cons + vars + stas)
 
     def delete_run(self):
-        run_name = get_base_run_filename(self.cb_history.currentText())
+        run_name = get_base_run_filename(self.history_browser.currentText())
 
         reply = QMessageBox.question(
             self,
@@ -556,14 +525,14 @@ class BadgerHomePage(QWidget):
             runs = get_runs()
         else:
             runs = get_runs_by_routine(self.current_routine.id)
-        self.cb_history.updateItems(runs)
-        if not self.cb_history.count():
-            self.go_run(-1)  # sometimes we need to trigger this manually
+        self.history_browser.tree_widget.blockSignals(True)
+        self.history_browser.updateItems(runs)
+        self.history_browser.tree_widget.blockSignals(False)
+        self.go_run(-1)
 
     def routine_saved(self):
         self.refresh_routine_list()
         self.select_routine(self.routine_list.item(0), force=True)
-        self.tab_state = 0  # force jump to run monitor
         self.done_create_routine()
 
     def done_create_routine(self):
@@ -573,12 +542,7 @@ class BadgerHomePage(QWidget):
             self.routine_editor.set_routine(self.current_routine)
             self.splitter_run.restoreState(self.splitter_state)
             self.splitter_state = None
-            self.tabs.setCurrentIndex(self.tab_state)
-            self.tab_state = None
             self.toggle_lock(False)
-        else:
-            self.tabs.setCurrentIndex(self.tab_state)
-            self.tab_state = None
 
     def delete_routine(self, id):
         remove_routine(id)
@@ -590,7 +554,7 @@ class BadgerHomePage(QWidget):
                 self.prev_routine_item = None
                 self.current_routine = None
                 self.load_all_runs()
-                if not self.cb_history.count():
+                if not self.history_browser.count():
                     self.go_run(-1)  # sometimes we need to trigger this manually
                 self.sig_routine_activated.emit(False)
 

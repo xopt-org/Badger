@@ -162,7 +162,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_common.setContentsMargins(0, 0, 0, 0)
         vbox_var_edit.addWidget(action_common)
         self.relative_to_curr = relative_to_curr = QCheckBox("Automatic")
-        relative_to_curr.setChecked(True)
+        relative_to_curr.setChecked(False)
         tooltip = (
             "If checked, you will not be able to change the\n"
             + "variable ranges and initial points manually.\n"

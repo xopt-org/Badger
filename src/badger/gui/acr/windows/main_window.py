@@ -66,7 +66,7 @@ class BadgerMainWindow(QMainWindow):
         if os.getenv("DEMO"):
             self.resize(1280, 720)
         else:
-            self.resize(1280, 800)
+            self.resize(1640, 800)
         self.center()
 
         # Add menu bar

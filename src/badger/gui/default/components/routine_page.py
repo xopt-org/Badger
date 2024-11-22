@@ -98,6 +98,9 @@ class BadgerRoutinePage(QWidget):
         self.init_ui()
         self.config_logic()
 
+        # Trigger the re-rendering of the environment box
+        self.env_box.relative_to_curr.setChecked(True)
+
     def init_ui(self):
         config_singleton = init_settings()
 
