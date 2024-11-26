@@ -1,19 +1,30 @@
 from typing import Optional
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
 from xopt.generators.bayesian.visualize import visualize_generator_model
 
 from badger.routine import Routine
+import time
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class PlottingArea(QWidget):
+    last_updated: float = None
+
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
 
         # Create a layout for the plot area without pre-filling it with a plot
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
+        self.last_updated = time.time()
 
     def update_plot(
         self,
@@ -25,7 +36,22 @@ class PlottingArea(QWidget):
         show_prior_mean: bool,
         show_feasibility: bool,
         n_grid: int,
+        interval: Optional[float] = 1000.0,  # Interval in milliseconds
     ):
+        logger.debug("Updating plot in PlottingArea")
+
+        # Check if the plot was updated recently
+        if self.last_updated is not None and interval is not None:
+            logger.debug(f"Time since last update: {time.time() - self.last_updated}")
+
+            time_diff = time.time() - self.last_updated
+            # If the plot was updated less than 1 second ago, skip this update
+            if time_diff < interval / 1000:
+                logger.debug("Skipping update")
+                return
+
+        logger.debug(f"layouts: {self.layout.count()}")
+
         # Clear the existing layout (remove previous plot if any)
         for i in reversed(range(self.layout.count())):
             widget_to_remove = self.layout.itemAt(i).widget()
@@ -85,3 +111,9 @@ class PlottingArea(QWidget):
 
         # Ensure the layout is updated
         self.updateGeometry()
+
+        # Close the old figure to prevent memory leaks
+        plt.close(fig)
+
+        # Update the last updated time
+        self.last_updated = time.time()

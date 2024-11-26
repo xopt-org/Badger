@@ -9,7 +9,7 @@ from badger.routine import Routine
 
 
 class ModelLogic:
-    def __init__(self, xopt_obj: Routine, vocs: VOCS):
+    def __init__(self, xopt_obj: Optional[Routine], vocs: Optional[VOCS]):
         self.xopt_obj = xopt_obj
         self.vocs = vocs
 

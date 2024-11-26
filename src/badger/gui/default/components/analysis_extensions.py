@@ -64,22 +64,60 @@ class ParetoFrontViewer(AnalysisExtension):
 
 
 class BOVisualizer(AnalysisExtension):
+    df_length = 0
+
     def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BOVisualizer")
         super().__init__(parent=parent)
         self.setWindowTitle("BO Visualizer")
+        self.bo_plot_widget: Optional[BOPlotWidget] = None
 
-        # Initialize BOPlotWidget without an xopt_obj
-        self.bo_plot_widget = BOPlotWidget()
+    def requires_update(self, routine: Routine):
+        if routine.data is None:
+            logger.debug("Reset - No data available")
+            return True
 
-        bo_layout = QVBoxLayout()
-        bo_layout.addWidget(self.bo_plot_widget)
-        self.setLayout(bo_layout)
+        if self.bo_plot_widget.model_logic.xopt_obj is None:
+            logger.debug("Reset - xopt_obj is None")
+            return True
+
+        if len(routine.data) <= self.df_length:
+            logger.debug("Reset - Data length is the same or smaller")
+            self.df_length = len(routine.data)
+            return True
+
+        return False
 
     def update_window(self, routine: Routine):
         # Update the BOPlotWidget with the new routine
         logger.debug("Updating BOVisualizer window with new routine")
-        logger.debug(f"isVisible: {self.bo_plot_widget.isVisible()}")
-        # Issue Identified: When continuing an optimization run, the BOVisualizer will update continuously and cause an infinite loop
-        # if not self.bo_plot_widget.isVisible():
-        self.bo_plot_widget.initialize_plot(routine)
+        self.df_length = len(routine.data)
+        # logger.debug(f"Routine {routine.data}")
+
+        # Initialize the BOPlotWidget if it is not already initialized
+        if self.bo_plot_widget is None:
+            # Initialize BOPlotWidget without an xopt_obj
+            self.bo_plot_widget = BOPlotWidget()
+
+            logger.debug("Initialized BOPlotWidget")
+
+            bo_layout = QVBoxLayout()
+            bo_layout.addWidget(self.bo_plot_widget)
+            self.setLayout(bo_layout)
+            logger.debug("Set layout for BOVisualizer")
+
+        else:
+            logger.debug("BOPlotWidget already initialized")
+
+        # If there is no data available, then initialize the plot
+        # This needs to happen when starting a new optimization run
+
+        if self.requires_update(routine):
+            self.bo_plot_widget.initialize_plot(routine)
+            logger.debug(f"Data: {self.bo_plot_widget.model_logic.xopt_obj.data}")
+        else:
+            logger.debug("BOPlotWidget already has data")
+
+        # Update the plot with every call to update_window
+        # This is necessary when continuing an optimization run
+        self.bo_plot_widget.update_plot(100)

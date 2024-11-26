@@ -44,13 +44,6 @@ class BOPlotWidget(QWidget):
 
         self.setLayout(main_layout)
 
-        if xopt_obj:
-            self.initialize_plot(xopt_obj)
-        else:
-            logger.debug("xopt_obj is None. Defer setup until xopt_obj is available")
-            # Defer setup until xopt_obj is available
-            pass
-
         self.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
         self.resize(1250, 720)
 
@@ -72,9 +65,9 @@ class BOPlotWidget(QWidget):
         logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
 
-        # Now it's safe to call update_plot
-        logger.debug("Calling update_plot")
-        self.update_plot()
+        # # Now it's safe to call update_plot
+        # logger.debug("Calling update_plot")
+        # self.update_plot()
 
     def setup_connections(self):
         # Disconnect existing connections
@@ -153,7 +146,7 @@ class BOPlotWidget(QWidget):
             # Only update plot if the selection has changed
             self.update_plot()
 
-    def update_plot(self):
+    def update_plot(self, interval: Optional[float] = None):
         logger.debug("Updating plot in BOPlotWidget")
         if not self.model_logic.xopt_obj or not self.model_logic.vocs:
             print("Cannot update plot: xopt_obj or vocs is not available.")
@@ -227,6 +220,7 @@ class BOPlotWidget(QWidget):
             self.ui_components.show_prior_mean_checkbox.isChecked(),
             self.ui_components.show_feasibility_checkbox.isChecked(),
             self.ui_components.n_grid.value(),
+            interval,
         )
 
     def update_reference_point_table(self, selected_variables: list[str]):
@@ -253,7 +247,7 @@ class BOPlotWidget(QWidget):
         # Force the table to refresh and update its view
         self.ui_components.reference_table.viewport().update()
 
-    def update_routine(self, xopt_obj: Routine):
-        logger.debug("Updating routine in BOPlotWidget")
-        logger.debug(f"xopt_obj: {xopt_obj}")
-        self.initialize_plot(xopt_obj)
+    # def update_routine(self, xopt_obj: Routine):
+    #     logger.debug("Updating routine in BOPlotWidget")
+    #     logger.debug(f"xopt_obj: {xopt_obj}")
+    #     self.initialize_plot(xopt_obj)
