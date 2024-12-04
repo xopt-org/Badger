@@ -21,7 +21,6 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class UIComponents:
@@ -122,6 +121,8 @@ class UIComponents:
 
     def populate_reference_table(self):
         """Populate the reference table based on the current vocs variable names."""
+
+        logger.debug("Populating reference table")
         self.reference_table.setRowCount(len(self.vocs.variable_names))
         self.ref_inputs = []
 
@@ -137,6 +138,9 @@ class UIComponents:
             reference_point_item = QTableWidgetItem(str(default_value))
             self.ref_inputs.append(reference_point_item)
             self.reference_table.setItem(i, 1, reference_point_item)
+            logger.debug(
+                f"Added reference point: {variable_item.text()}: {reference_point_item.text()}"
+            )
 
     def create_options_section(self):
         group_box = QGroupBox("Plot Options")
@@ -172,24 +176,29 @@ class UIComponents:
         state_changed_callback: Optional[Callable[[QWidget], None]] = None,
     ):
         self.vocs = vocs
-        logger.debug(f"Updating UI components with new vocs: {vocs}")
-        logger.debug(f"type(vocs): {type(vocs)}")
-        logger.debug(f"x_axis_combo: {self.x_axis_combo.currentText()}")
-        logger.debug(f"y_axis_combo: {self.y_axis_combo.currentText()}")
-        # Update axis combos after vocs is set
-        # FIX: Clearing the combo boxes triggers a signal that calls the state_changed_callback
-        self.x_axis_combo.clear()
-        self.y_axis_combo.clear()
-        logger.debug(f"x_axis_combo cleared: {self.x_axis_combo.currentText()}")
-        logger.debug(f"y_axis_combo cleared: {self.y_axis_combo.currentText()}")
-        if self.vocs:
+        logger.debug(f"vocs: {vocs}")
+        # List all items in the x_axis_combo QComboBox
+        x_axis_items = [
+            self.x_axis_combo.itemText(i) for i in range(self.x_axis_combo.count())
+        ]
+        logger.debug(f"x_axis_combo items: {x_axis_items}")
+
+        y_axis_items = [
+            self.y_axis_combo.itemText(i) for i in range(self.y_axis_combo.count())
+        ]
+        logger.debug(f"y_axis_combo items: {y_axis_items}")
+
+        combined_set = set(x_axis_items + y_axis_items)
+
+        if self.vocs.variable_names != list(combined_set):
             logger.debug(
                 f"Populating axis combos with variable names: {self.vocs.variable_names}"
             )
+            self.x_axis_combo.clear()
+            self.y_axis_combo.clear()
+
             self.x_axis_combo.addItems(self.vocs.variable_names)
             self.y_axis_combo.addItems(self.vocs.variable_names)
-            logger.debug(f"x_axis_combo: {self.x_axis_combo.currentText()}")
-            logger.debug(f"y_axis_combo: {self.y_axis_combo.currentText()}")
 
             # Re-initialize variable checkboxes if needed
 

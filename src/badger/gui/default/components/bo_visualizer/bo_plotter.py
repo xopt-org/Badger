@@ -10,7 +10,6 @@ from PyQt5.QtCore import Qt
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class BOPlotWidget(QWidget):
@@ -105,14 +104,46 @@ class BOPlotWidget(QWidget):
 
         # If you have variable checkboxes
         for checkbox in self.ui_components.variable_checkboxes.values():
+            logger.debug(f"Setting up connection for checkbox: {checkbox.text()}")
             try:
                 checkbox.stateChanged.disconnect()
             except TypeError:
                 pass
             checkbox.stateChanged.connect(self.on_axis_selection_changed)
 
+        # Plot options
+        plot_options_checkboxes = [
+            self.ui_components.acq_func_checkbox,
+            self.ui_components.show_samples_checkbox,
+            self.ui_components.show_prior_mean_checkbox,
+            self.ui_components.show_feasibility_checkbox,
+        ]
+
+        for checkbox in plot_options_checkboxes:
+            logger.debug(f"Setting up connection for checkbox: {checkbox.text()}")
+            try:
+                checkbox.stateChanged.disconnect()
+            except TypeError:
+                pass
+            checkbox.stateChanged.connect(self.update_plot)
+
+        # No. of Grid Points
+        try:
+            self.ui_components.n_grid.valueChanged.disconnect()
+        except TypeError:
+            pass
+        self.ui_components.n_grid.valueChanged.connect(self.update_plot)
+
+        # # Reference inputs
+        # try:
+        #     self.ui_components.reference_table.itemChanged.disconnect()
+        # except TypeError:
+        #     pass
+        # self.ui_components.reference_table.itemChanged.connect(self.update_plot)
+
     def on_axis_selection_changed(self):
         if not self.model_logic.vocs or not self.ui_components.ref_inputs:
+            # vocs or ref_inputs is not yet set; skip processing
             return
 
         logger.debug("Axis selection changed")
@@ -124,7 +155,6 @@ class BOPlotWidget(QWidget):
 
         # Always include X-axis variable
         x_var = self.ui_components.x_axis_combo.currentText()
-        logger.debug(f"x_var: {x_var}")
         if x_var:
             self.selected_variables.append(x_var)
 
@@ -139,6 +169,12 @@ class BOPlotWidget(QWidget):
 
         logger.debug(f"previous_selected_variables: {previous_selected_variables}")
         logger.debug(f"self.selected_variables: {self.selected_variables}")
+
+        if len(self.selected_variables) == 0:
+            # No variables selected; do not proceed with updating the plot
+            logger.debug("No variables selected; skipping plot update")
+            return
+
         if previous_selected_variables != self.selected_variables:
             print("Selected variables for plotting:", self.selected_variables)
             # Update the reference point table based on the selected variables
@@ -176,6 +212,9 @@ class BOPlotWidget(QWidget):
         # Disable and gray out the reference points for selected variables
         self.update_reference_point_table(selected_variables)
 
+        logger.debug(f"ref_inputs: {self.ui_components.ref_inputs}")
+        logger.debug(f"selected_variables: {selected_variables}")
+
         # Get reference points for non-selected variables
         reference_point = self.model_logic.get_reference_points(
             self.ui_components.ref_inputs, selected_variables
@@ -209,6 +248,11 @@ class BOPlotWidget(QWidget):
                 height = 720
 
         self.parent().resize(width, height)
+
+        logger.debug("Updating plot with selected variables and reference points")
+        # logger.debug(f"xopt_obj: {self.model_logic.xopt_obj}")
+        logger.debug(f"selected_variables: {selected_variables}")
+        logger.debug(f"reference_point: {reference_point}")
 
         # Update the plot with the selected variables and reference points
         self.plotting_area.update_plot(

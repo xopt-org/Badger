@@ -12,7 +12,6 @@ import time
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class PlottingArea(QWidget):
@@ -50,8 +49,6 @@ class PlottingArea(QWidget):
                 logger.debug("Skipping update")
                 return
 
-        logger.debug(f"layouts: {self.layout.count()}")
-
         # Clear the existing layout (remove previous plot if any)
         for i in reversed(range(self.layout.count())):
             widget_to_remove = self.layout.itemAt(i).widget()
@@ -63,12 +60,14 @@ class PlottingArea(QWidget):
             return
 
         generator = xopt_obj.generator
+        logger.debug(f"Generator: {generator}")
 
         # Ensure use_cuda is a boolean
         generator.use_cuda = False  # or True, depending on your setup
 
         # Set generator data
         generator.data = xopt_obj.data
+        logger.debug(f"Generator data: {generator.data}")
 
         # Check if the model exists
         if not hasattr(generator, "model") or generator.model is None:
@@ -78,6 +77,7 @@ class PlottingArea(QWidget):
                 generator.train_model()
             except Exception as e:
                 print(f"Failed to train model: {e}")
+                logger.error(f"Failed to train model: {e}")
                 QMessageBox.warning(
                     self, "Model Training Error", f"Failed to train model: {e}"
                 )

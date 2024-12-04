@@ -10,7 +10,6 @@ from badger.core import Routine
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class AnalysisExtension(QDialog):
@@ -72,7 +71,7 @@ class BOVisualizer(AnalysisExtension):
         self.setWindowTitle("BO Visualizer")
         self.bo_plot_widget: Optional[BOPlotWidget] = None
 
-    def requires_update(self, routine: Routine):
+    def requires_reinitialization(self, routine: Routine):
         if routine.data is None:
             logger.debug("Reset - No data available")
             return True
@@ -91,7 +90,9 @@ class BOVisualizer(AnalysisExtension):
     def update_window(self, routine: Routine):
         # Update the BOPlotWidget with the new routine
         logger.debug("Updating BOVisualizer window with new routine")
-        self.df_length = len(routine.data)
+        if routine.data is not None:
+            logger.debug("No data available")
+            self.df_length = len(routine.data)
         # logger.debug(f"Routine {routine.data}")
 
         # Initialize the BOPlotWidget if it is not already initialized
@@ -112,7 +113,7 @@ class BOVisualizer(AnalysisExtension):
         # If there is no data available, then initialize the plot
         # This needs to happen when starting a new optimization run
 
-        if self.requires_update(routine):
+        if self.requires_reinitialization(routine):
             self.bo_plot_widget.initialize_plot(routine)
             logger.debug(f"Data: {self.bo_plot_widget.model_logic.xopt_obj.data}")
         else:
@@ -120,4 +121,4 @@ class BOVisualizer(AnalysisExtension):
 
         # Update the plot with every call to update_window
         # This is necessary when continuing an optimization run
-        self.bo_plot_widget.update_plot(100)
+        self.bo_plot_widget.update_plot(500)
