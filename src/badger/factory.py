@@ -50,9 +50,9 @@ def scan_plugins(root):
 
     # Do not scan local generators if option disabled
     if LOAD_LOCAL_ALGO:
-        ptype_list = ["generator", "interface", "environment"]
+        ptype_list = ["generator", "interface", "environment", "filter"]
     else:
-        ptype_list = ["interface", "environment"]
+        ptype_list = ["interface", "environment", "filter"]
         factory["generator"] = {}
 
     for ptype in ptype_list:
@@ -82,6 +82,7 @@ def load_plugin(root, pname, ptype):
         "generator",
         "interface",
         "environment",
+        "filter"
     ], f"Invalid plugin type {ptype}"
 
     proot = os.path.join(root, f"{ptype}s")
@@ -115,6 +116,8 @@ def load_plugin(root, pname, ptype):
         }
         configs["params"] = params
         plugin = [module.Interface, configs]
+    elif ptype == 'filter':
+        plugin = [module.machine_tags, configs]
     elif ptype == "environment":
         vars = module.Environment.variables
         obses = module.Environment.observables
@@ -160,6 +163,7 @@ def load_docs(root, pname, ptype):
         "generator",
         "interface",
         "environment",
+        "filter"
     ], f"Invalid plugin type {ptype}"
 
     proot = os.path.join(root, f"{ptype}s")
@@ -213,6 +217,9 @@ def get_intf(name):
 def get_env(name):
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
+def get_filter(name):
+    return get_plug(BADGER_PLUGIN_ROOT, name, "filter")
+
 
 def list_generators():
     try:
@@ -236,6 +243,9 @@ def list_intf():
 
 def list_env():
     return sorted(BADGER_FACTORY["environment"])
+
+def list_filter():
+    return sorted(BADGER_FACTORY["filter"])
 
 
 BADGER_FACTORY = scan_plugins(BADGER_PLUGIN_ROOT)
