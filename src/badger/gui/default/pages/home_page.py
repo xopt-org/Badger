@@ -381,10 +381,13 @@ class BadgerHomePage(QWidget):
 
     def get_current_routines(self):
         keyword = self.sbar.text()
+        tag_mach = self.filter_box.cb_mach.currentText()
         tag_obj = self.filter_box.cb_obj.currentText()
         tag_reg = self.filter_box.cb_reg.currentText()
         tag_gain = self.filter_box.cb_gain.currentText()
         tags = {}
+        if tag_mach:
+            tags["machine"] = tag_mach
         if tag_obj:
             tags["objective"] = tag_obj
         if tag_reg:
