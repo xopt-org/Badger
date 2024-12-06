@@ -42,7 +42,7 @@ from badger.gui.default.utils import filter_generator_config
 from badger.db import save_routine, update_routine, get_runs_by_routine
 from badger.environment import instantiate_env
 from badger.errors import BadgerRoutineError
-from badger.factory import list_generators, list_env, get_env
+from badger.factory import list_generators, list_env, get_env, get_filter, list_filter
 from badger.routine import Routine
 from badger.settings import init_settings
 from badger.utils import (
@@ -68,6 +68,7 @@ class BadgerRoutinePage(QWidget):
 
         self.generators = list_generators()
         self.envs = list_env()
+        self.machine_tags = list_filter()
         self.env = None
         self.routine = None
         self.script = ""
@@ -154,7 +155,8 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(descr)
 
         # Tags
-        self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
+        self.cbox_tags = cbox_tags = BadgerFilterBox(parent=None, title=" Tags",
+                                                     tags=self.machine_tags)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_tags.hide()
         vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
@@ -207,6 +209,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
+        
+        self.cbox_tags.cb_mach.currentIndexChanged.connect(self.select_machine_tag)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
