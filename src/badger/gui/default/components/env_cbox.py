@@ -78,11 +78,14 @@ class BadgerEnvBox(CollapsibleBox):
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             btn_env_play.hide()
+        self.btn_pv = btn_pv = QPushButton("PV Search")
+        btn_pv.setFixedSize(128, 24)
         self.btn_docs = btn_docs = QPushButton("Open Docs")
         btn_docs.setFixedSize(128, 24)
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         hbox_name.addWidget(btn_env_play)
+        hbox_name.addWidget(btn_pv)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
@@ -203,6 +206,7 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_action_var.addWidget(check_only_var)
 
         self.var_table = VariableTable()
+        self.var_table.setAcceptDrops(True)
         self.var_table.lock_bounds()
         vbox_var_edit.addWidget(self.var_table)
 

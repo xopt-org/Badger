@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
 )
-
+from PyQt5.QtCore import Qt
 
 class ObjectiveTable(QTableWidget):
     def __init__(self, *args, **kwargs):
@@ -19,6 +19,11 @@ class ObjectiveTable(QTableWidget):
         # self.setShowGrid(False)
         # self.setDragDropMode(self.InternalMove)
         # self.setDragDropOverwriteMode(False)
+        
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
 
         self.setRowCount(0)
         self.setColumnCount(3)
@@ -41,6 +46,50 @@ class ObjectiveTable(QTableWidget):
 
         self.config_logic()
 
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasText():
+            text = event.mimeData().text()
+            strings = text.strip().split('\n')  # Adjust the delimiter as needed
+
+            position = event.pos()
+            drop_row = self.rowAt(position.y())
+            if drop_row == -1:
+                drop_row = self.rowCount()
+
+            for i, string in enumerate(strings):
+                string = string.strip()
+                if not string:
+                    continue  # Skip empty strings
+
+                row = drop_row + i
+                # Insert a new row if necessary
+                if row >= self.rowCount():
+                    self.insertRow(row)
+
+                # Create a QTableWidgetItem for the variable name
+                item = QTableWidgetItem(string)
+                # Set the item at the specified row and column (column 1 for variable names)
+                self.setItem(row, 1, item)
+
+                # Call add_additional_variable with the item
+                self.all_objectives.append(item)
+
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+    
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
 
