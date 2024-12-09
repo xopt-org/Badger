@@ -214,6 +214,7 @@ class BadgerRoutinePage(QWidget):
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
+        print("shakalaka", routine.tags)
 
         self.generators = list_generators()
         self.envs = list_env()
@@ -243,6 +244,9 @@ class BadgerRoutinePage(QWidget):
             self.edit_save.setPlaceholderText(name)
             self.edit_descr.setPlainText("")
             self.btn_descr_update.setDisabled(True)
+            
+            #TODO no tags active
+            #self.cbox_tags.
 
             return
 
@@ -349,6 +353,11 @@ class BadgerRoutinePage(QWidget):
         self.edit_save.setPlaceholderText(generate_slug(2))
         self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
+        
+        # set tags
+        if routine.tags:
+            self.cbox_tags.cb_mach.setCurrentIndex(filters['machine'])
+            self.select_machine_tag(self.machine_tags.index(tags['machine']))
 
         self.generator_box.check_use_script.setChecked(not not self.script)
 
@@ -1057,3 +1066,11 @@ class BadgerRoutinePage(QWidget):
             )
 
         return 0
+
+
+    def select_machine_tag(self, i):
+        if i <= 0:
+            machine_tag = ""
+        else:
+            machine_tag = self.machine_tags[i-1] # empty string from Combobox not in machine_tags
+        self.cbox_tags.select_machine(machine_tag) 

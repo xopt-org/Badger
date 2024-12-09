@@ -49,6 +49,7 @@ from badger.gui.default.components.status_bar import BadgerStatusBar
 from badger.gui.default.utils import create_button
 from badger.utils import get_header, strtobool
 from badger.settings import init_settings
+from badger.factory import list_filter
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
@@ -82,6 +83,7 @@ class BadgerHomePage(QWidget):
         self.process_manager = process_manager
         self.current_routine = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
+        self.machine_tags = list_filter()
         self.init_ui()
         self.config_logic()
 
@@ -133,7 +135,9 @@ class BadgerHomePage(QWidget):
         vbox_routine.addWidget(panel_search)
 
         # Filters
-        self.filter_box = filter_box = BadgerFilterBox(self, title=" Filters")
+        self.filter_box = filter_box = BadgerFilterBox(self,
+                                                       title=" Filters",
+                                                       tags=self.machine_tags)
         if not strtobool(self.config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             filter_box.hide()
         vbox_routine.addWidget(filter_box)
@@ -247,9 +251,12 @@ class BadgerHomePage(QWidget):
         self.run_table.cellClicked.connect(self.solution_selected)
         self.run_table.itemSelectionChanged.connect(self.table_selection_changed)
 
+        self.filter_box.cb_mach.currentIndexChanged.connect(self.select_machine_tag)
+        #self.filter_box.cb_mach.currentIndexChanged.connect(self.refresh_routine_list)
         self.filter_box.cb_obj.currentIndexChanged.connect(self.refresh_routine_list)
         self.filter_box.cb_reg.currentIndexChanged.connect(self.refresh_routine_list)
         self.filter_box.cb_gain.currentIndexChanged.connect(self.refresh_routine_list)
+        
 
         self.cb_history.currentIndexChanged.connect(self.go_run)
         self.btn_prev.clicked.connect(self.go_prev_run)
@@ -378,6 +385,13 @@ class BadgerHomePage(QWidget):
             if routine_id == selected_routine:
                 _item.activate()
                 self.prev_routine_item = item
+                
+    def select_machine_tag(self, i):
+        if i <= 0:
+            machine_tag = ""
+        else:
+            machine_tag = self.machine_tags[i-1] # empty string from Combobox not in machine_tags
+        self.filter_box.select_machine(machine_tag)
 
     def get_current_routines(self):
         keyword = self.sbar.text()

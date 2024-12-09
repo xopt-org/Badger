@@ -80,9 +80,11 @@ class BadgerFilterBox(CollapsibleBox):
             self.cb_reg.setCurrentIndex(-1)
             self.cb_gain.setCurrentIndex(-1)
         else:
-            tag_dict = get_filter(machine)
+            tag_dict = get_filter(machine)[0]
+            print(tag_dict)
             self.reset_filters()
 
+            print(tag_dict)
             self.cb_obj.addItems(tag_dict['objective'])
             self.cb_reg.addItems(tag_dict['region'])
             self.cb_gain.addItems(tag_dict['gain'])
