@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QCheckBox,
     QMessageBox,
+    QAbstractItemView
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
@@ -19,27 +20,19 @@ class VariableTable(QTableWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Reorder the rows by dragging around
-        # self.setSelectionBehavior(self.SelectRows)
-        # self.setSelectionMode(self.SingleSelection)
-        # self.setShowGrid(False)
-        # self.setDragDropMode(self.InternalMove)
-        # self.setDragDropOverwriteMode(False)
-
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
         self.setRowCount(0)
         self.setColumnCount(4)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
-        # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         self.verticalHeader().setVisible(False)
         header = self.horizontalHeader()
-        # header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(0, QHeaderView.Fixed)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
-        # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        # header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
@@ -57,6 +50,60 @@ class VariableTable(QTableWidget):
         self.previous_values = {}  # to track changes in table
 
         self.config_logic()
+    
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+    
+    def dropEvent(self, event):
+        if event.mimeData().hasText():
+            text = event.mimeData().text()
+            strings = text.strip().split('\n')  # Adjust the delimiter as needed
+
+            position = event.pos()
+            drop_row = self.rowAt(position.y())
+            if drop_row == -1:
+                drop_row = self.rowCount()
+
+            for i, string in enumerate(strings):
+                string = string.strip()
+                if not string:
+                    continue  # Skip empty strings
+
+                row = drop_row + i
+                # Insert a new row if necessary
+                if row >= self.rowCount():
+                    self.insertRow(row)
+
+                # Create a QTableWidgetItem for the variable name
+                item = QTableWidgetItem(string)
+                # Set the item at the specified row and column (column 1 for variable names)
+                self.setItem(row, 1, item)
+
+                # Call add_additional_variable with the item
+                self.add_additional_variable(item)
+
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+    
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.ItemIsEnabled
+        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if index.column() == 1:
+            flags |= (
+                Qt.ItemIsEditable | Qt.ItemIsDropEnabled
+            )  # First column is editable and droppable
+        return flags
 
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
@@ -310,7 +357,7 @@ class VariableTable(QTableWidget):
             else:
                 # TODO: handle this case? Right now I don't think it should happen
                 raise "Environment cannot be found for new variable bounds!"
-
+            
             # Sanitize vrange
             # TODO: raise a heads-up regarding the invalid bounds
             if vrange[1] <= vrange[0]:
