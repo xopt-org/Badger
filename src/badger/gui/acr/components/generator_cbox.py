@@ -30,6 +30,7 @@ class BadgerAlgoBox(QWidget):
         config_singleton = init_settings()
 
         vbox = QVBoxLayout(self)
+        vbox.setContentsMargins(8, 8, 8, 8)
 
         # Algo selector
         name = QWidget()

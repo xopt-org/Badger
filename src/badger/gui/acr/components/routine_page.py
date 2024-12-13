@@ -58,6 +58,7 @@ CONS_RELATION_DICT = {
     "<": "LESS_THAN",
     "=": "EQUAL_TO",
 }
+LABEL_WIDTH = 96
 
 
 class BadgerRoutinePage(QWidget):
@@ -112,16 +113,17 @@ class BadgerRoutinePage(QWidget):
         vbox.addWidget(tabs)
 
         # Meta group
-        self.group_meta = group_meta = QGroupBox("Metadata")
-        group_meta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.group_meta = group_meta = QWidget()
         vbox_meta = QVBoxLayout(group_meta)
+        vbox_meta.setContentsMargins(8, 8, 8, 8)
+        tabs.addTab(group_meta, "Metadata")
 
         # Name
         name = QWidget()
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
         label = QLabel("Name")
-        label.setFixedWidth(64)
+        label.setFixedWidth(LABEL_WIDTH)
         self.edit_save = edit_save = QLineEdit()
         edit_save.setPlaceholderText(generate_slug(2))
         hbox_name.addWidget(label)
@@ -135,8 +137,8 @@ class BadgerRoutinePage(QWidget):
         lbl_descr_col = QWidget()
         vbox_lbl_descr = QVBoxLayout(lbl_descr_col)
         vbox_lbl_descr.setContentsMargins(0, 0, 0, 0)
-        lbl_descr = QLabel("Descr")
-        lbl_descr.setFixedWidth(64)
+        lbl_descr = QLabel("Description")
+        lbl_descr.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_descr.addWidget(lbl_descr)
         vbox_lbl_descr.addStretch(1)
         hbox_descr.addWidget(lbl_descr_col)
@@ -145,7 +147,7 @@ class BadgerRoutinePage(QWidget):
         vbox_descr_edit = QVBoxLayout(edit_descr_col)
         vbox_descr_edit.setContentsMargins(0, 0, 0, 0)
         self.edit_descr = edit_descr = QPlainTextEdit()
-        edit_descr.setMaximumHeight(80)
+        edit_descr.setMinimumHeight(80)
         vbox_descr_edit.addWidget(edit_descr)
         descr_bar = QWidget()
         hbox_descr_bar = QHBoxLayout(descr_bar)
@@ -179,8 +181,8 @@ class BadgerRoutinePage(QWidget):
         except (FileNotFoundError, yaml.YAMLError):
             env_dict = {}
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
-        # scroll_area.setFrameShape(QScrollArea.NoFrame)
         scroll_area = QScrollArea()
+        scroll_area.setFrameShape(QScrollArea.NoFrame)
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
         scroll_layout_env.setContentsMargins(0, 0, 15, 0)
@@ -191,11 +193,9 @@ class BadgerRoutinePage(QWidget):
 
         # Algo box
         self.generator_box = BadgerAlgoBox(None, self.generators)
-        scroll_area = QScrollArea()
-        # scroll_area.setFrameShape(QScrollArea.NoFrame)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(self.generator_box)
-        tabs.addTab(scroll_area, "Algorithm")
+        tabs.addTab(self.generator_box, "Algorithm")
+
+        tabs.setCurrentIndex(1)  # Show the env box by default
 
         # vbox.addStretch()
 
