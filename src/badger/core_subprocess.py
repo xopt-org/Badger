@@ -1,3 +1,4 @@
+import os
 import logging
 import time
 import traceback
@@ -120,7 +121,7 @@ def run_routine_subprocess(
 
     # set optional arguments
     evaluate = args.pop("evaluate", None)
-    dump_file_callback = args.pop("dump_file_callback", None)
+    dump_file_path = args.pop("dump_file_path", None)
     termination_condition = args.pop("termination_condition", None)
     start_time = args.pop("start_time", None)
     verbose = args.pop("verbose", 2)
@@ -156,10 +157,10 @@ def run_routine_subprocess(
             evaluate_queue[0].send(result)
 
     # dumps file
-    if dump_file_callback:
+    if dump_file_path:
         combined_results = None
         ts_start = curr_ts_to_str()
-        dump_file = dump_file_callback()
+        dump_file = os.path.join(dump_file_path, f"xopt_states_{ts_start}.yaml") 
         if not dump_file:
             dump_file = f"xopt_states_{ts_start}.yaml"
 
@@ -214,7 +215,7 @@ def run_routine_subprocess(
                 evaluate_queue[0].send(routine.data)
 
             # Dump Xopt state after each step
-            if dump_file_callback:
+            if dump_file_path:
                 if combined_results is not None:
                     combined_results = concat(
                         [combined_results, result], axis=0

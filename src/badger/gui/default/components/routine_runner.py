@@ -78,6 +78,11 @@ class BadgerRoutineSubprocess:
         self.interval = 100
         self.config_singleton = init_settings()
 
+        if self.save:
+            self.dump_file = self.config_singleton.read_value("BADGER_ARCHIVE_ROOT")
+        else:
+            self.dump_file = None
+
     def set_termination_condition(self, termination_condition: dict) -> None:
         """
         Setter method for the termination condition.
@@ -151,6 +156,7 @@ class BadgerRoutineSubprocess:
                 "variable_ranges": self.routine.vocs.variables,
                 "initial_points": self.routine.initial_points,
                 "evaluate": True,
+                "dump_file_path": self.dump_file,
                 "termination_condition": self.termination_condition,
                 "start_time": self.start_time,
             }

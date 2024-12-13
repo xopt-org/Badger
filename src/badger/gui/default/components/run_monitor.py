@@ -568,7 +568,7 @@ class BadgerOptMonitor(QWidget):
         self.reset_routine_runner()
 
         self.routine_runner = routine_runner = BadgerRoutineSubprocess(
-            self.process_manager, self.routine, False
+            self.process_manager, self.routine, True
         )
 
         routine_runner.signals.env_ready.connect(self.env_ready)
