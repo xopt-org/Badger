@@ -17,6 +17,11 @@ class HistoryNavigator(QWidget):
         layout.addWidget(self.tree_widget)
 
         self.runs = None  # all runs to be shown in the tree widget
+        self.setStyleSheet("""
+            QTreeWidget {
+                background-color: #455364;
+            }
+        """)
 
     def _firstSelectableItem(self, parent=None):
         """

@@ -26,7 +26,7 @@ from badger.gui.default.utils import (
 )
 from badger.utils import strtobool
 
-LABEL_WIDTH = 80
+LABEL_WIDTH = 96
 
 stylesheet_auto = """
     #VarPanel {
@@ -64,7 +64,7 @@ class BadgerEnvBox(QWidget):
         name = QWidget()
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
-        lbl = QLabel("Name")
+        lbl = QLabel("Environment")
         lbl.setFixedWidth(LABEL_WIDTH)
         self.cb = cb = NoHoverFocusComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
@@ -76,41 +76,47 @@ class BadgerEnvBox(QWidget):
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             btn_env_play.hide()
         self.btn_docs = btn_docs = QPushButton("Open Docs")
-        btn_docs.setFixedSize(128, 24)
+        btn_docs.setFixedSize(96, 24)
+        self.btn_params = btn_params = QPushButton("Parameters")
+        btn_params.setCheckable(True)
+        btn_params.setFixedSize(96, 24)
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         hbox_name.addWidget(btn_env_play)
+        hbox_name.addWidget(btn_params)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
-        params = QWidget()
-        hbox_params = QHBoxLayout(params)
-        hbox_params.setContentsMargins(0, 0, 0, 0)
-        lbl_params_col = QWidget()
-        vbox_lbl_params = QVBoxLayout(lbl_params_col)
-        vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
-        lbl_params = QLabel("Params")
-        lbl_params.setFixedWidth(LABEL_WIDTH)
-        vbox_lbl_params.addWidget(lbl_params)
-        vbox_lbl_params.addStretch(1)
-        hbox_params.addWidget(lbl_params_col)
+        # params = QWidget()
+        # hbox_params = QHBoxLayout(params)
+        # hbox_params.setContentsMargins(0, 0, 0, 0)
+        # lbl_params_col = QWidget()
+        # vbox_lbl_params = QVBoxLayout(lbl_params_col)
+        # vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
+        # lbl_params = QLabel("Params")
+        # lbl_params.setFixedWidth(LABEL_WIDTH)
+        # vbox_lbl_params.addWidget(lbl_params)
+        # vbox_lbl_params.addStretch(1)
+        # hbox_params.addWidget(lbl_params_col)
 
-        edit_params_col = QWidget()
-        vbox_params_edit = QVBoxLayout(edit_params_col)
-        vbox_params_edit.setContentsMargins(0, 0, 0, 0)
+        # edit_params_col = QWidget()
+        # vbox_params_edit = QVBoxLayout(edit_params_col)
+        # vbox_params_edit.setContentsMargins(0, 0, 0, 0)
         self.edit = edit = QPlainTextEdit()
         # edit.setMaximumHeight(80)
         edit.setMinimumHeight(480)
-        vbox_params_edit.addWidget(edit)
-        hbox_params.addWidget(edit_params_col)
-        vbox.addWidget(params)
+        edit.hide()
+        vbox.addWidget(edit)
+        # vbox_params_edit.addWidget(edit)
+        # hbox_params.addWidget(edit_params_col)
+        # vbox.addWidget(params)
 
-        seperator = QFrame()
-        seperator.setFrameShape(QFrame.HLine)
-        seperator.setFrameShadow(QFrame.Sunken)
-        seperator.setLineWidth(0)
-        seperator.setMidLineWidth(0)
-        vbox.addWidget(seperator)
+        # seperator = QFrame()
+        # seperator.setFrameShape(QFrame.HLine)
+        # seperator.setFrameShadow(QFrame.Sunken)
+        # seperator.setLineWidth(0)
+        # seperator.setMidLineWidth(0)
+        # vbox.addWidget(seperator)
 
         # Variables config (table style)
         self.var_panel = var_panel = QWidget()
@@ -352,6 +358,13 @@ class BadgerEnvBox(QWidget):
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
+        self.btn_params.toggled.connect(self.toggle_params)
+
+    def toggle_params(self, checked):
+        if not checked:
+            self.edit.hide()
+        else:
+            self.edit.show()
 
     def toggle_var_show_mode(self, _):
         self.var_table.toggle_show_mode(self.check_only_var.isChecked())

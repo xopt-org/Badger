@@ -14,6 +14,8 @@ from badger.gui.default.utils import (
 )
 from badger.utils import strtobool
 
+LABEL_WIDTH = 96
+
 
 class BadgerAlgoBox(QWidget):
     def __init__(self, parent=None, generators=[], scaling_functions=[]):
@@ -33,8 +35,8 @@ class BadgerAlgoBox(QWidget):
         name = QWidget()
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
-        lbl = QLabel("Name")
-        lbl.setFixedWidth(64)
+        lbl = QLabel("Algorithm")
+        lbl.setFixedWidth(LABEL_WIDTH)
         self.cb = cb = NoHoverFocusComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
         cb.addItems(self.generators)
@@ -43,7 +45,7 @@ class BadgerAlgoBox(QWidget):
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         self.btn_docs = btn_docs = QPushButton("Open Docs")
-        btn_docs.setFixedSize(128, 24)
+        btn_docs.setFixedSize(96, 24)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
@@ -55,14 +57,14 @@ class BadgerAlgoBox(QWidget):
         vbox_lbl_params = QVBoxLayout(lbl_params_col)
         vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
         lbl_params = QLabel("Params")
-        lbl_params.setFixedWidth(64)
+        lbl_params.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_params.addWidget(lbl_params)
         vbox_lbl_params.addStretch(1)
         hbox_params.addWidget(lbl_params_col)
 
         edit_params_col = QWidget()
         vbox_params_edit = QVBoxLayout(edit_params_col)
-        vbox_params_edit.setContentsMargins(0, 0, 0, 8)
+        vbox_params_edit.setContentsMargins(0, 0, 0, 0)
         script_bar = QWidget()
         hbox_script = QHBoxLayout(script_bar)
         hbox_script.setContentsMargins(0, 0, 0, 0)
@@ -113,7 +115,7 @@ class BadgerAlgoBox(QWidget):
         vbox_lbl_params_s = QVBoxLayout(lbl_params_s_col)
         vbox_lbl_params_s.setContentsMargins(0, 0, 0, 0)
         lbl_params_s = QLabel("Params")
-        lbl_params_s.setFixedWidth(64)
+        lbl_params_s.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_params_s.addWidget(lbl_params_s)
         vbox_lbl_params_s.addStretch(1)
         hbox_params_s.addWidget(lbl_params_s_col)
