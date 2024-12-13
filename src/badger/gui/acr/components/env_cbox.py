@@ -58,6 +58,7 @@ class BadgerEnvBox(QWidget):
     def init_ui(self):
         config_singleton = init_settings()
         vbox = QVBoxLayout(self)
+        vbox.setContentsMargins(8, 8, 8, 8)
 
         self.setObjectName("EnvBox")
 

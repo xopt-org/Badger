@@ -183,6 +183,16 @@ class BadgerRoutinePage(QWidget):
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QScrollArea.NoFrame)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;  /* Remove border */
+                margin: 0px;   /* Remove margin */
+                padding: 0px;  /* Remove padding */
+            }
+            QScrollArea > QWidget {
+                margin: 0px;   /* Remove margin inside */
+            }
+        """)
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
         scroll_layout_env.setContentsMargins(0, 0, 15, 0)
