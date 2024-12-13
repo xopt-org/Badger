@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton
-from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget, QTabWidget
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
 from coolname import generate_slug
 from pydantic import ValidationError
@@ -20,14 +20,14 @@ from xopt import VOCS
 from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
 
-from badger.gui.default.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
 from badger.gui.default.components.constraint_item import constraint_item
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
     update_init_data_table,
 )
-from badger.gui.default.components.env_cbox import BadgerEnvBox
+from badger.gui.acr.components.env_cbox import BadgerEnvBox
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
 from badger.gui.default.components.state_item import state_item
 from badger.gui.default.windows.docs_window import BadgerDocsWindow
@@ -106,7 +106,10 @@ class BadgerRoutinePage(QWidget):
 
         # Set up the layout
         vbox = QVBoxLayout(self)
-        vbox.setContentsMargins(11, 11, 19, 11)
+        vbox.setContentsMargins(8, 18, 8, 0)
+
+        self.tabs = tabs = QTabWidget()
+        vbox.addWidget(tabs)
 
         # Meta group
         self.group_meta = group_meta = QGroupBox("Metadata")
@@ -165,11 +168,6 @@ class BadgerRoutinePage(QWidget):
 
         # vbox.addWidget(group_meta)
 
-        # Algo box
-        self.generator_box = BadgerAlgoBox(None, self.generators)
-        self.generator_box.expand()  # expand the box initially
-        vbox.addWidget(self.generator_box)
-
         # Env box
         BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
         env_dict_dir = os.path.join(
@@ -181,10 +179,25 @@ class BadgerRoutinePage(QWidget):
         except (FileNotFoundError, yaml.YAMLError):
             env_dict = {}
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
-        self.env_box.expand()  # expand the box initially
-        vbox.addWidget(self.env_box)
+        # scroll_area.setFrameShape(QScrollArea.NoFrame)
+        scroll_area = QScrollArea()
+        scroll_content_env = QWidget()
+        scroll_layout_env = QVBoxLayout(scroll_content_env)
+        scroll_layout_env.setContentsMargins(0, 0, 15, 0)
+        scroll_layout_env.addWidget(self.env_box)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(scroll_content_env)
+        tabs.addTab(scroll_area, "Environment + VOCS")
 
-        vbox.addStretch()
+        # Algo box
+        self.generator_box = BadgerAlgoBox(None, self.generators)
+        scroll_area = QScrollArea()
+        # scroll_area.setFrameShape(QScrollArea.NoFrame)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.generator_box)
+        tabs.addTab(scroll_area, "Algorithm")
+
+        # vbox.addStretch()
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)

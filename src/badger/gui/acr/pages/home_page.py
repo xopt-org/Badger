@@ -11,14 +11,12 @@ from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
-    QLabel,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
     QPushButton,
     QShortcut,
     QSplitter,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -46,6 +44,7 @@ from badger.gui.default.components.routine_item import BadgerRoutineItem
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.default.components.search_bar import search_bar
 from badger.gui.acr.components.status_bar import BadgerStatusBar
+from badger.gui.acr.components.action_bar import BadgerActionBar
 from badger.utils import get_header, strtobool
 from badger.settings import init_settings
 
@@ -111,8 +110,7 @@ class BadgerHomePage(QWidget):
         splitter = QSplitter(Qt.Horizontal)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        splitter.setStretchFactor(2, 1)
-        splitter.setStretchFactor(3, 0)
+
         vbox.addWidget(splitter, 1)
 
         # Routine panel
@@ -196,17 +194,38 @@ class BadgerHomePage(QWidget):
         self.routine_editor = routine_editor = BadgerRoutineEditor()
         vbox_routine_view.addWidget(routine_editor)
 
+        # Add action bar
+        self.run_action_bar = run_action_bar = BadgerActionBar()
+
+        # Run panel (routine editor + run monitor + data table + action bar)
+        panel_run = QWidget()
+        vbox_run = QVBoxLayout(panel_run)
+        vbox_run.setContentsMargins(0, 0, 0, 0)
+        vbox_run.setSpacing(0)
+
+        splitter_run = QSplitter(Qt.Horizontal)
+        splitter_run.setStretchFactor(0, 1)
+        splitter_run.setStretchFactor(1, 1)
+        splitter_run.setStretchFactor(2, 0)
+        vbox_run.addWidget(splitter_run, 1)
+
+        splitter_run.addWidget(routine_view)
+        splitter_run.addWidget(panel_monitor)
+        splitter_run.addWidget(run_table)
+
+        vbox_run.addWidget(run_action_bar, 0)
+
         # Add panels to splitter
         splitter.addWidget(history_browser)
-        splitter.addWidget(routine_view)
-        splitter.addWidget(panel_monitor)
-        splitter.addWidget(run_table)
+        splitter.addWidget(panel_run)
+
         # Set initial sizes (left fixed, middle and right equal)
         total_width = 1640  # Total width of the splitter
         fixed_width = 360  # Fixed width for the left panel
         remaining_width = total_width - fixed_width
         equal_width = remaining_width // 2
-        splitter.setSizes([fixed_width, equal_width, equal_width, 0])
+        splitter.setSizes([fixed_width, remaining_width])
+        splitter_run.setSizes([equal_width, equal_width, 0])
 
         self.status_bar = status_bar = BadgerStatusBar()
         status_bar.set_summary("Badger is ready!")
@@ -237,6 +256,26 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_progress.connect(self.progress)
         self.run_monitor.sig_del.connect(self.delete_run)
         self.run_monitor.sig_stop_run.connect(self.cover_page)
+        self.run_monitor.sig_run_started.connect(self.run_action_bar.run_start)
+        self.run_monitor.sig_routine_finished.connect(self.run_action_bar.routine_finished)
+        self.run_monitor.sig_lock_action.connect(self.run_action_bar.lock)
+        self.run_monitor.sig_toggle_reset.connect(self.run_action_bar.toggle_reset)
+        self.run_monitor.sig_toggle_run.connect(self.run_action_bar.toggle_run)
+        self.run_monitor.sig_toggle_other.connect(self.run_action_bar.toggle_other)
+        self.run_monitor.sig_set_run_action.connect(self.run_action_bar.set_run_action)
+        self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
+
+        self.run_action_bar.sig_start.connect(self.run_monitor.start)
+        self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
+        self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
+        self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
+        self.run_action_bar.sig_reset_env.connect(self.run_monitor.reset_env)
+        self.run_action_bar.sig_jump_to_optimal.connect(self.run_monitor.jump_to_optimal)
+        self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
+        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
+        self.run_action_bar.sig_run_action.connect(self.run_monitor.set_run_action)
+        self.run_action_bar.sig_run_until_action.connect(self.run_monitor.set_run_until_action)
+        self.run_action_bar.sig_open_extensions_palette.connect(self.run_monitor.open_extensions_palette)
 
         self.routine_editor.sig_saved.connect(self.routine_saved)
         self.routine_editor.sig_canceled.connect(self.done_create_routine)

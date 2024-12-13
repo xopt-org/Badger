@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QTextEdit, QStackedWidget, QScrollArea
+from PyQt5.QtWidgets import QTextEdit, QStackedWidget
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QFont
 from badger.gui.acr.components.routine_page import BadgerRoutinePage
@@ -36,11 +36,11 @@ class BadgerRoutineEditor(QWidget):
         routine_edit.setReadOnly(True)
         stacks.addWidget(routine_edit)
 
-        self.scroll_area = scroll_area = QScrollArea()
+        # self.scroll_area = scroll_area = QScrollArea()
         self.routine_page = routine_page = BadgerRoutinePage()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(routine_page)
-        stacks.addWidget(scroll_area)
+        # scroll_area.setWidgetResizable(True)
+        # scroll_area.setWidget(routine_page)
+        stacks.addWidget(routine_page)
 
         stacks.setCurrentIndex(1)
         vbox.addWidget(stacks)
@@ -67,7 +67,8 @@ class BadgerRoutineEditor(QWidget):
         hbox_action.addWidget(btn_cancel)
         hbox_action.addStretch(1)
         hbox_action.addWidget(btn_save)
-        vbox.addWidget(action_bar)
+        btn_save.hide()
+        # vbox.addWidget(action_bar)
 
     def config_logic(self):
         self.btn_cancel.clicked.connect(self.cancel_create_routine)
