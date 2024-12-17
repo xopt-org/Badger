@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QDialog, QVBoxLayout
 from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
 from badger.core import Routine
 
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,9 +23,9 @@ class AnalysisExtension(QDialog):
     def update_window(self, routine: Routine):
         pass
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, a0) -> None:
         self.window_closed.emit(self)
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
 
 class ParetoFrontViewer(AnalysisExtension):
@@ -63,7 +64,9 @@ class ParetoFrontViewer(AnalysisExtension):
 
 
 class BOVisualizer(AnalysisExtension):
-    df_length = 0
+    df_length = float("inf")
+    initialized = False
+    requires_model_rebuild = True
 
     def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BOVisualizer")
@@ -72,17 +75,22 @@ class BOVisualizer(AnalysisExtension):
         self.bo_plot_widget: Optional[BOPlotWidget] = None
 
     def requires_reinitialization(self, routine: Routine):
+        if not self.initialized:
+            logger.debug("Reset - Extension never initialized")
+            self.initialized = True
+            return True
+
         if routine.data is None:
             logger.debug("Reset - No data available")
             return True
 
-        if self.bo_plot_widget.model_logic.xopt_obj is None:
-            logger.debug("Reset - xopt_obj is None")
-            return True
+        previous_len = self.df_length
+        self.df_length = len(routine.data)
+        new_length = self.df_length
 
-        if len(routine.data) <= self.df_length:
+        if previous_len > new_length:
             logger.debug("Reset - Data length is the same or smaller")
-            self.df_length = len(routine.data)
+            self.requires_model_rebuild = True
             return True
 
         return False
@@ -90,10 +98,6 @@ class BOVisualizer(AnalysisExtension):
     def update_window(self, routine: Routine):
         # Update the BOPlotWidget with the new routine
         logger.debug("Updating BOVisualizer window with new routine")
-        if routine.data is not None:
-            logger.debug("No data available")
-            self.df_length = len(routine.data)
-        # logger.debug(f"Routine {routine.data}")
 
         # Initialize the BOPlotWidget if it is not already initialized
         if self.bo_plot_widget is None:
@@ -107,18 +111,21 @@ class BOVisualizer(AnalysisExtension):
             self.setLayout(bo_layout)
             logger.debug("Set layout for BOVisualizer")
 
-        else:
-            logger.debug("BOPlotWidget already initialized")
+            if routine.data is not None:
+                self.df_length = len(routine.data)
 
         # If there is no data available, then initialize the plot
         # This needs to happen when starting a new optimization run
 
         if self.requires_reinitialization(routine):
-            self.bo_plot_widget.initialize_plot(routine)
-            logger.debug(f"Data: {self.bo_plot_widget.model_logic.xopt_obj.data}")
-        else:
-            logger.debug("BOPlotWidget already has data")
+            self.bo_plot_widget.initialize_widget(routine)
+
+        logger.error(
+            f"Does the model need to be rebuilt? - {self.requires_model_rebuild}"
+        )
 
         # Update the plot with every call to update_window
         # This is necessary when continuing an optimization run
-        self.bo_plot_widget.update_plot(500)
+        self.bo_plot_widget.update_plot(500, self.requires_model_rebuild)
+        if self.requires_model_rebuild:
+            self.requires_model_rebuild = False

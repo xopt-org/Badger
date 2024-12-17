@@ -10,7 +10,6 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QCheckBox,
     QHeaderView,
-    QWidget,
 )
 from PyQt5.QtCore import Qt
 from typing import Callable, Optional
@@ -50,7 +49,7 @@ class UIComponents:
         self.variable_checkboxes_layout = None
 
     def initialize_variable_checkboxes(
-        self, state_changed_callback: Optional[Callable[[QWidget], None]] = None
+        self, state_changed_callback: Optional[Callable[[], None]] = None
     ):
         logger.debug("Initializing variable checkboxes")
         if not self.vocs:
@@ -106,9 +105,9 @@ class UIComponents:
         self.reference_table = QTableWidget()
         self.reference_table.setColumnCount(2)
         self.reference_table.setHorizontalHeaderLabels(["Variable", "Ref. Point"])
-        self.reference_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Stretch
-        )
+        horizontal_header = self.reference_table.horizontalHeader()
+        if horizontal_header is not None:
+            horizontal_header.setSectionResizeMode(QHeaderView.Stretch)
 
         self.ref_inputs = []
 
@@ -123,12 +122,22 @@ class UIComponents:
         """Populate the reference table based on the current vocs variable names."""
 
         logger.debug("Populating reference table")
+        if self.reference_table is None:
+            raise Exception("Reference Table is None")
+
+        if self.vocs is None:
+            raise Exception("Vocs is None")
+
         self.reference_table.setRowCount(len(self.vocs.variable_names))
         self.ref_inputs = []
 
         for i, var_name in enumerate(self.vocs.variable_names):
             variable_item = QTableWidgetItem(var_name)
-            variable_item.setFlags(variable_item.flags() & ~Qt.ItemIsEditable)
+            itemIsEditable = Qt.ItemFlag.ItemIsEditable
+
+            variable_item.setFlags(
+                variable_item.flags() & ~Qt.ItemFlags(itemIsEditable)
+            )
             self.reference_table.setItem(i, 0, variable_item)
 
             # Set default reference point to the midpoint of variable bounds
@@ -138,9 +147,6 @@ class UIComponents:
             reference_point_item = QTableWidgetItem(str(default_value))
             self.ref_inputs.append(reference_point_item)
             self.reference_table.setItem(i, 1, reference_point_item)
-            logger.debug(
-                f"Added reference point: {variable_item.text()}: {reference_point_item.text()}"
-            )
 
     def create_options_section(self):
         group_box = QGroupBox("Plot Options")
@@ -173,7 +179,7 @@ class UIComponents:
     def update_vocs(
         self,
         vocs: Optional[VOCS],
-        state_changed_callback: Optional[Callable[[QWidget], None]] = None,
+        state_changed_callback: Optional[Callable[[], None]] = None,
     ):
         self.vocs = vocs
         logger.debug(f"vocs: {vocs}")
@@ -189,6 +195,9 @@ class UIComponents:
         logger.debug(f"y_axis_combo items: {y_axis_items}")
 
         combined_set = set(x_axis_items + y_axis_items)
+
+        if self.vocs is None:
+            raise Exception("Vocs in None")
 
         if self.vocs.variable_names != list(combined_set):
             logger.debug(

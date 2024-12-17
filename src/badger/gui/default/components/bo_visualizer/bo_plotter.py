@@ -46,7 +46,7 @@ class BOPlotWidget(QWidget):
         self.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
         self.resize(1250, 720)
 
-    def initialize_plot(self, xopt_obj: Routine):
+    def initialize_widget(self, xopt_obj: Routine):
         logger.debug("Initializing plot with xopt_obj")
         self.model_logic.update_xopt(xopt_obj)
         logger.debug("Update vocs in UI components")
@@ -75,7 +75,7 @@ class BOPlotWidget(QWidget):
         except TypeError:
             pass  # No connection to disconnect
 
-        self.ui_components.update_button.clicked.connect(self.update_plot)
+        self.ui_components.update_button.clicked.connect(lambda: self.update_plot())
 
         # Similarly for other signals
         try:
@@ -159,16 +159,10 @@ class BOPlotWidget(QWidget):
             self.selected_variables.append(x_var)
 
         # Include Y-axis variable only if the checkbox is checked
-        logger.debug(
-            f"y_axis_checkbox: {self.ui_components.y_axis_checkbox.isChecked()}"
-        )
         if self.ui_components.y_axis_checkbox.isChecked():
             y_var = self.ui_components.y_axis_combo.currentText()
             if y_var and y_var != x_var:
                 self.selected_variables.append(y_var)
-
-        logger.debug(f"previous_selected_variables: {previous_selected_variables}")
-        logger.debug(f"self.selected_variables: {self.selected_variables}")
 
         if len(self.selected_variables) == 0:
             # No variables selected; do not proceed with updating the plot
@@ -182,7 +176,9 @@ class BOPlotWidget(QWidget):
             # Only update plot if the selection has changed
             self.update_plot()
 
-    def update_plot(self, interval: Optional[float] = None):
+    def update_plot(
+        self, interval: Optional[float] = None, requires_rebuild: bool = False
+    ):
         logger.debug("Updating plot in BOPlotWidget")
         if not self.model_logic.xopt_obj or not self.model_logic.vocs:
             print("Cannot update plot: xopt_obj or vocs is not available.")
@@ -212,50 +208,15 @@ class BOPlotWidget(QWidget):
         # Disable and gray out the reference points for selected variables
         self.update_reference_point_table(selected_variables)
 
-        logger.debug(f"ref_inputs: {self.ui_components.ref_inputs}")
-        logger.debug(f"selected_variables: {selected_variables}")
-
         # Get reference points for non-selected variables
         reference_point = self.model_logic.get_reference_points(
             self.ui_components.ref_inputs, selected_variables
         )
 
-        # Resizing window to fit plots properly
-        acq_chk = self.ui_components.acq_func_checkbox.isChecked()
-        prior_mean_chk = self.ui_components.show_prior_mean_checkbox.isChecked()
-        feas_chk = self.ui_components.show_feasibility_checkbox.isChecked()
-
-        # Adjust window size based on selected options
-        if self.ui_components.y_axis_checkbox.isChecked():
-            # Set width based on prior_mean_chk
-            width = 1400 if prior_mean_chk else 1250
-
-            # Set height based on acq_chk and feas_chk
-            if acq_chk and not prior_mean_chk and feas_chk:
-                height = 820
-            elif acq_chk or feas_chk:
-                height = 780
-            else:
-                height = 720
-
-        else:
-            width = 1250
-
-            # Set height based on acq_chk and feas_chk
-            if acq_chk and feas_chk:
-                height = 780
-            else:
-                height = 720
-
-        self.parent().resize(width, height)
-
         logger.debug("Updating plot with selected variables and reference points")
-        # logger.debug(f"xopt_obj: {self.model_logic.xopt_obj}")
-        logger.debug(f"selected_variables: {selected_variables}")
-        logger.debug(f"reference_point: {reference_point}")
 
         # Update the plot with the selected variables and reference points
-        self.plotting_area.update_plot(
+        return self.plotting_area.update_plot(
             self.model_logic.xopt_obj,
             selected_variables,
             reference_point,
@@ -264,6 +225,7 @@ class BOPlotWidget(QWidget):
             self.ui_components.show_prior_mean_checkbox.isChecked(),
             self.ui_components.show_feasibility_checkbox.isChecked(),
             self.ui_components.n_grid.value(),
+            requires_rebuild,
             interval,
         )
 
@@ -277,21 +239,25 @@ class BOPlotWidget(QWidget):
             # Get the reference point item from the table
             ref_item = self.ui_components.ref_inputs[i]
 
+            white = Qt.GlobalColor.white
+            lightGray = Qt.GlobalColor.lightGray
+            black = Qt.GlobalColor.black
+
+            itemIsEditable = Qt.ItemFlag.ItemIsEditable
+
             if var_name in selected_variables:
                 # Disable editing and gray out the background
-                ref_item.setFlags(ref_item.flags() & ~Qt.ItemIsEditable)
-                ref_item.setBackground(Qt.lightGray)
-                ref_item.setForeground(Qt.white)
+                ref_item.setFlags(ref_item.flags() & ~Qt.ItemFlags(itemIsEditable))
+                ref_item.setBackground(lightGray)
+                ref_item.setForeground(white)
             else:
                 # Re-enable editing and set background to white
-                ref_item.setFlags(ref_item.flags() | Qt.ItemIsEditable)
-                ref_item.setBackground(Qt.white)
-                ref_item.setForeground(Qt.black)
+                ref_item.setFlags(ref_item.flags() | Qt.ItemFlags(itemIsEditable))
+                ref_item.setBackground(white)
+                ref_item.setForeground(black)
 
         # Force the table to refresh and update its view
-        self.ui_components.reference_table.viewport().update()
-
-    # def update_routine(self, xopt_obj: Routine):
-    #     logger.debug("Updating routine in BOPlotWidget")
-    #     logger.debug(f"xopt_obj: {xopt_obj}")
-    #     self.initialize_plot(xopt_obj)
+        if self.ui_components.reference_table is not None:
+            viewport = self.ui_components.reference_table.viewport()
+            if viewport is not None:
+                viewport.update()
