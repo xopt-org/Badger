@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox, QLayout
 from xopt.generators.bayesian.visualize import visualize_generator_model
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
@@ -44,8 +44,25 @@ class PlottingArea(QWidget):
     ):
         logger.debug("Updating plot in PlottingArea")
 
+        debug_object = {
+            "xopt_obj": xopt_obj.__class__.__name__,
+            "variable_names": variable_names,
+            "reference_point": reference_point,
+            "show_acquisition": show_acquisition,
+            "show_samples": show_samples,
+            "show_prior_mean": show_prior_mean,
+            "show_feasibility": show_feasibility,
+            "n_grid": n_grid,
+            "requires_rebuild": requires_rebuild,
+            "interval": interval,
+        }
+
         # Check if the plot was updated recently
-        if self.last_updated is not None and interval is not None:
+        if (
+            self.last_updated is not None
+            and interval is not None
+            and not requires_rebuild
+        ):
             logger.debug(f"Time since last update: {time.time() - self.last_updated}")
 
             time_diff = time.time() - self.last_updated
@@ -64,6 +81,9 @@ class PlottingArea(QWidget):
         if xopt_data is None:
             logger.error("Xopt Data from Routine is None")
             return
+        if len(xopt_data) == 0:
+            logger.error("Xopt Data from Routine is empty")
+            return
 
         generator = cast(BayesianGenerator, xopt_obj.generator)
 
@@ -72,7 +92,6 @@ class PlottingArea(QWidget):
 
         # Set generator data
         generator.data = xopt_data
-        logger.debug(f"Generator data: {generator.data}")
 
         if requires_rebuild:
             generator.model = None
@@ -83,7 +102,6 @@ class PlottingArea(QWidget):
             print("Model not found. Training the model...")
             try:
                 generator.train_model()
-
             except Exception as e:
                 print(f"Failed to train model: {e}")
                 logger.error(f"Failed to train model: {e}")
@@ -91,6 +109,8 @@ class PlottingArea(QWidget):
                     self, "Model Training Error", f"Failed to train model: {e}"
                 )
                 return
+
+        logger.debug(f"Arguments: {debug_object}")
 
         # Generate the new plot using visualize_generator_model
         fig, _ = cast(
@@ -112,34 +132,41 @@ class PlottingArea(QWidget):
 
         layout = self.layout()
 
-        logger.debug(f"Layout exists: {layout}")
-
         if layout is not None:
             # Clear the existing layout (remove previous plot if any)
-            for i in reversed(range(layout.count())):
-                layout_item = layout.itemAt(i)
-                if layout_item is not None:
-                    widget_to_remove = layout_item.widget()
-                    if widget_to_remove is not None:
-                        widget_to_remove.setParent(None)
+            logger.debug(f"layout.count(): {layout.count()}")
+            self.clearLayout(layout)
 
             # Create a new figure and canvas
-            figure = Figure()
-            canvas = FigureCanvas(figure)
+            # figure = Figure()
+            canvas = FigureCanvas(fig)
             # Set the new figure to the canvas and draw it
-            canvas.figure = fig
+            # canvas.figure = fig
             canvas.draw()
 
             # Add the new canvas to the layout
             layout.addWidget(canvas)
+
+            # Close the old figure to prevent memory leaks
+            plt.close(fig)
+
         else:
             raise Exception("Layout never updated")
 
         # Ensure the layout is updated
         self.updateGeometry()
 
-        # Close the old figure to prevent memory leaks
-        plt.close(fig)
-
         # Update the last updated time
         self.last_updated = time.time()
+
+    def clearLayout(self, layout: QLayout):
+        while layout.count():
+            child = layout.takeAt(0)
+            if child is None:
+                break
+
+            widget = child.widget()
+            if widget is None:
+                break
+
+            widget.deleteLater()
