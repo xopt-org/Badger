@@ -97,18 +97,18 @@ class PlottingArea(QWidget):
             generator.model = None
 
         # Check if the model exists
-        if not hasattr(generator, "model") or generator.model is None:
-            # Attempt to train the model
-            print("Model not found. Training the model...")
-            try:
-                generator.train_model()
-            except Exception as e:
-                print(f"Failed to train model: {e}")
-                logger.error(f"Failed to train model: {e}")
-                QMessageBox.warning(
-                    self, "Model Training Error", f"Failed to train model: {e}"
-                )
-                return
+        # if not hasattr(generator, "model") or generator.model is None:
+        # Attempt to train the model
+        print("Model not found. Training the model...")
+        try:
+            generator.train_model()
+        except Exception as e:
+            print(f"Failed to train model: {e}")
+            logger.error(f"Failed to train model: {e}")
+            QMessageBox.warning(
+                self, "Model Training Error", f"Failed to train model: {e}"
+            )
+            return
 
         logger.debug(f"Arguments: {debug_object}")
 
@@ -134,15 +134,10 @@ class PlottingArea(QWidget):
 
         if layout is not None:
             # Clear the existing layout (remove previous plot if any)
-            logger.debug(f"layout.count(): {layout.count()}")
             self.clearLayout(layout)
 
             # Create a new figure and canvas
-            # figure = Figure()
             canvas = FigureCanvas(fig)
-            # Set the new figure to the canvas and draw it
-            # canvas.figure = fig
-            canvas.draw()
 
             # Add the new canvas to the layout
             layout.addWidget(canvas)
