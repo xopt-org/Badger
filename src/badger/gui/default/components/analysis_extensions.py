@@ -120,12 +120,13 @@ class BOVisualizer(AnalysisExtension):
         if self.requires_reinitialization(routine):
             self.bo_plot_widget.initialize_widget(routine)
 
-        logger.error(
+        logger.debug(
             f"Does the model need to be rebuilt? - {self.requires_model_rebuild}"
         )
 
         # Update the plot with every call to update_window
         # This is necessary when continuing an optimization run
-        self.bo_plot_widget.update_plot(500, self.requires_model_rebuild)
+        self.bo_plot_widget.update_plot(100, self.requires_model_rebuild)
+
         if self.requires_model_rebuild:
             self.requires_model_rebuild = False

@@ -4,7 +4,9 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox, QLayout
-from xopt.generators.bayesian.visualize import visualize_generator_model
+from xopt.generators.bayesian.visualize import (
+    visualize_generator_model,
+)
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 from badger.routine import Routine
@@ -98,7 +100,7 @@ class PlottingArea(QWidget):
 
         # Check if the model exists
         # if not hasattr(generator, "model") or generator.model is None:
-        # Attempt to train the model
+        # # Attempt to train the model
         print("Model not found. Training the model...")
         try:
             generator.train_model()
@@ -111,6 +113,13 @@ class PlottingArea(QWidget):
             return
 
         logger.debug(f"Arguments: {debug_object}")
+
+        # with open("xopt.yaml", "r") as f:
+        #     state_dict = f.read()
+
+        #     state_dict = xopt_obj.meta.state_dict
+
+        # model.load_state_dict(state_dict)
 
         # Generate the new plot using visualize_generator_model
         fig, _ = cast(
