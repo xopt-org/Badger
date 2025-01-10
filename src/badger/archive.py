@@ -2,7 +2,6 @@ import os
 import warnings
 import logging
 
-from badger.db import save_run, remove_run_by_filename
 from badger.utils import ts_float_to_str
 from badger.settings import init_settings
 from badger.routine import Routine
@@ -40,8 +39,6 @@ def archive_run(routine, states=None):
         "routine": routine,
         "data": data_dict,
     }
-    rid = save_run(run)
-    run = {"id": rid, **run}  # Put id in front
     if states:  # save the system states
         run["system_states"] = states
 
@@ -103,6 +100,18 @@ def list_run():
     return runs
 
 
+def get_runs():
+    runs = list_run()
+    run_list = []
+    for year, months in runs.items():
+        for month, days in months.items():
+            for day, files in days.items():
+                for run_fname in files:
+                    run_list.append(run_fname)
+
+    return run_list
+
+
 def load_run(run_fname):
     tokens = run_fname.split("-")
     first_level = tokens[1]
@@ -128,14 +137,15 @@ def load_run(run_fname):
     return routine
 
 
+def update_run(routine: Routine):
+    pass
+
+
 def delete_run(run_fname):
     tokens = run_fname.split("-")
     first_level = tokens[1]
     second_level = f"{tokens[1]}-{tokens[2]}"
     third_level = f"{tokens[1]}-{tokens[2]}-{tokens[3]}"
-
-    # Remove record from the database
-    remove_run_by_filename(run_fname)
 
     prefix = os.path.join(BADGER_ARCHIVE_ROOT, first_level, second_level, third_level)
 

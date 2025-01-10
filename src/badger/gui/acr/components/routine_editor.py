@@ -72,7 +72,6 @@ class BadgerRoutineEditor(QWidget):
 
     def config_logic(self):
         self.btn_cancel.clicked.connect(self.cancel_create_routine)
-        self.btn_save.clicked.connect(self.save_routine)
 
     def set_routine(self, routine: Routine, silent=False):
         try:
@@ -86,12 +85,6 @@ class BadgerRoutineEditor(QWidget):
 
     def cancel_create_routine(self):
         self.sig_canceled.emit()
-
-    def save_routine(self):
-        # here save() is not a property/attribute
-        # it's a method that also calls _compose_routine()
-        if self.routine_page.save() == 0:
-            self.sig_saved.emit()
 
     def clear(self):
         self.routine_edit.clear()

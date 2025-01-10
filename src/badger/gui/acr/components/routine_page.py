@@ -1,6 +1,4 @@
-import json
 import warnings
-import sqlite3
 import traceback
 import copy
 from functools import partial
@@ -10,12 +8,11 @@ import yaml
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton
+from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton
 from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
+from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
-from pydantic import ValidationError
 from xopt import VOCS
 from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
@@ -37,9 +34,8 @@ from badger.gui.default.windows.lim_vrange_dialog import BadgerLimitVariableRang
 from badger.gui.default.windows.review_dialog import BadgerReviewDialog
 from badger.gui.default.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 from badger.gui.default.utils import filter_generator_config
-from badger.db import save_routine, update_routine, get_runs_by_routine
+from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import BadgerRoutineError
 from badger.factory import list_generators, list_env, get_env
@@ -1025,7 +1021,7 @@ class BadgerRoutinePage(QWidget):
         routine = self.routine
         routine.description = self.edit_descr.toPlainText()
         try:
-            update_routine(routine)
+            update_run(routine)
             # Notify routine list to update
             self.sig_updated.emit(routine.name, routine.description)
             QMessageBox.information(
@@ -1035,47 +1031,3 @@ class BadgerRoutinePage(QWidget):
             )
         except Exception:
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
-
-    def save(self):
-        try:
-            routine = self._compose_routine()
-        except ValidationError as e:
-            error_message = "".join(
-                [error["msg"] + "\n\n" for error in e.errors()]
-            ).strip()
-            details = traceback.format_exc()
-            dialog = ExpandableMessageBox(
-                title="Error!", text=error_message, detailedText=details, parent=self
-            )
-            dialog.setIcon(QMessageBox.Critical)
-            dialog.exec_()
-            return
-
-        try:
-            if self.routine:
-                keys_to_exclude = ["data", "id", "name", "description"]
-                old_dict = json.loads(self.routine.json())
-                old_dict = {
-                    k: v for k, v in old_dict.items() if k not in keys_to_exclude
-                }
-                new_dict = json.loads(routine.json())
-                new_dict = {
-                    k: v for k, v in new_dict.items() if k not in keys_to_exclude
-                }
-                runs = get_runs_by_routine(self.routine.id)
-                if len(runs) == 0 or old_dict == new_dict:
-                    routine.id = self.routine.id
-                    update_routine(routine)
-                else:
-                    save_routine(routine)
-            else:
-                save_routine(routine)
-        except sqlite3.IntegrityError:
-            return QMessageBox.critical(
-                self,
-                "Error!",
-                f"Routine {routine.name} already existed in the database! Please "
-                f"choose another name.",
-            )
-
-        return 0

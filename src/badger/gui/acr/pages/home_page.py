@@ -1,35 +1,23 @@
 import gc
-import os
-import yaml
 import traceback
 from importlib import resources
-from typing import List
 
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
-    QFileDialog,
-    QHBoxLayout,
-    QListWidget,
-    QListWidgetItem,
     QMessageBox,
-    QPushButton,
     QShortcut,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
-from badger.archive import delete_run, get_base_run_filename, load_run
-from badger.db import (
-    export_routines,
+from badger.archive import (
+    delete_run,
+    get_base_run_filename,
+    load_run,
     get_runs,
-    get_runs_by_routine,
-    import_routines,
-    list_routine,
-    load_routine,
-    remove_routine,
 )
 from badger.gui.default.components.data_table import (
     add_row,
@@ -37,15 +25,12 @@ from badger.gui.default.components.data_table import (
     reset_table,
     update_table,
 )
-from badger.gui.default.components.filter_cbox import BadgerFilterBox
 from badger.gui.acr.components.history_navigator import HistoryNavigator
 from badger.gui.acr.components.routine_editor import BadgerRoutineEditor
-from badger.gui.default.components.routine_item import BadgerRoutineItem
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
-from badger.gui.default.components.search_bar import search_bar
 from badger.gui.acr.components.status_bar import BadgerStatusBar
 from badger.gui.acr.components.action_bar import BadgerActionBar
-from badger.utils import get_header, strtobool
+from badger.utils import get_header
 from badger.settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
@@ -113,62 +98,6 @@ class BadgerHomePage(QWidget):
 
         vbox.addWidget(splitter, 1)
 
-        # Routine panel
-        self.panel_routine = panel_routine = QWidget()
-        panel_routine.setMinimumWidth(360)
-        vbox_routine = QVBoxLayout(panel_routine)
-
-        # Search bar
-        panel_search = QWidget()
-        hbox_search = QHBoxLayout(panel_search)
-        hbox_search.setContentsMargins(0, 0, 0, 0)
-
-        self.sbar = sbar = search_bar()
-        sbar.setFixedHeight(36)
-        f = sbar.font()
-        f.setPixelSize(16)
-        sbar.setFont(f)
-        self.btn_new = btn_new = QPushButton()
-        btn_new.setFixedSize(36, 36)
-        btn_new.setIcon(self.icon_add)
-        btn_new.setToolTip("Create new routine")
-        hbox_search.addWidget(sbar)
-        # hbox_search.addSpacing(4)
-        hbox_search.addWidget(btn_new)
-        vbox_routine.addWidget(panel_search)
-
-        # Filters
-        self.filter_box = filter_box = BadgerFilterBox(self, title=" Filters")
-        if not strtobool(self.config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
-            filter_box.hide()
-        vbox_routine.addWidget(filter_box)
-
-        # Routine list
-        self.routine_list = routine_list = QListWidget()
-        routine_list.setAlternatingRowColors(True)
-        routine_list.setSpacing(1)
-        routine_list.setViewportMargins(0, 0, 17, 0)  # leave space for scrollbar
-        self.refresh_routine_list()
-        self.prev_routine_item = None  # last selected routine
-        vbox_routine.addWidget(routine_list)
-
-        # Action bar
-        action_bar = QWidget()
-        hbox_action = QHBoxLayout(action_bar)
-        hbox_action.setContentsMargins(0, 0, 0, 0)
-        self.btn_export = btn_export = QPushButton()
-        btn_export.setFixedSize(28, 28)
-        btn_export.setIcon(self.icon_export)
-        btn_export.setToolTip("Export filtered routines")
-        self.btn_import = btn_import = QPushButton()
-        btn_import.setFixedSize(28, 28)
-        btn_import.setIcon(self.icon_import)
-        btn_import.setToolTip("Import routines")
-        hbox_action.addStretch(1)
-        hbox_action.addWidget(btn_import)
-        hbox_action.addWidget(btn_export)
-        vbox_routine.addWidget(action_bar)
-
         # Monitor panel
         panel_monitor = QWidget()
         vbox_monitor = QVBoxLayout(panel_monitor)
@@ -235,15 +164,8 @@ class BadgerHomePage(QWidget):
         self.colors = ["c", "g", "m", "y", "b", "r", "w"]
         self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
 
-        self.sbar.textChanged.connect(self.refresh_routine_list)
-        self.btn_new.clicked.connect(self.create_new_routine)
-        self.routine_list.itemClicked.connect(self.select_routine)
         self.run_table.cellClicked.connect(self.solution_selected)
         self.run_table.itemSelectionChanged.connect(self.table_selection_changed)
-
-        self.filter_box.cb_obj.currentIndexChanged.connect(self.refresh_routine_list)
-        self.filter_box.cb_reg.currentIndexChanged.connect(self.refresh_routine_list)
-        self.filter_box.cb_gain.currentIndexChanged.connect(self.refresh_routine_list)
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
@@ -277,20 +199,9 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_run_until_action.connect(self.run_monitor.set_run_until_action)
         self.run_action_bar.sig_open_extensions_palette.connect(self.run_monitor.open_extensions_palette)
 
-        self.routine_editor.sig_saved.connect(self.routine_saved)
-        self.routine_editor.sig_canceled.connect(self.done_create_routine)
-        self.routine_editor.sig_deleted.connect(self.routine_deleted)
-        self.routine_editor.routine_page.sig_updated.connect(
-            self.routine_description_updated
-        )
-
         # Assign shortcuts
         self.shortcut_go_search = QShortcut(QKeySequence("Ctrl+L"), self)
         self.shortcut_go_search.activated.connect(self.go_search)
-
-        # Export/import routines
-        self.btn_export.clicked.connect(self.export_routines)
-        self.btn_import.clicked.connect(self.import_routines)
 
     def go_search(self):
         self.sbar.setFocus()
@@ -298,124 +209,6 @@ class BadgerHomePage(QWidget):
     def load_all_runs(self):
         runs = get_runs()
         self.history_browser.updateItems(runs)
-
-    def create_new_routine(self):
-        self.splitter_state = self.splitter_run.saveState()
-        self.routine_editor.set_routine(None)
-        self.mode = "new routine"
-        self.routine_editor.switch_mode(self.mode)
-        self.toggle_lock(True, 0)
-
-    def select_routine(self, routine_item: QListWidgetItem, force=False):
-        # force: if True, select the target routine_item even if
-        #        it's selected already
-        if self.prev_routine_item:
-            try:
-                self.routine_list.itemWidget(self.prev_routine_item).deactivate()
-            except ValueError:
-                pass
-
-            if (not force) and (
-                self.prev_routine_item.routine_id == routine_item.routine_id
-            ):
-                # click a routine again to deselect
-                self.prev_routine_item = None
-                self.current_routine = None
-                self.load_all_runs()
-                if not self.history_browser.count():
-                    self.go_run(-1)  # sometimes we need to trigger this manually
-                self.sig_routine_activated.emit(False)
-                return
-
-        self.prev_routine_item = routine_item  # note that prev_routine is an item!
-        self.sig_routine_activated.emit(True)
-
-        routine, timestamp = load_routine(routine_item.routine_id)
-        self.current_routine = routine
-        self.routine_editor.set_routine(routine)
-        runs = get_runs_by_routine(routine.id)
-        self.history_browser.updateItems(runs)
-        print(self.history_browser.count())
-        if not self.history_browser.count():
-            self.go_run(-1)  # sometimes we need to trigger this manually
-
-        if not runs:  # auto plot will not be triggered
-            self.run_monitor.init_plots(routine)
-
-        if self.go_run_failed:  # failed to load run, do not select the routine
-            self.go_run_failed = False
-        else:
-            self.routine_list.itemWidget(routine_item).activate()
-
-    def build_routine_list(
-        self,
-        routine_ids: List[str],
-        routine_names: List[str],
-        timestamps: List[str],
-        environments: List[str],
-        descriptions: List[str],
-    ):
-        # use id instead of name where needed
-        try:
-            selected_routine = self.prev_routine_item.routine_id
-        except Exception:
-            selected_routine = None
-        self.routine_list.clear()
-        BADGER_PLUGIN_ROOT = self.config_singleton.read_value("BADGER_PLUGIN_ROOT")
-        env_dict_dir = os.path.join(
-            BADGER_PLUGIN_ROOT, "environments", "env_colors.yaml"
-        )
-        try:
-            with open(env_dict_dir, "r") as stream:
-                env_dict = yaml.safe_load(stream)
-        except (FileNotFoundError, yaml.YAMLError):
-            env_dict = {}
-        for i, routine_id in enumerate(routine_ids):
-            _item = BadgerRoutineItem(
-                routine_id,
-                routine_names[i],
-                timestamps[i],
-                environments[i],
-                env_dict,
-                descriptions[i],
-                self,
-            )
-            _item.sig_del.connect(self.delete_routine)
-            item = QListWidgetItem(self.routine_list)
-            item.routine_id = routine_id  # dirty trick
-            item.setSizeHint(_item.sizeHint())
-            self.routine_list.addItem(item)
-            self.routine_list.setItemWidget(item, _item)
-            if routine_id == selected_routine:
-                _item.activate()
-                self.prev_routine_item = item
-
-    def get_current_routines(self):
-        keyword = self.sbar.text()
-        tag_obj = self.filter_box.cb_obj.currentText()
-        tag_reg = self.filter_box.cb_reg.currentText()
-        tag_gain = self.filter_box.cb_gain.currentText()
-        tags = {}
-        if tag_obj:
-            tags["objective"] = tag_obj
-        if tag_reg:
-            tags["region"] = tag_reg
-        if tag_gain:
-            tags["gain"] = tag_gain
-        routine_ids, routine_names, timestamps, environments, descriptions = (
-            list_routine(keyword, tags)
-        )
-
-        return routine_ids, routine_names, timestamps, environments, descriptions
-
-    def refresh_routine_list(self):
-        routine_ids, routine_names, timestamps, environments, descriptions = (
-            self.get_current_routines()
-        )
-
-        self.build_routine_list(
-            routine_ids, routine_names, timestamps, environments, descriptions
-        )
 
     def go_run(self, i: int = None):
         gc.collect()
@@ -441,17 +234,8 @@ class BadgerHomePage(QWidget):
 
         run_filename = get_base_run_filename(self.history_browser.currentText())
         try:
-            _routine = load_run(run_filename)
-            routine, _ = load_routine(_routine.id)  # get the initial routine
-            # TODO: figure out how to recover the original routine
-            if routine is None:  # routine not found, could be deleted
-                routine = _routine  # make do w/ the routine saved in run
-            else:
-                routine.data = _routine.data
-                routine.vocs = _routine.vocs
-                routine.initial_points = _routine.initial_points
-                del _routine  # release the resource
-                gc.collect()
+            routine = load_run(run_filename)
+            self.run_monitor.routine_filename = run_filename
         except IndexError:
             return
         except Exception as e:  # failed to load the run
@@ -507,10 +291,8 @@ class BadgerHomePage(QWidget):
 
     def toggle_lock(self, lock, lock_tab=1):
         if lock:
-            self.panel_routine.setDisabled(True)
             self.history_browser.setDisabled(True)
         else:
-            self.panel_routine.setDisabled(False)
             self.history_browser.setDisabled(False)
 
             self.uncover_page()
@@ -525,10 +307,7 @@ class BadgerHomePage(QWidget):
         reset_table(self.run_table, header)
 
     def run_name(self, name):
-        if self.prev_routine_item:
-            runs = get_runs_by_routine(self.current_routine.id)
-        else:
-            runs = get_runs()
+        runs = get_runs()
         self.history_browser.updateItems(runs)
         self.history_browser._selectItemByRun(name)
 
@@ -557,110 +336,11 @@ class BadgerHomePage(QWidget):
             return
 
         delete_run(run_name)
-        # Reset current routine if no routine is selected
-        if not self.prev_routine_item:
-            self.current_routine = None
-            runs = get_runs()
-        else:
-            runs = get_runs_by_routine(self.current_routine.id)
+        runs = get_runs()
         self.history_browser.tree_widget.blockSignals(True)
         self.history_browser.updateItems(runs)
         self.history_browser.tree_widget.blockSignals(False)
         self.go_run(-1)
-
-    def routine_saved(self):
-        self.refresh_routine_list()
-        self.select_routine(self.routine_list.item(0), force=True)
-        self.done_create_routine()
-
-    def done_create_routine(self):
-        if self.mode == "new routine":
-            self.mode = "regular"
-            self.routine_editor.switch_mode(self.mode)
-            self.routine_editor.set_routine(self.current_routine)
-            self.splitter_run.restoreState(self.splitter_state)
-            self.splitter_state = None
-            self.toggle_lock(False)
-
-    def delete_routine(self, id):
-        remove_routine(id)
-        self.routine_deleted(id)
-
-    def routine_deleted(self, id=None):
-        if self.prev_routine_item:
-            if self.prev_routine_item.routine_id == id:
-                self.prev_routine_item = None
-                self.current_routine = None
-                self.load_all_runs()
-                if not self.history_browser.count():
-                    self.go_run(-1)  # sometimes we need to trigger this manually
-                self.sig_routine_activated.emit(False)
-
-        self.refresh_routine_list()
-
-    def routine_description_updated(self, name, descr):
-        for i in range(self.routine_list.count()):
-            item = self.routine_list.item(i)
-            if item is not None:
-                routine_item = self.routine_list.itemWidget(item)
-                if routine_item.name == name:
-                    routine_item.update_description(descr)
-                    break
-
-    def export_routines(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        filename, _ = QFileDialog.getSaveFileName(
-            self, "Export Badger routines", "", "Database Files (*.db)", options=options
-        )
-
-        if not filename:
-            return
-
-        _, ext = os.path.splitext(filename)
-        if not ext:
-            filename = filename + ".db"
-
-        try:
-            routine_ids, _, _, _, _ = self.get_current_routines()
-            export_routines(filename, routine_ids)
-
-            QMessageBox.information(
-                self,
-                "Success!",
-                f"Export success: filtered routines exported to {filename}",
-            )
-        except Exception as e:
-            QMessageBox.critical(self, "Export failed!", f"Export failed: {str(e)}")
-
-    def import_routines(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        filename, _ = QFileDialog.getOpenFileName(
-            self, "Import Badger routines", "", "Database Files (*.db)", options=options
-        )
-
-        if not filename:
-            return
-
-        _, ext = os.path.splitext(filename)
-        if not ext:
-            filename = filename + ".db"
-
-        try:
-            import_routines(filename)
-
-            QMessageBox.information(
-                self,
-                "Success!",
-                f"Import success: imported all routines from {filename}",
-            )
-        except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Heads-up!",
-                f"Failed to import the following routines since they already existed: \n{str(e)}",
-            )
 
     def cover_page(self):
         return  # disable overlay for now

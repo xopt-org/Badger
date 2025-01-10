@@ -5,7 +5,7 @@ import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import DataFrame
 import multiprocessing as mp
 
-from badger.db import load_routine
+from badger.archive import load_run
 from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
@@ -90,7 +90,9 @@ def run_routine_subprocess(
 
     # set required arguments
     try:
-        routine, _ = load_routine(args["routine_id"])
+        routine = load_run(args["routine_filename"])
+        # TODO: might need to consider the case where routine.data is None?
+        routine.data = routine.data.iloc[0:0]  # reset the data
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
@@ -149,6 +151,7 @@ def run_routine_subprocess(
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
         if evaluate:
+            time.sleep(0.1)  # give it some break tp catch up
             evaluate_queue[0].send((routine.data, routine.generator))
 
     # perform optimization

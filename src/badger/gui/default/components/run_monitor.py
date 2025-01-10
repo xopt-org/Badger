@@ -68,6 +68,7 @@ class BadgerOptMonitor(QWidget):
         self.x_plot_relative = True
         # Routine info
         self.routine = None
+        self.routine_filename = None
         self.process_manager = process_manager
 
         # Curves in the monitor
@@ -401,7 +402,8 @@ class BadgerOptMonitor(QWidget):
         self.reset_routine_runner()
 
         self.routine_runner = routine_runner = BadgerRoutineSubprocess(
-            self.process_manager, self.routine, save=True, testing=self.testing
+            self.process_manager, self.routine, self.routine_filename,
+            save=True, testing=self.testing,
         )
 
         routine_runner.signals.env_ready.connect(self.env_ready)
@@ -423,6 +425,7 @@ class BadgerOptMonitor(QWidget):
     def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
+        self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
