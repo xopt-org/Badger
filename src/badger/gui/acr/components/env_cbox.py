@@ -27,6 +27,7 @@ from badger.gui.default.utils import (
 from badger.utils import strtobool
 
 LABEL_WIDTH = 96
+ENV_PARAMS_BTN = 1  # use button or collapsible box for env parameters
 
 stylesheet_auto = """
     #VarPanel {
@@ -81,6 +82,8 @@ class BadgerEnvBox(QWidget):
         self.btn_params = btn_params = QPushButton("Parameters")
         btn_params.setCheckable(True)
         btn_params.setFixedSize(96, 24)
+        if not ENV_PARAMS_BTN:
+            btn_params.hide()
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         hbox_name.addWidget(btn_env_play)
@@ -88,26 +91,39 @@ class BadgerEnvBox(QWidget):
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
-        # params = QWidget()
-        # hbox_params = QHBoxLayout(params)
-        # hbox_params.setContentsMargins(0, 0, 0, 0)
-        # lbl_params_col = QWidget()
-        # vbox_lbl_params = QVBoxLayout(lbl_params_col)
-        # vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
-        # lbl_params = QLabel("Params")
-        # lbl_params.setFixedWidth(LABEL_WIDTH)
-        # vbox_lbl_params.addWidget(lbl_params)
-        # vbox_lbl_params.addStretch(1)
-        # hbox_params.addWidget(lbl_params_col)
-
-        # edit_params_col = QWidget()
-        # vbox_params_edit = QVBoxLayout(edit_params_col)
-        # vbox_params_edit.setContentsMargins(0, 0, 0, 0)
         self.edit = edit = QPlainTextEdit()
         # edit.setMaximumHeight(80)
         edit.setMinimumHeight(480)
-        edit.hide()
-        vbox.addWidget(edit)
+        if ENV_PARAMS_BTN:
+            vbox.addWidget(edit)
+            edit.hide()
+        else:
+            params = QWidget()
+            vbox.addWidget(params)
+            hbox_params = QHBoxLayout(params)
+            hbox_params.setContentsMargins(0, 0, 0, 0)
+            lbl_params_col = QWidget()
+            vbox_lbl_params = QVBoxLayout(lbl_params_col)
+            vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
+            lbl_params = QLabel("")
+            lbl_params.setFixedWidth(LABEL_WIDTH)
+            vbox_lbl_params.addWidget(lbl_params)
+            vbox_lbl_params.addStretch(1)
+            hbox_params.addWidget(lbl_params_col)
+
+            edit_params_col = QWidget()
+            hbox_params.addWidget(edit_params_col)
+            vbox_params_edit = QVBoxLayout(edit_params_col)
+            vbox_params_edit.setContentsMargins(0, 0, 0, 0)
+
+            cbox_params = CollapsibleBox(self, " Parameters")
+            vbox_params_edit.addWidget(cbox_params, 1)
+            vbox_params = QVBoxLayout()
+
+            vbox_params.addWidget(edit, 1)
+            cbox_params.setContentLayout(vbox_params)
+
+        # vbox.addWidget(edit)
         # vbox_params_edit.addWidget(edit)
         # hbox_params.addWidget(edit_params_col)
         # vbox.addWidget(params)
