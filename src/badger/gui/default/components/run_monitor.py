@@ -479,8 +479,8 @@ class BadgerOptMonitor(QWidget):
 
         # Quick-n-dirty fix to the auto range issue
         self.eval_count += 1
-        # if self.eval_count < 5:
-        #     self.enable_auto_range()
+        if self.eval_count < 5:
+            self.enable_auto_range()
 
         self.sig_progress.emit(self.routine.data.tail(1))
 
