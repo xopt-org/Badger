@@ -1,5 +1,7 @@
-from typing import Optional
+from functools import wraps
+from typing import Callable, Optional, ParamSpec
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QSizePolicy
 
 from badger.routine import Routine
 from .ui_components import UIComponents
@@ -10,6 +12,20 @@ from PyQt5.QtCore import Qt
 import logging
 
 logger = logging.getLogger(__name__)
+
+Param = ParamSpec("Param")
+
+
+def signal_logger(text: str):
+    def decorator(fn: Callable[Param, None]) -> Callable[Param, None]:
+        @wraps(fn)
+        def wrapper(*args: Param.args, **kwargs: Param.kwargs):
+            logger.debug(f"{text}")
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 class BOPlotWidget(QWidget):
@@ -29,9 +45,9 @@ class BOPlotWidget(QWidget):
         controls_layout = QVBoxLayout()
 
         # Initialize variable checkboxes (if needed)
-        self.ui_components.initialize_variable_checkboxes(
-            self.on_axis_selection_changed
-        )
+        # self.ui_components.initialize_variable_checkboxes(
+        #     self.on_axis_selection_changed
+        # )
 
         controls_layout.addLayout(self.ui_components.create_axis_layout())
         controls_layout.addWidget(self.ui_components.create_reference_inputs())
@@ -43,10 +59,12 @@ class BOPlotWidget(QWidget):
 
         self.setLayout(main_layout)
 
-        self.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
+        ExpandingPolicy = QSizePolicy.Policy.Expanding
+
+        self.setSizePolicy(ExpandingPolicy, ExpandingPolicy)
         self.resize(1250, 720)
 
-    def initialize_widget(self, xopt_obj: Routine):
+    def initialize_widget(self, xopt_obj: Routine) -> None:
         logger.debug("Initializing plot with xopt_obj")
         self.model_logic.update_xopt(xopt_obj)
         logger.debug("Update vocs in UI components")
@@ -64,10 +82,6 @@ class BOPlotWidget(QWidget):
         logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
 
-        # # Now it's safe to call update_plot
-        # logger.debug("Calling update_plot")
-        # self.update_plot()
-
     def setup_connections(self):
         # Disconnect existing connections
         try:
@@ -75,7 +89,9 @@ class BOPlotWidget(QWidget):
         except TypeError:
             pass  # No connection to disconnect
 
-        self.ui_components.update_button.clicked.connect(lambda: self.update_plot())
+        self.ui_components.update_button.clicked.connect(
+            lambda: signal_logger("Update button clicked")(lambda: self.update_plot())()
+        )
 
         # Similarly for other signals
         try:
@@ -83,7 +99,9 @@ class BOPlotWidget(QWidget):
         except TypeError:
             pass
         self.ui_components.x_axis_combo.currentIndexChanged.connect(
-            self.on_axis_selection_changed
+            lambda: signal_logger("Updated 'x_axis_combo'")(
+                lambda: self.on_axis_selection_changed()
+            )()
         )
 
         try:
@@ -91,7 +109,9 @@ class BOPlotWidget(QWidget):
         except TypeError:
             pass
         self.ui_components.y_axis_combo.currentIndexChanged.connect(
-            self.on_axis_selection_changed
+            lambda: signal_logger("Updated 'y_axis_combo'")(
+                lambda: self.on_axis_selection_changed()
+            )()
         )
 
         try:
@@ -99,17 +119,10 @@ class BOPlotWidget(QWidget):
         except TypeError:
             pass
         self.ui_components.y_axis_checkbox.stateChanged.connect(
-            self.on_axis_selection_changed
+            lambda: signal_logger("Updated 'y_axis_checkbox'")(
+                lambda: self.on_axis_selection_changed()
+            )()
         )
-
-        # If you have variable checkboxes
-        for checkbox in self.ui_components.variable_checkboxes.values():
-            logger.debug(f"Setting up connection for checkbox: {checkbox.text()}")
-            try:
-                checkbox.stateChanged.disconnect()
-            except TypeError:
-                pass
-            checkbox.stateChanged.connect(self.on_axis_selection_changed)
 
         # Plot options
         plot_options_checkboxes = [
@@ -125,21 +138,33 @@ class BOPlotWidget(QWidget):
                 checkbox.stateChanged.disconnect()
             except TypeError:
                 pass
-            checkbox.stateChanged.connect(self.update_plot)
+            checkbox.stateChanged.connect(
+                lambda: signal_logger("Updated checkbox")(lambda: self.update_plot())()
+            )
 
         # No. of Grid Points
         try:
             self.ui_components.n_grid.valueChanged.disconnect()
         except TypeError:
             pass
-        self.ui_components.n_grid.valueChanged.connect(self.update_plot)
+        self.ui_components.n_grid.valueChanged.connect(
+            lambda: signal_logger("Updated 'n_grid' spinbox")(
+                lambda: self.update_plot()
+            )()
+        )
 
-        # # Reference inputs
-        # try:
-        #     self.ui_components.reference_table.itemChanged.disconnect()
-        # except TypeError:
-        #     pass
-        # self.ui_components.reference_table.itemChanged.connect(self.update_plot)
+        # Reference inputs
+
+        if self.ui_components.reference_table is not None:
+            try:
+                self.ui_components.reference_table.cellChanged.disconnect()
+            except TypeError:
+                pass
+            self.ui_components.reference_table.cellChanged.connect(
+                lambda: signal_logger("Updated 'reference_table'")(
+                    lambda: self.update_plot()
+                )()
+            )
 
     def on_axis_selection_changed(self):
         if not self.model_logic.vocs or not self.ui_components.ref_inputs:
@@ -172,13 +197,16 @@ class BOPlotWidget(QWidget):
         if previous_selected_variables != self.selected_variables:
             print("Selected variables for plotting:", self.selected_variables)
             # Update the reference point table based on the selected variables
-            self.update_reference_point_table(self.selected_variables)
+            if self.ui_components.reference_table is not None:
+                self.ui_components.reference_table.blockSignals(True)
+                self.update_reference_point_table(self.selected_variables)
+                self.ui_components.reference_table.blockSignals(False)
             # Only update plot if the selection has changed
             self.update_plot()
 
     def update_plot(
         self, interval: Optional[float] = None, requires_rebuild: bool = False
-    ):
+    ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
         if not self.model_logic.xopt_obj or not self.model_logic.vocs:
             print("Cannot update plot: xopt_obj or vocs is not available.")
@@ -205,8 +233,14 @@ class BOPlotWidget(QWidget):
         # Proceed with updating the plot
         selected_variables = self.selected_variables.copy()
 
-        # Disable and gray out the reference points for selected variables
-        self.update_reference_point_table(selected_variables)
+        # Disable signals for the reference table to prevent updating the plot multiple times
+        if self.ui_components.reference_table is not None:
+            self.ui_components.reference_table.blockSignals(True)
+
+            # Disable and gray out the reference points for selected variables
+            self.update_reference_point_table(selected_variables)
+
+            self.ui_components.reference_table.blockSignals(False)
 
         # Get reference points for non-selected variables
         reference_point = self.model_logic.get_reference_points(
@@ -216,7 +250,7 @@ class BOPlotWidget(QWidget):
         logger.debug("Updating plot with selected variables and reference points")
 
         # Update the plot with the selected variables and reference points
-        return self.plotting_area.update_plot(
+        self.plotting_area.update_plot(
             self.model_logic.xopt_obj,
             selected_variables,
             reference_point,

@@ -4,9 +4,9 @@ from typing import Optional
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog, QVBoxLayout
+from PyQt5.QtGui import QCloseEvent
 from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
-from badger.core import Routine
-
+from badger.routine import Routine
 
 import logging
 
@@ -23,7 +23,7 @@ class AnalysisExtension(QDialog):
     def update_window(self, routine: Routine):
         pass
 
-    def closeEvent(self, a0) -> None:
+    def closeEvent(self, a0: Optional[QCloseEvent]) -> None:
         self.window_closed.emit(self)
         super().closeEvent(a0)
 
@@ -66,7 +66,7 @@ class ParetoFrontViewer(AnalysisExtension):
 class BOVisualizer(AnalysisExtension):
     df_length = float("inf")
     initialized = False
-    requires_model_rebuild = True
+    # requires_model_rebuild = True
 
     def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BOVisualizer")
@@ -90,7 +90,7 @@ class BOVisualizer(AnalysisExtension):
 
         if previous_len > new_length:
             logger.debug("Reset - Data length is the same or smaller")
-            self.requires_model_rebuild = True
+            # self.requires_model_rebuild = True
             return True
 
         return False
@@ -120,13 +120,10 @@ class BOVisualizer(AnalysisExtension):
         if self.requires_reinitialization(routine):
             self.bo_plot_widget.initialize_widget(routine)
 
-        logger.debug(
-            f"Does the model need to be rebuilt? - {self.requires_model_rebuild}"
-        )
+        # logger.debug(
+        #     f"Does the model need to be rebuilt? - {self.requires_model_rebuild}"
+        # )
 
         # Update the plot with every call to update_window
-        # This is necessary when continuing an optimization run
-        self.bo_plot_widget.update_plot(100, self.requires_model_rebuild)
-
-        if self.requires_model_rebuild:
-            self.requires_model_rebuild = False
+        # This is necessary when continuing an optimiza tion run
+        self.bo_plot_widget.update_plot(100)

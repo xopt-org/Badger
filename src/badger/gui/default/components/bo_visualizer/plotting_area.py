@@ -41,7 +41,7 @@ class PlottingArea(QWidget):
         show_prior_mean: bool,
         show_feasibility: bool,
         n_grid: int,
-        requires_rebuild: bool,
+        requires_rebuild: bool = False,
         interval: Optional[float] = 1000.0,  # Interval in milliseconds
     ):
         logger.debug("Updating plot in PlottingArea")
@@ -95,12 +95,10 @@ class PlottingArea(QWidget):
         # Set generator data
         generator.data = xopt_data
 
-        if requires_rebuild:
-            generator.model = None
-
         # Check if the model exists
         # if not hasattr(generator, "model") or generator.model is None:
         # # Attempt to train the model
+
         print("Model not found. Training the model...")
         try:
             generator.train_model()

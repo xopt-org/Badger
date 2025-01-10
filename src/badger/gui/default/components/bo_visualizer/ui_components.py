@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
 )
 from PyQt5.QtCore import Qt
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 
 from xopt import VOCS
 
@@ -55,14 +55,15 @@ class UIComponents:
         if not self.vocs:
             return
 
-        self.variable_checkboxes = {}
+        self.variable_checkboxes: dict[str, QCheckBox] = {}
         self.variable_checkboxes_layout = QVBoxLayout()
 
         for var in self.vocs.variable_names:
             checkbox = QCheckBox(var)
             checkbox.setChecked(True)  # Select all variables by default
-            if state_changed_callback:
-                checkbox.stateChanged.connect(state_changed_callback)
+            # if state_changed_callback:
+            #     checkbox.stateChanged.connect(state_changed_callback)
+
             self.variable_checkboxes[var] = checkbox
             self.variable_checkboxes_layout.addWidget(checkbox)
 
@@ -107,7 +108,7 @@ class UIComponents:
         self.reference_table.setHorizontalHeaderLabels(["Variable", "Ref. Point"])
         horizontal_header = self.reference_table.horizontalHeader()
         if horizontal_header is not None:
-            horizontal_header.setSectionResizeMode(QHeaderView.Stretch)
+            horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         self.ref_inputs = []
 
@@ -128,6 +129,8 @@ class UIComponents:
         if self.vocs is None:
             raise Exception("Vocs is None")
 
+        self.reference_table.blockSignals(True)
+
         self.reference_table.setRowCount(len(self.vocs.variable_names))
         self.ref_inputs = []
 
@@ -141,12 +144,15 @@ class UIComponents:
             self.reference_table.setItem(i, 0, variable_item)
 
             # Set default reference point to the midpoint of variable bounds
-            default_value = (
-                self.vocs.variables[var_name][0] + self.vocs.variables[var_name][1]
-            ) / 2
+            default_value = cast(
+                float,
+                (self.vocs.variables[var_name][0] + self.vocs.variables[var_name][1])
+                / 2,
+            )
             reference_point_item = QTableWidgetItem(str(default_value))
             self.ref_inputs.append(reference_point_item)
             self.reference_table.setItem(i, 1, reference_point_item)
+        self.reference_table.blockSignals(False)
 
     def create_options_section(self):
         group_box = QGroupBox("Plot Options")
@@ -203,11 +209,18 @@ class UIComponents:
             logger.debug(
                 f"Populating axis combos with variable names: {self.vocs.variable_names}"
             )
+
+            # self.x_axis_combo.blockSignals(True)
+            # self.y_axis_combo.blockSignals(True)
+
             self.x_axis_combo.clear()
             self.y_axis_combo.clear()
 
             self.x_axis_combo.addItems(self.vocs.variable_names)
             self.y_axis_combo.addItems(self.vocs.variable_names)
+
+            # self.x_axis_combo.blockSignals(True)
+            # self.y_axis_combo.blockSignals(True)
 
             # Re-initialize variable checkboxes if needed
 
