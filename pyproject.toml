@@ -27,7 +27,7 @@ dependencies = [
     "coolname",
     "pyqt5",
     "pyqtgraph",
-    "qdarkstyle",
+    "qdarkstyle>=3.0",
     "pillow",
     "requests",
     "xopt>=2.2.2"
