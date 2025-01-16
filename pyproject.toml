@@ -69,7 +69,7 @@ extend-select = ["TID252"] # Defaults + check imports
 ignore = ["E722"] # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
-#addopts = "--cov=src/badger/"
+addopts = "--cov=src/badger/"
 log_cli_level = "info"
 log_level = "debug"
 testpaths = ["src/badger/tests"]
