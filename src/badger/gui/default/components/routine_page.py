@@ -10,7 +10,7 @@ import yaml
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton
+from PyQt5.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton, QComboBox, QFileDialog
 from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
@@ -51,6 +51,7 @@ from badger.utils import (
     strtobool,
     get_badger_version,
     get_xopt_version,
+    get_datadir,
 )
 
 CONS_RELATION_DICT = {
@@ -156,6 +157,41 @@ class BadgerRoutinePage(QWidget):
         hbox_descr.addWidget(edit_descr_col)
         vbox_meta.addWidget(descr)
 
+        # Templates
+
+        # There's probable a better way to do this -- need to make sure /templates dir exists
+        self.TEMPLATE_ROOT = str(get_datadir()) + "/Badger/plugins/templates/"
+
+        # Load Template ComboBox
+        template = QWidget()
+        hbox_name = QHBoxLayout(template)
+        hbox_name.setContentsMargins(0, 0, 0, 0)
+        label = QLabel("Template")
+        label.setFixedWidth(64)
+        self.template_dropdown = template_dropdown = QComboBox()
+        try:
+            files = os.listdir(self.TEMPLATE_ROOT) 
+        except FileNotFoundError:
+            files = []
+        files = [f for f in files if f.endswith(".yaml")]   
+        template_dropdown.addItems(files)
+        hbox_name.addWidget(label)
+        hbox_name.addWidget(template_dropdown, 1)
+        vbox_meta.addWidget(template, alignment=Qt.AlignBottom)
+        template.show()
+
+        # --or--
+
+        # Load Template Button
+        template_button = QWidget()
+        template_button.setFixedWidth(128)
+        hbox_name = QHBoxLayout(template_button)
+        hbox_name.setContentsMargins(0, 0, 0, 0)
+        self.load_template_button = load_template_button = QPushButton("Load Template")
+        hbox_name.addWidget(load_template_button, 0)
+        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
+        template_button.hide()
+
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
@@ -188,6 +224,8 @@ class BadgerRoutinePage(QWidget):
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
+        self.template_dropdown.activated.connect(self.load_template_yaml)
+        self.load_template_button.clicked.connect(self.load_template_yaml)
         self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
         self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
@@ -210,6 +248,130 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
+
+    def load_template_yaml(self):
+        """
+        Load data from template .yaml into template_dict dictionary.
+        This function expects to be called via an action from either
+        a QPushButton, or QComboBox with filenames as menu options
+        """
+        
+        # load template from button
+        if isinstance(self.sender(), QPushButton):
+            options = QFileDialog.Options()
+            template_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select YAML File",
+                self.TEMPLATE_ROOT,
+                "YAML Files (*.yaml);;All Files (*)",
+                options=options,
+            )
+        
+            if not template_path:
+                # file not found? Should this go somewhere else?
+                return
+            
+        # load template from combobox
+        if isinstance(self.sender(), QComboBox):
+            template_filename = self.template_dropdown.currentText()
+            if isinstance(template_filename, str) and not template_filename.endswith(".yaml"):
+                template_filename += ".yaml"
+            template_path = os.path.join(
+                self.TEMPLATE_ROOT, template_filename
+            )
+
+        # Load template file
+        try:
+            with open(template_path, "r") as stream:
+                template_dict = yaml.safe_load(stream)
+                self.set_options_from_template(template_dict=template_dict)
+        except (FileNotFoundError, yaml.YAMLError):
+            template_dict = {}
+            # throw error indicating unable to load template
+            return
+        
+        
+    def set_options_from_template(self, template_dict: dict):
+        """
+        Fills in routine_page GUI with relevant info from template_dict
+        dictionary
+        """
+
+        # Compose the template
+        # should add some sort of check in case template_dict does not have specified key
+        name = template_dict["name"]
+        description = template_dict["description"]
+        relative_to_current = template_dict["relative_to_current"]
+        generator_name = template_dict["generator"]["name"]
+        env_name = template_dict["environment"]["name"]
+
+        # set vocs
+        vocs = VOCS(
+            variables=template_dict["vocs"]["variables"],
+            objectives=template_dict["vocs"]["objectives"],
+            constraints=template_dict["vocs"]["constraints"],
+            constants={},
+            observables=template_dict["vocs"]["observables"],
+        )
+
+        # set description
+        self.edit_descr.setPlainText(description)
+
+        # set generator
+        if generator_name in self.generators:
+            i = self.generators.index(generator_name)
+            self.generator_box.cb.setCurrentIndex(i)
+
+        # set environment
+        if env_name in self.envs:
+            i = self.envs.index(env_name)
+            self.env_box.cb.setCurrentIndex(i)
+
+        # set init points based on relative to current
+        if template_dict["relative_to_current"]:
+            # make sure gui checkbox state matches yaml option
+            if not self.env_box.relative_to_curr.isChecked():
+                self.env_box.relative_to_curr.setChecked(True)
+
+            self.ratio_var_ranges = template_dict["vrange_limit_options"]
+            self.init_table_actions = template_dict["initial_point_actions"] # should be type: add_curr
+
+            # set bounds (should this be somewhere else?)
+            bounds = self.calc_auto_bounds()
+            self.env_box.var_table.set_bounds(bounds)
+
+            # set initial points to sample
+            self._fill_init_table()
+        else:
+            if self.env_box.relative_to_curr.isChecked():
+                self.env_box.relative_to_curr.setChecked(False)
+            self.vrange_limit_options = None
+            self.initial_point_actions = None
+
+        # set selected variables
+        self.env_box.var_table.set_selected(vocs.variables)
+        self.env_box.var_table.set_bounds(vocs.variables)
+        self.env_box.check_only_var.setChecked(True)
+
+        # set objectives
+        self.env_box.obj_table.set_selected(vocs.objectives)
+        self.env_box.obj_table.set_rules(vocs.objectives)
+        self.env_box.check_only_obj.setChecked(True)
+
+        # set constraints
+        constraints = vocs.constraints
+        if len(constraints):
+            for name, val in constraints.items():
+                relation, thres = val
+                critical = name in template_dict["critical_constraint_names"]
+                relation = ["GREATER_THAN", "LESS_THAN", "EQUAL_TO"].index(relation)
+                self.add_constraint(name, relation, thres, critical)
+
+        # set observables
+        observables = vocs.observable_names 
+        if len(observables):
+            for name_sta in observables:
+                self.add_state(name_sta)
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
@@ -269,12 +431,12 @@ class BadgerRoutinePage(QWidget):
             name_generator, routine.generator.model_dump()
         )
         self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
-        self.script = routine.script
+        self.script = routine.script #!
 
         name_env = routine.environment.name
         idx_env = self.envs.index(name_env)
         self.env_box.cb.setCurrentIndex(idx_env)
-        env_params = routine.environment.model_dump()
+        env_params = routine.environment.model_dump() #??
         del env_params["interface"]
         self.env_box.edit.setPlainText(get_yaml_string(env_params))
 
@@ -304,7 +466,7 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
-        self.env_box.var_table.addtl_vars = routine.additional_variables
+        self.env_box.var_table.addtl_vars = routine.additional_variables # ??
 
         flag_relative = routine.relative_to_current
         if flag_relative:  # load the relative to current settings
@@ -346,7 +508,7 @@ class BadgerRoutinePage(QWidget):
 
         # Config the metadata
         self.edit_save.setPlaceholderText(generate_slug(2))
-        self.edit_save.setText(routine.name)
+        self.edit_save.setText(routine.name) # !
         self.edit_descr.setPlainText(routine.description)
 
         self.generator_box.check_use_script.setChecked(not not self.script)
