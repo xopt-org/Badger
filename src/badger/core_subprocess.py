@@ -154,13 +154,13 @@ def run_routine_subprocess(
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
         if evaluate:
-            evaluate_queue[0].send(result)
+            evaluate_queue[0].send((result, routine.generator))
 
     # dumps file
     if dump_file_path:
         combined_results = None
         ts_start = curr_ts_to_str()
-        dump_file = os.path.join(dump_file_path, f"xopt_states_{ts_start}.yaml") 
+        dump_file = os.path.join(dump_file_path, f"xopt_states_{ts_start}.yaml")
         if not dump_file:
             dump_file = f"xopt_states_{ts_start}.yaml"
 
@@ -212,7 +212,7 @@ def run_routine_subprocess(
             # TODO if paused tell user it is paused
 
             if evaluate:
-                evaluate_queue[0].send(routine.data)
+                evaluate_queue[0].send((routine.data, routine.generator))
 
             # Dump Xopt state after each step
             if dump_file_path:

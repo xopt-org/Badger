@@ -221,7 +221,8 @@ class BadgerRoutineSubprocess:
         if self.evaluate_queue[1].poll():
             while self.evaluate_queue[1].poll():
                 results = self.evaluate_queue[1].recv()
-                self.after_evaluate(results)
+                self.after_evaluate(results[0])
+                self.routine.generator = results[1]
 
         if not self.data_and_error_queue.empty():
             error_title, error_traceback = self.data_and_error_queue.get()
