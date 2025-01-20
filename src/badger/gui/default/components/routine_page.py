@@ -161,6 +161,8 @@ class BadgerRoutinePage(QWidget):
 
         # There's probable a better way to do this -- need to make sure /templates dir exists
         self.TEMPLATE_ROOT = str(get_datadir()) + "/Badger/plugins/templates/"
+        #if not os.path.exists(self.TEMPLATE_ROOT):
+        #    os.makedirs(self.TEMPLATE_ROOT)
 
         # Load Template ComboBox
         template = QWidget()
@@ -304,6 +306,9 @@ class BadgerRoutinePage(QWidget):
         relative_to_current = template_dict["relative_to_current"]
         generator_name = template_dict["generator"]["name"]
         env_name = template_dict["environment"]["name"]
+        vrange_limit_options = template_dict["vrange_limit_options"]
+        initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
+        critical_constraint_names = template_dict["critical_constraint_names"]
 
         # set vocs
         vocs = VOCS(
@@ -328,13 +333,13 @@ class BadgerRoutinePage(QWidget):
             self.env_box.cb.setCurrentIndex(i)
 
         # set init points based on relative to current
-        if template_dict["relative_to_current"]:
+        if relative_to_current:
             # make sure gui checkbox state matches yaml option
             if not self.env_box.relative_to_curr.isChecked():
                 self.env_box.relative_to_curr.setChecked(True)
 
-            self.ratio_var_ranges = template_dict["vrange_limit_options"]
-            self.init_table_actions = template_dict["initial_point_actions"] # should be type: add_curr
+            self.ratio_var_ranges = vrange_limit_options
+            self.init_table_actions = initial_point_actions
 
             # set bounds (should this be somewhere else?)
             bounds = self.calc_auto_bounds()
@@ -363,7 +368,7 @@ class BadgerRoutinePage(QWidget):
         if len(constraints):
             for name, val in constraints.items():
                 relation, thres = val
-                critical = name in template_dict["critical_constraint_names"]
+                critical = name in critical_constraint_names
                 relation = ["GREATER_THAN", "LESS_THAN", "EQUAL_TO"].index(relation)
                 self.add_constraint(name, relation, thres, critical)
 
@@ -436,7 +441,7 @@ class BadgerRoutinePage(QWidget):
         name_env = routine.environment.name
         idx_env = self.envs.index(name_env)
         self.env_box.cb.setCurrentIndex(idx_env)
-        env_params = routine.environment.model_dump() #??
+        env_params = routine.environment.model_dump()
         del env_params["interface"]
         self.env_box.edit.setPlainText(get_yaml_string(env_params))
 
@@ -508,7 +513,7 @@ class BadgerRoutinePage(QWidget):
 
         # Config the metadata
         self.edit_save.setPlaceholderText(generate_slug(2))
-        self.edit_save.setText(routine.name) # !
+        self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
 
         self.generator_box.check_use_script.setChecked(not not self.script)
