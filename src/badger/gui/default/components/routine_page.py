@@ -158,8 +158,6 @@ class BadgerRoutinePage(QWidget):
 
         # There's probable a better way to do this -- need to make sure /templates dir exists
         self.TEMPLATE_ROOT = str(get_datadir()) + "/Badger/plugins/templates/"
-        #if not os.path.exists(self.TEMPLATE_ROOT):
-        #    os.makedirs(self.TEMPLATE_ROOT)
 
         # Load Template ComboBox
         template = QWidget()
@@ -177,7 +175,7 @@ class BadgerRoutinePage(QWidget):
         hbox_name.addWidget(label)
         hbox_name.addWidget(template_dropdown, 1)
         vbox_meta.addWidget(template, alignment=Qt.AlignBottom)
-        template.show()
+        template.hide()
 
         # --or--
 
@@ -189,7 +187,7 @@ class BadgerRoutinePage(QWidget):
         self.load_template_button = load_template_button = QPushButton("Load Template")
         hbox_name.addWidget(load_template_button, 0)
         vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
-        template_button.hide()
+        template_button.show()
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
@@ -248,15 +246,15 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
 
-    def load_template_yaml(self):
+    def load_template_yaml(self) -> None:
         """
         Load data from template .yaml into template_dict dictionary.
         This function expects to be called via an action from either
         a QPushButton, or QComboBox with filenames as menu options
         """
         
-        # load template from button
         if isinstance(self.sender(), QPushButton):
+            # load template from button
             options = QFileDialog.Options()
             template_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -265,30 +263,26 @@ class BadgerRoutinePage(QWidget):
                 "YAML Files (*.yaml);;All Files (*)",
                 options=options,
             )
-        
-            if not template_path:
-                # file not found? Should this go somewhere else?
-                return
-            
-        # load template from combobox
-        if isinstance(self.sender(), QComboBox):
+        elif isinstance(self.sender(), QComboBox):
+            # load template from combobox
             template_filename = self.template_dropdown.currentText()
             if isinstance(template_filename, str) and not template_filename.endswith(".yaml"):
                 template_filename += ".yaml"
             template_path = os.path.join(
                 self.TEMPLATE_ROOT, template_filename
             )
+        
+        if not template_path:
+            return
 
         # Load template file
         try:
             with open(template_path, "r") as stream:
                 template_dict = yaml.safe_load(stream)
                 self.set_options_from_template(template_dict=template_dict)
-        except (FileNotFoundError, yaml.YAMLError):
-            template_dict = {}
-            # throw error indicating unable to load template
+        except (FileNotFoundError, yaml.YAMLError) as e:
+            print(f"Error loading template: {e}")
             return
-        
         
     def set_options_from_template(self, template_dict: dict):
         """
@@ -368,12 +362,16 @@ class BadgerRoutinePage(QWidget):
                 critical = name in critical_constraint_names
                 relation = ["GREATER_THAN", "LESS_THAN", "EQUAL_TO"].index(relation)
                 self.add_constraint(name, relation, thres, critical)
+        else:
+            self.env_box.list_con.clear()
 
         # set observables
         observables = vocs.observable_names 
         if len(observables):
             for name_sta in observables:
                 self.add_state(name_sta)
+        else:
+            self.env_box.list_obs.clear()
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
