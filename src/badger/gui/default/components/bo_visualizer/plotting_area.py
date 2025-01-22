@@ -3,13 +3,12 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox, QLayout
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLayout
 from xopt.generators.bayesian.visualize import (
     visualize_generator_model,
 )
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
-from badger.routine import Routine
 import time
 
 
@@ -33,7 +32,7 @@ class PlottingArea(QWidget):
 
     def update_plot(
         self,
-        xopt_obj: Optional[Routine],
+        generator: BayesianGenerator,
         variable_names: list[str],
         reference_point: dict[str, float],
         show_acquisition: bool,
@@ -47,7 +46,6 @@ class PlottingArea(QWidget):
         logger.debug("Updating plot in PlottingArea")
 
         debug_object = {
-            "xopt_obj": xopt_obj.__class__.__name__,
             "variable_names": variable_names,
             "reference_point": reference_point,
             "show_acquisition": show_acquisition,
@@ -74,50 +72,11 @@ class PlottingArea(QWidget):
                 logger.debug("Skipping update")
                 return
 
-        if not xopt_obj:
-            print("Xopt object is not available. Cannot update plot.")
-            return
-
-        xopt_data = xopt_obj.data
-
-        if xopt_data is None:
-            logger.error("Xopt Data from Routine is None")
-            return
-        if len(xopt_data) == 0:
-            logger.error("Xopt Data from Routine is empty")
-            return
-
-        generator = cast(BayesianGenerator, xopt_obj.generator)
-
-        # Ensure use_cuda is a boolean
-        generator.use_cuda = False  # or True, depending on your setup
-
-        # Set generator data
-        generator.data = xopt_data
-
-        # Check if the model exists
-        # if not hasattr(generator, "model") or generator.model is None:
-        # # Attempt to train the model
-
-        print("Model not found. Training the model...")
-        try:
-            generator.train_model()
-        except Exception as e:
-            print(f"Failed to train model: {e}")
-            logger.error(f"Failed to train model: {e}")
-            QMessageBox.warning(
-                self, "Model Training Error", f"Failed to train model: {e}"
-            )
+        if generator.model is None:
+            logger.debug("Model not found")
             return
 
         logger.debug(f"Arguments: {debug_object}")
-
-        # with open("xopt.yaml", "r") as f:
-        #     state_dict = f.read()
-
-        #     state_dict = xopt_obj.meta.state_dict
-
-        # model.load_state_dict(state_dict)
 
         # Generate the new plot using visualize_generator_model
         fig, _ = cast(
@@ -157,6 +116,7 @@ class PlottingArea(QWidget):
 
         # Ensure the layout is updated
         self.updateGeometry()
+        self.adjustSize()
 
         # Update the last updated time
         self.last_updated = time.time()

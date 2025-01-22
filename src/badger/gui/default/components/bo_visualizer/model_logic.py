@@ -7,20 +7,24 @@ from PyQt5.QtWidgets import (
 
 from badger.routine import Routine
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ModelLogic:
-    def __init__(self, xopt_obj: Optional[Routine], vocs: Optional[VOCS]):
-        self.xopt_obj = xopt_obj
+    def __init__(self, routine: Optional[Routine], vocs: Optional[VOCS]):
+        self.routine = routine
         self.vocs = vocs
 
-    def update_xopt(self, xopt_obj: Optional[Routine]):
-        if xopt_obj is not None:
-            self.xopt_obj = xopt_obj
-            self.vocs = xopt_obj.vocs
+    def update_routine(self, routine: Optional[Routine]):
+        if routine is not None:
+            self.routine = routine
+            self.vocs = routine.vocs
         else:
-            self.xopt_obj = None
+            self.routine = None
             self.vocs = None
-            print("Warning: xopt_obj is None in update_xopt")
+            logger.warning("Routine is None")
 
     def get_reference_points(
         self, ref_inputs: list[QTableWidgetItem], variable_names: list[str]

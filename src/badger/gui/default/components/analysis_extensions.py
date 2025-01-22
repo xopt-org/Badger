@@ -1,14 +1,16 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, cast
 
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox
 from PyQt5.QtGui import QCloseEvent
 from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
 from badger.routine import Routine
 
 import logging
+
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -66,15 +68,27 @@ class ParetoFrontViewer(AnalysisExtension):
 class BOVisualizer(AnalysisExtension):
     df_length = float("inf")
     initialized = False
-    # requires_model_rebuild = True
 
     def __init__(self, parent: Optional[AnalysisExtension] = None):
-        logger.debug("Initializing BOVisualizer")
+        logger.debug("Initializing BO Visualizer Extension")
+
         super().__init__(parent=parent)
         self.setWindowTitle("BO Visualizer")
-        self.bo_plot_widget: Optional[BOPlotWidget] = None
+
+        # Initialize BOPlotWidget without a routine
+        self.bo_plot_widget = BOPlotWidget()
+
+        logger.debug("Initialized BOPlotWidget")
+
+        bo_layout = QVBoxLayout()
+        bo_layout.addWidget(self.bo_plot_widget)
+        self.setLayout(bo_layout)
+
+        logger.debug("Set layout for BOVisualizer")
 
     def requires_reinitialization(self, routine: Routine):
+        # Check if the extension needs to be reinitialized
+
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
@@ -90,40 +104,53 @@ class BOVisualizer(AnalysisExtension):
 
         if previous_len > new_length:
             logger.debug("Reset - Data length is the same or smaller")
-            # self.requires_model_rebuild = True
+            self.df_length = float("inf")
             return True
 
         return False
 
     def update_window(self, routine: Routine):
-        # Update the BOPlotWidget with the new routine
-        logger.debug("Updating BOVisualizer window with new routine")
+        # Updating the BO Visualizer window
+        logger.debug("Updating BO Visualizer window")
 
-        # Initialize the BOPlotWidget if it is not already initialized
-        if self.bo_plot_widget is None:
-            # Initialize BOPlotWidget without an xopt_obj
-            self.bo_plot_widget = BOPlotWidget()
+        # Update the routine with new generator model if applicable
+        self.update_routine(routine)
 
-            logger.debug("Initialized BOPlotWidget")
+        if self.requires_reinitialization(self.routine):
+            self.bo_plot_widget.initialize_widget(self.routine)
 
-            bo_layout = QVBoxLayout()
-            bo_layout.addWidget(self.bo_plot_widget)
-            self.setLayout(bo_layout)
-            logger.debug("Set layout for BOVisualizer")
-
-            if routine.data is not None:
-                self.df_length = len(routine.data)
-
-        # If there is no data available, then initialize the plot
-        # This needs to happen when starting a new optimization run
-
-        if self.requires_reinitialization(routine):
-            self.bo_plot_widget.initialize_widget(routine)
-
-        # logger.debug(
-        #     f"Does the model need to be rebuilt? - {self.requires_model_rebuild}"
-        # )
-
-        # Update the plot with every call to update_window
-        # This is necessary when continuing an optimiza tion run
+        # Update the plots with the new generator model
         self.bo_plot_widget.update_plot(100)
+
+    def update_routine(self, routine: Routine):
+        logger.debug("Updating routine in BO Visualizer")
+
+        generator = cast(BayesianGenerator, routine.generator)
+
+        if generator.data is None:
+            logger.warning("No data available in generator")
+
+            if routine.data is None:
+                logger.warning("No data available in routine or generator")
+            else:
+                # Handle the edge case where the extension has been opened after an optimization has already finished.
+                logger.debug("Setting generator data from routine")
+
+                # Use the data from the routine to train the model
+                generator.data = routine.data
+
+                try:
+                    generator.train_model()
+                except Exception as e:
+                    logger.error(f"Failed to train model: {e}")
+                    QMessageBox.warning(
+                        self,
+                        "Failed to train model",
+                        f"Failed to train model: {e}",
+                    )
+
+        else:
+            self.df_length = len(generator.data)
+
+        routine.generator = generator
+        self.routine = routine

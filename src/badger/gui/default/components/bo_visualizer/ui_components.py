@@ -48,25 +48,6 @@ class UIComponents:
         # Initialize layouts
         self.variable_checkboxes_layout = None
 
-    def initialize_variable_checkboxes(
-        self, state_changed_callback: Optional[Callable[[], None]] = None
-    ):
-        logger.debug("Initializing variable checkboxes")
-        if not self.vocs:
-            return
-
-        self.variable_checkboxes: dict[str, QCheckBox] = {}
-        self.variable_checkboxes_layout = QVBoxLayout()
-
-        for var in self.vocs.variable_names:
-            checkbox = QCheckBox(var)
-            checkbox.setChecked(True)  # Select all variables by default
-            # if state_changed_callback:
-            #     checkbox.stateChanged.connect(state_changed_callback)
-
-            self.variable_checkboxes[var] = checkbox
-            self.variable_checkboxes_layout.addWidget(checkbox)
-
     def create_variable_checkboxes(self):
         group_box = QGroupBox("Select Variables")
         layout = self.variable_checkboxes_layout or QVBoxLayout()
@@ -210,19 +191,10 @@ class UIComponents:
                 f"Populating axis combos with variable names: {self.vocs.variable_names}"
             )
 
-            # self.x_axis_combo.blockSignals(True)
-            # self.y_axis_combo.blockSignals(True)
-
             self.x_axis_combo.clear()
             self.y_axis_combo.clear()
 
             self.x_axis_combo.addItems(self.vocs.variable_names)
             self.y_axis_combo.addItems(self.vocs.variable_names)
 
-            # self.x_axis_combo.blockSignals(True)
-            # self.y_axis_combo.blockSignals(True)
-
-            # Re-initialize variable checkboxes if needed
-
-            self.initialize_variable_checkboxes(state_changed_callback)
             self.populate_reference_table()

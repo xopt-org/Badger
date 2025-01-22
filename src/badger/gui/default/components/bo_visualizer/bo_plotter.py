@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Callable, Optional, ParamSpec
+from typing import Callable, Optional, ParamSpec, cast
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
 from PyQt5.QtWidgets import QSizePolicy
 
@@ -8,6 +8,7 @@ from .ui_components import UIComponents
 from .plotting_area import PlottingArea
 from .model_logic import ModelLogic
 from PyQt5.QtCore import Qt
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 import logging
 
@@ -30,24 +31,19 @@ def signal_logger(text: str):
 
 class BOPlotWidget(QWidget):
     def __init__(
-        self, parent: Optional[QWidget] = None, xopt_obj: Optional[Routine] = None
+        self, parent: Optional[QWidget] = None, routine: Optional[Routine] = None
     ):
         logger.debug("Initializing BOPlotWidget")
         super().__init__(parent)
         self.selected_variables: list[str] = []  # Initialize selected_variables
 
         # Initialize model logic and UI components with None or default values
-        self.model_logic = ModelLogic(xopt_obj, xopt_obj.vocs if xopt_obj else None)
-        self.ui_components = UIComponents(xopt_obj.vocs if xopt_obj else None)
+        self.model_logic = ModelLogic(routine, routine.vocs if routine else None)
+        self.ui_components = UIComponents(routine.vocs if routine else None)
         self.plotting_area = PlottingArea()
 
         main_layout = QHBoxLayout(self)
         controls_layout = QVBoxLayout()
-
-        # Initialize variable checkboxes (if needed)
-        # self.ui_components.initialize_variable_checkboxes(
-        #     self.on_axis_selection_changed
-        # )
 
         controls_layout.addLayout(self.ui_components.create_axis_layout())
         controls_layout.addWidget(self.ui_components.create_reference_inputs())
@@ -62,13 +58,13 @@ class BOPlotWidget(QWidget):
         ExpandingPolicy = QSizePolicy.Policy.Expanding
 
         self.setSizePolicy(ExpandingPolicy, ExpandingPolicy)
-        self.resize(1250, 720)
+        self.setMinimumSize(1250, 720)
 
-    def initialize_widget(self, xopt_obj: Routine) -> None:
-        logger.debug("Initializing plot with xopt_obj")
-        self.model_logic.update_xopt(xopt_obj)
+    def initialize_widget(self, routine: Routine) -> None:
+        logger.debug("Initializing plot with routine")
+        self.model_logic.update_routine(routine)
         logger.debug("Update vocs in UI components")
-        self.ui_components.update_vocs(xopt_obj.vocs, self.on_axis_selection_changed)
+        self.ui_components.update_vocs(routine.vocs, self.on_axis_selection_changed)
 
         # Set default selections for X-axis and Y-axis dropdowns
         self.ui_components.x_axis_combo.setCurrentIndex(0)  # Default to first variable
@@ -208,8 +204,8 @@ class BOPlotWidget(QWidget):
         self, interval: Optional[float] = None, requires_rebuild: bool = False
     ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
-        if not self.model_logic.xopt_obj or not self.model_logic.vocs:
-            print("Cannot update plot: xopt_obj or vocs is not available.")
+        if not self.model_logic.routine or not self.model_logic.vocs:
+            print("Cannot update plot: routine or vocs are not available.")
             return
 
         # Ensure selected_variables is not empty
@@ -246,12 +242,13 @@ class BOPlotWidget(QWidget):
         reference_point = self.model_logic.get_reference_points(
             self.ui_components.ref_inputs, selected_variables
         )
+        generator = cast(BayesianGenerator, self.model_logic.routine.generator)
 
         logger.debug("Updating plot with selected variables and reference points")
 
         # Update the plot with the selected variables and reference points
         self.plotting_area.update_plot(
-            self.model_logic.xopt_obj,
+            generator,
             selected_variables,
             reference_point,
             self.ui_components.acq_func_checkbox.isChecked(),
