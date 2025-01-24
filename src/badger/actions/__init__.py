@@ -42,6 +42,7 @@ def show_info(args):
     info = {
         "name": "Badger the optimizer",
         "version": metadata.version("badger-opt"),
+        "xopt version": metadata.version("xopt"),
         "plugin root": BADGER_PLUGIN_ROOT,
         # "database root": BADGER_DB_ROOT,
         "logbook root": BADGER_LOGBOOK_ROOT,
