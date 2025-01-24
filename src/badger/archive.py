@@ -33,7 +33,9 @@ def archive_run(routine, states=None):
     second_level = f"{tokens[0]}-{tokens[1]}"
     third_level = f"{tokens[0]}-{tokens[1]}-{tokens[2]}"
     path = os.path.join(BADGER_ARCHIVE_ROOT, first_level, second_level, third_level)
-    fname = f"BadgerOpt-{suffix}.yaml"
+    env_name = routine.environment.name
+    # algo_name = routine.generator.name
+    fname = f"{env_name}-{suffix}.yaml"
 
     run = {
         "filename": fname,
