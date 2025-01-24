@@ -92,7 +92,8 @@ def run_routine_subprocess(
     try:
         routine = load_run(args["routine_filename"])
         # TODO: might need to consider the case where routine.data is None?
-        routine.data = routine.data.iloc[0:0]  # reset the data
+        if routine.data is not None:
+            routine.data = routine.data.iloc[0:0]  # reset the data
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()

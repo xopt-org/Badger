@@ -18,6 +18,7 @@ from badger.archive import (
     get_base_run_filename,
     load_run,
     get_runs,
+    save_tmp_run,
 )
 from badger.gui.default.components.data_table import (
     add_row,
@@ -187,7 +188,7 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_set_run_action.connect(self.run_action_bar.set_run_action)
         self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
 
-        self.run_action_bar.sig_start.connect(self.run_monitor.start)
+        self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -296,6 +297,19 @@ class BadgerHomePage(QWidget):
             self.history_browser.setDisabled(False)
 
             self.uncover_page()
+
+    def start_run(self):
+        routine = self.routine_editor.routine_page._compose_routine()
+        self.current_routine = routine
+
+        # Save routine as a temp file
+        # since routine runner subprocess needs to load routine from file
+        run_filename = save_tmp_run(routine)
+        self.run_monitor.routine_filename = run_filename
+
+        # Tell monitor to start the run
+        self.run_monitor.init_plots(routine)
+        self.run_monitor.start()
 
     def new_run(self):
         self.cover_page()
