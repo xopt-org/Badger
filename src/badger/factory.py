@@ -10,7 +10,7 @@ import sys
 import os
 import importlib
 import yaml
-from xopt.generators import generators, get_generator
+from xopt.generators import generators, get_generator_defaults
 
 import logging
 
@@ -227,7 +227,7 @@ def list_generators():
     return sorted(generator_names)
 
 
-get_generator = get_generator
+get_generator = get_generator_defaults
 
 
 def list_intf():
