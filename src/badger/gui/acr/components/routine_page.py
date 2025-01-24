@@ -156,6 +156,7 @@ class BadgerRoutinePage(QWidget):
         vbox_descr_edit.addWidget(descr_bar)
         hbox_descr.addWidget(edit_descr_col)
         vbox_meta.addWidget(descr)
+        descr_bar.hide()
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
