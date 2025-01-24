@@ -92,7 +92,7 @@ class BadgerActionBar(QWidget):
     sig_reset_env = pyqtSignal()
     sig_jump_to_optimal = pyqtSignal()
     sig_dial_in = pyqtSignal()
-    sig_ctrl = pyqtSignal()
+    sig_ctrl = pyqtSignal(bool)
     sig_run_action = pyqtSignal()
     sig_run_until_action = pyqtSignal()
     sig_open_extensions_palette = pyqtSignal()
@@ -134,6 +134,12 @@ class BadgerActionBar(QWidget):
         self.btn_set = create_button("set.png", "Dial in solution")
         self.btn_ctrl = create_button("pause.png", "Pause")
         self.btn_ctrl._status = "pause"
+
+        self.btn_del.setDisabled(True)
+        self.btn_log.setDisabled(True)
+        self.btn_reset.setDisabled(True)
+        self.btn_opt.setDisabled(True)
+        self.btn_set.setDisabled(True)
         self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
@@ -161,7 +167,7 @@ class BadgerActionBar(QWidget):
         self.btn_stop.setMenu(menu)
         self.btn_stop.setDefaultAction(run_action)
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
-        self.btn_stop.setDisabled(True)
+        self.btn_stop.setDisabled(False)
         # btn_stop.setToolTip('')
 
         # Config button
@@ -215,6 +221,9 @@ class BadgerActionBar(QWidget):
         self.btn_stop.setDisabled(False)
         self.btn_opt.setDisabled(False)
         self.btn_set.setDisabled(False)
+
+    def routine_invalid(self):
+        self.btn_stop.setDisabled(False)
 
     def routine_finished(self):
         self.btn_ctrl.setIcon(self.icon_pause)
@@ -286,7 +295,16 @@ class BadgerActionBar(QWidget):
         self.sig_dial_in.emit()
 
     def ctrl_routine(self):
-        self.sig_ctrl.emit()
+        if self.btn_ctrl._status == "pause":
+            self.sig_ctrl.emit(True)
+            self.btn_ctrl.setIcon(self.icon_play)
+            self.btn_ctrl.setToolTip("Resume")
+            self.btn_ctrl._status = "play"
+        else:
+            self.sig_ctrl.emit(False)
+            self.btn_ctrl.setIcon(self.icon_pause)
+            self.btn_ctrl.setToolTip("Pause")
+            self.btn_ctrl._status = "pause"
 
     def open_extensions_palette(self):
         self.sig_open_extensions_palette.emit()

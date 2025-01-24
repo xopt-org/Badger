@@ -558,9 +558,9 @@ class BadgerOptMonitor(QWidget):
 
         # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
-        self.btn_ctrl.setIcon(self.icon_play)
-        self.btn_ctrl.setToolTip("Resume")
-        self.btn_ctrl._status = "play"
+        # self.btn_ctrl.setIcon(self.icon_play)
+        # self.btn_ctrl.setToolTip("Resume")
+        # self.btn_ctrl._status = "play"
 
         # Show the list of critical violated constraints
         feas_crit = feas[self.routine.critical_constraint_names]
@@ -670,17 +670,8 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(
         #     self, 'Success!', f'')
 
-    def ctrl_routine(self):
-        if self.btn_ctrl._status == "pause":
-            self.sig_pause.emit(True)
-            self.btn_ctrl.setIcon(self.icon_play)
-            self.btn_ctrl.setToolTip("Resume")
-            self.btn_ctrl._status = "play"
-        else:
-            self.sig_pause.emit(False)
-            self.btn_ctrl.setIcon(self.icon_pause)
-            self.btn_ctrl.setToolTip("Pause")
-            self.btn_ctrl._status = "pause"
+    def ctrl_routine(self, status):
+        self.sig_pause.emit(status)
 
     def ins_obj_dragged(self, ins_obj):
         self.inspector_variable.setValue(ins_obj.value())

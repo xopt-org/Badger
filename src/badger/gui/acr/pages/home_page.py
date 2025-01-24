@@ -56,6 +56,7 @@ QPushButton
 
 class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
+    sig_routine_invalid = pyqtSignal()
 
     def __init__(self, process_manager=None):
         super().__init__()
@@ -69,6 +70,7 @@ class BadgerHomePage(QWidget):
         self.config_logic()
 
         self.load_all_runs()
+        self.init_home_page()
 
     def init_ui(self):
         self.config_singleton = init_settings()
@@ -200,6 +202,8 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_run_until_action.connect(self.run_monitor.set_run_until_action)
         self.run_action_bar.sig_open_extensions_palette.connect(self.run_monitor.open_extensions_palette)
 
+        self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
+
         # Assign shortcuts
         self.shortcut_go_search = QShortcut(QKeySequence("Ctrl+L"), self)
         self.shortcut_go_search.activated.connect(self.go_search)
@@ -210,6 +214,10 @@ class BadgerHomePage(QWidget):
     def load_all_runs(self):
         runs = get_runs()
         self.history_browser.updateItems(runs)
+
+    def init_home_page(self):
+        # Load the default generator
+        self.routine_editor.routine_page.generator_box.cb.setCurrentIndex(0)
 
     def go_run(self, i: int = None):
         gc.collect()
@@ -299,7 +307,12 @@ class BadgerHomePage(QWidget):
             self.uncover_page()
 
     def start_run(self):
-        routine = self.routine_editor.routine_page._compose_routine()
+        try:
+            routine = self.routine_editor.routine_page._compose_routine()
+        except Exception as e:
+            self.sig_routine_invalid.emit()
+            raise e
+
         self.current_routine = routine
 
         # Save routine as a temp file
