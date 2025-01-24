@@ -35,7 +35,7 @@ def show_info(args):
 
     config_singleton = init_settings()
     BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
-    BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
+    # BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
     BADGER_LOGBOOK_ROOT = config_singleton.read_value("BADGER_LOGBOOK_ROOT")
     BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
 
@@ -43,7 +43,7 @@ def show_info(args):
         "name": "Badger the optimizer",
         "version": metadata.version("badger-opt"),
         "plugin root": BADGER_PLUGIN_ROOT,
-        "database root": BADGER_DB_ROOT,
+        # "database root": BADGER_DB_ROOT,
         "logbook root": BADGER_LOGBOOK_ROOT,
         "archive root": BADGER_ARCHIVE_ROOT,
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
