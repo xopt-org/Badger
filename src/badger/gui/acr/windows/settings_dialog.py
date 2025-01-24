@@ -1,7 +1,7 @@
-from PyQt5.QtCore import QRegExp
-from PyQt5.QtGui import QRegExpValidator
+# from PyQt5.QtCore import QRegExp
+# from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import (
-    QComboBox,
+    # QComboBox,
     QGridLayout,
     QVBoxLayout,
     QWidget,
@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QApplication,
-    QStyledItemDelegate,
+    # QStyledItemDelegate,
     QCheckBox,
 )
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
@@ -45,7 +45,7 @@ class BadgerSettingsDialog(QDialog):
 
         vbox = QVBoxLayout(self)
 
-        validator = QRegExpValidator(QRegExp(r"^[0-9]\d*(\.\d+)?$"))
+        # validator = QRegExpValidator(QRegExp(r"^[0-9]\d*(\.\d+)?$"))
 
         widget_settings = QWidget(self)
         grid = QGridLayout(widget_settings)
@@ -84,6 +84,15 @@ class BadgerSettingsDialog(QDialog):
         )
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
+
+        # Auto refresh
+        self.auto_refresh = auto_refresh = QLabel("Auto Refresh")
+        self.enable_auto_refresh = enable_auto_refresh = QCheckBox()
+        enable_auto_refresh.setChecked(
+            strtobool(self.config_singleton.read_value("AUTO_REFRESH"))
+        )
+        grid.addWidget(auto_refresh, 5, 0)
+        grid.addWidget(enable_auto_refresh, 5, 1)
 
         # Check Variable Interval
         # self.var_int = var_int = QLabel('Check Variable Interval')
@@ -162,6 +171,9 @@ class BadgerSettingsDialog(QDialog):
         )
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
+        )
+        self.config_singleton.write_value(
+            "AUTO_REFRESH", self.enable_auto_refresh.isChecked()
         )
         # write_value('BADGER_CHECK_VAR_INTERVAL', self.var_int_val.text())
         # write_value('BADGER_CHECK_VAR_TIMEOUT', self.var_time_val.text())
