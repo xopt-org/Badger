@@ -68,6 +68,7 @@ class ParetoFrontViewer(AnalysisExtension):
 class BOVisualizer(AnalysisExtension):
     df_length = float("inf")
     initialized = False
+    correct_generator = False
 
     def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BO Visualizer Extension")
@@ -116,6 +117,10 @@ class BOVisualizer(AnalysisExtension):
         # Update the routine with new generator model if applicable
         self.update_routine(routine)
 
+        if not self.correct_generator:
+            logger.debug("Incorrect generator type")
+            return
+
         if self.requires_reinitialization(self.routine):
             self.bo_plot_widget.initialize_widget(self.routine)
 
@@ -125,7 +130,21 @@ class BOVisualizer(AnalysisExtension):
     def update_routine(self, routine: Routine):
         logger.debug("Updating routine in BO Visualizer")
 
-        generator = cast(BayesianGenerator, routine.generator)
+        self.routine = routine
+
+        if not issubclass(self.routine.generator.__class__, BayesianGenerator):
+            self.correct_generator = False
+            QMessageBox.critical(
+                self,
+                "Invalid Generator",
+                f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports BayesianGenerator",
+            )
+            return
+
+        self.correct_generator = True
+
+        # TODO: Check if the generator is a BayesianGenerator and handle the extension accordingly
+        generator = cast(BayesianGenerator, self.routine.generator)
 
         if generator.data is None:
             logger.warning("No data available in generator")
@@ -137,7 +156,7 @@ class BOVisualizer(AnalysisExtension):
                 logger.debug("Setting generator data from routine")
 
                 # Use the data from the routine to train the model
-                generator.data = routine.data
+                generator.data = self.routine.data
 
                 try:
                     generator.train_model()
@@ -152,5 +171,4 @@ class BOVisualizer(AnalysisExtension):
         else:
             self.df_length = len(generator.data)
 
-        routine.generator = generator
-        self.routine = routine
+        self.routine.generator = generator
