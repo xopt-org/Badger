@@ -1,4 +1,5 @@
 import os
+import time
 import warnings
 import logging
 
@@ -50,6 +51,25 @@ def archive_run(routine, states=None):
     run["path"] = path
 
     return run
+
+
+def clear_tmp_runs():
+    path = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp")
+    if os.path.exists(path):
+        for f in os.listdir(path):
+            os.remove(os.path.join(path, f))
+
+
+def save_tmp_run(routine):
+    # routine: Routine
+    path = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp")
+    suffix = time.strftime("%Y-%m-%d-%H%M%S")
+    fname = f".tmp-BadgerOpt-{suffix}.yaml"
+
+    os.makedirs(path, exist_ok=True)
+    routine.dump(os.path.join(path, fname))
+
+    return fname
 
 
 def list_run():
@@ -113,14 +133,17 @@ def get_runs():
 
 
 def load_run(run_fname):
-    tokens = run_fname.split("-")
-    first_level = tokens[1]
-    second_level = f"{tokens[1]}-{tokens[2]}"
-    third_level = f"{tokens[1]}-{tokens[2]}-{tokens[3]}"
+    if run_fname.startswith('.tmp'):  # temp run file
+        filename = os.path.join(BADGER_ARCHIVE_ROOT, '.tmp', run_fname)
+    else:
+        tokens = run_fname.split("-")
+        first_level = tokens[1]
+        second_level = f"{tokens[1]}-{tokens[2]}"
+        third_level = f"{tokens[1]}-{tokens[2]}-{tokens[3]}"
 
-    filename = os.path.join(
-        BADGER_ARCHIVE_ROOT, first_level, second_level, third_level, run_fname
-    )
+        filename = os.path.join(
+            BADGER_ARCHIVE_ROOT, first_level, second_level, third_level, run_fname
+        )
 
     # TODO: create utility function to catch warnings to remove code
     # duplication
