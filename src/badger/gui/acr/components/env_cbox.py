@@ -36,6 +36,13 @@ stylesheet_auto = """
     }
 """
 
+stylesheet_manual = """
+    #VarPanel {
+        border: 4px solid #60798B;
+        border-radius: 4px;
+    }
+"""
+
 stylesheet_auto_msg = """
     QLabel {
         background-color: #FDD835;
@@ -44,6 +51,37 @@ stylesheet_auto_msg = """
         border-radius: 0;
     }
 """
+
+stylesheet_manual_msg = """
+    QLabel {
+        background-color: #60798B;
+        color: #FFFFFF;
+        padding: 4px 4px 8px 4px;
+        border-radius: 0;
+    }
+"""
+
+MSG_AUTO_RELATIVE = (
+    "The values you see in the variable ranges spin "
+    "boxes and initial points table are preview that "
+    "generated either based on current machine state, "
+    "or the machine state at the time of this historical"
+    " run. The real values would be regenerated based on"
+    " the machine state before running the optimization "
+    "again."
+)
+
+MSG_AUTO = (
+    "Auto mode is on.  To manually set the "
+    "variable ranges and/or initial points,  please "
+    'uncheck the "Automatic" check box.'
+)
+
+MSG_MANUAL = (
+    "Auto mode is off.  To automatically set the "
+    "variable ranges and/or initial points,  please "
+    'check the "Automatic" check box.'
+)
 
 
 class BadgerEnvBox(QWidget):
@@ -146,29 +184,21 @@ class BadgerEnvBox(QWidget):
         self.vbox_var = vbox_var = QVBoxLayout(var_panel)
         vbox_var.setContentsMargins(4, 4, 4, 4)
         vbox_var.setSpacing(0)
-        msg_auto = QLabel(
-            "The values you see in the variable ranges spin "
-            "boxes and initial points table are preview that "
-            "generated either based on current machine state, "
-            "or the machine state at the time of this historical"
-            " run. The real values would be regenerated based on"
-            " the machine state before running the optimization "
-            "again."
-        )
-        if not config_singleton.read_value("AUTO_REFRESH"):
-            msg_auto = QLabel(
-                "Auto mode is on.  To explicitly set the "
-                "variable ranges and/or initial points,  please "
-                'uncheck the "Automatic" check box.'
-            )
+        if config_singleton.read_value("AUTO_REFRESH"):
+            self.MSG_AUTO = MSG_AUTO_RELATIVE
+            self.MSG_MANUAL = MSG_MANUAL
+        else:
+            self.MSG_AUTO = MSG_AUTO
+            self.MSG_MANUAL = MSG_MANUAL
+        msg_auto = QLabel(self.MSG_AUTO)
         msg_auto.setWordWrap(True)
         msg_auto.setStyleSheet(stylesheet_auto_msg)
-        msg_auto.hide()
         self.msg_auto = msg_auto
         vbox_var.addWidget(msg_auto)
         var_panel_origin = QWidget()
         vbox_var.addWidget(var_panel_origin)
         self.hbox_var = hbox_var = QHBoxLayout(var_panel_origin)
+        hbox_var.setContentsMargins(8, 8, 8, 8)
         lbl_var_col = QWidget()
         vbox_lbl_var = QVBoxLayout(lbl_var_col)
         vbox_lbl_var.setContentsMargins(0, 0, 0, 0)
@@ -446,14 +476,12 @@ class BadgerEnvBox(QWidget):
     def switch_var_panel_style(self, auto=True):
         if auto:
             self.var_panel.setStyleSheet(stylesheet_auto)
-            self.vbox_var.setContentsMargins(4, 4, 4, 4)
-            self.hbox_var.setContentsMargins(8, 8, 8, 8)
-            self.msg_auto.show()
+            self.msg_auto.setStyleSheet(stylesheet_auto_msg)
+            self.msg_auto.setText(self.MSG_AUTO)
         else:
-            self.var_panel.setStyleSheet(None)
-            self.vbox_var.setContentsMargins(0, 0, 0, 0)
-            self.hbox_var.setContentsMargins(0, 0, 0, 0)
-            self.msg_auto.hide()
+            self.var_panel.setStyleSheet(stylesheet_manual)
+            self.msg_auto.setStyleSheet(stylesheet_manual_msg)
+            self.msg_auto.setText(self.MSG_MANUAL)
 
     def update_stylesheets(self, environment=""):
         if environment in self.env_dict:
