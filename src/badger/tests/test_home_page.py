@@ -10,15 +10,12 @@ def init_multiprocessing():
 
 
 def test_home_page_run_routine(qtbot, init_multiprocessing):
-    from badger.db import save_routine
-    from badger.gui.default.windows.main_window import BadgerMainWindow
+    from badger.archive import save_tmp_run
+    from badger.gui.acr.windows.main_window import BadgerMainWindow
     from badger.tests.utils import (
         create_multiobjective_routine,
         create_routine,
-        fix_db_path_issue,
     )
-
-    fix_db_path_issue()
 
     main_page = BadgerMainWindow()
 
@@ -35,9 +32,10 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
     ]
 
     for ele in routines:
-        save_routine(ele)
+        tmp_filename = save_tmp_run(ele)
         home_page.current_routine = ele
         home_page.run_monitor.testing = True
+        home_page.run_monitor.routine_filename = tmp_filename
         home_page.run_monitor.termination_condition = {
             "tc_idx": 0,
             "max_eval": 3,

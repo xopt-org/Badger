@@ -33,16 +33,14 @@ class TestRoutineRunner:
 
     @pytest.fixture
     def instance(self, process_manager, init_multiprocessing):
-        from badger.db import save_routine
+        from badger.archive import save_tmp_run
         from badger.gui.default.components.routine_runner import (
             BadgerRoutineSubprocess,
         )
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.tests.utils import create_routine
 
         routine = create_routine()
-        save_routine(routine)
+        _ = save_tmp_run(routine)
         instance = BadgerRoutineSubprocess(process_manager, routine)
         instance.pause_event = multiprocessing.Event()
         return instance
@@ -110,15 +108,10 @@ class TestRoutineRunner:
     # TODO: check for signal emit message
 
     def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing_alt):
-        return
-
-        from badger.gui.default.windows.main_window import BadgerMainWindow
+        from badger.gui.acr.windows.main_window import BadgerMainWindow
         from badger.gui.default.windows.message_dialog import (
             BadgerScrollableMessageBox,
         )
-        from badger.tests.utils import fix_db_path_issue
-
-        fix_db_path_issue()
 
         window = BadgerMainWindow()
         # qtbot.addWidget(window)
@@ -127,9 +120,7 @@ class TestRoutineRunner:
         QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
         loop.exec_()
 
-        # Create and save a routine
-        qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
-        assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
+        # TODO: Create and save a routine
 
         editor = window.home_page.routine_editor
 

@@ -31,14 +31,14 @@ class TestRunMonitor:
 
     @pytest.fixture
     def monitor(self, process_manager, init_multiprocessing):
-        from badger.db import save_routine
+        from badger.archive import save_tmp_run
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
+        from badger.tests.utils import create_routine
 
-        fix_db_path_issue()
         routine = create_routine()
-        save_routine(routine)
+        tmp_filename = save_tmp_run(routine)
         monitor = BadgerOptMonitor(process_manager)
+        monitor.routine_filename = tmp_filename
         monitor.testing = True
         monitor.routine = routine
 
@@ -52,9 +52,7 @@ class TestRunMonitor:
 
     def test_run_monitor(self, process_manager):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.tests.utils import create_routine
 
         monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
@@ -90,27 +88,24 @@ class TestRunMonitor:
         QTest.mouseClick(monitor.btn_stop, Qt.MouseButton.LeftButton)
 
     def test_routine_identity(self, qtbot, process_manager, init_multiprocessing):
-        from badger.db import save_routine
+        from badger.archive import save_tmp_run
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.tests.utils import create_routine
 
         monitor = BadgerOptMonitor(process_manager)
         # qtbot.addWidget(monitor)
 
         routine = create_routine()
-        save_routine(routine)
+        tmp_filename = save_tmp_run(routine)
 
         # Feed in the sample routine
         monitor.routine = routine
+        monitor.routine_filename = tmp_filename
         monitor.init_routine_runner()
 
         assert monitor.routine_runner.routine == monitor.routine
 
     def test_plotting(self, qtbot, monitor):
-        from badger.db import remove_routine
-
         self.add_data(monitor)
         monitor.update_curves()
 
@@ -125,7 +120,6 @@ class TestRunMonitor:
         monitor.x_plot_relative = 1
         monitor.x_plot_y_axis = 1
         monitor.update_curves()
-        remove_routine(monitor.routine)
 
     def test_click_graph(self, qtbot, monitor, mocker):
         self.add_data(monitor)
@@ -144,9 +138,7 @@ class TestRunMonitor:
 
     def create_test_run_monitor(self, process_manager, add_data=True):
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.tests.utils import create_routine
 
         monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
@@ -304,16 +296,13 @@ class TestRunMonitor:
         assert max_value == optimal_value
 
     def test_reset_environment(self, qtbot, init_multiprocessing):
-        from badger.db import save_routine
-        from badger.gui.default.windows.main_window import BadgerMainWindow
+        from badger.archive import save_tmp_run
+        from badger.gui.acr.windows.main_window import BadgerMainWindow
         from badger.tests.utils import (
             create_routine,
-            fix_db_path_issue,
             get_current_vars,
             get_vars_in_row,
         )
-
-        fix_db_path_issue()
 
         window = BadgerMainWindow()
 
@@ -323,10 +312,11 @@ class TestRunMonitor:
 
         # Run a routine
         routine = create_routine()
-        save_routine(routine)
+        tmp_filename = save_tmp_run(routine)
         home_page = window.home_page
         home_page.current_routine = routine
         monitor = home_page.run_monitor
+        monitor.routine_filename = tmp_filename
         monitor.testing = True
 
         # check if reset button click signal is trigged and if state is same as original state after click
@@ -474,18 +464,17 @@ class TestRunMonitor:
     """
 
     def test_critical_constraints(self, qtbot, process_manager, init_multiprocessing):
-        from badger.db import save_routine
+        from badger.archive import save_tmp_run
         from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine_critical, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.tests.utils import create_routine_critical
 
         monitor = BadgerOptMonitor(process_manager)
         monitor.testing = True
 
         routine = create_routine_critical()
-        save_routine(routine)
+        tmp_filename = save_tmp_run(routine)
         monitor.routine = routine
+        monitor.routine_filename = tmp_filename
         monitor.init_plots(routine)
 
         def handle_dialog():
@@ -521,11 +510,9 @@ class TestRunMonitor:
     # you might want to run this test last
     # TODO: work out why monitor.plot_con still exists after the last routine is deleated
     def test_del_last_run(self, qtbot, init_multiprocessing):
-        from badger.db import save_routine
-        from badger.gui.default.windows.main_window import BadgerMainWindow
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.archive import save_tmp_run
+        from badger.gui.acr.windows.main_window import BadgerMainWindow
+        from badger.tests.utils import create_routine
 
         window = BadgerMainWindow()
         # qtbot.addWidget(window)
@@ -536,10 +523,11 @@ class TestRunMonitor:
 
         # Run a routine
         routine = create_routine()
-        save_routine(routine)
+        tmp_filename = save_tmp_run(routine)
         home_page = window.home_page
         home_page.current_routine = routine
         monitor = home_page.run_monitor
+        monitor.routine_filename = tmp_filename
         monitor.testing = True
         monitor.termination_condition = {
             "tc_idx": 0,

@@ -12,10 +12,7 @@ def init_multiprocessing():
 
 
 def test_gui_main(qtbot, init_multiprocessing):
-    from badger.gui.default.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import fix_db_path_issue
-
-    fix_db_path_issue()
+    from badger.gui.acr.windows.main_window import BadgerMainWindow
 
     window = BadgerMainWindow()
 
@@ -32,19 +29,16 @@ def test_gui_main(qtbot, init_multiprocessing):
     QTimer.singleShot(3000, loop.quit)  # 1000 ms pause
     loop.exec_()
 
-    # Test new routine feature
-    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
-    assert window.stacks.currentWidget().tabs.currentIndex() == 1
+    # TODO: Test if generator tab has been filled
+    # assert window.stacks.currentWidget().tabs.currentIndex() == 1
 
     window.process_manager.close_proccesses()
 
 
 def test_close_main(qtbot, init_multiprocessing):
-    from badger.db import save_routine
-    from badger.gui.default.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import create_routine, fix_db_path_issue
-
-    fix_db_path_issue()
+    from badger.archive import save_tmp_run
+    from badger.gui.acr.windows.main_window import BadgerMainWindow
+    from badger.tests.utils import create_routine
 
     window = BadgerMainWindow()
 
@@ -57,8 +51,9 @@ def test_close_main(qtbot, init_multiprocessing):
     routine = create_routine()
     home_page = window.home_page
     home_page.current_routine = routine
-    save_routine(routine)
+    tmp_filename = save_tmp_run(routine)
     home_page.run_monitor.testing = True
+    home_page.run_monitor.routine_filename = tmp_filename
     home_page.run_monitor.termination_condition = {
         "tc_idx": 0,
         "max_eval": 3,
@@ -78,58 +73,13 @@ def test_close_main(qtbot, init_multiprocessing):
     window.process_manager.close_proccesses()
 
 
-def test_auto_select_updated_routine(qtbot, init_multiprocessing):
-    from badger.gui.default.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import fix_db_path_issue
-
-    fix_db_path_issue()
-
-    window = BadgerMainWindow()
-
-    loop = QEventLoop()
-    QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
-    loop.exec_()
-
-    qtbot.addWidget(window)
-
-    # Create and save a routine
-    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
-    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
-
-    editor = window.home_page.routine_editor
-    qtbot.keyClicks(editor.routine_page.generator_box.cb, "expected_improvement")
-    qtbot.keyClicks(editor.routine_page.env_box.cb, "test")
-    editor.routine_page.env_box.var_table.cellWidget(0, 0).setChecked(True)
-    editor.routine_page.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-    qtbot.mouseClick(editor.btn_save, Qt.MouseButton.LeftButton)
-    assert window.home_page.tabs.currentIndex() == 0  # jump back to monitor
-
-    # The routine just created should be activated
-    routine_item = window.home_page.routine_list.item(0)
-    routine_widget = window.home_page.routine_list.itemWidget(routine_item)
-    assert routine_widget.activated
-
-    # Update the routine
-    qtbot.keyClicks(editor.routine_page.generator_box.cb, "random")
-    qtbot.mouseClick(editor.btn_save, Qt.MouseButton.LeftButton)
-
-    # The updated routine should still be activated
-    routine_item = window.home_page.routine_list.item(0)
-    routine_widget = window.home_page.routine_list.itemWidget(routine_item)
-    assert routine_widget.activated
-
-    window.process_manager.close_proccesses()
-
-
 def test_traceback_during_run(qtbot, init_multiprocessing):
     with patch("badger.core.run_routine") as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
-        from badger.gui.default.windows.main_window import BadgerMainWindow
+        from badger.gui.acr.windows.main_window import BadgerMainWindow
         from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
-        from badger.tests.utils import create_routine, fix_db_path_issue
-
-        fix_db_path_issue()
+        from badger.tests.utils import create_routine
 
         window = BadgerMainWindow()
 
@@ -180,10 +130,7 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     import yaml
     from xopt.generators import all_generator_names
 
-    from badger.gui.default.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import fix_db_path_issue
-
-    fix_db_path_issue()
+    from badger.gui.acr.windows.main_window import BadgerMainWindow
 
     window = BadgerMainWindow()
 
@@ -194,8 +141,6 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     qtbot.addWidget(window)
 
     # Create and save a routine
-    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
-    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
     editor = window.home_page.routine_editor
     cb_generator = editor.routine_page.generator_box.cb
