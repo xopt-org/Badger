@@ -160,7 +160,9 @@ class BadgerRoutinePage(QWidget):
         # Templates
 
         # There's probable a better way to do this -- need to make sure /templates dir exists
-        self.TEMPLATE_ROOT = str(get_datadir()) + "/Badger/plugins/templates/"
+        # self.TEMPLATE_ROOT = str(get_datadir()) + "/Badger/src/badger/built_in_pluigins/templates"
+        self.TEMPLATE_ROOT = "./src/badger/built_in_plugins/templates/"
+        # print(str(get_datadir()))
 
         # Load Template ComboBox
         template = QWidget()
@@ -303,7 +305,8 @@ class BadgerRoutinePage(QWidget):
         vrange_limit_options = template_dict["vrange_limit_options"]
         initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
         critical_constraint_names = template_dict["critical_constraint_names"]
-
+        env_params = template_dict["environment"]["params"]
+        
         # set vocs
         vocs = VOCS(
             variables=template_dict["vocs"]["variables"],
@@ -321,10 +324,14 @@ class BadgerRoutinePage(QWidget):
             i = self.generators.index(generator_name)
             self.generator_box.cb.setCurrentIndex(i)
 
+            filtered_config = filter_generator_config(generator_name, template_dict["generator"])
+            self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+
         # set environment
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
+            self.env_box.edit.setPlainText(get_yaml_string(env_params))
 
         # set init points based on relative to current
         if relative_to_current:
@@ -334,22 +341,17 @@ class BadgerRoutinePage(QWidget):
 
             self.ratio_var_ranges = vrange_limit_options
             self.init_table_actions = initial_point_actions
-
+            
             # set bounds (should this be somewhere else?)
             bounds = self.calc_auto_bounds()
             self.env_box.var_table.set_bounds(bounds)
 
             # set initial points to sample
             self._fill_init_table()
-        else:
-            if self.env_box.relative_to_curr.isChecked():
-                self.env_box.relative_to_curr.setChecked(False)
-            self.vrange_limit_options = None
-            self.initial_point_actions = None
 
         # set selected variables
         self.env_box.var_table.set_selected(vocs.variables)
-        self.env_box.var_table.set_bounds(vocs.variables)
+        #self.env_box.var_table.set_bounds(vocs.variables)
         self.env_box.check_only_var.setChecked(True)
 
         # set objectives
@@ -933,7 +935,7 @@ class BadgerRoutinePage(QWidget):
 
         env = self.create_env()
         var_curr = env._get_variables(vname_selected)
-
+    
         for name in vname_selected:
             try:
                 limit_option = self.ratio_var_ranges[name]
