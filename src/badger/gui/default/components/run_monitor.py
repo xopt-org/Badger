@@ -55,7 +55,6 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_reset = pyqtSignal(bool)
     sig_toggle_run = pyqtSignal(bool)
     sig_toggle_other = pyqtSignal(bool)
-    sig_set_run_action = pyqtSignal()
     sig_env_ready = pyqtSignal()
 
     def __init__(self, process_manager=None):
@@ -898,29 +897,18 @@ class BadgerOptMonitor(QWidget):
         self.sig_stop.emit()
         self.sig_stop_run.emit()
 
-    def set_run_action(self):
-        self.sig_set_run_action.emit()
-
-    def set_run_until_action(self):
-        if self.btn_stop.defaultAction() is not self.run_until_action:
-            self.btn_stop.setDefaultAction(self.run_until_action)
-
-        if self.run_until_action.text() == "Run until":
-            dlg = BadgerTerminationConditionDialog(
-                self,
-                self.start,
-                self.save_termination_condition,
-                self.termination_condition,
-            )
-            self.tc_dialog = dlg
-            try:
-                dlg.exec()
-            finally:
-                self.tc_dialog = None
-        else:
-            self.btn_stop.setDisabled(True)
-            self.sig_stop.emit()
-            self.sig_stop_run.emit()
+    def start_until(self):
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            self.start,
+            self.save_termination_condition,
+            self.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)

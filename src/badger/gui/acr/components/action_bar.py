@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
-from PyQt5.QtGui import QIcon, QFont, QPalette
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtCore import pyqtSignal
 from importlib import resources
 from badger.gui.default.utils import create_button
 
@@ -85,6 +85,7 @@ QToolButton
 
 class BadgerActionBar(QWidget):
     sig_start = pyqtSignal()
+    sig_start_until = pyqtSignal()
     sig_stop = pyqtSignal()
 
     sig_delete_run = pyqtSignal()
@@ -93,8 +94,6 @@ class BadgerActionBar(QWidget):
     sig_jump_to_optimal = pyqtSignal()
     sig_dial_in = pyqtSignal()
     sig_ctrl = pyqtSignal(bool)
-    sig_run_action = pyqtSignal()
-    sig_run_until_action = pyqtSignal()
     sig_open_extensions_palette = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -201,7 +200,7 @@ class BadgerActionBar(QWidget):
         self.btn_set.clicked.connect(self.dial_in)
         self.btn_ctrl.clicked.connect(self.ctrl_routine)
         self.run_action.triggered.connect(self.set_run_action)
-        # self.run_until_action.triggered.connect(self.set_run_until_action)
+        self.run_until_action.triggered.connect(self.set_run_until_action)
         self.btn_open_extensions_palette.clicked.connect(self.open_extensions_palette)
 
     def lock(self):
@@ -275,6 +274,16 @@ class BadgerActionBar(QWidget):
         if self.run_action.text() == "Run":
             self.btn_stop.setDisabled(True)
             self.sig_start.emit()
+        else:
+            self.btn_stop.setDisabled(True)
+            self.sig_stop.emit()
+
+    def set_run_until_action(self):
+        if self.btn_stop.defaultAction() is not self.run_until_action:
+            self.btn_stop.setDefaultAction(self.run_until_action)
+
+        if self.run_until_action.text() == "Run until":
+            self.sig_start_until.emit()
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()

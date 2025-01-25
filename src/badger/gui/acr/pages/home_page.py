@@ -187,10 +187,10 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_toggle_reset.connect(self.run_action_bar.toggle_reset)
         self.run_monitor.sig_toggle_run.connect(self.run_action_bar.toggle_run)
         self.run_monitor.sig_toggle_other.connect(self.run_action_bar.toggle_other)
-        self.run_monitor.sig_set_run_action.connect(self.run_action_bar.set_run_action)
         self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
 
         self.run_action_bar.sig_start.connect(self.start_run)
+        self.run_action_bar.sig_start_until.connect(self.start_run_until)
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -198,8 +198,6 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_jump_to_optimal.connect(self.run_monitor.jump_to_optimal)
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
         self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
-        self.run_action_bar.sig_run_action.connect(self.run_monitor.set_run_action)
-        self.run_action_bar.sig_run_until_action.connect(self.run_monitor.set_run_until_action)
         self.run_action_bar.sig_open_extensions_palette.connect(self.run_monitor.open_extensions_palette)
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
@@ -306,7 +304,7 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def start_run(self):
+    def prepare_run(self):
         try:
             routine = self.routine_editor.routine_page._compose_routine()
         except Exception as e:
@@ -322,7 +320,14 @@ class BadgerHomePage(QWidget):
 
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
+
+    def start_run(self):
+        self.prepare_run()
         self.run_monitor.start()
+
+    def start_run_until(self):
+        self.prepare_run()
+        self.run_monitor.start_until()
 
     def new_run(self):
         self.cover_page()
