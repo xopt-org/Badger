@@ -15,7 +15,10 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
     from badger.tests.utils import (
         create_multiobjective_routine,
         create_routine,
+        fix_path_issues,
     )
+
+    fix_path_issues()
 
     main_page = BadgerMainWindow()
 
