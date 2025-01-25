@@ -1,10 +1,9 @@
-import os
 import logging
 import time
 import traceback
 import pkg_resources
 import torch  # noqa: F401. For converting dtype str to torch object.
-from pandas import concat, DataFrame
+from pandas import DataFrame
 import multiprocessing as mp
 
 from badger.db import load_routine
@@ -12,7 +11,7 @@ from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
-from badger.utils import curr_ts_to_str, dump_state
+from badger.archive import archive_run
 
 logger = logging.getLogger(__name__)
 
@@ -121,10 +120,11 @@ def run_routine_subprocess(
 
     # set optional arguments
     evaluate = args.pop("evaluate", None)
-    dump_file_path = args.pop("dump_file_path", None)
+    archive = args.pop("archive", False)
     termination_condition = args.pop("termination_condition", None)
     start_time = args.pop("start_time", None)
     verbose = args.pop("verbose", 2)
+    testing = args.pop("testing", False)
 
     # setup variables of routine properties for code readablilty
     initial_points = routine.initial_points
@@ -154,15 +154,11 @@ def run_routine_subprocess(
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
         if evaluate:
-            evaluate_queue[0].send((result, routine.generator))
+            evaluate_queue[0].send((routine.data, routine.generator))
 
     # dumps file
-    if dump_file_path:
+    if archive:
         combined_results = None
-        ts_start = curr_ts_to_str()
-        dump_file = os.path.join(dump_file_path, f"xopt_states_{ts_start}.yaml")
-        if not dump_file:
-            dump_file = f"xopt_states_{ts_start}.yaml"
 
     # perform optimization
     try:
@@ -214,16 +210,10 @@ def run_routine_subprocess(
             if evaluate:
                 evaluate_queue[0].send((routine.data, routine.generator))
 
-            # Dump Xopt state after each step
-            if dump_file_path:
-                if combined_results is not None:
-                    combined_results = concat(
-                        [combined_results, result], axis=0
-                    ).reset_index(drop=True)
-                else:
-                    combined_results = result
-
-                dump_state(dump_file, routine.generator, combined_results)
+            # archive Xopt state after each step
+            if archive:
+                if not testing:
+                    archive_run(routine)
     except BadgerRunTerminated:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()

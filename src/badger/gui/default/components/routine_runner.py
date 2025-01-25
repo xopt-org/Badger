@@ -39,6 +39,7 @@ class BadgerRoutineSubprocess:
         save: bool = False,
         verbose: int = 2,
         use_full_ts: bool = False,
+        testing: bool = False,
     ) -> None:
         """
         Parameters
@@ -53,8 +54,6 @@ class BadgerRoutineSubprocess:
             If true use full time stamp info when dumping to database
         """
         super().__init__()
-        # print('Created a new thread to run the routine.')
-
         # Signals should belong to instance rather than class
         # Since there could be multiple runners running in parallel
         self.signals = BadgerRoutineSignals()
@@ -76,12 +75,8 @@ class BadgerRoutineSubprocess:
         self.routine_process = None
         self.is_killed = False
         self.interval = 100
+        self.testing = testing
         self.config_singleton = init_settings()
-
-        if self.save:
-            self.dump_file = self.config_singleton.read_value("BADGER_ARCHIVE_ROOT")
-        else:
-            self.dump_file = None
 
     def set_termination_condition(self, termination_condition: dict) -> None:
         """
@@ -156,9 +151,10 @@ class BadgerRoutineSubprocess:
                 "variable_ranges": self.routine.vocs.variables,
                 "initial_points": self.routine.initial_points,
                 "evaluate": True,
-                "dump_file_path": self.dump_file,
+                "archive": self.save,
                 "termination_condition": self.termination_condition,
                 "start_time": self.start_time,
+                "testing": self.testing,
             }
 
             self.data_and_error_queue.put(arg_dict)
