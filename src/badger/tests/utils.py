@@ -185,3 +185,9 @@ def get_current_vars(routine):
 def get_vars_in_row(routine, idx=0):
     var_names = routine.vocs.variable_names
     return routine.data.iloc[idx][var_names].to_numpy()
+
+
+def fix_path_issues():
+    from badger.archive import BADGER_ARCHIVE_ROOT
+
+    os.makedirs(BADGER_ARCHIVE_ROOT, exist_ok=True)
