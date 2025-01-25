@@ -156,10 +156,6 @@ def run_routine_subprocess(
         if evaluate:
             evaluate_queue[0].send((routine.data, routine.generator))
 
-    # dumps file
-    if archive:
-        combined_results = None
-
     # perform optimization
     try:
         while True:
