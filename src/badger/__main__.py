@@ -1,18 +1,17 @@
 import argparse
 
-from badger.actions import show_info
-from badger.actions.doctor import self_check
-from badger.actions.routine import show_routine
-from badger.actions.generator import show_generator
-from badger.actions.env import show_env
-from badger.actions.install import plugin_install
-from badger.actions.uninstall import plugin_remove
-from badger.actions.intf import show_intf
-from badger.actions.run import run_routine
-from badger.actions.config import config_settings
 from badger.log import config_log
-
 config_log()
+from badger.actions import show_info  # noqa: E402
+from badger.actions.doctor import self_check  # noqa: E402
+from badger.actions.routine import show_routine  # noqa: E402
+from badger.actions.generator import show_generator  # noqa: E402
+from badger.actions.env import show_env  # noqa: E402
+from badger.actions.install import plugin_install  # noqa: E402
+from badger.actions.uninstall import plugin_remove  # noqa: E402
+from badger.actions.intf import show_intf  # noqa: E402
+from badger.actions.run import run_routine  # noqa: E402
+from badger.actions.config import config_settings  # noqa: E402
 
 
 def main():

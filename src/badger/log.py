@@ -1,10 +1,6 @@
 import logging
 from logging.config import dictConfig
-
 from badger.utils import merge_params
-
-logger = logging.getLogger(__name__)
-
 
 LOG_CONFIG_DEFAULT = {
     "version": 1,
