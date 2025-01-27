@@ -231,6 +231,19 @@ class BadgerEnvBox(QWidget):
         )
         relative_to_curr.setToolTip(tooltip)
         hbox_action_common.addWidget(relative_to_curr)
+        self.btn_refresh = btn_refresh = QPushButton("Refresh")
+        btn_refresh.setFixedSize(96, 24)
+        btn_refresh.setDisabled(True)
+        tooltip = (
+            "Refresh the variable ranges and the initial points based on\n"
+            + "the current variable values.\n\n"
+            + 'Note that in manual mode, click "Refresh" will clear the \n'
+            + 'initial points table if the variable ranges change,\n'
+            + 'since the old initial points might be invalid.\n'
+            + 'In this case, you will need to add initial points again.'
+        )
+        btn_refresh.setToolTip(tooltip)
+        hbox_action_common.addWidget(btn_refresh)
         hbox_action_common.addStretch()
 
         action_var = QWidget()

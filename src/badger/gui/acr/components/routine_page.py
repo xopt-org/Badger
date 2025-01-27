@@ -228,6 +228,7 @@ class BadgerRoutinePage(QWidget):
         )
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
         self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
+        self.env_box.btn_refresh.clicked.connect(self.refresh_variables)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
 
@@ -483,6 +484,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
+            self.env_box.btn_refresh.setDisabled(True)
             self.routine = None
             self.env_box.update_stylesheets()
             return
@@ -498,6 +500,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(False)
             self.env_box.btn_add_var.setDisabled(False)
             self.env_box.btn_lim_vrange.setDisabled(False)
+            self.env_box.btn_refresh.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
         except Exception:
@@ -834,6 +837,22 @@ class BadgerRoutinePage(QWidget):
 
             self.env_box.var_table.unlock_bounds()
             self.env_box.init_table.set_editable()
+
+    def refresh_variables(self):
+        variables = self.env_box.var_table.export_variables()
+        bounds = self.calc_auto_bounds()
+
+        no_need_to_update = True
+        for vname in variables:
+            if not np.allclose(bounds[vname], variables[vname]):
+                no_need_to_update = False
+                break
+        if no_need_to_update:
+            return
+
+        self.env_box.var_table.set_bounds(bounds)
+        self.clear_init_table(reset_actions=False)
+        self.try_populate_init_table()
 
     def try_populate_init_table(self):
         if (
