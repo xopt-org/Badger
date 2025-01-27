@@ -120,25 +120,17 @@ class TestRoutineRunner:
         QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
         loop.exec_()
 
-        # TODO: Create and save a routine
-
+        # Create and save a routine
         editor = window.home_page.routine_editor
-
         # Turn off relative to current
         editor.routine_page.env_box.relative_to_curr.setChecked(False)
-
-        qtbot.keyClicks(editor.routine_page.generator_box.cb, "expected_improvement")
-        params = editor.routine_page.generator_box.edit.toPlainText()
-        # Turn on turbo controller
-        params = params.replace("turbo_controller: null", "turbo_controller: optimize")
-        editor.routine_page.generator_box.edit.setPlainText(params)
+        # Config env and vocs
         qtbot.keyClicks(editor.routine_page.env_box.cb, "test")
         editor.routine_page.env_box.var_table.cellWidget(0, 0).setChecked(True)
         editor.routine_page.env_box.obj_table.cellWidget(0, 0).setChecked(True)
         qtbot.mouseClick(
             editor.routine_page.env_box.btn_add_curr, Qt.MouseButton.LeftButton
         )
-        qtbot.mouseClick(editor.btn_save, Qt.MouseButton.LeftButton)
 
         # Run the routine
         monitor = window.home_page.run_monitor
@@ -166,7 +158,8 @@ class TestRoutineRunner:
             BadgerScrollableMessageBox.showEvent
         )
 
-        monitor.run_until_action.trigger()
+        action_bar = window.home_page.run_action_bar
+        action_bar.run_until_action.trigger()
         monitor.routine_runner.data_and_error_queue.empty = Mock(return_value=True)
 
         # Wait until the run is done
