@@ -102,7 +102,7 @@ class TestCore:
 
         # assert len(self.candidates_list) == self.count - 1
 
-        assert len(self.results) == self.num_of_points
+        assert len(self.results[0]) == self.num_of_points
 
         assert self.states is None
 
