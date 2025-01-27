@@ -165,6 +165,7 @@ class TestRoutineRunner:
         # Wait until the run is done
         while monitor.running:
             qtbot.wait(100)
+        qtbot.wait(100)  # wait for longer to make sure the routine is done
 
         assert len(monitor.routine.data) == 2
 
