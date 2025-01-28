@@ -60,7 +60,9 @@ class BOPlotWidget(QWidget):
         self.setSizePolicy(ExpandingPolicy, ExpandingPolicy)
         self.setMinimumSize(1250, 720)
 
-    def initialize_widget(self, routine: Routine) -> None:
+    def initialize_widget(
+        self, routine: Routine, update_routine: Callable[[Routine], None]
+    ) -> None:
         logger.debug("Initializing plot with routine")
         self.model_logic.update_routine(routine)
         logger.debug("Update vocs in UI components")
@@ -72,13 +74,15 @@ class BOPlotWidget(QWidget):
 
         # Set up connections
         logger.debug("Setting up connections")
-        self.setup_connections()
+        self.setup_connections(routine, update_routine)
 
         # Trigger the axis selection changed to disable reference points for default selected variables
         logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
 
-    def setup_connections(self):
+    def setup_connections(
+        self, routine: Routine, update_routine: Callable[[Routine], None]
+    ) -> None:
         # Disconnect existing connections
         try:
             self.ui_components.update_button.clicked.disconnect()
@@ -86,7 +90,9 @@ class BOPlotWidget(QWidget):
             pass  # No connection to disconnect
 
         self.ui_components.update_button.clicked.connect(
-            lambda: signal_logger("Update button clicked")(lambda: self.update_plot())()
+            lambda: signal_logger("Update button clicked")(
+                lambda: update_routine(routine)
+            )()
         )
 
         # Similarly for other signals
