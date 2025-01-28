@@ -224,8 +224,11 @@ class BadgerRoutineSubprocess:
                 self.routine.generator = results[1]
 
         if not self.data_and_error_queue.empty():
-            error_title, error_traceback = self.data_and_error_queue.get()
-            BadgerError(error_title, error_traceback)
+            try:
+                error_title, error_traceback = self.data_and_error_queue.get()
+                BadgerError(error_title, error_traceback)
+            except ValueError:  # seems to only occur in tests
+                pass
 
         if not self.routine_process.is_alive():
             self.close()

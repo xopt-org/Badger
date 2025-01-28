@@ -1,5 +1,4 @@
 import multiprocessing
-import time
 import warnings
 from unittest.mock import patch
 
@@ -7,7 +6,7 @@ import numpy as np
 import pytest
 from PyQt5.QtCore import QEventLoop, QPointF, Qt, QTimer
 from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtTest import QSignalSpy, QTest
+from PyQt5.QtTest import QSignalSpy
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
 
@@ -114,20 +113,8 @@ class TestRunMonitor:
         assert spy.isValid()
         monitor.start()
 
-    def test_routine_identity(self, qtbot, process_manager, init_multiprocessing):
-        from badger.archive import save_tmp_run
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
-        from badger.tests.utils import create_routine
-
-        monitor = BadgerOptMonitor(process_manager)
-        # qtbot.addWidget(monitor)
-
-        routine = create_routine()
-        tmp_filename = save_tmp_run(routine)
-
-        # Feed in the sample routine
-        monitor.routine = routine
-        monitor.routine_filename = tmp_filename
+    def test_routine_identity(self, home_page):
+        monitor = home_page.run_monitor
         monitor.init_routine_runner()
 
         assert monitor.routine_runner.routine == monitor.routine
