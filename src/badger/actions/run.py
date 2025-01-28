@@ -115,7 +115,13 @@ def run_n_archive(
 
 
 def run_routine(args):
-    pass
+    print(
+        "This command is deprecated.\n"
+        "Please use 'badger -g' to launch the Badger GUI "
+        "and run an optimization."
+    )
+    return
+
     # try:
     #     from ..factory import get_algo, get_env
     # except Exception as e:

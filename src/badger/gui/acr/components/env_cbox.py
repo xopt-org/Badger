@@ -11,9 +11,8 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QLabel,
     QListWidget,
-    QFrame,
 )
-from PyQt5.QtCore import QRegExp
+from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
@@ -26,11 +25,19 @@ from badger.gui.default.utils import (
 )
 from badger.utils import strtobool
 
-LABEL_WIDTH = 80
+LABEL_WIDTH = 96
+ENV_PARAMS_BTN = 1  # use button or collapsible box for env parameters
 
 stylesheet_auto = """
     #VarPanel {
         border: 4px solid #FDD835;
+        border-radius: 4px;
+    }
+"""
+
+stylesheet_manual = """
+    #VarPanel {
+        border: 4px solid #60798B;
         border-radius: 4px;
     }
 """
@@ -44,10 +51,41 @@ stylesheet_auto_msg = """
     }
 """
 
+stylesheet_manual_msg = """
+    QLabel {
+        background-color: #60798B;
+        color: #FFFFFF;
+        padding: 4px 4px 8px 4px;
+        border-radius: 0;
+    }
+"""
 
-class BadgerEnvBox(CollapsibleBox):
+MSG_AUTO_RELATIVE = (
+    "The values you see in the variable ranges spin "
+    "boxes and initial points table are preview that "
+    "generated either based on current machine state, "
+    "or the machine state at the time of this historical"
+    " run. The real values would be regenerated based on"
+    " the machine state before running the optimization "
+    "again."
+)
+
+MSG_AUTO = (
+    "Auto mode is on.  To manually set the "
+    "variable ranges and/or initial points,  please "
+    'uncheck the "Automatic" check box.'
+)
+
+MSG_MANUAL = (
+    "Auto mode is off.  To automatically set the "
+    "variable ranges and/or initial points,  please "
+    'check the "Automatic" check box.'
+)
+
+
+class BadgerEnvBox(QWidget):
     def __init__(self, env_dict, parent=None, envs=[]):
-        super().__init__(parent, " Environment + VOCS")
+        super().__init__(parent)
 
         self.envs = envs
         self.env_dict = env_dict
@@ -57,14 +95,15 @@ class BadgerEnvBox(CollapsibleBox):
 
     def init_ui(self):
         config_singleton = init_settings()
-        vbox = QVBoxLayout()
+        vbox = QVBoxLayout(self)
+        vbox.setContentsMargins(8, 8, 8, 8)
 
-        self.content_area.setObjectName("EnvBox")
+        self.setObjectName("EnvBox")
 
         name = QWidget()
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
-        lbl = QLabel("Name")
+        lbl = QLabel("Environment")
         lbl.setFixedWidth(LABEL_WIDTH)
         self.cb = cb = NoHoverFocusComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
@@ -76,41 +115,65 @@ class BadgerEnvBox(CollapsibleBox):
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             btn_env_play.hide()
         self.btn_docs = btn_docs = QPushButton("Open Docs")
-        btn_docs.setFixedSize(128, 24)
+        btn_docs.setFixedSize(96, 24)
+        self.btn_params = btn_params = QPushButton("Parameters")
+        btn_params.setCheckable(True)
+        btn_params.setFixedSize(96, 24)
+        if not ENV_PARAMS_BTN:
+            btn_params.hide()
         hbox_name.addWidget(lbl)
         hbox_name.addWidget(cb, 1)
         hbox_name.addWidget(btn_env_play)
+        hbox_name.addWidget(btn_params)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
-        params = QWidget()
-        hbox_params = QHBoxLayout(params)
-        hbox_params.setContentsMargins(0, 0, 0, 0)
-        lbl_params_col = QWidget()
-        vbox_lbl_params = QVBoxLayout(lbl_params_col)
-        vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
-        lbl_params = QLabel("Params")
-        lbl_params.setFixedWidth(LABEL_WIDTH)
-        vbox_lbl_params.addWidget(lbl_params)
-        vbox_lbl_params.addStretch(1)
-        hbox_params.addWidget(lbl_params_col)
-
-        edit_params_col = QWidget()
-        vbox_params_edit = QVBoxLayout(edit_params_col)
-        vbox_params_edit.setContentsMargins(0, 0, 0, 0)
         self.edit = edit = QPlainTextEdit()
-        # edit.setMaximumHeight(80)
-        edit.setMinimumHeight(480)
-        vbox_params_edit.addWidget(edit)
-        hbox_params.addWidget(edit_params_col)
-        vbox.addWidget(params)
+        # edit.setMinimumHeight(480)
+        if ENV_PARAMS_BTN:
+            vbox.addWidget(edit)
+            edit.setMaximumHeight(0)
+            edit.hide()
+        else:
+            params = QWidget()
+            vbox.addWidget(params)
+            hbox_params = QHBoxLayout(params)
+            hbox_params.setContentsMargins(0, 0, 0, 0)
+            lbl_params_col = QWidget()
+            vbox_lbl_params = QVBoxLayout(lbl_params_col)
+            vbox_lbl_params.setContentsMargins(0, 0, 0, 0)
+            lbl_params = QLabel("")
+            lbl_params.setFixedWidth(LABEL_WIDTH)
+            vbox_lbl_params.addWidget(lbl_params)
+            vbox_lbl_params.addStretch(1)
+            hbox_params.addWidget(lbl_params_col)
 
-        seperator = QFrame()
-        seperator.setFrameShape(QFrame.HLine)
-        seperator.setFrameShadow(QFrame.Sunken)
-        seperator.setLineWidth(0)
-        seperator.setMidLineWidth(0)
-        vbox.addWidget(seperator)
+            edit_params_col = QWidget()
+            hbox_params.addWidget(edit_params_col)
+            vbox_params_edit = QVBoxLayout(edit_params_col)
+            vbox_params_edit.setContentsMargins(0, 0, 0, 0)
+
+            cbox_params = CollapsibleBox(self, " Parameters")
+            vbox_params_edit.addWidget(cbox_params, 1)
+            vbox_params = QVBoxLayout()
+
+            vbox_params.addWidget(edit, 1)
+            cbox_params.setContentLayout(vbox_params)
+
+        self.animation = QPropertyAnimation(self.edit, b"maximumHeight")
+        self.animation.setDuration(150)
+
+        # vbox.addWidget(edit)
+        # vbox_params_edit.addWidget(edit)
+        # hbox_params.addWidget(edit_params_col)
+        # vbox.addWidget(params)
+
+        # seperator = QFrame()
+        # seperator.setFrameShape(QFrame.HLine)
+        # seperator.setFrameShadow(QFrame.Sunken)
+        # seperator.setLineWidth(0)
+        # seperator.setMidLineWidth(0)
+        # vbox.addWidget(seperator)
 
         # Variables config (table style)
         self.var_panel = var_panel = QWidget()
@@ -120,29 +183,21 @@ class BadgerEnvBox(CollapsibleBox):
         self.vbox_var = vbox_var = QVBoxLayout(var_panel)
         vbox_var.setContentsMargins(4, 4, 4, 4)
         vbox_var.setSpacing(0)
-        msg_auto = QLabel(
-            "The values you see in the variable ranges spin "
-            "boxes and initial points table are preview that "
-            "generated either based on current machine state, "
-            "or the machine state at the time of this historical"
-            " run. The real values would be regenerated based on"
-            " the machine state before running the optimization "
-            "again."
-        )
-        if not config_singleton.read_value("AUTO_REFRESH"):
-            msg_auto = QLabel(
-                "Auto mode is on.  To explicitly set the "
-                "variable ranges and/or initial points,  please "
-                'uncheck the "Automatic" check box.'
-            )
+        if config_singleton.read_value("AUTO_REFRESH"):
+            self.MSG_AUTO = MSG_AUTO_RELATIVE
+            self.MSG_MANUAL = MSG_MANUAL
+        else:
+            self.MSG_AUTO = MSG_AUTO
+            self.MSG_MANUAL = MSG_MANUAL
+        msg_auto = QLabel(self.MSG_AUTO)
         msg_auto.setWordWrap(True)
         msg_auto.setStyleSheet(stylesheet_auto_msg)
-        msg_auto.hide()
         self.msg_auto = msg_auto
         vbox_var.addWidget(msg_auto)
         var_panel_origin = QWidget()
         vbox_var.addWidget(var_panel_origin)
         self.hbox_var = hbox_var = QHBoxLayout(var_panel_origin)
+        hbox_var.setContentsMargins(8, 8, 8, 8)
         lbl_var_col = QWidget()
         vbox_lbl_var = QVBoxLayout(lbl_var_col)
         vbox_lbl_var.setContentsMargins(0, 0, 0, 0)
@@ -175,6 +230,19 @@ class BadgerEnvBox(CollapsibleBox):
         )
         relative_to_curr.setToolTip(tooltip)
         hbox_action_common.addWidget(relative_to_curr)
+        self.btn_refresh = btn_refresh = QPushButton("Refresh")
+        btn_refresh.setFixedSize(96, 24)
+        btn_refresh.setDisabled(True)
+        tooltip = (
+            "Refresh the variable ranges and the initial points based on\n"
+            + "the current variable values.\n\n"
+            + 'Note that in manual mode, click "Refresh" will clear the \n'
+            + "initial points table if the variable ranges change,\n"
+            + "since the old initial points might be invalid.\n"
+            + "In this case, you will need to add initial points again."
+        )
+        btn_refresh.setToolTip(tooltip)
+        hbox_action_common.addWidget(btn_refresh)
         hbox_action_common.addStretch()
 
         action_var = QWidget()
@@ -345,8 +413,6 @@ class BadgerEnvBox(CollapsibleBox):
         hbox_sta.addWidget(edit_sta_col)
         cbox_more.setContentLayout(vbox_more)
 
-        self.setContentLayout(vbox)
-
     def config_logic(self):
         self.dict_con = {}
 
@@ -354,6 +420,25 @@ class BadgerEnvBox(CollapsibleBox):
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
+        self.btn_params.toggled.connect(self.toggle_params)
+        self.animation.finished.connect(self.animation_finished)
+
+    def toggle_params(self, checked):
+        if not checked:
+            self.animation.setStartValue(self.edit.sizeHint().height())
+            self.animation.setEndValue(0)
+        else:
+            # Animate to fill the available vertical space
+            self.animation.setStartValue(0)
+            self.animation.setEndValue(self.edit.sizeHint().height() * 4)
+            self.edit.show()
+
+        # Configure the animation
+        self.animation.start()
+
+    def animation_finished(self):
+        if self.edit.maximumHeight() == 0:
+            self.edit.hide()
 
     def toggle_var_show_mode(self, _):
         self.var_table.toggle_show_mode(self.check_only_var.isChecked())
@@ -403,14 +488,12 @@ class BadgerEnvBox(CollapsibleBox):
     def switch_var_panel_style(self, auto=True):
         if auto:
             self.var_panel.setStyleSheet(stylesheet_auto)
-            self.vbox_var.setContentsMargins(4, 4, 4, 4)
-            self.hbox_var.setContentsMargins(8, 8, 8, 8)
-            self.msg_auto.show()
+            self.msg_auto.setStyleSheet(stylesheet_auto_msg)
+            self.msg_auto.setText(self.MSG_AUTO)
         else:
-            self.var_panel.setStyleSheet(None)
-            self.vbox_var.setContentsMargins(0, 0, 0, 0)
-            self.hbox_var.setContentsMargins(0, 0, 0, 0)
-            self.msg_auto.hide()
+            self.var_panel.setStyleSheet(stylesheet_manual)
+            self.msg_auto.setStyleSheet(stylesheet_manual_msg)
+            self.msg_auto.setText(self.MSG_MANUAL)
 
     def update_stylesheets(self, environment=""):
         if environment in self.env_dict:

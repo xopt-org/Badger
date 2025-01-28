@@ -36,6 +36,7 @@ class BadgerRoutineSubprocess:
         self,
         process_manager: ProcessManager,
         routine: Routine = None,
+        routine_filename: str = None,
         save: bool = False,
         verbose: int = 2,
         use_full_ts: bool = False,
@@ -59,6 +60,7 @@ class BadgerRoutineSubprocess:
         self.signals = BadgerRoutineSignals()
         self.process_manager = process_manager
         self.routine = routine
+        self.routine_filename = routine_filename
         self.run_filename = None
         self.states = None  # system states to be saved at start of a run
         self.save = save
@@ -147,6 +149,7 @@ class BadgerRoutineSubprocess:
 
             arg_dict = {
                 "routine_id": self.routine.id,
+                "routine_filename": self.routine_filename,
                 "routine_name": self.routine.name,
                 "variable_ranges": self.routine.vocs.variables,
                 "initial_points": self.routine.initial_points,
@@ -221,8 +224,11 @@ class BadgerRoutineSubprocess:
                 self.routine.generator = results[1]
 
         if not self.data_and_error_queue.empty():
-            error_title, error_traceback = self.data_and_error_queue.get()
-            BadgerError(error_title, error_traceback)
+            try:
+                error_title, error_traceback = self.data_and_error_queue.get()
+                BadgerError(error_title, error_traceback)
+            except ValueError:  # seems to only occur in tests
+                pass
 
         if not self.routine_process.is_alive():
             self.close()

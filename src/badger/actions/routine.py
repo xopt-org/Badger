@@ -9,6 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 def show_routine(args):
+    print(
+        "This command is deprecated.\n"
+        "Please use 'badger -g' to launch the Badger GUI "
+        "and manage routines/runs."
+    )
+    return
+
     try:
         from badger.db import load_routine, list_routine
         from badger.actions.run import run_n_archive

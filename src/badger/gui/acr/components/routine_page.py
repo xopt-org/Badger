@@ -1,6 +1,4 @@
-import json
 import warnings
-import sqlite3
 import traceback
 import copy
 from functools import partial
@@ -10,24 +8,23 @@ import yaml
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton
-from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
+from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton
+from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget, QTabWidget
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
+from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
-from pydantic import ValidationError
 from xopt import VOCS
 from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
 
-from badger.gui.default.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
 from badger.gui.default.components.constraint_item import constraint_item
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
     update_init_data_table,
 )
-from badger.gui.default.components.env_cbox import BadgerEnvBox
+from badger.gui.acr.components.env_cbox import BadgerEnvBox
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
 from badger.gui.default.components.state_item import state_item
 from badger.gui.default.windows.docs_window import BadgerDocsWindow
@@ -37,9 +34,8 @@ from badger.gui.default.windows.lim_vrange_dialog import BadgerLimitVariableRang
 from badger.gui.default.windows.review_dialog import BadgerReviewDialog
 from badger.gui.default.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 from badger.gui.default.utils import filter_generator_config
-from badger.db import save_routine, update_routine, get_runs_by_routine
+from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import BadgerRoutineError
 from badger.factory import list_generators, list_env, get_env
@@ -58,6 +54,7 @@ CONS_RELATION_DICT = {
     "<": "LESS_THAN",
     "=": "EQUAL_TO",
 }
+LABEL_WIDTH = 96
 
 
 class BadgerRoutinePage(QWidget):
@@ -106,19 +103,23 @@ class BadgerRoutinePage(QWidget):
 
         # Set up the layout
         vbox = QVBoxLayout(self)
-        vbox.setContentsMargins(11, 11, 19, 11)
+        vbox.setContentsMargins(8, 18, 8, 0)
+
+        self.tabs = tabs = QTabWidget()
+        vbox.addWidget(tabs)
 
         # Meta group
-        group_meta = QGroupBox("Metadata")
-        group_meta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.group_meta = group_meta = QWidget()
         vbox_meta = QVBoxLayout(group_meta)
+        vbox_meta.setContentsMargins(8, 8, 8, 8)
+        tabs.addTab(group_meta, "Metadata")
 
         # Name
         name = QWidget()
         hbox_name = QHBoxLayout(name)
         hbox_name.setContentsMargins(0, 0, 0, 0)
         label = QLabel("Name")
-        label.setFixedWidth(64)
+        label.setFixedWidth(LABEL_WIDTH)
         self.edit_save = edit_save = QLineEdit()
         edit_save.setPlaceholderText(generate_slug(2))
         hbox_name.addWidget(label)
@@ -132,8 +133,8 @@ class BadgerRoutinePage(QWidget):
         lbl_descr_col = QWidget()
         vbox_lbl_descr = QVBoxLayout(lbl_descr_col)
         vbox_lbl_descr.setContentsMargins(0, 0, 0, 0)
-        lbl_descr = QLabel("Descr")
-        lbl_descr.setFixedWidth(64)
+        lbl_descr = QLabel("Description")
+        lbl_descr.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_descr.addWidget(lbl_descr)
         vbox_lbl_descr.addStretch(1)
         hbox_descr.addWidget(lbl_descr_col)
@@ -142,7 +143,7 @@ class BadgerRoutinePage(QWidget):
         vbox_descr_edit = QVBoxLayout(edit_descr_col)
         vbox_descr_edit.setContentsMargins(0, 0, 0, 0)
         self.edit_descr = edit_descr = QPlainTextEdit()
-        edit_descr.setMaximumHeight(80)
+        edit_descr.setMinimumHeight(80)
         vbox_descr_edit.addWidget(edit_descr)
         descr_bar = QWidget()
         hbox_descr_bar = QHBoxLayout(descr_bar)
@@ -155,6 +156,7 @@ class BadgerRoutinePage(QWidget):
         vbox_descr_edit.addWidget(descr_bar)
         hbox_descr.addWidget(edit_descr_col)
         vbox_meta.addWidget(descr)
+        descr_bar.hide()
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
@@ -163,12 +165,7 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
         # vbox_meta.addStretch()
 
-        vbox.addWidget(group_meta)
-
-        # Algo box
-        self.generator_box = BadgerAlgoBox(None, self.generators)
-        self.generator_box.expand()  # expand the box initially
-        vbox.addWidget(self.generator_box)
+        # vbox.addWidget(group_meta)
 
         # Env box
         BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
@@ -181,10 +178,33 @@ class BadgerRoutinePage(QWidget):
         except (FileNotFoundError, yaml.YAMLError):
             env_dict = {}
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
-        self.env_box.expand()  # expand the box initially
-        vbox.addWidget(self.env_box)
+        scroll_area = QScrollArea()
+        scroll_area.setFrameShape(QScrollArea.NoFrame)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;  /* Remove border */
+                margin: 0px;   /* Remove margin */
+                padding: 0px;  /* Remove padding */
+            }
+            QScrollArea > QWidget {
+                margin: 0px;   /* Remove margin inside */
+            }
+        """)
+        scroll_content_env = QWidget()
+        scroll_layout_env = QVBoxLayout(scroll_content_env)
+        scroll_layout_env.setContentsMargins(0, 0, 15, 0)
+        scroll_layout_env.addWidget(self.env_box)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(scroll_content_env)
+        tabs.addTab(scroll_area, "Environment + VOCS")
 
-        vbox.addStretch()
+        # Algo box
+        self.generator_box = BadgerAlgoBox(None, self.generators)
+        tabs.addTab(self.generator_box, "Algorithm")
+
+        tabs.setCurrentIndex(1)  # Show the env box by default
+
+        # vbox.addStretch()
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
@@ -208,6 +228,7 @@ class BadgerRoutinePage(QWidget):
         )
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
         self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
+        self.env_box.btn_refresh.clicked.connect(self.refresh_variables)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
 
@@ -463,6 +484,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
+            self.env_box.btn_refresh.setDisabled(True)
             self.routine = None
             self.env_box.update_stylesheets()
             return
@@ -478,6 +500,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(False)
             self.env_box.btn_add_var.setDisabled(False)
             self.env_box.btn_lim_vrange.setDisabled(False)
+            self.env_box.btn_refresh.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
         except Exception:
@@ -815,6 +838,22 @@ class BadgerRoutinePage(QWidget):
             self.env_box.var_table.unlock_bounds()
             self.env_box.init_table.set_editable()
 
+    def refresh_variables(self):
+        variables = self.env_box.var_table.export_variables()
+        bounds = self.calc_auto_bounds()
+
+        no_need_to_update = True
+        for vname in variables:
+            if not np.allclose(bounds[vname], variables[vname]):
+                no_need_to_update = False
+                break
+        if no_need_to_update:
+            return
+
+        self.env_box.var_table.set_bounds(bounds)
+        self.clear_init_table(reset_actions=False)
+        self.try_populate_init_table()
+
     def try_populate_init_table(self):
         if (
             self.env_box.relative_to_curr.isChecked()
@@ -1002,7 +1041,7 @@ class BadgerRoutinePage(QWidget):
         routine = self.routine
         routine.description = self.edit_descr.toPlainText()
         try:
-            update_routine(routine)
+            update_run(routine)
             # Notify routine list to update
             self.sig_updated.emit(routine.name, routine.description)
             QMessageBox.information(
@@ -1012,47 +1051,3 @@ class BadgerRoutinePage(QWidget):
             )
         except Exception:
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
-
-    def save(self):
-        try:
-            routine = self._compose_routine()
-        except ValidationError as e:
-            error_message = "".join(
-                [error["msg"] + "\n\n" for error in e.errors()]
-            ).strip()
-            details = traceback.format_exc()
-            dialog = ExpandableMessageBox(
-                title="Error!", text=error_message, detailedText=details, parent=self
-            )
-            dialog.setIcon(QMessageBox.Critical)
-            dialog.exec_()
-            return
-
-        try:
-            if self.routine:
-                keys_to_exclude = ["data", "id", "name", "description"]
-                old_dict = json.loads(self.routine.json())
-                old_dict = {
-                    k: v for k, v in old_dict.items() if k not in keys_to_exclude
-                }
-                new_dict = json.loads(routine.json())
-                new_dict = {
-                    k: v for k, v in new_dict.items() if k not in keys_to_exclude
-                }
-                runs = get_runs_by_routine(self.routine.id)
-                if len(runs) == 0 or old_dict == new_dict:
-                    routine.id = self.routine.id
-                    update_routine(routine)
-                else:
-                    save_routine(routine)
-            else:
-                save_routine(routine)
-        except sqlite3.IntegrityError:
-            return QMessageBox.critical(
-                self,
-                "Error!",
-                f"Routine {routine.name} already existed in the database! Please "
-                f"choose another name.",
-            )
-
-        return 0
