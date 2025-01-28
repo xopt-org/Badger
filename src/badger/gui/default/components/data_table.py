@@ -15,6 +15,19 @@ stylesheet = """
     }
 """
 
+stylesheet_data = """
+    QTableWidget
+    {
+        margin: 0px 8px 8px 8px;
+        alternate-background-color: #262E38;
+    }
+    QTableWidget::item::selected
+    {
+        background-color: #B3E5FC;
+        color: #000000;
+    }
+"""
+
 
 # https://stackoverflow.com/questions/60715462/how-to-copy-and-paste-multiple-cells-in-qtablewidget-in-pyqt5
 class TableWithCopy(QTableWidget):
@@ -103,7 +116,7 @@ def add_row(table, row):
 def data_table(data=None):
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
-    table.setStyleSheet(stylesheet)
+    table.setStyleSheet(stylesheet_data)
     # table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
     return update_table(table, data)
 
