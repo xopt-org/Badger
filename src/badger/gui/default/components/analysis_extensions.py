@@ -69,6 +69,7 @@ class BOVisualizer(AnalysisExtension):
     df_length = float("inf")
     initialized = False
     correct_generator = False
+    routine_identifier = ""
 
     def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BO Visualizer Extension")
@@ -87,20 +88,26 @@ class BOVisualizer(AnalysisExtension):
 
         logger.debug("Set layout for BOVisualizer")
 
-    def requires_reinitialization(self, routine: Routine):
+    def requires_reinitialization(self):
         # Check if the extension needs to be reinitialized
+        logger.debug("Checking if BO Visualizer needs to be reinitialized")
 
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
             return True
 
-        if routine.data is None:
+        if self.routine_identifier != self.routine.name:
+            logger.debug("Reset - Routine name has changed")
+            self.identifier = self.routine.name
+            return True
+
+        if self.routine.data is None:
             logger.debug("Reset - No data available")
             return True
 
         previous_len = self.df_length
-        self.df_length = len(routine.data)
+        self.df_length = len(self.routine.data)
         new_length = self.df_length
 
         if previous_len > new_length:
@@ -121,8 +128,8 @@ class BOVisualizer(AnalysisExtension):
             logger.debug("Incorrect generator type")
             return
 
-        if self.requires_reinitialization(self.routine):
-            self.bo_plot_widget.initialize_widget(self.routine)
+        if self.requires_reinitialization():
+            self.bo_plot_widget.initialize_widget(self.routine, self.update_window)
 
         # Update the plots with the new generator model
         self.bo_plot_widget.update_plot(100)
@@ -132,6 +139,7 @@ class BOVisualizer(AnalysisExtension):
 
         self.routine = routine
 
+        # Check if the generator is a BayesianGenerator
         if not issubclass(self.routine.generator.__class__, BayesianGenerator):
             self.correct_generator = False
             QMessageBox.critical(
@@ -143,32 +151,45 @@ class BOVisualizer(AnalysisExtension):
 
         self.correct_generator = True
 
-        # TODO: Check if the generator is a BayesianGenerator and handle the extension accordingly
         generator = cast(BayesianGenerator, self.routine.generator)
 
-        if generator.data is None:
-            logger.warning("No data available in generator")
-
-            if routine.data is None:
-                logger.warning("No data available in routine or generator")
-            else:
-                # Handle the edge case where the extension has been opened after an optimization has already finished.
-                logger.debug("Setting generator data from routine")
+        # Handle the edge case where the extension has been opened after an optimization has already finished.
+        if generator.model is None:
+            logger.warning("Model not found in generator")
+            if generator.data is None:
+                if self.routine.data is None:
+                    logger.error("No data available in routine or generator")
+                    QMessageBox.critical(
+                        self,
+                        "No data available",
+                        "No data available in routine or generator",
+                    )
+                    return
 
                 # Use the data from the routine to train the model
+                logger.debug("Setting generator data from routine")
                 generator.data = self.routine.data
 
-                try:
-                    generator.train_model()
-                except Exception as e:
-                    logger.error(f"Failed to train model: {e}")
-                    QMessageBox.warning(
-                        self,
-                        "Failed to train model",
-                        f"Failed to train model: {e}",
-                    )
-
+            try:
+                generator.train_model(generator.data)
+            except Exception as e:
+                logger.error(f"Failed to train model: {e}")
+                QMessageBox.warning(
+                    self,
+                    "Failed to train model",
+                    f"Failed to train model: {e}",
+                )
         else:
-            self.df_length = len(generator.data)
+            logger.debug("Model already exists in generator")
 
+        if generator.data is None:
+            logger.error("No data available in generator")
+            QMessageBox.critical(
+                self,
+                "No data available",
+                "No data available in generator",
+            )
+            return
+
+        self.df_length = len(generator.data)
         self.routine.generator = generator
