@@ -182,7 +182,9 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_del.connect(self.delete_run)
         self.run_monitor.sig_stop_run.connect(self.cover_page)
         self.run_monitor.sig_run_started.connect(self.run_action_bar.run_start)
-        self.run_monitor.sig_routine_finished.connect(self.run_action_bar.routine_finished)
+        self.run_monitor.sig_routine_finished.connect(
+            self.run_action_bar.routine_finished
+        )
         self.run_monitor.sig_lock_action.connect(self.run_action_bar.lock)
         self.run_monitor.sig_toggle_reset.connect(self.run_action_bar.toggle_reset)
         self.run_monitor.sig_toggle_run.connect(self.run_action_bar.toggle_run)
@@ -195,10 +197,14 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
         self.run_action_bar.sig_reset_env.connect(self.run_monitor.reset_env)
-        self.run_action_bar.sig_jump_to_optimal.connect(self.run_monitor.jump_to_optimal)
+        self.run_action_bar.sig_jump_to_optimal.connect(
+            self.run_monitor.jump_to_optimal
+        )
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
         self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
-        self.run_action_bar.sig_open_extensions_palette.connect(self.run_monitor.open_extensions_palette)
+        self.run_action_bar.sig_open_extensions_palette.connect(
+            self.run_monitor.open_extensions_palette
+        )
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 

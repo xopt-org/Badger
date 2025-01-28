@@ -1,6 +1,7 @@
 import argparse
 
 from badger.log import config_log
+
 config_log()
 from badger.actions import show_info  # noqa: E402
 from badger.actions.doctor import self_check  # noqa: E402

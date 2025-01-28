@@ -237,7 +237,7 @@ class ConfigSingleton:
                 continue
 
             # Skip the BADGER_DB_ROOT setting
-            if k == 'BADGER_DB_ROOT':
+            if k == "BADGER_DB_ROOT":
                 continue
 
             path_dict[k] = v["value"]

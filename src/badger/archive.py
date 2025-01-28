@@ -135,8 +135,8 @@ def get_runs():
 
 
 def load_run(run_fname):
-    if run_fname.startswith('.tmp'):  # temp run file
-        filename = os.path.join(BADGER_ARCHIVE_ROOT, '.tmp', run_fname)
+    if run_fname.startswith(".tmp"):  # temp run file
+        filename = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp", run_fname)
     else:
         tokens = run_fname.split("-")
         first_level = tokens[1]
