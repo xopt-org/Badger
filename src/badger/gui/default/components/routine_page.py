@@ -39,6 +39,7 @@ from badger.gui.default.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 from badger.gui.default.utils import filter_generator_config
+from badger.gui.default.components.archive_search import ArchiveSearchWidget
 from badger.db import save_routine, update_routine, get_runs_by_routine
 from badger.environment import instantiate_env
 from badger.errors import BadgerRoutineError
@@ -194,6 +195,7 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.cb.currentIndexChanged.connect(self.select_env)
         self.env_box.btn_env_play.clicked.connect(self.open_playground)
+        self.env_box.btn_pv.clicked.connect(self.open_archive_search)
         self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
@@ -329,6 +331,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(True)
         self.env_box.edit_obj.clear()
         self.env_box.obj_table.set_selected(objectives)
+        self.env_box.obj_table.addtl_obs = routine.additional_observables
         self.env_box.obj_table.set_rules(routine.vocs.objectives)
 
         constraints = routine.vocs.constraints
@@ -457,6 +460,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.var_table.update_variables(None)
             self.env_box.edit_obj.clear()
             self.env_box.obj_table.update_objectives(None)
+            self.env_box.obsv_table.update_objectives(None)
             self.configs = None
             self.env = None
             self.env_box.btn_add_con.setDisabled(True)
@@ -516,8 +520,22 @@ class BadgerRoutinePage(QWidget):
             obj = {}
             obj[name] = "MINIMIZE"  # default rule
             objs_env.append(obj)
+
         self.env_box.check_only_obj.setChecked(False)
         self.env_box.obj_table.update_objectives(objs_env)
+
+        """
+        _obsv_env = configs['additional observations']
+        obsv_env = []
+        for name in _obsv_env:
+            obj = {}
+            obj[name] = ''  # default formula
+            obsv_env.append(obj)
+        """
+
+        self.env_box.check_only_obsv.setChecked(False)
+
+        # self.env_box.obsv_table.update_objectives(obsv_env)
 
         self.env_box.list_con.clear()
         self.env_box.list_obs.clear()
@@ -655,6 +673,10 @@ class BadgerRoutinePage(QWidget):
 
     def open_environment_docs(self):
         self.window_env_docs.show()
+
+    def open_archive_search(self):
+        self.archive_search = ArchiveSearchWidget()
+        self.archive_search.show() 
 
     def add_var(self):
         # TODO: Use a cached env
@@ -976,6 +998,7 @@ class BadgerRoutinePage(QWidget):
                 vrange_limit_options=vrange_limit_options,
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
+                additional_observables=self.env_box.obsv_table.addtl_obs,
             )
 
             # Check if any user warnings were caught
