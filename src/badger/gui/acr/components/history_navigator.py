@@ -104,8 +104,8 @@ class HistoryNavigator(QWidget):
                 month_item = year_item.child(j)
                 for k in range(month_item.childCount()):
                     day_item = month_item.child(k)
-                    for l in range(day_item.childCount()):
-                        file_item = day_item.child(l)
+                    for _l in range(day_item.childCount()):
+                        file_item = day_item.child(_l)
                         if get_base_run_filename(file_item.text(0)) == run:
                             self.tree_widget.setCurrentItem(file_item)
                             return

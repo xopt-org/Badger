@@ -11,9 +11,8 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QLabel,
     QListWidget,
-    QFrame,
 )
-from PyQt5.QtCore import QRegExp, QPropertyAnimation, QRect
+from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable

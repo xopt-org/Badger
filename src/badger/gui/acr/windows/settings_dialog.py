@@ -12,12 +12,9 @@ from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QApplication,
-    # QStyledItemDelegate,
-    QCheckBox,
 )
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
 from badger.settings import init_settings
-from badger.utils import strtobool
 
 
 class BadgerSettingsDialog(QDialog):
