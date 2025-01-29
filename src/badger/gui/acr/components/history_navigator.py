@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem
+from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 from badger.archive import get_base_run_filename
 from badger.utils import run_names_to_dict
@@ -12,14 +13,21 @@ class HistoryNavigator(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.tree_widget = QTreeWidget()
-        self.tree_widget.setHeaderHidden(True)
+
+        self.tree_widget.setHeaderLabels(["History Navigator"])
+        header = self.tree_widget.header()
+        # Set the font of the header to bold
+        bold_font = QFont()
+        bold_font.setBold(True)
+        header.setFont(bold_font)
+
         self.tree_widget.setMinimumHeight(256)
         layout.addWidget(self.tree_widget)
 
         self.runs = None  # all runs to be shown in the tree widget
         self.setStyleSheet("""
             QTreeWidget {
-                background-color: #455364;
+                background-color: #37414F;
             }
         """)
 

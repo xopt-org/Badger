@@ -720,7 +720,7 @@ class BadgerOptMonitor(QWidget):
             self.inspector_state.setValue(value)
         self.inspector_variable.setValue(value)
 
-        self.sig_inspect.emit(idx)
+        self.sig_inspect.emit(int(idx))
 
     def closest_ts(self, t):
         # Get the closest timestamp in data regarding t

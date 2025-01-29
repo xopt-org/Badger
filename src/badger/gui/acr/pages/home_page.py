@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QSplitter,
     QVBoxLayout,
     QWidget,
+    QLabel,
 )
 
 from badger.archive import (
@@ -92,7 +93,7 @@ class BadgerHomePage(QWidget):
 
         # History run browser
         self.history_browser = history_browser = HistoryNavigator()
-        history_browser.setMinimumWidth(360)
+        history_browser.setFixedWidth(360)
 
         # Splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -115,8 +116,21 @@ class BadgerHomePage(QWidget):
         vbox_run_view.addWidget(run_monitor)
 
         # Data table
+        panel_table = QWidget()
+        panel_table.setMinimumHeight(180)
+        vbox_table = QVBoxLayout(panel_table)
+        vbox_table.setContentsMargins(0, 0, 0, 0)
+        title_label = QLabel("Run Data")
+        title_label.setStyleSheet("""
+            background-color: #455364;
+            font-weight: bold;
+            padding: 4px;
+        """)
+        title_label.setAlignment(Qt.AlignCenter)  # Center-align the title
+        vbox_table.addWidget(title_label, 0)
         self.run_table = run_table = data_table()
         run_table.set_uneditable()  # should not be editable
+        vbox_table.addWidget(run_table, 1)
 
         # Routine view
         self.routine_view = routine_view = QWidget()  # for consistent bg
@@ -138,12 +152,16 @@ class BadgerHomePage(QWidget):
         splitter_run = QSplitter(Qt.Horizontal)
         splitter_run.setStretchFactor(0, 1)
         splitter_run.setStretchFactor(1, 1)
-        splitter_run.setStretchFactor(2, 0)
         vbox_run.addWidget(splitter_run, 1)
 
+        splitter_data = QSplitter(Qt.Vertical)
+        splitter_data.setStretchFactor(0, 1)
+        splitter_data.setStretchFactor(1, 0)
+        splitter_data.addWidget(panel_monitor)
+        splitter_data.addWidget(panel_table)
+
         splitter_run.addWidget(routine_view)
-        splitter_run.addWidget(panel_monitor)
-        splitter_run.addWidget(run_table)
+        splitter_run.addWidget(splitter_data)
 
         vbox_run.addWidget(run_action_bar, 0)
 
@@ -152,12 +170,9 @@ class BadgerHomePage(QWidget):
         splitter.addWidget(panel_run)
 
         # Set initial sizes (left fixed, middle and right equal)
-        total_width = 1640  # Total width of the splitter
-        fixed_width = 360  # Fixed width for the left panel
-        remaining_width = total_width - fixed_width
-        equal_width = remaining_width // 2
-        splitter.setSizes([fixed_width, remaining_width])
-        splitter_run.setSizes([equal_width, equal_width, 0])
+        splitter.setSizes([1, 1])
+        splitter_run.setSizes([1, 1])
+        splitter_data.setSizes([800, 180])
 
         self.status_bar = status_bar = BadgerStatusBar()
         status_bar.set_summary("Badger is ready!")
@@ -298,6 +313,9 @@ class BadgerHomePage(QWidget):
                 row = _row
                 continue
 
+            return
+
+        if row == -1:
             return
 
         self.run_monitor.jump_to_solution(row)
