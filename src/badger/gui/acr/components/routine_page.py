@@ -962,6 +962,25 @@ class BadgerRoutinePage(QWidget):
             # Patch the BO generators to turn on TuRBO by default
             if "turbo_controller" not in generator_params:
                 generator_params["turbo_controller"] = "optimize"
+
+            # Nullify a few properties in turbo that can cause issues
+            turbo_config = generator_params["turbo_controller"]
+            if type(turbo_config) is dict:
+                if turbo_config["name"] == "optimize":
+                    try:
+                        turbo_config["center_x"] = None
+                    except KeyError:
+                        pass
+                    try:
+                        turbo_config["best_value"] = None
+                    except KeyError:
+                        pass
+                elif turbo_config["name"] == "safety":
+                    try:
+                        turbo_config["center_x"] = None
+                    except KeyError:
+                        pass
+
         env_params = load_config(self.env_box.edit.toPlainText())
 
         # VOCS
