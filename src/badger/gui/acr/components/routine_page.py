@@ -967,19 +967,10 @@ class BadgerRoutinePage(QWidget):
             turbo_config = generator_params["turbo_controller"]
             if type(turbo_config) is dict:
                 if turbo_config["name"] == "optimize":
-                    try:
-                        turbo_config["center_x"] = None
-                    except KeyError:
-                        pass
-                    try:
-                        turbo_config["best_value"] = None
-                    except KeyError:
-                        pass
+                    turbo_config["center_x"] = None
+                    turbo_config["best_value"] = None
                 elif turbo_config["name"] == "safety":
-                    try:
-                        turbo_config["center_x"] = None
-                    except KeyError:
-                        pass
+                    turbo_config["center_x"] = None
 
         env_params = load_config(self.env_box.edit.toPlainText())
 
