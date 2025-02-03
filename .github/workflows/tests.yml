@@ -34,6 +34,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
+          #mamba-version: "2.0.5"
           activate-environment: badger-dev
           python-version: ${{ matrix.python-version }}
 
