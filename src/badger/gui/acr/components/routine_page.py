@@ -1009,8 +1009,7 @@ class BadgerRoutinePage(QWidget):
         init_points_df = init_points_df.dropna(subset=init_points_df.columns, how="all")
         if init_points_df.empty:
             raise BadgerRoutineError(
-                "No initial points provided. "
-                "Please add at least one initial point"
+                "No initial points provided. Please add at least one initial point"
             )
         contains_na = init_points_df.isna().any().any()
         if contains_na:
