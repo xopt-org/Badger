@@ -939,14 +939,18 @@ class BadgerRoutinePage(QWidget):
 
     def _compose_routine(self) -> Routine:
         # Compose the routine
+
+        # Metadata
         name = self.edit_save.text() or self.edit_save.placeholderText()
         description = self.edit_descr.toPlainText()
 
+        # General sanity checks
         if self.generator_box.cb.currentIndex() == -1:
             raise BadgerRoutineError("no generator selected")
         if self.env_box.cb.currentIndex() == -1:
             raise BadgerRoutineError("no environment selected")
 
+        # Generator
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.toPlainText())
@@ -972,10 +976,30 @@ class BadgerRoutinePage(QWidget):
                 elif turbo_config["name"] == "safety":
                     turbo_config["center_x"] = None
 
+        # Environment
         env_params = load_config(self.env_box.edit.toPlainText())
 
         # VOCS
         vocs, critical_constraints = self._compose_vocs()
+        if not vocs.variables:
+            raise BadgerRoutineError("no variables selected")
+        if not vocs.objectives:
+            raise BadgerRoutineError("no objectives selected")
+        # Sanity check on BO + VOCS cross-compatibility
+        flag_safety_bo = False
+        if generator_name in all_generator_names["bo"]:
+            turbo_config = generator_params["turbo_controller"]
+            if type(turbo_config) is dict:
+                if turbo_config["name"] == "safety":
+                    flag_safety_bo = True
+            elif turbo_config == "safety":
+                flag_safety_bo = True
+
+        if flag_safety_bo and not vocs.constraints:
+            raise BadgerRoutineError(
+                "TuRBO in safety mode requires constraints, "
+                "please add at least one constraint in the VOCS config panel"
+            )
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
@@ -983,6 +1007,11 @@ class BadgerRoutinePage(QWidget):
         )
         init_points_df = init_points_df.replace("", pd.NA)
         init_points_df = init_points_df.dropna(subset=init_points_df.columns, how="all")
+        if init_points_df.empty:
+            raise BadgerRoutineError(
+                "No initial points provided. "
+                "Please add at least one initial point"
+            )
         contains_na = init_points_df.isna().any().any()
         if contains_na:
             raise BadgerRoutineError(
