@@ -219,6 +219,31 @@ class ConfigSingleton:
         """
         return self._config.dict(by_alias=True)
 
+    def list_path_settings(self) -> Dict[str, Any]:
+        """List all the path-related settings in Badger
+
+        Returns
+        -------
+        result: Dict
+            A dictionary containing the path-related settings.
+            Keys in the dict are fields of the settings,
+            the value for each key is the current value for that setting.
+        """
+        path_dict = {}
+
+        all_settings = self._config.model_dump(by_alias=True)
+        for k, v in all_settings.items():
+            if not v["is_path"]:
+                continue
+
+            # Skip the BADGER_DB_ROOT setting
+            if k == "BADGER_DB_ROOT":
+                continue
+
+            path_dict[k] = v["value"]
+
+        return path_dict
+
     def read_value(self, key: str, return_value_field: bool = True) -> Any:
         """
         Searches for the key in all sections of the configuration.

@@ -13,6 +13,7 @@ from PyQt5.QtCore import Qt
 from badger.gui.default.components.analysis_extensions import (
     AnalysisExtension,
     ParetoFrontViewer,
+    BOVisualizer,
 )
 
 
@@ -75,14 +76,17 @@ class ExtensionsPalette(QMainWindow):
         self.text_box.setAlignment(Qt.AlignCenter)
 
         self.btn_data_viewer = QPushButton("ParetoFrontViewer")
+        self.btn_bo_visualizer = QPushButton("BOVisualizer")
 
         layout.addWidget(self.btn_data_viewer)
+        layout.addWidget(self.btn_bo_visualizer)
         layout.addStretch()
         layout.addWidget(self.text_box)
 
         central_widget.setLayout(layout)
 
         self.btn_data_viewer.clicked.connect(self.add_pf_viewer)
+        self.btn_bo_visualizer.clicked.connect(self.add_bo_visualizer)
 
     @property
     def n_active_extensions(self):
@@ -107,6 +111,13 @@ class ExtensionsPalette(QMainWindow):
         """
         self.add_child_window_to_monitor(ParetoFrontViewer(self))
 
+    def add_bo_visualizer(self):
+        """
+        Open the BOVisualizer extension.
+
+        """
+        self.add_child_window_to_monitor(BOVisualizer(self))
+
     def add_child_window_to_monitor(self, child_window: AnalysisExtension):
         """
         Add a child window to the run monitor.
@@ -118,15 +129,18 @@ class ExtensionsPalette(QMainWindow):
 
         """
         child_window.window_closed.connect(self.run_monitor.extension_window_closed)
+        self.run_monitor.active_extensions.append(child_window)
 
-        if self.run_monitor.routine is not None:
-            try:
+        try:
+            if self.run_monitor.routine is not None:
                 child_window.update_window(self.run_monitor.routine)
-                self.run_monitor.active_extensions.append(child_window)
-                child_window.show()
-            except ValueError:
-                QMessageBox.warning(
-                    self, "Extension is not applicable!", traceback.format_exc()
-                )
+        except ValueError:
+            QMessageBox.warning(
+                self, "Extension is not applicable!", traceback.format_exc()
+            )
+            self.run_monitor.active_extensions.remove(child_window)
+            return
+
+        child_window.show()
 
         self.update_palette()

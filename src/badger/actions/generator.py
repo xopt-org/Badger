@@ -17,7 +17,7 @@ def show_generator(args):
         return
 
     try:
-        _, configs = get_generator(args.generator_name)
+        configs = get_generator(args.generator_name)
         yprint(configs)
     except Exception as e:
         logger.error(e)

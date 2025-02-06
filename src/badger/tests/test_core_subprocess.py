@@ -57,16 +57,15 @@ class TestCore:
         A unit test to ensure the core functionality
         of run_routine_xopt is functioning as intended.
         """
-        from badger.db import save_routine
-        from badger.tests.utils import create_routine, fix_db_path_issue
+        from badger.archive import save_tmp_run
+        from badger.tests.utils import create_routine
 
-        fix_db_path_issue()
         self.count = 0
         self.num_of_points = 3
 
         self.routine = create_routine()
         time.sleep(1)
-        save_routine(self.routine)
+        tmp_filename = save_tmp_run(self.routine)
         self.termination_condition = {
             "tc_idx": 0,
             "max_eval": 3,
@@ -81,6 +80,7 @@ class TestCore:
 
         arg_dict = {
             "routine_id": self.routine.id,
+            "routine_filename": tmp_filename,
             "routine_name": self.routine.name,
             "variable_ranges": self.routine.vocs.variables,
             "initial_points": self.routine.initial_points,
@@ -102,7 +102,7 @@ class TestCore:
 
         # assert len(self.candidates_list) == self.count - 1
 
-        assert len(self.results) == self.num_of_points
+        assert len(self.results[0]) == self.num_of_points
 
         assert self.states is None
 

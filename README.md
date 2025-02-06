@@ -30,8 +30,8 @@ Internally, Badger leverages the [Xopt](https://github.com/ChristopherMayes/Xopt
 Badger boasts a range of features designed to enhance your optimization experience:
 
 - **Plugin System:** Easily add your optimization problem in just a few minutes.
-- **Versatile Modes:** Enjoy full support for three modes: GUI, CLI, and API, allowing you to use Badger according to your preferences.
-- **Efficient Rerun:** With a single click or command, rerun optimization tasks swiftly -- ideal for daily machine operation routines.
+- **Versatile Modes:** Enjoy full support for three modes: GUI, CLI[^2], and API, allowing you to use Badger according to your preferences.
+- **Efficient Rerun:** With a single click or command[^2], rerun optimization tasks swiftly -- ideal for daily machine operation routines.
 - **History Exploration:** Browse through past runs effortlessly.
 - **Optimal Solution Navigation:** Jump to or set optimal solutions.
 - **State Recovery:** Easily recover machine states after an optimization run.
@@ -121,21 +121,22 @@ pip install -e ".[dev]"
 
 You'll also need to install `ruff` and `pre-commit` to be able to
 pass the linting and formatting checks:
-```
+```shell
 pip install ruff pre-commit
 ```
 
 Then install the pre-commit hooks:
-```
+```shell
 pre-commit install
 ```
 
 You can also do a run at any time to check your progress:
-```
+```shell
 pre-commit run --all-files
 ```
 ## Issues or questions?
 
-Please check out current Badger issues [here](https://github.com/xopt-org/Badger/issues) before [opening a new one](https://github.com/xopt-org/Badger/issues/new/). Alternatively, you are welcome to [shoot us an email](mailto:zhezhang@slac.stanford.edu), or join our [Slack channel](https://join.slack.com/share/enQtNjI3NjY0NDk0MzUxMC0zNThjYTdmNmZlOTA3MzM2NjFjZTVmNDY5MDk4NmQ2NmQxMjE1NjBjN2VhNzYxNjBjYjgxYzMwY2ExZTIxYzkw).
+Please check out current Badger issues [here](https://github.com/xopt-org/Badger/issues) before [opening a new one](https://github.com/xopt-org/Badger/issues/new/). Alternatively, you are welcome to [shoot us an email](mailto:zhezhang@slac.stanford.edu), or join our [Slack channel](https://slac.slack.com/archives/C02AQS1EGB0) if you are a [SLACer](https://www6.slac.stanford.edu/about/our-people).
 
 [^1]: Draws limited inspiration from [Ocelot the optimizer](https://github.com/ocelot-collab/optimizer).
+[^2]: In version v1.3.0 we only support part of the CLI capabilities but would add them back with future updates.

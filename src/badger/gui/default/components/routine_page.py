@@ -99,6 +99,9 @@ class BadgerRoutinePage(QWidget):
         self.init_ui()
         self.config_logic()
 
+        # Trigger the re-rendering of the environment box
+        self.env_box.relative_to_curr.setChecked(True)
+
     def init_ui(self):
         config_singleton = init_settings()
 
@@ -749,7 +752,7 @@ class BadgerRoutinePage(QWidget):
 
             for warning in caught_warnings:
                 # Ignore runtime warnings (usually caused by clip by bounds)
-                if isinstance(warning.category, RuntimeWarning):
+                if warning.category is RuntimeWarning:
                     pass
                 else:
                     print(f"Caught user warning: {warning.message}")
