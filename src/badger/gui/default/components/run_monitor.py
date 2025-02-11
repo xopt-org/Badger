@@ -386,7 +386,6 @@ class BadgerOptMonitor(QWidget):
             return
 
         self.update_curves()
-        self.update_analysis_extensions()
 
         self.sig_toggle_other.emit(False)
 
