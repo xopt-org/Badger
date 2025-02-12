@@ -7,17 +7,14 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
-    QAction,
     QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
-    QMenu,
     QMessageBox,
     QStyledItemDelegate,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -29,7 +26,6 @@ from badger.archive import archive_run, BADGER_ARCHIVE_ROOT
 from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
 from badger.routine import Routine
 from badger.tests.utils import get_current_vars
-from badger.gui.default.utils import create_button
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
@@ -40,84 +36,6 @@ from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
 
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'
-
-
-stylesheet_del = """
-QPushButton:hover:pressed
-{
-    background-color: #C7737B;
-}
-QPushButton:hover
-{
-    background-color: #BF616A;
-}
-QPushButton
-{
-    background-color: #A9444E;
-}
-"""
-
-stylesheet_log = """
-QPushButton:hover:pressed
-{
-    background-color: #88C0D0;
-}
-QPushButton:hover
-{
-    background-color: #72A4B4;
-}
-QPushButton
-{
-    background-color: #5C8899;
-    color: #000000;
-}
-"""
-
-stylesheet_ext = """
-QPushButton:hover:pressed
-{
-    background-color: #4DB6AC;
-}
-QPushButton:hover
-{
-    background-color: #26A69A;
-}
-QPushButton
-{
-    background-color: #00897B;
-}
-"""
-
-stylesheet_run = """
-QToolButton:hover:pressed
-{
-    background-color: #92D38C;
-}
-QToolButton:hover
-{
-    background-color: #6EC566;
-}
-QToolButton
-{
-    background-color: #4AB640;
-    color: #000000;
-}
-"""
-
-stylesheet_stop = """
-QToolButton:hover:pressed
-{
-    background-color: #C7737B;
-}
-QToolButton:hover
-{
-    background-color: #BF616A;
-}
-QToolButton
-{
-    background-color: #A9444E;
-}
-"""
 
 
 class BadgerOptMonitor(QWidget):
@@ -132,6 +50,12 @@ class BadgerOptMonitor(QWidget):
     sig_inspect = pyqtSignal(int)  # index of the inspector
     sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
     sig_del = pyqtSignal()
+    sig_routine_finished = pyqtSignal()
+    sig_lock_action = pyqtSignal()
+    sig_toggle_reset = pyqtSignal(bool)
+    sig_toggle_run = pyqtSignal(bool)
+    sig_toggle_other = pyqtSignal(bool)
+    sig_env_ready = pyqtSignal()
 
     def __init__(self, process_manager=None):
         super().__init__()
@@ -143,6 +67,7 @@ class BadgerOptMonitor(QWidget):
         self.x_plot_relative = True
         # Routine info
         self.routine = None
+        self.routine_filename = None
         self.process_manager = process_manager
 
         # Curves in the monitor
@@ -192,12 +117,12 @@ class BadgerOptMonitor(QWidget):
         # self.main_panel = main_panel = QWidget(self)
         # main_panel.setStyleSheet('background-color: #19232D;')
         vbox = QVBoxLayout(self)
-        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setContentsMargins(0, 8, 0, 0)
 
         # Config bar
         config_bar = QWidget()
         hbox_config = QHBoxLayout(config_bar)
-        hbox_config.setContentsMargins(8, 0, 8, 0)
+        hbox_config.setContentsMargins(0, 0, 0, 0)
         label = QLabel("Evaluation History Plot Type")
         label_x = QLabel("X Axis")
         self.cb_plot_x = cb_plot_x = QComboBox()
@@ -248,78 +173,8 @@ class BadgerOptMonitor(QWidget):
         self.colors = ["c", "g", "m", "y", "b", "r", "w"]
         self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
 
-        # Action bar
-        action_bar = QWidget()
-        # action_bar.hide()
-        hbox_action = QHBoxLayout(action_bar)
-        hbox_action.setContentsMargins(8, 0, 8, 0)
-
-        cool_font = QFont()
-        cool_font.setWeight(QFont.DemiBold)
-        cool_font.setPixelSize(13)
-
-        self.btn_del = create_button("trash.png", "Delete run", stylesheet_del)
-        self.btn_log = create_button("book.png", "Logbook", stylesheet_log)
-        self.btn_reset = create_button("undo.png", "Reset environment")
-        self.btn_opt = create_button("star.png", "Jump to optimum")
-        self.btn_set = create_button("set.png", "Dial in solution")
-        self.btn_ctrl = create_button("pause.png", "Pause")
-        self.btn_ctrl._status = "pause"
-        self.btn_ctrl.setDisabled(True)
-
-        # self.btn_stop = btn_stop = QPushButton('Run')
-        self.btn_stop = QToolButton()
-        self.btn_stop.setFixedSize(96, 32)
-        self.btn_stop.setFont(cool_font)
-        self.btn_stop.setStyleSheet(stylesheet_run)
-
-        # add button for extensions
-        self.btn_open_extensions_palette = btn_extensions = create_button(
-            "extension.png", "Open extensions", stylesheet_ext
-        )
-
-        # Create a menu and add options
-        self.run_menu = menu = QMenu(self)
-        menu.setFixedWidth(128)
-        self.run_action = run_action = QAction("Run", self)
-        run_action.setIcon(self.icon_play)
-        self.run_until_action = run_until_action = QAction("Run until", self)
-        run_until_action.setIcon(self.icon_play)
-        menu.addAction(run_action)
-        menu.addAction(run_until_action)
-
-        # Set the menu as the run button's dropdown menu
-        self.btn_stop.setMenu(menu)
-        self.btn_stop.setDefaultAction(run_action)
-        self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
-        self.btn_stop.setDisabled(True)
-        # btn_stop.setToolTip('')
-
-        # Config button
-        self.btn_config = btn_config = create_button("tools.png", "Configure run")
-        btn_config.hide()
-        # Run info button
-        self.btn_info = btn_info = create_button("info.png", "Run information")
-        btn_info.hide()
-
-        hbox_action.addWidget(self.btn_del)
-        # hbox_action.addWidget(btn_edit)
-        hbox_action.addWidget(self.btn_log)
-        hbox_action.addStretch(1)
-        hbox_action.addWidget(self.btn_opt)
-        hbox_action.addWidget(self.btn_reset)
-        hbox_action.addWidget(self.btn_ctrl)
-        hbox_action.addWidget(self.btn_stop)
-        hbox_action.addWidget(self.btn_opt)
-        hbox_action.addWidget(self.btn_set)
-        hbox_action.addStretch(1)
-        hbox_action.addWidget(btn_extensions)
-        hbox_action.addWidget(btn_config)
-        hbox_action.addWidget(btn_info)
-
         vbox.addWidget(config_bar)
         vbox.addWidget(monitor)
-        vbox.addWidget(action_bar)
 
     # noinspection PyUnresolvedReferences
     def config_logic(self):
@@ -358,16 +213,6 @@ class BadgerOptMonitor(QWidget):
         self.inspector_variable.sigPositionChangeFinished.connect(self.ins_drag_done)
         self.plot_obj.scene().sigMouseClicked.connect(self.on_mouse_click)
         # sigMouseReleased.connect(self.on_mouse_click)
-
-        self.btn_del.clicked.connect(self.delete_run)
-        self.btn_log.clicked.connect(self.logbook)
-        self.btn_reset.clicked.connect(self.reset_env)
-        self.btn_opt.clicked.connect(self.jump_to_optimal)
-        self.btn_set.clicked.connect(self.set_vars)
-        self.btn_ctrl.clicked.connect(self.ctrl_routine)
-        self.run_action.triggered.connect(self.set_run_action)
-        self.run_until_action.triggered.connect(self.set_run_until_action)
-        self.btn_open_extensions_palette.clicked.connect(self.open_extensions_palette)
 
         # Visualization
         self.cb_plot_x.currentIndexChanged.connect(self.select_x_axis)
@@ -436,13 +281,7 @@ class BadgerOptMonitor(QWidget):
                 pass
 
             # if no routine is loaded set button to disabled
-            self.btn_del.setDisabled(True)
-            self.btn_log.setDisabled(True)
-            self.btn_reset.setDisabled(True)
-            self.btn_ctrl.setDisabled(True)
-            self.btn_stop.setDisabled(True)
-            self.btn_opt.setDisabled(True)
-            self.btn_set.setDisabled(True)
+            self.sig_lock_action.emit()
 
             self.routine = None
 
@@ -526,31 +365,25 @@ class BadgerOptMonitor(QWidget):
         self.inspector_state.setValue(0)
 
         # Switch run button state
-        self.btn_stop.setDisabled(False)
+        self.sig_toggle_run.emit(False)
 
         self.eval_count = 0  # reset the evaluation count
         self.enable_auto_range()
 
         # Reset button should only be available if it's the current run
         if self.routine_runner and self.routine_runner.run_filename == run_filename:
-            self.btn_reset.setDisabled(False)
+            self.sig_toggle_reset.emit(False)
         else:
-            self.btn_reset.setDisabled(True)
+            self.sig_toggle_reset.emit(True)
 
         if routine.data is None:
-            self.btn_del.setDisabled(True)
-            self.btn_log.setDisabled(True)
-            self.btn_opt.setDisabled(True)
-            self.btn_set.setDisabled(True)
+            self.sig_toggle_other.emit(True)
 
             return
 
         self.update_curves()
 
-        self.btn_del.setDisabled(False)
-        self.btn_log.setDisabled(False)
-        self.btn_opt.setDisabled(False)
-        self.btn_set.setDisabled(False)
+        self.sig_toggle_other.emit(False)
 
     def _configure_plot(self, plot_object, inspector, names):
         plot_object.clear()
@@ -568,7 +401,11 @@ class BadgerOptMonitor(QWidget):
         self.reset_routine_runner()
 
         self.routine_runner = routine_runner = BadgerRoutineSubprocess(
-            self.process_manager, self.routine, False
+            self.process_manager,
+            self.routine,
+            self.routine_filename,
+            save=True,
+            testing=self.testing,
         )
 
         routine_runner.signals.env_ready.connect(self.env_ready)
@@ -590,22 +427,14 @@ class BadgerOptMonitor(QWidget):
     def start(self, use_termination_condition=False):
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
+        self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
         self.routine_runner.run()
-        self.btn_stop.setStyleSheet(stylesheet_stop)
-        self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.sig_run_started.emit()
-        self.btn_stop.setDisabled(False)
-        self.run_action.setText("Stop")
-        self.run_action.setIcon(self.icon_stop)
-        self.run_until_action.setText("Stop")
-        self.run_until_action.setIcon(self.icon_stop)
-        self.btn_ctrl.setDisabled(False)
-        self.btn_set.setDisabled(True)
         self.sig_lock.emit(True)
 
     def save_termination_condition(self, tc):
@@ -652,8 +481,8 @@ class BadgerOptMonitor(QWidget):
 
         # Quick-n-dirty fix to the auto range issue
         self.eval_count += 1
-        # if self.eval_count < 5:
-        #     self.enable_auto_range()
+        if self.eval_count < 2:
+            self.enable_auto_range()
 
         self.sig_progress.emit(self.routine.data.tail(1))
 
@@ -731,9 +560,9 @@ class BadgerOptMonitor(QWidget):
 
         # if code reaches this point there is a critical constraint violated
         self.sig_pause.emit(True)
-        self.btn_ctrl.setIcon(self.icon_play)
-        self.btn_ctrl.setToolTip("Resume")
-        self.btn_ctrl._status = "play"
+        # self.btn_ctrl.setIcon(self.icon_play)
+        # self.btn_ctrl.setToolTip("Resume")
+        # self.btn_ctrl._status = "play"
 
         # Show the list of critical violated constraints
         feas_crit = feas[self.routine.critical_constraint_names]
@@ -760,29 +589,11 @@ class BadgerOptMonitor(QWidget):
     def env_ready(self, init_vars) -> None:
         self.init_vars = init_vars
 
-        self.btn_log.setDisabled(False)
-        self.btn_opt.setDisabled(False)
+        self.sig_env_ready.emit()
 
     def routine_finished(self) -> None:
         self.running = False
-        self.btn_ctrl.setIcon(self.icon_pause)
-        self.btn_ctrl.setToolTip("Pause")
-        self.btn_ctrl._status = "pause"
-        self.btn_ctrl.setDisabled(True)
-
-        # Note the order of the following two lines cannot be changed!
-        self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
-        self.btn_stop.setStyleSheet(stylesheet_run)
-        self.run_action.setText("Run")
-        self.run_action.setIcon(self.icon_play)
-        self.run_until_action.setText("Run until")
-        self.run_until_action.setIcon(self.icon_play)
-        # self.btn_stop.setToolTip('')
-        self.btn_stop.setDisabled(False)
-
-        self.btn_reset.setDisabled(False)
-        self.btn_set.setDisabled(False)
-        self.btn_del.setDisabled(False)
+        self.sig_routine_finished.emit()
 
         self.sig_lock.emit(False)
 
@@ -861,17 +672,8 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(
         #     self, 'Success!', f'')
 
-    def ctrl_routine(self):
-        if self.btn_ctrl._status == "pause":
-            self.sig_pause.emit(True)
-            self.btn_ctrl.setIcon(self.icon_play)
-            self.btn_ctrl.setToolTip("Resume")
-            self.btn_ctrl._status = "play"
-        else:
-            self.sig_pause.emit(False)
-            self.btn_ctrl.setIcon(self.icon_pause)
-            self.btn_ctrl.setToolTip("Pause")
-            self.btn_ctrl._status = "pause"
+    def ctrl_routine(self, status):
+        self.sig_pause.emit(status)
 
     def ins_obj_dragged(self, ins_obj):
         self.inspector_variable.setValue(ins_obj.value())
@@ -918,7 +720,7 @@ class BadgerOptMonitor(QWidget):
             self.inspector_state.setValue(value)
         self.inspector_variable.setValue(value)
 
-        self.sig_inspect.emit(idx)
+        self.sig_inspect.emit(int(idx))
 
     def closest_ts(self, t):
         # Get the closest timestamp in data regarding t
@@ -1094,38 +896,22 @@ class BadgerOptMonitor(QWidget):
     def delete_run(self):
         self.sig_del.emit()
 
-    def set_run_action(self):
-        if self.btn_stop.defaultAction() is not self.run_action:
-            self.btn_stop.setDefaultAction(self.run_action)
+    def stop(self):
+        self.sig_stop.emit()
+        self.sig_stop_run.emit()
 
-        if self.run_action.text() == "Run":
-            self.btn_stop.setDisabled(True)
-            self.start()
-        else:
-            self.btn_stop.setDisabled(True)
-            self.sig_stop.emit()
-            self.sig_stop_run.emit()
-
-    def set_run_until_action(self):
-        if self.btn_stop.defaultAction() is not self.run_until_action:
-            self.btn_stop.setDefaultAction(self.run_until_action)
-
-        if self.run_until_action.text() == "Run until":
-            dlg = BadgerTerminationConditionDialog(
-                self,
-                self.start,
-                self.save_termination_condition,
-                self.termination_condition,
-            )
-            self.tc_dialog = dlg
-            try:
-                dlg.exec()
-            finally:
-                self.tc_dialog = None
-        else:
-            self.btn_stop.setDisabled(True)
-            self.sig_stop.emit()
-            self.sig_stop_run.emit()
+    def start_until(self):
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            self.start,
+            self.save_termination_condition,
+            self.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)

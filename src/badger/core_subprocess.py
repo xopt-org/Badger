@@ -1,17 +1,16 @@
 import logging
 import time
 import traceback
-import pkg_resources
 import torch  # noqa: F401. For converting dtype str to torch object.
-from pandas import concat, DataFrame
+from pandas import DataFrame
 import multiprocessing as mp
 
-from badger.db import load_routine
+from badger.archive import load_run
 from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
-from badger.utils import curr_ts_to_str, dump_state
+from badger.archive import archive_run
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +25,9 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     result : DataFrame
     routine : Routine
     """
-    xopt_package_version = pkg_resources.get_distribution("xopt").version
     vocs = routine.vocs
     try:
-        if xopt_package_version >= "2.2.2":
-            best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
-        else:
-            best_idx, _ = vocs.select_best(routine.sorted_data, n=1)
+        best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
 
         if best_idx.size > 0:
             if best_idx[0] != len(routine.data) - 1:
@@ -95,7 +90,10 @@ def run_routine_subprocess(
 
     # set required arguments
     try:
-        routine, _ = load_routine(args["routine_id"])
+        routine = load_run(args["routine_filename"])
+        # TODO: might need to consider the case where routine.data is None?
+        if routine.data is not None:
+            routine.data = routine.data.iloc[0:0]  # reset the data
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
@@ -120,10 +118,11 @@ def run_routine_subprocess(
 
     # set optional arguments
     evaluate = args.pop("evaluate", None)
-    dump_file_callback = args.pop("dump_file_callback", None)
+    archive = args.pop("archive", False)
     termination_condition = args.pop("termination_condition", None)
     start_time = args.pop("start_time", None)
     verbose = args.pop("verbose", 2)
+    testing = args.pop("testing", False)
 
     # setup variables of routine properties for code readablilty
     initial_points = routine.initial_points
@@ -153,15 +152,8 @@ def run_routine_subprocess(
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
         if evaluate:
-            evaluate_queue[0].send(result)
-
-    # dumps file
-    if dump_file_callback:
-        combined_results = None
-        ts_start = curr_ts_to_str()
-        dump_file = dump_file_callback()
-        if not dump_file:
-            dump_file = f"xopt_states_{ts_start}.yaml"
+            time.sleep(0.1)  # give it some break tp catch up
+            evaluate_queue[0].send((routine.data, routine.generator))
 
     # perform optimization
     try:
@@ -211,18 +203,12 @@ def run_routine_subprocess(
             # TODO if paused tell user it is paused
 
             if evaluate:
-                evaluate_queue[0].send(routine.data)
+                evaluate_queue[0].send((routine.data, routine.generator))
 
-            # Dump Xopt state after each step
-            if dump_file_callback:
-                if combined_results is not None:
-                    combined_results = concat(
-                        [combined_results, result], axis=0
-                    ).reset_index(drop=True)
-                else:
-                    combined_results = result
-
-                dump_state(dump_file, routine.generator, combined_results)
+            # archive Xopt state after each step
+            if archive:
+                if not testing:
+                    archive_run(routine)
     except BadgerRunTerminated:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()

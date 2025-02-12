@@ -36,9 +36,11 @@ class BadgerRoutineSubprocess:
         self,
         process_manager: ProcessManager,
         routine: Routine = None,
+        routine_filename: str = None,
         save: bool = False,
         verbose: int = 2,
         use_full_ts: bool = False,
+        testing: bool = False,
     ) -> None:
         """
         Parameters
@@ -53,13 +55,12 @@ class BadgerRoutineSubprocess:
             If true use full time stamp info when dumping to database
         """
         super().__init__()
-        # print('Created a new thread to run the routine.')
-
         # Signals should belong to instance rather than class
         # Since there could be multiple runners running in parallel
         self.signals = BadgerRoutineSignals()
         self.process_manager = process_manager
         self.routine = routine
+        self.routine_filename = routine_filename
         self.run_filename = None
         self.states = None  # system states to be saved at start of a run
         self.save = save
@@ -76,6 +77,7 @@ class BadgerRoutineSubprocess:
         self.routine_process = None
         self.is_killed = False
         self.interval = 100
+        self.testing = testing
         self.config_singleton = init_settings()
 
     def set_termination_condition(self, termination_condition: dict) -> None:
@@ -147,12 +149,15 @@ class BadgerRoutineSubprocess:
 
             arg_dict = {
                 "routine_id": self.routine.id,
+                "routine_filename": self.routine_filename,
                 "routine_name": self.routine.name,
                 "variable_ranges": self.routine.vocs.variables,
                 "initial_points": self.routine.initial_points,
                 "evaluate": True,
+                "archive": self.save,
                 "termination_condition": self.termination_condition,
                 "start_time": self.start_time,
+                "testing": self.testing,
             }
 
             self.data_and_error_queue.put(arg_dict)
@@ -215,11 +220,15 @@ class BadgerRoutineSubprocess:
         if self.evaluate_queue[1].poll():
             while self.evaluate_queue[1].poll():
                 results = self.evaluate_queue[1].recv()
-                self.after_evaluate(results)
+                self.after_evaluate(results[0])
+                self.routine.generator = results[1]
 
         if not self.data_and_error_queue.empty():
-            error_title, error_traceback = self.data_and_error_queue.get()
-            BadgerError(error_title, error_traceback)
+            try:
+                error_title, error_traceback = self.data_and_error_queue.get()
+                BadgerError(error_title, error_traceback)
+            except ValueError:  # seems to only occur in tests
+                pass
 
         if not self.routine_process.is_alive():
             self.close()

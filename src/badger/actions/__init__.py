@@ -14,15 +14,15 @@ def show_info(args):
 
     if args.gui:
         if check_n_config_paths(args.config_filepath):
-            from badger.gui.default import launch_gui
+            from badger.gui.acr import launch_gui
 
             launch_gui(config_path)
 
         return
 
     if args.gui_acr:
-        if check_n_config_paths():
-            from badger.gui.default import launch_gui
+        if check_n_config_paths(args.config_filepath):
+            from badger.gui.acr import launch_gui
 
             launch_gui(config_path)
 
@@ -35,15 +35,16 @@ def show_info(args):
 
     config_singleton = init_settings()
     BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
-    BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
+    # BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
     BADGER_LOGBOOK_ROOT = config_singleton.read_value("BADGER_LOGBOOK_ROOT")
     BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
 
     info = {
         "name": "Badger the optimizer",
         "version": metadata.version("badger-opt"),
+        "xopt version": metadata.version("xopt"),
         "plugin root": BADGER_PLUGIN_ROOT,
-        "database root": BADGER_DB_ROOT,
+        # "database root": BADGER_DB_ROOT,
         "logbook root": BADGER_LOGBOOK_ROOT,
         "archive root": BADGER_ARCHIVE_ROOT,
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')

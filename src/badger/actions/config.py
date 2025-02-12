@@ -12,11 +12,10 @@ def config_settings(args):
     key = args.key
 
     if key is None:
-        yprint(config_singleton.list_settings())
+        yprint(config_singleton.list_path_settings())
         return
 
     try:
-        print("")
         try:
             return _config_path_var(key)
         except KeyError:
@@ -42,7 +41,7 @@ def _config_path_var(var_name):
     display_name = config_singleton.read_display_name(var_name)
     desc = config_singleton.read_description(var_name)
 
-    print(f"=== Configure {display_name} ===")
+    print(f"\n=== Configure {display_name} ===")
     print(f"*** {desc} ***\n")
     while True:
         res = input(
@@ -95,11 +94,11 @@ def _config_path_var(var_name):
 def _config_core_var(var_name):
     config_singleton = init_settings()
 
-    display_name = config_singleton.get_section("core")[var_name]["display name"]
-    desc = config_singleton.get_section("core")[var_name]["description"]
-    default = config_singleton.get_section("core")[var_name]["default value"]
+    display_name = config_singleton.read_display_name(var_name)
+    desc = config_singleton.read_description(var_name)
+    default = config_singleton.read_value(var_name)
 
-    print(f"=== Configure {display_name} ===")
+    print(f"\n=== Configure {display_name} ===")
     print(f"*** {desc} ***\n")
     while True:
         res = input(
