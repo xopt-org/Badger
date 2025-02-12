@@ -110,7 +110,7 @@ git clone https://github.com/xopt-org/badger.git
 
 Create a fresh Python environment, for example using conda:
 ```shell
-conda env create -n badger-env python=3.12
+conda create -n badger-env python=3.12
 ```
 
 Install Badger as editable:
