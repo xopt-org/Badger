@@ -132,7 +132,7 @@ class BOVisualizer(AnalysisExtension):
             self.bo_plot_widget.initialize_widget(self.routine, self.update_window)
 
         # Update the plots with the new generator model
-        self.bo_plot_widget.update_plot(100)
+        self.bo_plot_widget.update_plot(200)
 
     def update_routine(self, routine: Routine):
         logger.debug("Updating routine in BO Visualizer")

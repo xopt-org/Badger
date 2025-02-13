@@ -14,6 +14,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from typing import Callable, Optional, cast
 
+from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
+
+
 from xopt import VOCS
 
 import logging
@@ -23,7 +26,11 @@ logger = logging.getLogger(__name__)
 
 
 class UIComponents:
-    def __init__(self, vocs: Optional[VOCS] = None):
+    def __init__(
+        self,
+        default_parameters: ConfigurableOptions,
+        vocs: Optional[VOCS] = None,
+    ):
         self.vocs = vocs
         self.variable_checkboxes = {}
         self.ref_inputs: list[QTableWidgetItem] = []
@@ -34,16 +41,30 @@ class UIComponents:
         self.x_axis_combo = QComboBox()
         self.y_axis_combo = QComboBox()
         self.y_axis_checkbox = QCheckBox("Include Variable 2")
-        self.y_axis_checkbox.setChecked(True)  # Set checked by default
         self.acq_func_checkbox = QCheckBox("Show Acquisition Function")
-        self.acq_func_checkbox.setChecked(True)  # Set checked by default
         self.show_samples_checkbox = QCheckBox("Show Samples")
-        self.show_samples_checkbox.setChecked(True)  # Set checked by default
         self.show_prior_mean_checkbox = QCheckBox("Show Prior Mean")
         self.show_feasibility_checkbox = QCheckBox("Show Feasibility")
         self.n_grid = QSpinBox()
-        self.n_grid.setRange(10, 100)
-        self.n_grid.setValue(50)  # Default value
+
+        include_variable_2 = default_parameters["include_variable_2"]
+        show_prior_mean = default_parameters["plot_options"]["show_prior_mean"]
+        show_feasibility = default_parameters["plot_options"]["show_feasibility"]
+        show_samples = default_parameters["plot_options"]["show_samples"]
+        show_acq_func = default_parameters["plot_options"]["show_acq_func"]
+        n_grid = default_parameters["plot_options"]["n_grid"]
+        n_grid_range = default_parameters["plot_options"]["n_grid_range"]
+
+        # Set default parameters
+        self.x_axis_combo.setCurrentIndex(1)
+        self.y_axis_combo.setCurrentIndex(0)
+        self.y_axis_checkbox.setChecked(include_variable_2)
+        self.acq_func_checkbox.setChecked(show_acq_func)
+        self.show_samples_checkbox.setChecked(show_samples)
+        self.show_prior_mean_checkbox.setChecked(show_prior_mean)
+        self.show_feasibility_checkbox.setChecked(show_feasibility)
+        self.n_grid.setValue(n_grid)
+        self.n_grid.setRange(n_grid_range[0], n_grid_range[1])
 
         # Initialize layouts
         self.variable_checkboxes_layout = None

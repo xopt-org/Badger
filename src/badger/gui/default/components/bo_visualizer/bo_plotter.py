@@ -1,8 +1,9 @@
 from functools import wraps
 from typing import Callable, Optional, ParamSpec, cast
-from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout
 from PyQt5.QtWidgets import QSizePolicy
 
+from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.routine import Routine
 from .ui_components import UIComponents
 from .plotting_area import PlottingArea
@@ -29,17 +30,41 @@ def signal_logger(text: str):
     return decorator
 
 
+DEFAULT_PARAMETERS: ConfigurableOptions = {
+    "plot_options": {
+        "n_grid": 100,
+        "n_grid_range": (10, 1000),
+        "show_samples": True,
+        "show_prior_mean": False,
+        "show_feasibility": False,
+        "show_acq_func": True,
+    },
+    "variable_1": 0,
+    "variable_2": 1,
+    "include_variable_2": True,
+    "reference_point": {},
+}
+
+
 class BOPlotWidget(QWidget):
+    config_parameters: ConfigurableOptions
+
     def __init__(
         self, parent: Optional[QWidget] = None, routine: Optional[Routine] = None
     ):
         logger.debug("Initializing BOPlotWidget")
         super().__init__(parent)
+
+        # Set default configuration parameters
+        self.config_parameters = DEFAULT_PARAMETERS
+
         self.selected_variables: list[str] = []  # Initialize selected_variables
 
         # Initialize model logic and UI components with None or default values
         self.model_logic = ModelLogic(routine, routine.vocs if routine else None)
-        self.ui_components = UIComponents(routine.vocs if routine else None)
+        self.ui_components = UIComponents(
+            self.config_parameters, routine.vocs if routine else None
+        )
         self.plotting_area = PlottingArea()
 
         main_layout = QHBoxLayout(self)
@@ -68,10 +93,6 @@ class BOPlotWidget(QWidget):
         logger.debug("Update vocs in UI components")
         self.ui_components.update_vocs(routine.vocs, self.on_axis_selection_changed)
 
-        # Set default selections for X-axis and Y-axis dropdowns
-        self.ui_components.x_axis_combo.setCurrentIndex(0)  # Default to first variable
-        self.ui_components.y_axis_combo.setCurrentIndex(1)  # Default to second variable
-
         # Set up connections
         logger.debug("Setting up connections")
         self.setup_connections(routine, update_routine)
@@ -79,6 +100,16 @@ class BOPlotWidget(QWidget):
         # Trigger the axis selection changed to disable reference points for default selected variables
         logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
+
+        self.ui_components.x_axis_combo.setCurrentIndex(
+            self.config_parameters["variable_1"]
+        )
+        self.ui_components.y_axis_combo.setCurrentIndex(
+            self.config_parameters["variable_2"]
+        )
+
+    def setup_selected_variables(self, selected_variables: list[str]) -> None:
+        self.selected_variables = selected_variables
 
     def setup_connections(
         self, routine: Routine, update_routine: Callable[[Routine], None]
@@ -175,28 +206,40 @@ class BOPlotWidget(QWidget):
 
         logger.debug("Axis selection changed")
 
-        previous_selected_variables = self.selected_variables.copy()
+        selected_variables: list[str] = []
 
-        # Start with an empty list of selected variables
-        self.selected_variables = []
+        previous_selected_options = (
+            self.config_parameters["variable_1"],
+            self.config_parameters["variable_2"],
+            self.config_parameters["include_variable_2"],
+        )
 
-        # Always include X-axis variable
-        x_var = self.ui_components.x_axis_combo.currentText()
-        if x_var:
-            self.selected_variables.append(x_var)
+        x_var_index = self.ui_components.x_axis_combo.currentIndex()
+        self.config_parameters["variable_1"] = x_var_index
+        x_var_text = self.ui_components.x_axis_combo.currentText()
+        if x_var_text != "":
+            selected_variables.append(x_var_text)
 
-        # Include Y-axis variable only if the checkbox is checked
-        if self.ui_components.y_axis_checkbox.isChecked():
-            y_var = self.ui_components.y_axis_combo.currentText()
-            if y_var and y_var != x_var:
-                self.selected_variables.append(y_var)
+        include_var2 = self.ui_components.y_axis_checkbox.isChecked()
+        self.config_parameters["include_variable_2"] = include_var2
+        if include_var2:
+            y_var_index = self.ui_components.y_axis_combo.currentIndex()
+            self.config_parameters["variable_2"] = y_var_index
+            y_var_text = self.ui_components.y_axis_combo.currentText()
+            if y_var_text != "":
+                selected_variables.append(y_var_text)
 
-        if len(self.selected_variables) == 0:
-            # No variables selected; do not proceed with updating the plot
-            logger.debug("No variables selected; skipping plot update")
-            return
+        current_selected_options = (
+            self.config_parameters["variable_1"],
+            self.config_parameters["variable_2"],
+            self.config_parameters["include_variable_2"],
+        )
 
-        if previous_selected_variables != self.selected_variables:
+        # Update the selected variables based on the selected indices
+        self.selected_variables = list(set(selected_variables))
+        logger.debug(f"Selected variables: {self.selected_variables}")
+
+        if previous_selected_options != current_selected_options:
             print("Selected variables for plotting:", self.selected_variables)
             # Update the reference point table based on the selected variables
             if self.ui_components.reference_table is not None:
@@ -216,21 +259,18 @@ class BOPlotWidget(QWidget):
 
         # Ensure selected_variables is not empty
         if len(self.selected_variables) == 0:
-            QMessageBox.warning(
-                self,
-                "No Variables Selected",
-                "Please select at least one variable to plot.",
-            )
+            logger.error("No variables selected for plotting")
             return
 
         # **Add validation for the number of variables**
         if len(self.selected_variables) > 2:
-            QMessageBox.warning(
-                self,
-                "Too Many Variables Selected",
-                "Visualization is only supported with respect to 1 or 2 variables. Please select up to 2 variables.",
-            )
+            logger.error("Too many variables selected for plotting")
             return
+
+        for var in self.selected_variables:
+            if var == "":
+                logger.error("Empty variable selected for plotting")
+                return
 
         # Proceed with updating the plot
         selected_variables = self.selected_variables.copy()
