@@ -158,10 +158,6 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(descr)
         descr_bar.hide()
 
-        # Templates
-        # There's probable a better way to do this
-        self.TEMPLATE_ROOT = "./src/badger/built_in_plugins/templates/"
-        
         # Load Template Button
         template_button = QWidget()
         template_button.setFixedWidth(128)
