@@ -255,6 +255,7 @@ class BadgerRoutinePage(QWidget):
         """
 
         template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        #template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
 
         if isinstance(self.sender(), QPushButton):
             # load template from button
@@ -286,16 +287,19 @@ class BadgerRoutinePage(QWidget):
         """
 
         # Compose the template
-        # should add some sort of check in case template_dict does not have specified key
-        name = template_dict["name"]
-        description = template_dict["description"]
-        relative_to_current = template_dict["relative_to_current"]
-        generator_name = template_dict["generator"]["name"]
-        env_name = template_dict["environment"]["name"]
-        vrange_limit_options = template_dict["vrange_limit_options"]
-        initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
-        critical_constraint_names = template_dict["critical_constraint_names"]
-        #env_params = template_dict["environment"]["params"]
+        try:
+            name = template_dict["name"]
+            description = template_dict["description"]
+            relative_to_current = template_dict["relative_to_current"]
+            generator_name = template_dict["generator"]["name"]
+            env_name = template_dict["environment"]["name"]
+            vrange_limit_options = template_dict["vrange_limit_options"]
+            initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
+            critical_constraint_names = template_dict["critical_constraint_names"]
+            env_params = template_dict["environment"]["params"]
+        except KeyError as e:
+            QMessageBox.warning(self, "Error", f"Missing key in template: {e}")
+            return
         
         # set vocs
         vocs = VOCS(
@@ -321,7 +325,7 @@ class BadgerRoutinePage(QWidget):
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
-            #self.env_box.edit.setPlainText(get_yaml_string(env_params))
+            self.env_box.edit.setPlainText(get_yaml_string(env_params))
 
         # set init points based on relative to current
         if relative_to_current:
