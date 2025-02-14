@@ -15,4 +15,3 @@ class ConfigurableOptions(TypedDict):
     variable_1: int
     variable_2: int
     include_variable_2: bool
-    reference_point: dict[str, float]

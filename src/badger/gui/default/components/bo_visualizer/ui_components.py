@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
 )
 from PyQt5.QtCore import Qt
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 
@@ -56,15 +56,15 @@ class UIComponents:
         n_grid_range = default_parameters["plot_options"]["n_grid_range"]
 
         # Set default parameters
-        self.x_axis_combo.setCurrentIndex(1)
-        self.y_axis_combo.setCurrentIndex(0)
         self.y_axis_checkbox.setChecked(include_variable_2)
         self.acq_func_checkbox.setChecked(show_acq_func)
         self.show_samples_checkbox.setChecked(show_samples)
         self.show_prior_mean_checkbox.setChecked(show_prior_mean)
         self.show_feasibility_checkbox.setChecked(show_feasibility)
-        self.n_grid.setValue(n_grid)
         self.n_grid.setRange(n_grid_range[0], n_grid_range[1])
+        self.n_grid.setValue(n_grid)
+
+        self.ref_inputs = []
 
         # Initialize layouts
         self.variable_checkboxes_layout = None
@@ -101,6 +101,9 @@ class UIComponents:
 
         return layout
 
+    def initialize_ui_components(self, configurable_options: ConfigurableOptions):
+        self.populate_reference_table()
+
     def create_reference_inputs(self):
         group_box = QGroupBox("Reference Points")
         layout = QVBoxLayout()
@@ -111,11 +114,6 @@ class UIComponents:
         horizontal_header = self.reference_table.horizontalHeader()
         if horizontal_header is not None:
             horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-        self.ref_inputs = []
-
-        if self.vocs:
-            self.populate_reference_table()
 
         layout.addWidget(self.reference_table)
         group_box.setLayout(layout)
@@ -184,33 +182,27 @@ class UIComponents:
 
         return layout
 
-    def update_vocs(
-        self,
-        vocs: Optional[VOCS],
-        state_changed_callback: Optional[Callable[[], None]] = None,
-    ):
-        self.vocs = vocs
-        logger.debug(f"vocs: {vocs}")
-        # List all items in the x_axis_combo QComboBox
+    def update_variables(self, configurable_options: ConfigurableOptions):
+        if self.vocs is None:
+            raise Exception("Vocs is None")
+
         x_axis_items = [
             self.x_axis_combo.itemText(i) for i in range(self.x_axis_combo.count())
         ]
-        logger.debug(f"x_axis_combo items: {x_axis_items}")
 
         y_axis_items = [
             self.y_axis_combo.itemText(i) for i in range(self.y_axis_combo.count())
         ]
-        logger.debug(f"y_axis_combo items: {y_axis_items}")
 
         combined_set = set(x_axis_items + y_axis_items)
-
-        if self.vocs is None:
-            raise Exception("Vocs in None")
 
         if self.vocs.variable_names != list(combined_set):
             logger.debug(
                 f"Populating axis combos with variable names: {self.vocs.variable_names}"
             )
+
+            self.x_axis_combo.blockSignals(True)
+            self.y_axis_combo.blockSignals(True)
 
             self.x_axis_combo.clear()
             self.y_axis_combo.clear()
@@ -218,4 +210,20 @@ class UIComponents:
             self.x_axis_combo.addItems(self.vocs.variable_names)
             self.y_axis_combo.addItems(self.vocs.variable_names)
 
+            self.x_axis_combo.setCurrentIndex(configurable_options["variable_1"])
+            self.y_axis_combo.setCurrentIndex(configurable_options["variable_2"])
+
+            self.x_axis_combo.blockSignals(False)
+            self.y_axis_combo.blockSignals(False)
+
             self.populate_reference_table()
+
+    def update_vocs(
+        self,
+        vocs: Optional[VOCS],
+    ):
+        if vocs is None:
+            raise Exception("Vocs in None")
+
+        self.vocs = vocs
+        logger.debug(f"vocs: {vocs}")

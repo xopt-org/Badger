@@ -32,8 +32,8 @@ def signal_logger(text: str):
 
 DEFAULT_PARAMETERS: ConfigurableOptions = {
     "plot_options": {
-        "n_grid": 100,
-        "n_grid_range": (10, 1000),
+        "n_grid": 50,
+        "n_grid_range": (10, 100),
         "show_samples": True,
         "show_prior_mean": False,
         "show_feasibility": False,
@@ -42,7 +42,6 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
     "variable_1": 0,
     "variable_2": 1,
     "include_variable_2": True,
-    "reference_point": {},
 }
 
 
@@ -91,25 +90,19 @@ class BOPlotWidget(QWidget):
         logger.debug("Initializing plot with routine")
         self.model_logic.update_routine(routine)
         logger.debug("Update vocs in UI components")
-        self.ui_components.update_vocs(routine.vocs, self.on_axis_selection_changed)
+        self.ui_components.update_vocs(routine.vocs)
+        self.ui_components.update_variables(self.config_parameters)
 
         # Set up connections
         logger.debug("Setting up connections")
         self.setup_connections(routine, update_routine)
 
+        # Initialize UI Components
+        self.ui_components.initialize_ui_components(self.config_parameters)
+
         # Trigger the axis selection changed to disable reference points for default selected variables
         logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
-
-        self.ui_components.x_axis_combo.setCurrentIndex(
-            self.config_parameters["variable_1"]
-        )
-        self.ui_components.y_axis_combo.setCurrentIndex(
-            self.config_parameters["variable_2"]
-        )
-
-    def setup_selected_variables(self, selected_variables: list[str]) -> None:
-        self.selected_variables = selected_variables
 
     def setup_connections(
         self, routine: Routine, update_routine: Callable[[Routine], None]
@@ -235,9 +228,18 @@ class BOPlotWidget(QWidget):
             self.config_parameters["include_variable_2"],
         )
 
+        logger.debug(f"previous_selected_options: {previous_selected_options}")
+        logger.debug(f"current_selected_options: {current_selected_options}")
+
         # Update the selected variables based on the selected indices
         self.selected_variables = list(set(selected_variables))
-        logger.debug(f"Selected variables: {self.selected_variables}")
+
+        self.ui_components.x_axis_combo.setCurrentIndex(
+            self.config_parameters["variable_1"]
+        )
+        self.ui_components.y_axis_combo.setCurrentIndex(
+            self.config_parameters["variable_2"]
+        )
 
         if previous_selected_options != current_selected_options:
             print("Selected variables for plotting:", self.selected_variables)
@@ -272,21 +274,43 @@ class BOPlotWidget(QWidget):
                 logger.error("Empty variable selected for plotting")
                 return
 
-        # Proceed with updating the plot
-        selected_variables = self.selected_variables.copy()
+        n_grid_value = self.ui_components.n_grid.value()
+
+        if n_grid_value < self.config_parameters["plot_options"]["n_grid_range"][0]:
+            logger.error(
+                f"Number of grid points is less than the minimum value: {n_grid_value}"
+            )
+            return
+
+        # Update the plot options
+        self.config_parameters["plot_options"]["n_grid"] = (
+            self.ui_components.n_grid.value()
+        )
+        self.config_parameters["plot_options"]["show_samples"] = (
+            self.ui_components.show_samples_checkbox.isChecked()
+        )
+        self.config_parameters["plot_options"]["show_prior_mean"] = (
+            self.ui_components.show_prior_mean_checkbox.isChecked()
+        )
+        self.config_parameters["plot_options"]["show_feasibility"] = (
+            self.ui_components.show_feasibility_checkbox.isChecked()
+        )
+        self.config_parameters["plot_options"]["show_acq_func"] = (
+            self.ui_components.acq_func_checkbox.isChecked()
+        )
 
         # Disable signals for the reference table to prevent updating the plot multiple times
         if self.ui_components.reference_table is not None:
             self.ui_components.reference_table.blockSignals(True)
 
             # Disable and gray out the reference points for selected variables
-            self.update_reference_point_table(selected_variables)
+            self.update_reference_point_table(self.selected_variables)
 
             self.ui_components.reference_table.blockSignals(False)
 
         # Get reference points for non-selected variables
         reference_point = self.model_logic.get_reference_points(
-            self.ui_components.ref_inputs, selected_variables
+            self.ui_components.ref_inputs, self.selected_variables
         )
         generator = cast(BayesianGenerator, self.model_logic.routine.generator)
 
@@ -295,13 +319,13 @@ class BOPlotWidget(QWidget):
         # Update the plot with the selected variables and reference points
         self.plotting_area.update_plot(
             generator,
-            selected_variables,
+            self.selected_variables,
             reference_point,
-            self.ui_components.acq_func_checkbox.isChecked(),
-            self.ui_components.show_samples_checkbox.isChecked(),
-            self.ui_components.show_prior_mean_checkbox.isChecked(),
-            self.ui_components.show_feasibility_checkbox.isChecked(),
-            self.ui_components.n_grid.value(),
+            self.config_parameters["plot_options"]["show_acq_func"],
+            self.config_parameters["plot_options"]["show_samples"],
+            self.config_parameters["plot_options"]["show_prior_mean"],
+            self.config_parameters["plot_options"]["show_feasibility"],
+            self.config_parameters["plot_options"]["n_grid"],
             requires_rebuild,
             interval,
         )
