@@ -158,10 +158,6 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(descr)
         descr_bar.hide()
 
-        # Templates
-        # There's probable a better way to do this
-        self.TEMPLATE_ROOT = "./src/badger/built_in_plugins/templates/"
-        
         # Load Template Button
         template_button = QWidget()
         template_button.setFixedWidth(128)
@@ -169,6 +165,16 @@ class BadgerRoutinePage(QWidget):
         hbox_name.setContentsMargins(0, 0, 0, 0)
         self.load_template_button = load_template_button = QPushButton("Load Template")
         hbox_name.addWidget(load_template_button, 0)
+        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
+        template_button.show()
+
+        # Save Template Button
+        template_button = QWidget()
+        template_button.setFixedWidth(128)
+        hbox_name = QHBoxLayout(template_button)
+        hbox_name.setContentsMargins(0, 0, 0, 0)
+        self.save_template_button = save_template_button = QPushButton("Save Template")
+        hbox_name.addWidget(save_template_button, 1)
         vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
         template_button.show()
 
@@ -223,6 +229,7 @@ class BadgerRoutinePage(QWidget):
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
+        self.save_template_button.clicked.connect(self.save_template_yaml)
         self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
         self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
@@ -255,6 +262,7 @@ class BadgerRoutinePage(QWidget):
         """
 
         template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        #template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
 
         if isinstance(self.sender(), QPushButton):
             # load template from button
@@ -286,16 +294,19 @@ class BadgerRoutinePage(QWidget):
         """
 
         # Compose the template
-        # should add some sort of check in case template_dict does not have specified key
-        name = template_dict["name"]
-        description = template_dict["description"]
-        relative_to_current = template_dict["relative_to_current"]
-        generator_name = template_dict["generator"]["name"]
-        env_name = template_dict["environment"]["name"]
-        vrange_limit_options = template_dict["vrange_limit_options"]
-        initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
-        critical_constraint_names = template_dict["critical_constraint_names"]
-        #env_params = template_dict["environment"]["params"]
+        try:
+            name = template_dict["name"]
+            description = template_dict["description"]
+            relative_to_current = template_dict["relative_to_current"]
+            generator_name = template_dict["generator"]["name"]
+            env_name = template_dict["environment"]["name"]
+            vrange_limit_options = template_dict["vrange_limit_options"]
+            initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
+            critical_constraint_names = template_dict["critical_constraint_names"]
+            env_params = template_dict["environment"]["params"]
+        except KeyError as e:
+            QMessageBox.warning(self, "Error", f"Missing key in template: {e}")
+            return
         
         # set vocs
         vocs = VOCS(
@@ -321,7 +332,7 @@ class BadgerRoutinePage(QWidget):
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
-            #self.env_box.edit.setPlainText(get_yaml_string(env_params))
+            self.env_box.edit.setPlainText(get_yaml_string(env_params))
 
         # set init points based on relative to current
         if relative_to_current:
@@ -367,6 +378,62 @@ class BadgerRoutinePage(QWidget):
                 self.add_state(name_sta)
         else:
             self.env_box.list_obs.clear()
+        
+    def generate_template_dict_from_gui(self):
+        """
+        Generate a template dictionary from the current state of the GUI
+        """
+
+        vocs, critical_constraints = self._compose_vocs()
+
+        template_dict = {
+            "name": self.edit_save.text(),
+            "description": str(self.edit_descr.toPlainText()),
+            "relative_to_current": self.env_box.relative_to_curr.isChecked(),
+            "generator": {
+                "name": self.generator_box.cb.currentText(),
+                "config": load_config(self.generator_box.edit.toPlainText())
+            },
+            "environment": {
+                "name": self.env_box.cb.currentText(),
+                "params": load_config(self.env_box.edit.toPlainText())
+            },
+            "vrange_limit_options": self.ratio_var_ranges,
+            "initial_point_actions": self.init_table_actions,
+            "critical_constraint_names": critical_constraints,
+            "vocs": vars(vocs), 
+            "badger_version": get_badger_version(),
+            "xopt_version": get_xopt_version(),
+        } 
+
+        return template_dict
+    
+    def save_template_yaml(self):
+        """
+        Save the current routine as a template .yaml file
+        """
+
+        template_dict = self.generate_template_dict_from_gui()
+
+        template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        options = QFileDialog.Options()
+        template_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Template",
+            template_dir,
+            "YAML Files (*.yaml);;All Files (*)",
+            options=options,
+        )
+
+        if not template_path:
+            return
+
+        try:
+            with open(template_path, "w") as stream:
+                yaml.dump(template_dict, stream)
+        except (FileNotFoundError, yaml.YAMLError) as e:
+            print(f"Error saving template: {e}")
+            return
     
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
