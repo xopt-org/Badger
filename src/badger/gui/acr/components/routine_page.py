@@ -168,6 +168,16 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
         template_button.show()
 
+        # Save Template Button
+        template_button = QWidget()
+        template_button.setFixedWidth(128)
+        hbox_name = QHBoxLayout(template_button)
+        hbox_name.setContentsMargins(0, 0, 0, 0)
+        self.save_template_button = save_template_button = QPushButton("Save Template")
+        hbox_name.addWidget(save_template_button, 1)
+        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
+        template_button.show()
+
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
@@ -219,6 +229,7 @@ class BadgerRoutinePage(QWidget):
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
+        self.save_template_button.clicked.connect(self.save_template_yaml)
         self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
         self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
@@ -367,6 +378,62 @@ class BadgerRoutinePage(QWidget):
                 self.add_state(name_sta)
         else:
             self.env_box.list_obs.clear()
+        
+    def generate_template_dict_from_gui(self):
+        """
+        Generate a template dictionary from the current state of the GUI
+        """
+
+        vocs, critical_constraints = self._compose_vocs()
+
+        template_dict = {
+            "name": self.edit_save.text(),
+            "description": str(self.edit_descr.toPlainText()),
+            "relative_to_current": self.env_box.relative_to_curr.isChecked(),
+            "generator": {
+                "name": self.generator_box.cb.currentText(),
+                "config": load_config(self.generator_box.edit.toPlainText())
+            },
+            "environment": {
+                "name": self.env_box.cb.currentText(),
+                "params": load_config(self.env_box.edit.toPlainText())
+            },
+            "vrange_limit_options": self.ratio_var_ranges,
+            "initial_point_actions": self.init_table_actions,
+            "critical_constraint_names": critical_constraints,
+            "vocs": vars(vocs), 
+            "badger_version": get_badger_version(),
+            "xopt_version": get_xopt_version(),
+        } 
+
+        return template_dict
+    
+    def save_template_yaml(self):
+        """
+        Save the current routine as a template .yaml file
+        """
+
+        template_dict = self.generate_template_dict_from_gui()
+
+        template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        options = QFileDialog.Options()
+        template_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Template",
+            template_dir,
+            "YAML Files (*.yaml);;All Files (*)",
+            options=options,
+        )
+
+        if not template_path:
+            return
+
+        try:
+            with open(template_path, "w") as stream:
+                yaml.dump(template_dict, stream)
+        except (FileNotFoundError, yaml.YAMLError) as e:
+            print(f"Error saving template: {e}")
+            return
     
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
