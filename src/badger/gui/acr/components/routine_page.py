@@ -59,6 +59,8 @@ LABEL_WIDTH = 96
 
 class BadgerRoutinePage(QWidget):
     sig_updated = pyqtSignal(str, str)  # routine name, routine description
+    sig_load_template = pyqtSignal(str)  # template path
+    sig_save_template = pyqtSignal(str)  # template path
 
     def __init__(self):
         super().__init__()
@@ -284,6 +286,7 @@ class BadgerRoutinePage(QWidget):
             with open(template_path, "r") as stream:
                 template_dict = yaml.safe_load(stream)
                 self.set_options_from_template(template_dict=template_dict)
+                self.sig_load_template.emit(f"Options loaded from template: {os.path.basename(template_path)}")
         except (FileNotFoundError, yaml.YAMLError) as e:
             print(f"Error loading template: {e}")
             return
@@ -440,6 +443,7 @@ class BadgerRoutinePage(QWidget):
         try:
             with open(template_path, "w") as stream:
                 yaml.dump(template_dict, stream)
+                self.sig_save_template.emit(f"Current routine options saved to template: {os.path.basename(template_path)}")
         except (FileNotFoundError, yaml.YAMLError) as e:
             print(f"Error saving template: {e}")
             return
