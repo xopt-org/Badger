@@ -97,6 +97,10 @@ class BadgerRoutinePage(QWidget):
 
         # Trigger the re-rendering of the environment box
         self.env_box.relative_to_curr.setChecked(True)
+        
+        # Template path
+        #template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        self.template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
 
     def init_ui(self):
         config_singleton = init_settings()
@@ -173,7 +177,7 @@ class BadgerRoutinePage(QWidget):
         template_button.setFixedWidth(128)
         hbox_name = QHBoxLayout(template_button)
         hbox_name.setContentsMargins(0, 0, 0, 0)
-        self.save_template_button = save_template_button = QPushButton("Save Template")
+        self.save_template_button = save_template_button = QPushButton("Save as Template")
         hbox_name.addWidget(save_template_button, 1)
         vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
         template_button.show()
@@ -261,16 +265,13 @@ class BadgerRoutinePage(QWidget):
         a QPushButton, or QComboBox with filenames as menu options
         """
 
-        template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
-        #template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
-
         if isinstance(self.sender(), QPushButton):
             # load template from button
             options = QFileDialog.Options()
             template_path, _ = QFileDialog.getOpenFileName(
                 self,
                 "Select YAML File",
-                template_dir,
+                self.template_dir,
                 "YAML Files (*.yaml);;All Files (*)",
                 options=options,
             )
@@ -344,8 +345,9 @@ class BadgerRoutinePage(QWidget):
             self.init_table_actions = initial_point_actions
             
             # set bounds (should this be somewhere else?)
-            bounds = self.calc_auto_bounds()
-            self.env_box.var_table.set_bounds(bounds)
+            if env_name:
+                bounds = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds)
 
             # set initial points to sample
             self._fill_init_table()
@@ -385,6 +387,14 @@ class BadgerRoutinePage(QWidget):
         """
 
         vocs, critical_constraints = self._compose_vocs()
+        
+        # set bounds to variable range limits (avoids confusion when looking at template file)
+        for var in self.env_box.var_table.variables:
+            name = next(iter(var))
+            if self.env_box.var_table.is_checked(name):
+                bounds = var[name]
+                if name in vocs.variables:
+                    vocs.variables[name] = bounds
 
         template_dict = {
             "name": self.edit_save.text(),
@@ -392,8 +402,8 @@ class BadgerRoutinePage(QWidget):
             "relative_to_current": self.env_box.relative_to_curr.isChecked(),
             "generator": {
                 "name": self.generator_box.cb.currentText(),
-                "config": load_config(self.generator_box.edit.toPlainText())
-            },
+                
+            } | load_config(self.generator_box.edit.toPlainText()),
             "environment": {
                 "name": self.env_box.cb.currentText(),
                 "params": load_config(self.env_box.edit.toPlainText())
@@ -415,12 +425,11 @@ class BadgerRoutinePage(QWidget):
 
         template_dict = self.generate_template_dict_from_gui()
 
-        template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
         options = QFileDialog.Options()
         template_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save Template",
-            template_dir,
+            self.template_dir,
             "YAML Files (*.yaml);;All Files (*)",
             options=options,
         )
