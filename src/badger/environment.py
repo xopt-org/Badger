@@ -186,8 +186,7 @@ class Environment(BaseModel, ABC):
             variable_names = self.variable_names
 
         variable_names_new = [
-            name for name in variable_names
-            if not len(self.variables.get(name, []))
+            name for name in variable_names if not len(self.variables.get(name, []))
         ]
 
         # Get bound one by one due to potential failure

@@ -4,7 +4,6 @@ import copy
 from functools import partial
 import os
 import yaml
-from packaging.version import parse
 
 import numpy as np
 import pandas as pd
@@ -934,8 +933,6 @@ class BadgerRoutinePage(QWidget):
 
     def _compose_routine(self) -> Routine:
         # Compose the routine
-        xopt_version = get_xopt_version()
-
         # Metadata
         name = self.edit_save.text() or self.edit_save.placeholderText()
         description = self.edit_descr.toPlainText()
