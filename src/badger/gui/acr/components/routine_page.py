@@ -356,13 +356,13 @@ class BadgerRoutinePage(QWidget):
             bounds = self.calc_auto_bounds()
             self.env_box.var_table.set_bounds(bounds)
 
-        # set initial points to sample
-        self._fill_init_table()
-
         # set selected variables
         self.env_box.var_table.set_selected(vocs.variables)
         #self.env_box.var_table.set_bounds(vocs.variables)
         self.env_box.check_only_var.setChecked(True)
+
+        # set initial points to sample
+        self._fill_init_table()
 
         # set objectives
         self.env_box.obj_table.set_selected(vocs.objectives)
@@ -411,9 +411,8 @@ class BadgerRoutinePage(QWidget):
             # setting different ranges for different vars)
             for vname in vocs.variables:
                 vrange_limit_options[vname] = copy.deepcopy(self.limit_option)
-        
-        # Set vrange_limit_options based on current table info
-        if not self.env_box.relative_to_curr.isChecked():
+        else:
+            # Set vrange_limit_options based on current table info
             # Set each based on bounds in table --> convert to percentage of full range
             var_bounds = self.env_box.var_table.export_variables()
             for var_name in var_bounds:
