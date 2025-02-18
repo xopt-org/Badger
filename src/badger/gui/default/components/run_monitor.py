@@ -34,6 +34,10 @@ from badger.gui.default.windows.terminition_condition_dialog import (
 from badger.gui.default.components.extensions_palette import ExtensionsPalette
 from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # disable chained assignment warning from pydantic
 pd.options.mode.chained_assignment = None  # default='warn'
 

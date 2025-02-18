@@ -70,6 +70,7 @@ class BOVisualizer(AnalysisExtension):
     initialized = False
     correct_generator = False
     routine_identifier = ""
+    plot_update_rate = 250
 
     def __init__(self, parent: Optional[AnalysisExtension] = None):
         logger.debug("Initializing BO Visualizer Extension")
@@ -132,7 +133,7 @@ class BOVisualizer(AnalysisExtension):
             self.bo_plot_widget.initialize_widget(self.routine, self.update_window)
 
         # Update the plots with the new generator model
-        self.bo_plot_widget.update_plot(100)
+        self.bo_plot_widget.update_plot(self.plot_update_rate)
 
     def update_routine(self, routine: Routine):
         logger.debug("Updating routine in BO Visualizer")
