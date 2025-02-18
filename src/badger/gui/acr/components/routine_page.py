@@ -313,13 +313,7 @@ class BadgerRoutinePage(QWidget):
             all_variables.update(i)
         if routine.additional_variables:  # there are additional variables
             env = self.create_env()
-            # Have to check each variable since some could fail
-            for v in routine.additional_variables:
-                try:
-                    b = env.get_bound(v)
-                except Exception:
-                    b = [-1000, 1000]  # default wide range
-                all_variables.update({v: b})
+            all_variables.update(env._get_bounds(routine.additional_variables))
         # Format for update_variables method
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
@@ -969,15 +963,15 @@ class BadgerRoutinePage(QWidget):
             if "turbo_controller" not in generator_params:
                 generator_params["turbo_controller"] = "optimize"
 
-            if parse(xopt_version) < parse("2.5.4"):
-                # Nullify a few properties in turbo that can cause issues
-                turbo_config = generator_params["turbo_controller"]
-                if type(turbo_config) is dict:
-                    if turbo_config["name"] == "optimize":
-                        turbo_config["center_x"] = None
-                        turbo_config["best_value"] = None
-                    elif turbo_config["name"] == "safety":
-                        turbo_config["center_x"] = None
+            # TODO: remove this patch when Xopt reset API works
+            # Nullify a few properties in turbo that can cause issues
+            turbo_config = generator_params["turbo_controller"]
+            if type(turbo_config) is dict:
+                if turbo_config["name"] == "optimize":
+                    turbo_config["center_x"] = None
+                    turbo_config["best_value"] = None
+                elif turbo_config["name"] == "safety":
+                    turbo_config["center_x"] = None
 
         # Environment
         env_params = load_config(self.env_box.edit.toPlainText())
@@ -988,25 +982,6 @@ class BadgerRoutinePage(QWidget):
             raise BadgerRoutineError("no variables selected")
         if not vocs.objectives:
             raise BadgerRoutineError("no objectives selected")
-
-        # Use Xopt's built-in sanity check for BO + VOCS cross-compatibility
-        # if Xopt version is no less than 2.5.4
-        if parse(xopt_version) < parse("2.5.4"):
-            # Sanity check on BO + VOCS cross-compatibility
-            flag_safety_bo = False
-            if generator_name in all_generator_names["bo"]:
-                turbo_config = generator_params["turbo_controller"]
-                if type(turbo_config) is dict:
-                    if turbo_config["name"] == "safety":
-                        flag_safety_bo = True
-                elif turbo_config == "safety":
-                    flag_safety_bo = True
-
-            if flag_safety_bo and not vocs.constraints:
-                raise BadgerRoutineError(
-                    "TuRBO in safety mode requires constraints, "
-                    "please add at least one constraint in the VOCS config panel"
-                )
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
