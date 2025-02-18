@@ -91,11 +91,6 @@ def run_routine_subprocess(
     # set required arguments
     try:
         routine = load_run(args["routine_filename"])
-        # Call the reset generator API before starting the optimization
-        try:
-            routine.generator.turbo_controller.reset()
-        except AttributeError:  # if not BO generators
-            pass
         # TODO: might need to consider the case where routine.data is None?
         if routine.data is not None:
             routine.data = routine.data.iloc[0:0]  # reset the data
