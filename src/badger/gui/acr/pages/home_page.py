@@ -39,6 +39,10 @@ from badger.settings import init_settings
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.utils import ModalOverlay
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 stylesheet = """
 QPushButton:hover:pressed
 {
@@ -121,11 +125,13 @@ class BadgerHomePage(QWidget):
         vbox_table = QVBoxLayout(panel_table)
         vbox_table.setContentsMargins(0, 0, 0, 0)
         title_label = QLabel("Run Data")
-        title_label.setStyleSheet("""
+        title_label.setStyleSheet(
+            """
             background-color: #455364;
             font-weight: bold;
             padding: 4px;
-        """)
+        """
+        )
         title_label.setAlignment(Qt.AlignCenter)  # Center-align the title
         vbox_table.addWidget(title_label, 0)
         self.run_table = run_table = data_table()
@@ -294,6 +300,8 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine, run_filename)
         self.routine_editor.set_routine(routine, silent=True)
         self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")
+
+        self.run_monitor.update_analysis_extensions()
 
     def inspect_solution(self, idx):
         self.run_table.selectRow(idx)
