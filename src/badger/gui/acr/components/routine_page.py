@@ -351,6 +351,8 @@ class BadgerRoutinePage(QWidget):
         self.ratio_var_ranges = vrange_limit_options
         self.init_table_actions = initial_point_actions
         
+        self.env_box.init_table.clear()
+        
         # set bounds (should this be somewhere else?)
         if env_name:
             bounds = self.calc_auto_bounds()
@@ -361,8 +363,9 @@ class BadgerRoutinePage(QWidget):
         #self.env_box.var_table.set_bounds(vocs.variables)
         self.env_box.check_only_var.setChecked(True)
 
-        # set initial points to sample
-        self._fill_init_table()
+        if not relative_to_current:
+            # set initial points to sample
+            self._fill_init_table()
 
         # set objectives
         self.env_box.obj_table.set_selected(vocs.objectives)
