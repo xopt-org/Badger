@@ -99,9 +99,9 @@ class BadgerRoutinePage(QWidget):
 
         # Trigger the re-rendering of the environment box
         self.env_box.relative_to_curr.setChecked(True)
-        
+
         # Template path
-        #template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        # template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
         self.template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
 
     def init_ui(self):
@@ -168,7 +168,9 @@ class BadgerRoutinePage(QWidget):
         template_button = QWidget()
         hbox_name = QHBoxLayout(template_button)
         hbox_name.setContentsMargins(0, 0, 0, 0)
-        self.save_template_button = save_template_button = QPushButton("Save as Template")
+        self.save_template_button = save_template_button = QPushButton(
+            "Save as Template"
+        )
         save_template_button.setFixedWidth(128)
         hbox_name.addWidget(save_template_button, alignment=Qt.AlignRight)
         vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
@@ -184,7 +186,9 @@ class BadgerRoutinePage(QWidget):
         # vbox.addWidget(group_meta)
 
         # Env box
-        self.BADGER_PLUGIN_ROOT = BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
+        self.BADGER_PLUGIN_ROOT = BADGER_PLUGIN_ROOT = config_singleton.read_value(
+            "BADGER_PLUGIN_ROOT"
+        )
         env_dict_dir = os.path.join(
             BADGER_PLUGIN_ROOT, "environments", "env_colors.yaml"
         )
@@ -196,7 +200,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QScrollArea.NoFrame)
-        scroll_area.setStyleSheet("""
+        scroll_area.setStyleSheet(
+            """
             QScrollArea {
                 border: none;  /* Remove border */
                 margin: 0px;   /* Remove margin */
@@ -205,7 +210,8 @@ class BadgerRoutinePage(QWidget):
             QScrollArea > QWidget {
                 margin: 0px;   /* Remove margin inside */
             }
-        """)
+        """
+        )
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
         scroll_layout_env.setContentsMargins(0, 0, 15, 0)
@@ -267,7 +273,7 @@ class BadgerRoutinePage(QWidget):
                 "YAML Files (*.yaml);;All Files (*)",
                 options=options,
             )
-        
+
         if not template_path:
             return
 
@@ -276,11 +282,13 @@ class BadgerRoutinePage(QWidget):
             with open(template_path, "r") as stream:
                 template_dict = yaml.safe_load(stream)
                 self.set_options_from_template(template_dict=template_dict)
-                self.sig_load_template.emit(f"Options loaded from template: {os.path.basename(template_path)}")
+                self.sig_load_template.emit(
+                    f"Options loaded from template: {os.path.basename(template_path)}"
+                )
         except (FileNotFoundError, yaml.YAMLError) as e:
             print(f"Error loading template: {e}")
             return
-        
+
     def set_options_from_template(self, template_dict: dict):
         """
         Fills in routine_page GUI with relevant info from template_dict
@@ -295,13 +303,15 @@ class BadgerRoutinePage(QWidget):
             generator_name = template_dict["generator"]["name"]
             env_name = template_dict["environment"]["name"]
             vrange_limit_options = template_dict["vrange_limit_options"]
-            initial_point_actions = template_dict["initial_point_actions"] # should be type: add_curr
+            initial_point_actions = template_dict[
+                "initial_point_actions"
+            ]  # should be type: add_curr
             critical_constraint_names = template_dict["critical_constraint_names"]
             env_params = template_dict["environment"]["params"]
         except KeyError as e:
             QMessageBox.warning(self, "Error", f"Missing key in template: {e}")
             return
-        
+
         # set vocs
         vocs = VOCS(
             variables=template_dict["vocs"]["variables"],
@@ -319,7 +329,9 @@ class BadgerRoutinePage(QWidget):
             i = self.generators.index(generator_name)
             self.generator_box.cb.setCurrentIndex(i)
 
-            filtered_config = filter_generator_config(generator_name, template_dict["generator"])
+            filtered_config = filter_generator_config(
+                generator_name, template_dict["generator"]
+            )
             self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
 
         # set environment
@@ -333,16 +345,16 @@ class BadgerRoutinePage(QWidget):
             # make sure gui checkbox state matches yaml option
             if not self.env_box.relative_to_curr.isChecked():
                 self.env_box.relative_to_curr.setChecked(True)
-        
+
         else:
             if self.env_box.relative_to_curr.isChecked():
                 self.env_box.relative_to_curr.setChecked(False)
 
         self.ratio_var_ranges = vrange_limit_options
         self.init_table_actions = initial_point_actions
-        
+
         self.env_box.init_table.clear()
-        
+
         # set bounds (should this be somewhere else?)
         if env_name:
             bounds = self.calc_auto_bounds()
@@ -350,7 +362,7 @@ class BadgerRoutinePage(QWidget):
 
         # set selected variables
         self.env_box.var_table.set_selected(vocs.variables)
-        #self.env_box.var_table.set_bounds(vocs.variables)
+        # self.env_box.var_table.set_bounds(vocs.variables)
         self.env_box.check_only_var.setChecked(True)
 
         if not relative_to_current:
@@ -374,22 +386,22 @@ class BadgerRoutinePage(QWidget):
             self.env_box.list_con.clear()
 
         # set observables
-        observables = vocs.observable_names 
+        observables = vocs.observable_names
         if len(observables):
             for name_sta in observables:
                 self.add_state(name_sta)
         else:
             self.env_box.list_obs.clear()
-        
+
     def generate_template_dict_from_gui(self):
         """
         Generate a template dictionary from the current state of the GUI
         """
 
         vocs, critical_constraints = self._compose_vocs()
-        
+
         vrange_limit_options = {}
-        
+
         for var in self.env_box.var_table.variables:
             # set bounds to variable range limits
             name = next(iter(var))
@@ -400,7 +412,7 @@ class BadgerRoutinePage(QWidget):
 
         # Record the ratio var ranges
         if self.env_box.relative_to_curr.isChecked():
-            # set all to self.limit_option (I don't think auto mode *currently allows 
+            # set all to self.limit_option (I don't think auto mode *currently allows
             # setting different ranges for different vars)
             for vname in vocs.variables:
                 vrange_limit_options[vname] = copy.deepcopy(self.limit_option)
@@ -413,10 +425,10 @@ class BadgerRoutinePage(QWidget):
                 vocs_bounds = vocs.variables[var_name]
                 bound_range = vocs_bounds[1] - vocs_bounds[0]
                 desired_bound_range = var_bounds[var_name][1] - var_bounds[var_name][0]
-                
+
                 # calc percentage of full range
                 ratio_full = desired_bound_range / bound_range
-                
+
                 # calc percentage of current value
                 # Probably a better way to get current value?
                 var_curr = var_bounds[var_name][0] + 0.5 * desired_bound_range
@@ -427,29 +439,29 @@ class BadgerRoutinePage(QWidget):
                     "ratio_curr": ratio_curr,
                     "ratio_full": ratio_full,
                 }
-				
+
         template_dict = {
             "name": self.edit_save.text(),
             "description": str(self.edit_descr.toPlainText()),
             "relative_to_current": self.env_box.relative_to_curr.isChecked(),
             "generator": {
                 "name": self.generator_box.cb.currentText(),
-                
-            } | load_config(self.generator_box.edit.toPlainText()),
+            }
+            | load_config(self.generator_box.edit.toPlainText()),
             "environment": {
                 "name": self.env_box.cb.currentText(),
-                "params": load_config(self.env_box.edit.toPlainText())
+                "params": load_config(self.env_box.edit.toPlainText()),
             },
             "vrange_limit_options": vrange_limit_options,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
-            "vocs": vars(vocs), 
+            "vocs": vars(vocs),
             "badger_version": get_badger_version(),
             "xopt_version": get_xopt_version(),
-        } 
+        }
 
         return template_dict
-    
+
     def save_template_yaml(self):
         """
         Save the current routine as a template .yaml file
@@ -472,11 +484,13 @@ class BadgerRoutinePage(QWidget):
         try:
             with open(template_path, "w") as stream:
                 yaml.dump(template_dict, stream)
-                self.sig_save_template.emit(f"Current routine options saved to template: {os.path.basename(template_path)}")
+                self.sig_save_template.emit(
+                    f"Current routine options saved to template: {os.path.basename(template_path)}"
+                )
         except (FileNotFoundError, yaml.YAMLError) as e:
             print(f"Error saving template: {e}")
             return
-    
+
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
         self.routine = routine  # save routine for future reference
 
