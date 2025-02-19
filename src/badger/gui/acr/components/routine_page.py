@@ -164,16 +164,6 @@ class BadgerRoutinePage(QWidget):
         vbox_meta.addWidget(descr)
         descr_bar.hide()
 
-        """# Load Template Button
-        template_button = QWidget()
-        template_button.setFixedWidth(128)
-        hbox_name = QHBoxLayout(template_button)
-        hbox_name.setContentsMargins(0, 0, 0, 0)
-        self.load_template_button = load_template_button = QPushButton("Load Template")
-        hbox_name.addWidget(load_template_button, 0)
-        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
-        template_button.show()"""
-
         # Save Template Button
         template_button = QWidget()
         hbox_name = QHBoxLayout(template_button)
@@ -263,8 +253,8 @@ class BadgerRoutinePage(QWidget):
     def load_template_yaml(self) -> None:
         """
         Load data from template .yaml into template_dict dictionary.
-        This function expects to be called via an action from either
-        a QPushButton, or QComboBox with filenames as menu options
+        This function expects to be called via an action from
+        a QPushButton
         """
 
         if isinstance(self.sender(), QPushButton):
