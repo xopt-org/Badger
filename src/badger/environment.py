@@ -188,13 +188,20 @@ class Environment(BaseModel, ABC):
         variable_names_new = [
             name for name in variable_names if not len(self.variables.get(name, []))
         ]
-        if len(variable_names_new):
-            self.variables.update(self.get_bounds(variable_names_new))
 
-        # Set a default value for the bounds if not defined
-        default_value = [-1, 1]
+        # Get bound one by one due to potential failure
+        for name in variable_names_new:
+            try:
+                bound = self.get_bound(name)
+            except Exception:
+                raise BadgerEnvVarError(f"Failed to get bound for {name}")
 
-        return {k: self.variables.get(k, default_value) for k in variable_names}
+            if bound[1] <= bound[0]:
+                raise BadgerEnvVarError(f"Invalid bound for {name}: {bound}")
+
+            self.variables.update({name: bound})
+
+        return {k: self.variables[k] for k in variable_names}
 
 
 def instantiate_env(env_class, configs, manager=None):

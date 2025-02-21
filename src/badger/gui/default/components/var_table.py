@@ -311,11 +311,6 @@ class VariableTable(QTableWidget):
                 # TODO: handle this case? Right now I don't think it should happen
                 raise "Environment cannot be found for new variable bounds!"
 
-            # Sanitize vrange
-            # TODO: raise a heads-up regarding the invalid bounds
-            if vrange[1] <= vrange[0]:
-                vrange = [-1000, 1000]  # fallback to some default values
-
             # Add checkbox only when a PV is entered
             self.setCellWidget(idx, 0, QCheckBox())
 
@@ -350,8 +345,8 @@ class VariableTable(QTableWidget):
         self.env = instantiate_env(self.env_class, self.configs)
 
         value = self.env.get_variable(name)
-        bounds = self.env.get_bound(name)
-        return value, bounds
+        bound = self.env._get_bounds([name])[name]
+        return value, bound
 
     def add_variable(self, name, lb, ub):
         var = {name: [lb, ub]}
