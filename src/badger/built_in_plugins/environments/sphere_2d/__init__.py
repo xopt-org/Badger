@@ -14,7 +14,8 @@ class Environment(environment.Environment):
         "x1": 0.5,
     }
     _observations = {
-        "f": 0.0,
+        "f1": 0.0,
+        "f2": 0.0,
     }
 
     def get_variables(self, variable_names):
