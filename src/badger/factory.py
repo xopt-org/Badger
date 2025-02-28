@@ -24,7 +24,6 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "neldermead",
-    "mobo",
     "upper_confidence_bound",
 ]
 
