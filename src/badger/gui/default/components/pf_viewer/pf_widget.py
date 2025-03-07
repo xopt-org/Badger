@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import Optional
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QVBoxLayout
@@ -33,7 +32,7 @@ class ParetoFrontWidget(QWidget):
         return
 
     def update_plot(self, routine: Routine):
-        self.routine = deepcopy(routine)
+        self.routine = routine
 
         if not self.isValidRoutine(self.routine):
             logging.error("Invalid routine")

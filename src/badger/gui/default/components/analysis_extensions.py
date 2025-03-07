@@ -43,7 +43,7 @@ class ParetoFrontViewer(AnalysisExtension):
         self.setLayout(layout)
 
     def update_window(self, routine: Routine):
-        self.pw_widget.update_window(routine)
+        self.pw_widget.update_plot(routine)
 
 
 class BOVisualizer(AnalysisExtension):
