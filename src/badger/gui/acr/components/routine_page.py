@@ -642,7 +642,7 @@ class BadgerRoutinePage(QWidget):
             # Patch for BOs that make the low noise prior False by default
             default_config["gp_constructor"]["use_low_noise_prior"] = False
             # Patch for BOs that turn on TuRBO by default
-            default_config["turbo_controller"] = "optimize"
+            # default_config["turbo_controller"] = "optimize"
 
         # Patch to only show part of the config
         filtered_config = filter_generator_config(name, default_config)
