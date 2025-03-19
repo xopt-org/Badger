@@ -98,6 +98,16 @@ class BadgerEnvBox(QWidget):
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(8, 8, 8, 8)
 
+        # Load Template Button
+        template_button = QWidget()
+        template_button.setFixedWidth(128)
+        hbox_name = QHBoxLayout(template_button)
+        hbox_name.setContentsMargins(0, 0, 0, 0)
+        self.load_template_button = load_template_button = QPushButton("Load Template")
+        hbox_name.addWidget(load_template_button, 0)
+        vbox.addWidget(template_button)
+        template_button.show()
+
         self.setObjectName("EnvBox")
 
         name = QWidget()
