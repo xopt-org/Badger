@@ -27,7 +27,7 @@ Description:
     Note: not all extensions are applicable to every optimization configuration
 3 - Access the BO Visualization extension by clicking the corresponding option within the Badger extensions palette
 
-![bo extension window](./images/bo-extension-initial.png)
+![bo extension window](./images/bo-window.png)
 
 Description:
 
