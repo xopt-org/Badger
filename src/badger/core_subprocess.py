@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 import time
 import traceback
@@ -200,10 +201,10 @@ def run_routine_subprocess(
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
 
-            # TODO if paused tell user it is paused
+            generator_copy = deepcopy(routine.generator)
 
             if evaluate:
-                evaluate_queue[0].send((routine.data, routine.generator))
+                evaluate_queue[0].send((routine.data, generator_copy))
 
             # archive Xopt state after each step
             if archive:
