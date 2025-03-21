@@ -3,11 +3,12 @@ from typing import Optional, cast
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox, QLayout
 from badger.routine import Routine
 
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 from xopt.generators.bayesian.mobo import MOBOGenerator
-from xopt.generators.bayesian.bayesian_generator import visualize_generator_model
 
 import logging
 
@@ -19,6 +20,8 @@ class ParetoFrontWidget(QWidget):
     df_length: int
     correct_generator: bool
     last_updated: Optional[float] = None
+
+    plot_ittr_colors = ("#648FFF", "#FFB000")
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
@@ -37,13 +40,15 @@ class ParetoFrontWidget(QWidget):
 
         return True
 
-    def create_pareto_plot(
+    def setup_connections(self):
+        pass
+
+    def create_ui(self):
+        pass
+
+    def create_plot(
         self, generator: MOBOGenerator, requires_rebuild=False, interval=1000
     ):
-        if generator.model is None:
-            logging.error("Model not found in generator")
-            return
-
         # Check if the plot was updated recently
         if (
             self.last_updated is not None
@@ -59,26 +64,11 @@ class ParetoFrontWidget(QWidget):
                 logger.debug("Skipping update")
                 return
 
-        # pareto_front = generator.get_pareto_front()
+        fig = Figure()
 
-        # if pareto_front[0] is None or pareto_front[1] is None:
-        #     logging.error("No pareto front")
-        #     return
+        fig, ax = self.create_pareto_plot(fig, generator, 1)
 
-        # fig = Figure()
-        # ax = fig.add_subplot()
-        # ax.plot(pareto_front, "ro")
-
-        fig, ax = visualize_generator_model(
-            generator=generator,
-            variable_names=generator.vocs.variable_names,
-            reference_point=generator.reference_point,
-            show_acquisition=True,
-            show_samples=True,
-            show_prior_mean=True,
-            show_feasibility=True,
-            n_grid=100,
-        )
+        ax.set_title("Pareto Front")
 
         self.clearLayout(self.plot_widget)
 
@@ -90,6 +80,66 @@ class ParetoFrontWidget(QWidget):
 
         # Update the last updated time
         self.last_updated = time.time()
+
+    def create_pareto_plot(
+        self, fig: Figure, generator: MOBOGenerator, plot_index: int
+    ):
+        if generator.vocs.objective_names is None:
+            logging.error("No objective names")
+            raise ValueError("No objective names")
+        if generator.vocs.variable_names is None:
+            logging.error("No variable names")
+            raise ValueError("No variable names")
+        if plot_index == 0:
+            x_var_name = generator.vocs.variable_names[0]
+            y_var_name = generator.vocs.variable_names[1]
+        elif plot_index == 1:
+            x_var_name = generator.vocs.objective_names[0]
+            y_var_name = generator.vocs.objective_names[1]
+        else:
+            logging.error("Invalid plot index")
+            raise ValueError("Invalid plot index")
+
+        pareto_front = generator.get_pareto_front()
+
+        if pareto_front[0] is None or pareto_front[1] is None:
+            logging.error("No pareto front")
+            raise ValueError("No pareto front")
+
+        ax = fig.add_subplot()
+
+        raw_data = generator.data
+
+        if raw_data is not None:
+            x = raw_data[f"{x_var_name}"]
+            y = raw_data[f"{y_var_name}"]
+
+            if len(x) > 0 and len(y) > 0:
+                ax.scatter(
+                    x,
+                    y,
+                    color="black",
+                )
+
+        data_points = pareto_front[plot_index]
+        num_of_points = len(data_points)
+
+        color_map = LinearSegmentedColormap.from_list(
+            "custom", self.plot_ittr_colors, N=num_of_points
+        )
+
+        for i, data_point in enumerate(data_points):
+            color = (
+                color_map(i / (num_of_points - 1))
+                if num_of_points > 1
+                else color_map(0)
+            )
+            ax.scatter(data_point[0], data_point[1], color=color)
+
+        ax.set_xlabel(x_var_name)
+        ax.set_ylabel(y_var_name)
+
+        return fig, ax
 
     def create_hypervolume_plot(self, generator: MOBOGenerator):
         hypervolume = generator.calculate_hypervolume()
@@ -121,7 +171,7 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid generator")
             return False
 
-        self.create_pareto_plot(self.routine.generator)
+        self.create_plot(self.routine.generator)
 
         hypervolume = self.create_hypervolume_plot(self.routine.generator)
         logger.debug(f"Pareto front hypervolume: {hypervolume}")
@@ -146,33 +196,33 @@ class ParetoFrontWidget(QWidget):
         generator = cast(MOBOGenerator, self.routine.generator)
 
         # Handle the edge case where the extension has been opened after an optimization has already finished.
-        if generator.model is None:
-            logger.warning("Model not found in generator")
-            if generator.data is None:
-                if self.routine.data is None:
-                    logger.error("No data available in routine or generator")
-                    QMessageBox.critical(
-                        self,
-                        "No data available",
-                        "No data available in routine or generator",
-                    )
-                    return
+        # if generator.model is None:
+        #     logger.warning("Model not found in generator")
+        #     if generator.data is None:
+        #         if self.routine.data is None:
+        #             logger.error("No data available in routine or generator")
+        #             QMessageBox.critical(
+        #                 self,
+        #                 "No data available",
+        #                 "No data available in routine or generator",
+        #             )
+        #             return
 
-                # Use the data from the routine to train the model
-                logger.debug("Setting generator data from routine")
-                generator.data = self.routine.data
+        #         # Use the data from the routine to train the model
+        #         logger.debug("Setting generator data from routine")
+        #         generator.data = self.routine.data
 
-            try:
-                generator.train_model(generator.data)
-            except Exception as e:
-                logger.error(f"Failed to train model: {e}")
-                QMessageBox.warning(
-                    self,
-                    "Failed to train model",
-                    f"Failed to train model: {e}",
-                )
-        else:
-            logger.debug("Model already exists in generator")
+        #     try:
+        #         generator.train_model(generator.data)
+        #     except Exception as e:
+        #         logger.error(f"Failed to train model: {e}")
+        #         QMessageBox.warning(
+        #             self,
+        #             "Failed to train model",
+        #             f"Failed to train model: {e}",
+        #         )
+        # else:
+        #     logger.debug("Model already exists in generator")
 
         if generator.data is None:
             logger.error("No data available in generator")
