@@ -31,8 +31,8 @@ class AnalysisExtension(QDialog):
 
 
 class ParetoFrontViewer(AnalysisExtension):
-    def __init__(self, parent: Optional[AnalysisExtension] = None):
-        super().__init__(parent=parent)
+    def __init__(self):
+        super().__init__()
 
         self.setWindowTitle("Pareto Front Viewer")
 
@@ -53,10 +53,10 @@ class BOVisualizer(AnalysisExtension):
     routine_identifier = ""
     plot_update_rate = 250
 
-    def __init__(self, parent: Optional[AnalysisExtension] = None):
+    def __init__(self):
         logger.debug("Initializing BO Visualizer Extension")
 
-        super().__init__(parent=parent)
+        super().__init__()
         self.setWindowTitle("BO Visualizer")
 
         # Initialize BOPlotWidget without a routine
