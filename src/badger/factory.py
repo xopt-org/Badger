@@ -23,8 +23,6 @@ ALGO_EXCLUDED = [
     "mggpo",
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
-    "neldermead",
-    "mobo",
     "upper_confidence_bound",
 ]
 
