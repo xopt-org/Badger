@@ -468,6 +468,9 @@ class BadgerRoutinePage(QWidget):
         self.init_table_actions = []
         self.ratio_var_ranges = {}
 
+        if hasattr(self, "archive_search"):
+            self.archive_search.close()
+
         if i == -1:
             self.env_box.edit.setPlainText("")
             self.env_box.edit_var.clear()
