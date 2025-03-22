@@ -1,4 +1,6 @@
 from badger import environment
+from PyQt5.QtNetwork import QNetworkRequest
+from PyQt5.QtCore import QUrl
 
 
 class Environment(environment.Environment):
@@ -33,3 +35,12 @@ class Environment(environment.Environment):
 
     def get_observables(self, observable_names):
         return {k: self._observations[k] for k in observable_names}
+
+    def search(self, keyword):
+        url_string = (
+            f"http://lcls-archapp.slac.stanford.edu/"
+            f"retrieval/bpl/searchForPVsRegex?regex=.*{keyword}.*"
+        )
+        request = QNetworkRequest(QUrl(url_string))
+
+        return request
