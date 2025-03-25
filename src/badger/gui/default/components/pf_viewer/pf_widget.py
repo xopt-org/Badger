@@ -1,6 +1,21 @@
 import time
 from typing import Optional, cast
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox, QLayout
+from PyQt5.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMessageBox,
+    QLayout,
+    QPushButton,
+    QComboBox,
+    QRadioButton,
+    QLabel,
+    QGroupBox,
+    QTabWidget,
+)
+
+from PyQt5.QtCore import Qt
+from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions
 from badger.routine import Routine
 
 from matplotlib.figure import Figure
@@ -10,9 +25,26 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 from xopt.generators.bayesian.mobo import MOBOGenerator
 
+from badger.gui.default.components.pf_viewer.types import (
+    PFUIWidgets,
+    PFUILayouts,
+)
+
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+DEFAULT_PARAMETERS: ConfigurableOptions = {
+    "plot_options": {
+        "show_samples": True,
+        "show_prior_mean": False,
+        "show_feasibility": False,
+        "show_acq_func": True,
+    },
+    "variable_1": 0,
+    "variable_2": 1,
+}
 
 
 class ParetoFrontWidget(QWidget):
@@ -25,10 +57,9 @@ class ParetoFrontWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
-        self.plot_widget = QVBoxLayout()
-        layout = QVBoxLayout()
-        layout.addLayout(self.plot_widget)
-        self.setLayout(layout)
+
+        self.create_ui()
+        self.setup_connections()
 
     def isValidRoutine(self, routine: Routine):
         if routine.vocs.objective_names is None:
@@ -42,9 +73,95 @@ class ParetoFrontWidget(QWidget):
 
     def setup_connections(self):
         pass
+        # components["update"].clicked.connect()
 
     def create_ui(self):
+        update_button = QPushButton("Update")
+        variable_1_combo = QComboBox()
+        variable_2_combo = QComboBox()
+        sample_checkbox = QRadioButton("Show Samples")
+
+        components: PFUIWidgets = {
+            "variables": {
+                "variable_1": variable_1_combo,
+                "variable_2": variable_2_combo,
+            },
+            "options": {
+                "sample_checkbox": sample_checkbox,
+            },
+            "update": update_button,
+            "plot": QTabWidget(),
+        }
+
+        layouts: PFUILayouts = {
+            "main": QHBoxLayout(),
+            "settings": QVBoxLayout(),
+            "plot": QVBoxLayout(),
+            "options": QVBoxLayout(),
+            "variables": QVBoxLayout(),
+            "update": QVBoxLayout(),
+        }
+
+        self.ui: PFUI = {"components": components, "layouts": layouts}
+
+        main_layout = self.ui["layouts"]["main"]
+
+        # Left side of the layout
+        settings_layout = self.ui["layouts"]["settings"]
+
+        settings_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # Variables layout
+
+        variables_layout = self.ui["layouts"]["variables"]
+
+        variable_1_layout = QHBoxLayout()
+        variable_1_layout.addWidget(QLabel("Variable 1"))
+        variables_layout.addWidget(variable_1_combo)
+
+        variable_2_layout = QHBoxLayout()
+        variable_2_layout.addWidget(QLabel("Variable 2"))
+        variables_layout.addWidget(variable_2_combo)
+
+        variables_layout.addLayout(variable_1_layout)
+        variables_layout.addLayout(variable_2_layout)
+
+        variables_group = QGroupBox("Variables")
+        variables_group.setLayout(variables_layout)
+
+        settings_layout.addWidget(variables_group)
+
+        # Options layout
+        options_layout = self.ui["layouts"]["options"]
+
+        options_layout.addWidget(self.ui["components"]["options"]["sample_checkbox"])
+
+        settings_layout.addLayout(options_layout)
+
+        # Update layout
+
+        update_button = self.ui["components"]["update"]
+
+        settings_layout.addWidget(update_button)
+
+        main_layout.addLayout(settings_layout)
+
+        # Right side of the layout
+        plot_layout = self.ui["layouts"]["plot"]
+
+        plot_layout.addWidget(self.ui["components"]["plot"])
+
+        main_layout.addLayout(plot_layout)
+
+        self.setLayout(main_layout)
+
+    def update_ui(self):
         pass
+
+    def clear_tabs(self, tab_widget: QTabWidget):
+        max_index = tab_widget.count()
+        for i in range(max_index, -1, -1):
+            tab_widget.removeTab(i)
 
     def create_plot(
         self, generator: MOBOGenerator, requires_rebuild=False, interval=1000
@@ -64,19 +181,29 @@ class ParetoFrontWidget(QWidget):
                 logger.debug("Skipping update")
                 return
 
-        fig = Figure()
+        fig0, ax0 = self.create_pareto_plot(Figure(), generator, 0)
+        fig1, ax1 = self.create_pareto_plot(Figure(), generator, 1)
 
-        fig, ax = self.create_pareto_plot(fig, generator, 1)
+        ax1.set_title("Pareto Front")
 
-        ax.set_title("Pareto Front")
+        plot_layout = self.ui["layouts"]["plot"]
 
-        self.clearLayout(self.plot_widget)
+        plot_tab_widget = self.ui["components"]["plot"]
 
-        canvas = FigureCanvas(fig)
+        self.clear_tabs(plot_tab_widget)
 
-        self.plot_widget.addWidget(canvas)
+        canvas0 = FigureCanvas(fig0)
+        canvas1 = FigureCanvas(fig1)
 
-        plt.close(fig)
+        plt.close(fig0)
+        plt.close(fig1)
+
+        plot_tab_widget.addTab(canvas0, "Variable Space")
+        plot_tab_widget.addTab(canvas1, "Objective Space")
+
+        plot_tab_widget.setCurrentIndex(0)
+
+        plot_layout.addWidget(plot_tab_widget)
 
         # Update the last updated time
         self.last_updated = time.time()
