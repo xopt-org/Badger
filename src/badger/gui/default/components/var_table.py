@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QCheckBox,
     QMessageBox,
+    QAbstractItemView,
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
@@ -19,6 +20,11 @@ class VariableTable(QTableWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
 
         # Reorder the rows by dragging around
         # self.setSelectionBehavior(self.SelectRows)
@@ -55,7 +61,6 @@ class VariableTable(QTableWidget):
         self.env = None  # needed to get bounds on the fly
         self.configs = None  # needed to get bounds on the fly
         self.previous_values = {}  # to track changes in table
-
         self.config_logic()
 
     def config_logic(self):
@@ -65,7 +70,7 @@ class VariableTable(QTableWidget):
 
     def setItem(self, row, column, item):
         text = item.text()
-        if text != "Enter new PV here...":
+        if text != "Enter new variable here....":
             self.previous_values[(row, column)] = item.text()
         super().setItem(row, column, item)
 
@@ -111,7 +116,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
-            if name != "Enter new PV here...":  # TODO: fix...
+            if name != "Enter new variable here....":  # TODO: fix...
                 self.selected[name] = _cb.isChecked()
 
         self.sig_sel_changed.emit()
@@ -227,7 +232,7 @@ class VariableTable(QTableWidget):
                 sb_upper.setEnabled(True)
 
         # Make extra editable row
-        item = QTableWidgetItem("Enter new PV here...")
+        item = QTableWidgetItem("Enter new variable here....")
         item.setFlags(item.flags() | Qt.ItemIsEditable)
         item.setForeground(QColor("gray"))
         self.setItem(n - 1, 1, item)
@@ -250,7 +255,7 @@ class VariableTable(QTableWidget):
         if (
             row != self.rowCount() - 1
             and column == 1
-            and name != "Enter new PV here..."
+            and name != "Enter new variable here...."
         ):
             # check that the new text is not equal to the previous value at that cell
             prev_name = self.previous_values.get((row, column), "")
@@ -272,7 +277,7 @@ class VariableTable(QTableWidget):
         if (
             row == self.rowCount() - 1
             and column == 1
-            and name != "Enter new PV here..."
+            and name != "Enter new variable here...."
         ):
             # Check that variables doesn't already exist in table
             if name in [list(d.keys())[0] for d in self.variables]:
@@ -371,3 +376,51 @@ class VariableTable(QTableWidget):
     def unlock_bounds(self):
         self.bounds_locked = False
         self.toggle_show_mode(self.checked_only)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasText():
+            text = event.mimeData().text()
+            strings = text.strip().split("\n")
+
+            position = event.pos()
+            drop_row = self.rowAt(position.y())
+            if drop_row == -1:
+                drop_row = self.rowCount()
+
+            for i, string in enumerate(strings):
+                string = string.strip()
+                if not string:
+                    continue
+
+                row = drop_row + i
+                if row >= self.rowCount():
+                    self.insertRow(row)
+
+                item = QTableWidgetItem(string)
+                self.setItem(row, 1, item)
+
+                self.add_additional_variable(item)
+
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.ItemIsEnabled
+        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if index.column() == 1:
+            flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
+        return flags

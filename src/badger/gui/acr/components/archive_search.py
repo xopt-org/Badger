@@ -10,7 +10,6 @@ from PyQt5.QtCore import (
     QVariant,
     pyqtSignal,
 )
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkReply
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -22,13 +21,14 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from badger.errors import BadgerRoutineError
 
 logger = logging.getLogger(__name__)
 
 
 class ArchiveResultsTableModel(QAbstractTableModel):
-    """This table model holds the results of an archiver appliance PV search. This search is for names matching
-    the input search words, and the results are a list of PV names that match that search.
+    """This table model holds the results of a variable search. This search is for names matching
+    the input search words, and the results are a list of variable names that match that search.
 
     Parameters
     ----------
@@ -77,7 +77,7 @@ class ArchiveResultsTableModel(QAbstractTableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
 
     def append(self, pv: str) -> None:
-        """Appends a row to this table given the PV name as input"""
+        """Appends a row to this table given the variable name as input"""
         self.beginInsertRows(
             QModelIndex(), len(self.results_list), len(self.results_list)
         )
@@ -86,7 +86,7 @@ class ArchiveResultsTableModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def replace_rows(self, pvs: List[str]) -> None:
-        """Overwrites any existing rows in the table with the input list of PV names"""
+        """Overwrites any existing rows in the table with the input list of variable names"""
         self.beginInsertRows(QModelIndex(), 0, len(pvs) - 1)
         self.results_list = pvs
         self.endInsertRows()
@@ -100,15 +100,15 @@ class ArchiveResultsTableModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def sort(self, col: int, order=Qt.AscendingOrder) -> None:
-        """Sort the table by PV name"""
+        """Sort the table by variable name"""
         self.results_list.sort(reverse=order == Qt.DescendingOrder)
         self.layoutChanged.emit()
 
 
 class ArchiveSearchWidget(QWidget):
     """
-    The ArchiveSearchWidget is a display widget for showing the results of a PV search using an instance of the
-    EPICS archiver appliance. Currently the only type of search supported is for PV names matching an input search
+    The ArchiveSearchWidget is a display widget for showing the results of a variable search using, for example, an instance of the
+    EPICS archiver appliance. Currently the only type of search supported is for variable names matching an input search
     string, though this can be extended in the future.
 
     Parameters
@@ -117,27 +117,20 @@ class ArchiveSearchWidget(QWidget):
         The parent item of this widget
     """
 
-    append_PVs_requested = pyqtSignal(str)
+    append_variables_requested = pyqtSignal(str)
 
     def __init__(self, environment, parent: QObject = None) -> None:
         super().__init__(parent=parent)
         self.env = environment
-        self.network_manager = QNetworkAccessManager()
-        self.network_manager.finished.connect(self.populate_results_list)
 
         self.resize(400, 800)
         self.layout = QVBoxLayout()
-
-        # self.archive_title_label = QLabel("Archive URL:")
-        # self.archive_url_textedit = QLineEdit("http://lcls-archapp.slac.stanford.edu/")
-        # self.archive_url_textedit.setFixedWidth(250)
-        # self.archive_url_textedit.setFixedHeight(25)
 
         self.search_label = QLabel("Pattern:")
         self.search_box = QLineEdit()
         self.search_button = QPushButton("Search")
         self.search_button.setDefault(True)
-        self.search_button.clicked.connect(self.request_archiver_info)
+        self.search_button.clicked.connect(self.request_variable_search)
 
         self.loading_label = QLabel("Loading...")
         self.loading_label.hide()
@@ -158,8 +151,6 @@ class ArchiveSearchWidget(QWidget):
         self.results_view.startDrag = self.startDragAction
 
         self.archive_url_layout = QHBoxLayout()
-        # self.archive_url_layout.addWidget(self.archive_title_label)
-        # self.archive_url_layout.addWidget(self.archive_url_textedit)
         self.layout.addLayout(self.archive_url_layout)
         self.search_layout = QHBoxLayout()
         self.search_layout.addWidget(self.search_label)
@@ -168,20 +159,15 @@ class ArchiveSearchWidget(QWidget):
         self.layout.addLayout(self.search_layout)
         self.layout.addWidget(self.loading_label)
         self.layout.addWidget(self.results_view)
-        # self.insert_button = QPushButton("Add PVs")
-        # self.insert_button.clicked.connect(
-        #    lambda: self.append_PVs_requested.emit(self.selectedPVs())
-        # )
         self.results_view.doubleClicked.connect(
-            lambda: self.append_PVs_requested.emit(self.selectedPVs())
+            lambda: self.append_variables_requested.emit(self.selectedVariables())
         )
-        # self.layout.addWidget(self.insert_button)
         self.setLayout(self.layout)
 
-    def selectedPVs(self) -> str:
-        """Figure out based on which indexes were selected, the list of PVs (by string name)
+    def selectedVariables(self) -> str:
+        """Figure out based on which indexes were selected, the list of variables (by string name)
         The user was hoping to insert into the table. Concatenate them into string form i.e.
-        <pv1>, <pv2>, <pv3>"""
+        <v1>, <v2>, <v3>"""
         indices = self.results_view.selectedIndexes()
         pv_list = ""
         for index in indices:
@@ -192,41 +178,61 @@ class ArchiveSearchWidget(QWidget):
     def startDragAction(self, supported_actions) -> None:
         """
         The method to be called when a user initiates a drag action for one of the results in the table. The current
-        reason for this functionality is the ability to drag a PV name onto a plot to automatically start drawing
-        data for that PV
+        reason for this functionality is the ability to drag a variable name onto a plot to automatically start drawing
+        data for that variable
         """
         drag = QDrag(self)
         mime_data = QMimeData()
-        mime_data.setText(self.selectedPVs())
+        mime_data.setText(self.selectedVariables())
         drag.setMimeData(mime_data)
         drag.exec_()
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         """Special key press tracker, just so that if enter or return is pressed the formula dialog attempts to submit the formula"""
         if e.key() == Qt.Key_Return or e.key() == Qt.Key_Enter:
-            self.request_archiver_info()
+            self.request_variable_search()
         return super().keyPressEvent(e)
 
-    def request_archiver_info(self) -> None:
-        """ """
+    def request_variable_search(self) -> None:
+        """
+        Process the search input and initiate a variable search.
+
+        This method retrieves the search text from the search box, replaces any
+        question marks with a period to normalize the input, and then performs a
+        variable search using the environment's search method. While waiting for the
+        search results, a loading indicator is shown. Once the reply is received,
+        the results list is populated accordingly.
+
+        Returns
+        -------
+        None
+        """
         search_text = self.search_box.text()
         search_text = search_text.replace("?", ".")
-        request = self.env.search(search_text)
-
-        if request is None:
-            request = ""
-
-        self.network_manager.get(request)
         self.loading_label.show()
+        self.env.search(search_text, self.populate_results_list)
 
-    def populate_results_list(self, reply: QNetworkReply) -> None:
-        """Slot called when the archiver appliance returns search results. Will populate the table with the results"""
+    def populate_results_list(self, reply: list[str]) -> None:
+        """
+        Update the results table with new search results.
+
+        This callback is called when new search results (a list of strings) are available.
+        It hides the loading indicator, clears any existing rows in the results table model, and replaces them with the new results.
+
+        Parameters
+        ----------
+        reply : list[str]
+            A list of search result strings to be displayed in the table.
+
+        Raises
+        ------
+        BadgerRoutineError
+            If the reply is empty or None, indicating that no search results could be retrieved.
+        """
         self.loading_label.hide()
-        if reply.error() == QNetworkReply.NoError:
+
+        if reply:
             self.results_table_model.clear()
-            bytes_str = reply.readAll()
-            pv_list = str(bytes_str, "utf-8").split()
-            self.results_table_model.replace_rows(pv_list)
+            self.results_table_model.replace_rows(reply)
         else:
-            logger.error(f"Could not retrieve archiver results due to: {reply.error()}")
-        reply.deleteLater()
+            raise BadgerRoutineError("Could not retrieve search results")

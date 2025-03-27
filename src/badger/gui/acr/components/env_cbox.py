@@ -16,8 +16,8 @@ from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
 from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
-from badger.gui.acr.components.var_table import VariableTable
-from badger.gui.acr.components.obj_table import ObjectiveTable
+from badger.gui.default.components.var_table import VariableTable
+from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.data_table import init_data_table
 from badger.settings import init_settings
 from badger.gui.default.utils import (
@@ -115,7 +115,7 @@ class BadgerEnvBox(QWidget):
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             btn_env_play.hide()
-        self.btn_pv = btn_pv = QPushButton("PV Search")
+        self.btn_pv = btn_pv = QPushButton("Variable Search")
         btn_pv.setFixedSize(128, 24)
         self.btn_docs = btn_docs = QPushButton("Open Docs")
         btn_docs.setFixedSize(96, 24)
