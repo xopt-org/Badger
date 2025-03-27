@@ -1,5 +1,7 @@
+from functools import wraps
 import time
-from typing import Optional, cast
+from typing import Callable, Optional, cast, ParamSpec
+from types import TracebackType
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -18,6 +20,7 @@ from PyQt5.QtCore import Qt
 from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions
 from badger.routine import Routine
 
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -38,20 +41,57 @@ logger = logging.getLogger(__name__)
 DEFAULT_PARAMETERS: ConfigurableOptions = {
     "plot_options": {
         "show_samples": True,
-        "show_prior_mean": False,
-        "show_feasibility": False,
-        "show_acq_func": True,
     },
     "variable_1": 0,
     "variable_2": 1,
+    "variables": [],
+    "objectives": [],
+    "objective_1": 0,
+    "objective_2": 1,
+    "plot_tab": 0,
 }
+
+Param = ParamSpec("Param")
+
+
+def signal_logger(text: str):
+    def decorator(fn: Callable[Param, None]) -> Callable[Param, None]:
+        @wraps(fn)
+        def wrapper(*args: Param.args, **kwargs: Param.kwargs):
+            logger.debug(f"{text}")
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+class MatplotlibFigureContext:
+    def __init__(self):
+        self.fig = Figure()
+        self.ax = self.fig.add_subplot()
+
+    def __enter__(self):
+        return self.fig, self.ax
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        exc_traceback: Optional[TracebackType],
+    ):
+        plt.close(self.fig)
 
 
 class ParetoFrontWidget(QWidget):
     routine: Routine
+    generator: MOBOGenerator
     df_length: int
     correct_generator: bool
     last_updated: Optional[float] = None
+    routine_identifier: str = ""
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
+    initialized: bool = False
 
     plot_ittr_colors = ("#648FFF", "#FFB000")
 
@@ -59,7 +99,6 @@ class ParetoFrontWidget(QWidget):
         super().__init__(parent=parent)
 
         self.create_ui()
-        self.setup_connections()
 
     def isValidRoutine(self, routine: Routine):
         if routine.vocs.objective_names is None:
@@ -71,9 +110,23 @@ class ParetoFrontWidget(QWidget):
 
         return True
 
-    def setup_connections(self):
-        pass
-        # components["update"].clicked.connect()
+    def setup_connections(self, routine: Routine):
+        self.ui["components"]["update"].clicked.connect(
+            lambda: signal_logger("Update button clicked")(
+                lambda: self.update_plot(routine)
+            )()
+        )
+
+        self.ui["components"]["variables"]["variable_1"].currentIndexChanged.connect(
+            lambda: signal_logger("Variable 1 has changed")(
+                lambda: self.on_variable_change()
+            )()
+        )
+        self.ui["components"]["variables"]["variable_2"].currentIndexChanged.connect(
+            lambda: signal_logger("Variable 2 has changed")(
+                lambda: self.on_variable_change()
+            )()
+        )
 
     def create_ui(self):
         update_button = QPushButton("Update")
@@ -134,7 +187,10 @@ class ParetoFrontWidget(QWidget):
         # Options layout
         options_layout = self.ui["layouts"]["options"]
 
-        options_layout.addWidget(self.ui["components"]["options"]["sample_checkbox"])
+        sample_checkbox = self.ui["components"]["options"]["sample_checkbox"]
+        sample_checkbox.setChecked(self.parameters["plot_options"]["show_samples"])
+
+        options_layout.addWidget(sample_checkbox)
 
         settings_layout.addLayout(options_layout)
 
@@ -148,20 +204,71 @@ class ParetoFrontWidget(QWidget):
 
         # Right side of the layout
         plot_layout = self.ui["layouts"]["plot"]
+        plot_tab_widget = self.ui["components"]["plot"]
+        plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
 
-        plot_layout.addWidget(self.ui["components"]["plot"])
+        plot_layout.addWidget(plot_tab_widget)
 
         main_layout.addLayout(plot_layout)
 
         self.setLayout(main_layout)
 
+    def initialize_ui(self):
+        routine = self.routine
+
+        # Setup the variable dropdowns
+        variable_names = routine.vocs.variable_names
+        objective_names = routine.vocs.objective_names
+
+        if variable_names is None:
+            logging.error("No variable names")
+            return
+        if objective_names is None:
+            logging.error("No objective names")
+            return
+
+        self.parameters["variables"] = variable_names
+        self.parameters["objectives"] = objective_names
+
+        variable_1_combo = self.ui["components"]["variables"]["variable_1"]
+        variable_2_combo = self.ui["components"]["variables"]["variable_2"]
+
+        variable_1_combo.blockSignals(True)
+        variable_2_combo.blockSignals(True)
+
+        variable_1_combo.clear()
+        variable_2_combo.clear()
+
+        for variable_name in variable_names:
+            variable_1_combo.addItem(variable_name)
+            variable_2_combo.addItem(variable_name)
+
+        variable_1_combo.setCurrentIndex(self.parameters["variable_1"])
+        variable_2_combo.setCurrentIndex(self.parameters["variable_2"])
+
+        variable_1_combo.blockSignals(False)
+        variable_2_combo.blockSignals(False)
+
+    def on_variable_change(self):
+        self.parameters["variable_1"] = self.ui["components"]["variables"][
+            "variable_1"
+        ].currentIndex()
+        self.parameters["variable_2"] = self.ui["components"]["variables"][
+            "variable_2"
+        ].currentIndex()
+        self.parameters["plot_tab"] = self.ui["components"]["plot"].currentIndex()
+
+        self.update_ui()
+
     def update_ui(self):
-        pass
+        self.create_plot(self.generator, requires_rebuild=True)
 
     def clear_tabs(self, tab_widget: QTabWidget):
         max_index = tab_widget.count()
-        for i in range(max_index, -1, -1):
+        tab_widget.blockSignals(True)
+        for i in range(max_index - 1, -1, -1):
             tab_widget.removeTab(i)
+        tab_widget.blockSignals(False)
 
     def create_plot(
         self, generator: MOBOGenerator, requires_rebuild=False, interval=1000
@@ -181,35 +288,34 @@ class ParetoFrontWidget(QWidget):
                 logger.debug("Skipping update")
                 return
 
-        fig0, ax0 = self.create_pareto_plot(Figure(), generator, 0)
-        fig1, ax1 = self.create_pareto_plot(Figure(), generator, 1)
-
-        ax1.set_title("Pareto Front")
-
-        plot_layout = self.ui["layouts"]["plot"]
-
         plot_tab_widget = self.ui["components"]["plot"]
 
         self.clear_tabs(plot_tab_widget)
 
-        canvas0 = FigureCanvas(fig0)
-        canvas1 = FigureCanvas(fig1)
+        with MatplotlibFigureContext() as (fig, ax):
+            fig0, ax0 = self.create_pareto_plot(fig, ax, generator, 0)
+            canvas0 = FigureCanvas(fig0)
 
-        plt.close(fig0)
-        plt.close(fig1)
+            ax0.set_title("Data Points")
+            plot_tab_widget.addTab(canvas0, "Variable Space")
 
-        plot_tab_widget.addTab(canvas0, "Variable Space")
-        plot_tab_widget.addTab(canvas1, "Objective Space")
+        with MatplotlibFigureContext() as (fig, ax):
+            fig1, ax1 = self.create_pareto_plot(fig, ax, generator, 1)
+            canvas1 = FigureCanvas(fig1)
 
-        plot_tab_widget.setCurrentIndex(0)
+            ax1.set_title("Pareto Front")
+            plot_tab_widget.addTab(canvas1, "Objective Space")
 
+        plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
+
+        plot_layout = self.ui["layouts"]["plot"]
         plot_layout.addWidget(plot_tab_widget)
 
         # Update the last updated time
         self.last_updated = time.time()
 
     def create_pareto_plot(
-        self, fig: Figure, generator: MOBOGenerator, plot_index: int
+        self, fig: Figure, ax: Axes, generator: MOBOGenerator, plot_index: int
     ):
         if generator.vocs.objective_names is None:
             logging.error("No objective names")
@@ -217,12 +323,22 @@ class ParetoFrontWidget(QWidget):
         if generator.vocs.variable_names is None:
             logging.error("No variable names")
             raise ValueError("No variable names")
+
+        logger.debug(f"x: {self.parameters['variable_1']}")
+        logger.debug(f"y: {self.parameters['variable_2']}")
+
         if plot_index == 0:
-            x_var_name = generator.vocs.variable_names[0]
-            y_var_name = generator.vocs.variable_names[1]
+            x_axis = self.parameters["variable_1"]
+            y_axis = self.parameters["variable_2"]
+
+            x_var_name = generator.vocs.variable_names[x_axis]
+            y_var_name = generator.vocs.variable_names[y_axis]
         elif plot_index == 1:
-            x_var_name = generator.vocs.objective_names[0]
-            y_var_name = generator.vocs.objective_names[1]
+            x_axis = self.parameters["objective_1"]
+            y_axis = self.parameters["objective_2"]
+
+            x_var_name = generator.vocs.objective_names[x_axis]
+            y_var_name = generator.vocs.objective_names[y_axis]
         else:
             logging.error("Invalid plot index")
             raise ValueError("Invalid plot index")
@@ -232,8 +348,6 @@ class ParetoFrontWidget(QWidget):
         if pareto_front[0] is None or pareto_front[1] is None:
             logging.error("No pareto front")
             raise ValueError("No pareto front")
-
-        ax = fig.add_subplot()
 
         raw_data = generator.data
 
@@ -287,6 +401,35 @@ class ParetoFrontWidget(QWidget):
 
             widget.deleteLater()
 
+    def requires_reinitialization(self):
+        # Check if the extension needs to be reinitialized
+        logger.debug("Checking if extension needs to be reinitialized")
+
+        if not self.initialized:
+            logger.debug("Reset - Extension never initialized")
+            self.initialized = True
+            return True
+
+        if self.routine_identifier != self.routine.name:
+            logger.debug("Reset - Routine name has changed")
+            self.identifier = self.routine.name
+            return True
+
+        if self.routine.data is None:
+            logger.debug("Reset - No data available")
+            return True
+
+        previous_len = self.df_length
+        self.df_length = len(self.routine.data)
+        new_length = self.df_length
+
+        if previous_len > new_length:
+            logger.debug("Reset - Data length is the same or smaller")
+            self.df_length = int("inf")
+            return True
+
+        return False
+
     def update_plot(self, routine: Routine):
         self.update_routine(routine)
 
@@ -294,13 +437,17 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid routine")
             return
 
-        if not isinstance(self.routine.generator, MOBOGenerator):
+        if not isinstance(self.generator, MOBOGenerator):
             logging.error("Invalid generator")
-            return False
+            return
 
-        self.create_plot(self.routine.generator)
+        if self.requires_reinitialization():
+            self.setup_connections(self.routine)
+            self.initialize_ui()
 
-        hypervolume = self.create_hypervolume_plot(self.routine.generator)
+        self.create_plot(self.generator)
+
+        hypervolume = self.create_hypervolume_plot(self.generator)
         logger.debug(f"Pareto front hypervolume: {hypervolume}")
 
     def update_routine(self, routine: Routine):
@@ -322,35 +469,6 @@ class ParetoFrontWidget(QWidget):
 
         generator = cast(MOBOGenerator, self.routine.generator)
 
-        # Handle the edge case where the extension has been opened after an optimization has already finished.
-        # if generator.model is None:
-        #     logger.warning("Model not found in generator")
-        #     if generator.data is None:
-        #         if self.routine.data is None:
-        #             logger.error("No data available in routine or generator")
-        #             QMessageBox.critical(
-        #                 self,
-        #                 "No data available",
-        #                 "No data available in routine or generator",
-        #             )
-        #             return
-
-        #         # Use the data from the routine to train the model
-        #         logger.debug("Setting generator data from routine")
-        #         generator.data = self.routine.data
-
-        #     try:
-        #         generator.train_model(generator.data)
-        #     except Exception as e:
-        #         logger.error(f"Failed to train model: {e}")
-        #         QMessageBox.warning(
-        #             self,
-        #             "Failed to train model",
-        #             f"Failed to train model: {e}",
-        #         )
-        # else:
-        #     logger.debug("Model already exists in generator")
-
         if generator.data is None:
             logger.error("No data available in generator")
             QMessageBox.critical(
@@ -361,4 +479,4 @@ class ParetoFrontWidget(QWidget):
             return
 
         self.df_length = len(generator.data)
-        self.routine.generator = generator
+        self.generator = generator

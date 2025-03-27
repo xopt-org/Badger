@@ -10,15 +10,17 @@ from PyQt5.QtWidgets import (
 
 class PlotOptions(TypedDict):
     show_samples: bool
-    show_prior_mean: bool
-    show_feasibility: bool
-    show_acq_func: bool
 
 
 class ConfigurableOptions(TypedDict):
     plot_options: PlotOptions
     variable_1: int
     variable_2: int
+    variables: list[str]
+    objectives: list[str]
+    objective_1: int
+    objective_2: int
+    plot_tab: int
 
 
 class PFOptionsUIWidgets(TypedDict):
