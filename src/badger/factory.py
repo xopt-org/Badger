@@ -24,6 +24,7 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "upper_confidence_bound",
+    "nsga2",
 ]
 
 # Check badger plugin root
