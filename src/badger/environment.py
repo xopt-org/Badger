@@ -122,6 +122,9 @@ class Environment(BaseModel, ABC):
     def get_bound(self, variable_name):
         return self.get_bounds([variable_name])[variable_name]
 
+    def search(self, keyword: str, callback: callable):
+        return None
+
     ############################################################
     # Expert level of customization
     ############################################################
