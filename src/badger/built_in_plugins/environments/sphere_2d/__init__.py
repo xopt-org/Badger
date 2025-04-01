@@ -7,7 +7,7 @@ class Environment(environment.Environment):
         "x0": [-1, 1],
         "x1": [-1, 1],
     }
-    observables = ["f"]
+    observables = ["f", "g"]
 
     _variables = {
         "x0": 0.5,
@@ -15,6 +15,7 @@ class Environment(environment.Environment):
     }
     _observations = {
         "f": 0.0,
+        "g": 0.0,
     }
 
     def get_variables(self, variable_names):
@@ -28,8 +29,10 @@ class Environment(environment.Environment):
 
         # Filling up the observations
         f = self._variables["x0"] ** 2 + self._variables["x1"] ** 2
+        g = (self._variables["x0"] - 0.5) ** 2 + self._variables["x1"] ** 2
 
         self._observations["f"] = f
+        self._observations["g"] = g
 
     def get_observables(self, observable_names):
         return {k: self._observations[k] for k in observable_names}
