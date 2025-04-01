@@ -30,7 +30,7 @@ dependencies = [
     "qdarkstyle>=3.0",
     "pillow",
     "requests",
-    "xopt>=2.5.4",
+    "xopt>=2.6.0",
 ]
 dynamic = ["version"]
 [tool.setuptools_scm]
