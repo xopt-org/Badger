@@ -137,6 +137,8 @@ def test_ui_update(qtbot):
 
     routine = create_routine()
     window.refresh_ui(routine)
+    idx = window.generators.index(routine.generator.name)
+    window.select_generator(idx)
 
     assert window.generator_box.edit.toPlainText() == "{}\n"
 
