@@ -45,8 +45,6 @@ def create_button(icon_file, tooltip, stylesheet=None, size=(32, 32), icon_size=
 def filter_generator_config(name, config):
     filtered_config = {}
     if name == "neldermead":
-        filtered_config["xatol"] = config["xatol"]
-        filtered_config["fatol"] = config["fatol"]
         filtered_config["adaptive"] = config["adaptive"]
     elif name == "expected_improvement":
         filtered_config["turbo_controller"] = config["turbo_controller"]
@@ -56,7 +54,6 @@ def filter_generator_config(name, config):
     elif name == "rcds":
         filtered_config["noise"] = config["noise"]
         filtered_config["step"] = config["step"]
-        filtered_config["tol"] = config["tol"]
     else:
         filtered_config = config
 

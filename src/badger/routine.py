@@ -16,6 +16,7 @@ from pydantic import (
 from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
 from xopt.utils import get_local_region
+from xopt.generators.sequential import SequentialGenerator
 from badger.utils import curr_ts
 from badger.environment import Environment, instantiate_env
 
@@ -57,12 +58,16 @@ class Routine(Xopt):
                 data["generator"] = generator_class.model_validate(
                     {**data["generator"], "vocs": data["vocs"]}
                 )
+
             elif isinstance(data["generator"], str):
                 generator_class = get_generator(data["generator"])
 
                 data["generator"] = generator_class.model_validate(
                     {"vocs": data["vocs"]}
                 )
+
+            if isinstance(data["generator"], SequentialGenerator):
+                data["generator"].is_active = False
 
             # validate data (if it exists
             if "data" in data:
@@ -73,9 +78,10 @@ class Routine(Xopt):
                         data["data"] = pd.DataFrame(data["data"], index=[0])
 
                     # Add data one row at a time to avoid generator issues
-                    for i in range(len(data["data"])):
-                        row_df = data["data"].iloc[[i]]
-                        data["generator"].add_data(row_df)
+                    if isinstance(data["generator"], SequentialGenerator):
+                        data["generator"].set_data(data["data"])
+                    else:
+                        data["generator"].add_data(data["data"])
 
             # instantiate env
             if isinstance(data["environment"], dict):
