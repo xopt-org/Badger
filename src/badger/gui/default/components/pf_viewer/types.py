@@ -1,4 +1,6 @@
 from typing import TypedDict
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+
 from PyQt5.QtWidgets import (
     QRadioButton,
     QComboBox,
@@ -32,11 +34,16 @@ class PFVariablesUIWidgets(TypedDict):
     variable_2: QComboBox
 
 
+class PFPlotUIWidgets(TypedDict):
+    pareto: QTabWidget
+    hypervolume: FigureCanvas
+
+
 class PFUIWidgets(TypedDict):
     variables: PFVariablesUIWidgets
     options: PFOptionsUIWidgets
     update: QRadioButton
-    plot: QTabWidget
+    plot: PFPlotUIWidgets
 
 
 class PFVariablesLayouts(TypedDict):
