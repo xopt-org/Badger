@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QLayout,
     QPushButton,
     QComboBox,
-    QRadioButton,
+    QCheckBox,
     QLabel,
     QGroupBox,
     QTabWidget,
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PARAMETERS: ConfigurableOptions = {
     "plot_options": {
-        "show_samples": True,
+        "show_raw_data": True,
     },
     "variable_1": 0,
     "variable_2": 1,
@@ -67,9 +67,9 @@ def signal_logger(text: str):
 
 
 class BlockSignalsContext:
-    widgets: Iterable[QWidget]
+    widgets: Iterable[QWidget | QLayout]
 
-    def __init__(self, widgets: QWidget | Iterable[QWidget]):
+    def __init__(self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]):
         if isinstance(widgets, Iterable):
             self.widgets = widgets
         else:
@@ -109,10 +109,11 @@ class MatplotlibFigureContext:
 class ParetoFrontWidget(QWidget):
     routine: Routine
     generator: MOBOGenerator
-    df_length: int
+    df_length: float = float("inf")
     correct_generator: bool
     last_updated: Optional[float] = None
     routine_identifier: str = ""
+    history: list[tuple[int, float]] = []
     parameters: ConfigurableOptions = DEFAULT_PARAMETERS
     initialized: bool = False
 
@@ -152,13 +153,17 @@ class ParetoFrontWidget(QWidget):
             lambda: signal_logger("Tab changed")(lambda: self.on_tab_change())()
         )
 
+        self.ui["components"]["options"]["show_raw_data"].clicked.connect(
+            lambda: signal_logger("Sample checkbox changed")(lambda: self.update_ui())()
+        )
+
     def create_ui(self):
         update_button = QPushButton("Update")
         variable_1_combo = QComboBox()
         variable_1_combo.setMinimumWidth(100)
         variable_2_combo = QComboBox()
         variable_2_combo.setMinimumWidth(100)
-        sample_checkbox = QRadioButton("Show Samples")
+        show_raw_data_checkbox = QCheckBox("Show Raw Data")
 
         components: PFUIWidgets = {
             "variables": {
@@ -166,12 +171,12 @@ class ParetoFrontWidget(QWidget):
                 "variable_2": variable_2_combo,
             },
             "options": {
-                "sample_checkbox": sample_checkbox,
+                "show_raw_data": show_raw_data_checkbox,
             },
             "update": update_button,
             "plot": {
                 "pareto": QTabWidget(),
-                "hypervolume": FigureCanvas(Figure(figsize=(5, 4))),
+                "hypervolume": QVBoxLayout(),
             },
         }
 
@@ -218,10 +223,12 @@ class ParetoFrontWidget(QWidget):
         # Options layout
         options_layout = self.ui["layouts"]["options"]
 
-        sample_checkbox = self.ui["components"]["options"]["sample_checkbox"]
-        sample_checkbox.setChecked(self.parameters["plot_options"]["show_samples"])
+        show_raw_data_checkbox = self.ui["components"]["options"]["show_raw_data"]
+        show_raw_data_checkbox.setChecked(
+            self.parameters["plot_options"]["show_raw_data"]
+        )
 
-        options_layout.addWidget(sample_checkbox)
+        options_layout.addWidget(show_raw_data_checkbox)
 
         settings_layout.addLayout(options_layout)
 
@@ -242,7 +249,7 @@ class ParetoFrontWidget(QWidget):
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
 
         plot_layout.addWidget(plot_tab_widget)
-        plot_layout.addWidget(plot_hypervolume)
+        plot_layout.addLayout(plot_hypervolume)
 
         main_layout.addLayout(plot_layout)
 
@@ -329,14 +336,14 @@ class ParetoFrontWidget(QWidget):
         self.update_ui()
 
     def update_ui(self):
-        self.create_plot(self.generator, requires_rebuild=True)
+        self.create_plots(self.generator, requires_rebuild=True)
 
     def clear_tabs(self, tab_widget: QTabWidget):
         max_index = tab_widget.count()
         for i in range(max_index - 1, -1, -1):
             tab_widget.removeTab(i)
 
-    def create_plot(
+    def create_plots(
         self,
         generator: MOBOGenerator,
         requires_rebuild: bool = False,
@@ -359,36 +366,47 @@ class ParetoFrontWidget(QWidget):
             self.clear_tabs(plot_tab_widget)
 
             with MatplotlibFigureContext() as (fig, ax):
-                fig0, ax0 = self.create_pareto_plot(fig, ax, generator)
-                canvas0 = FigureCanvas(fig0)
+                try:
+                    fig0, ax0 = self.create_pareto_plot(fig, ax, generator)
+                    canvas0 = FigureCanvas(fig0)
 
-                ax0.set_title("Data Points")
-                plot_tab_widget.addTab(canvas0, "Variable Space")
+                    ax0.set_title("Data Points")
+                    plot_tab_widget.addTab(canvas0, "Variable Space")
+                except ValueError:
+                    logging.error("No data points available for Variable Space")
 
             with MatplotlibFigureContext() as (fig, ax):
-                fig1, ax1 = self.create_pareto_plot(fig, ax, generator)
-                canvas1 = FigureCanvas(fig1)
+                try:
+                    fig1, ax1 = self.create_pareto_plot(fig, ax, generator)
+                    canvas1 = FigureCanvas(fig1)
 
-                ax1.set_title("Pareto Front")
-                plot_tab_widget.addTab(canvas1, "Objective Space")
+                    ax1.set_title("Pareto Front")
+                    plot_tab_widget.addTab(canvas1, "Objective Space")
+                except ValueError:
+                    logging.error("No data points available for Objective Space")
 
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
 
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
+        self.clearLayout(plot_hypervolume)
+        plot_hypervolume.blockSignals
 
         with BlockSignalsContext(plot_hypervolume):
             with MatplotlibFigureContext() as (fig, ax):
-                fig, ax = self.create_pareto_plot(fig, ax, generator)
-                ax1.set_title("Pareto Front")
-                canvas = FigureCanvas(fig)
+                try:
+                    fig, ax = self.create_hypervolume_plot(fig, ax)
 
-                plot_hypervolume = canvas
+                    canvas = FigureCanvas(fig)
+                    plot_hypervolume.addWidget(canvas)
+                except ValueError:
+                    logging.error("No data points available for Hypervolume")
 
         # Update the last updated time
         self.last_updated = time.time()
 
     def create_pareto_plot(self, fig: Figure, ax: Axes, generator: MOBOGenerator):
         current_tab = self.parameters["plot_tab"]
+        show_raw_data = self.ui["components"]["options"]["show_raw_data"].isChecked()
 
         if current_tab == 0:
             x_axis = self.parameters["variable_1"]
@@ -419,7 +437,7 @@ class ParetoFrontWidget(QWidget):
 
         raw_data = generator.data
 
-        if raw_data is not None:
+        if raw_data is not None and show_raw_data:
             x = raw_data[f"{x_var_name}"]
             y = raw_data[f"{y_var_name}"]
 
@@ -467,12 +485,22 @@ class ParetoFrontWidget(QWidget):
 
         return fig, ax
 
-    def create_hypervolume_plot(self, generator: MOBOGenerator):
-        hypervolume = generator.calculate_hypervolume()
+    def create_hypervolume_plot(self, fig: Figure, ax: Axes):
+        data_points = self.history
+        if len(data_points) == 0:
+            raise ValueError("No data points available")
+        # Extract the x and y coordinates from the data points
+        x = [point[0] for point in data_points]
+        y = [point[1] for point in data_points]
+        # Create a scatter plot
+        ax.scatter(x, y, color="black")
+        # Set the x and y axis labels
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Hypervolume")
+        # Set the title of the plot
+        ax.set_title("Hypervolume over iterations")
 
-        logging.debug(f"Pareto front hypervolume: {hypervolume}")
-
-        return hypervolume
+        return fig, ax
 
     def clearLayout(self, layout: QLayout):
         while layout.count():
@@ -494,15 +522,18 @@ class ParetoFrontWidget(QWidget):
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
+            self.history = []
             return True
 
         if self.routine_identifier != self.routine.name:
             logger.debug("Reset - Routine name has changed")
             self.routine_identifier = self.routine.name
+            self.history = []
             return True
 
         if self.routine.data is None:
             logger.debug("Reset - No data available")
+            self.history = []
             return True
 
         previous_len = self.df_length
@@ -511,7 +542,8 @@ class ParetoFrontWidget(QWidget):
 
         if previous_len > new_length:
             logger.debug("Reset - Data length is the same or smaller")
-            self.df_length = int("inf")
+            self.history = []
+            self.df_length = len(self.routine.data)
             return True
 
         return False
@@ -529,13 +561,33 @@ class ParetoFrontWidget(QWidget):
             self.setup_connections(self.routine)
             self.initialize_ui()
 
-        self.create_plot(self.generator)
+        self.update_hypervolume()
+        self.create_plots(self.generator)
 
-        hypervolume = self.create_hypervolume_plot(self.generator)
-        logger.debug(f"Pareto front hypervolume: {hypervolume}")
+    def update_hypervolume(self):
+        # Get the hypervolume from the generator
+        hypervolume = self.generator.calculate_hypervolume()
+
+        if self.generator.data is None:
+            logger.error("No data available in generator")
+            return
+        # Append the hypervolume to the history
+        current_iteration = int(sorted(self.generator.data.index, key=int)[-1])
+        logger.debug(
+            f"Current iteration: {current_iteration}, Hypervolume: {hypervolume}"
+        )
+        if len(self.history) > 0:
+            last_iteration = self.history[-1][0]
+            if current_iteration <= last_iteration:
+                logger.debug(
+                    "Current iteration is less than or equal to the last iteration"
+                )
+                return
+
+        self.history.append((current_iteration, hypervolume))
 
     def update_routine(self, routine: Routine):
-        logger.debug("Updating routine in BO Visualizer")
+        logger.debug("Updating routine in Pareto Front Viewer")
         is_success = False
 
         self.routine = routine

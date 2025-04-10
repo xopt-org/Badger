@@ -1,5 +1,4 @@
 from typing import TypedDict
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 from PyQt5.QtWidgets import (
     QRadioButton,
@@ -11,7 +10,7 @@ from PyQt5.QtWidgets import (
 
 
 class PlotOptions(TypedDict):
-    show_samples: bool
+    show_raw_data: bool
 
 
 class ConfigurableOptions(TypedDict):
@@ -26,7 +25,7 @@ class ConfigurableOptions(TypedDict):
 
 
 class PFOptionsUIWidgets(TypedDict):
-    sample_checkbox: QRadioButton
+    show_raw_data: QRadioButton
 
 
 class PFVariablesUIWidgets(TypedDict):
@@ -36,7 +35,7 @@ class PFVariablesUIWidgets(TypedDict):
 
 class PFPlotUIWidgets(TypedDict):
     pareto: QTabWidget
-    hypervolume: FigureCanvas
+    hypervolume: QVBoxLayout
 
 
 class PFUIWidgets(TypedDict):
