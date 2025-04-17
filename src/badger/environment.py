@@ -12,23 +12,6 @@ from badger.errors import (
 from badger.interface import Interface
 
 
-def validate_variable_names(func):
-    def validate(cls, variable_names: List[str]):
-        variable_names_invalid = [
-            name for name in variable_names if name not in cls.variables
-        ]
-        if len(variable_names_invalid):
-            # TODO: remove this validation and validate bounds only?
-            pass
-            # raise BadgerEnvVarError(
-            #     f"Variables {variable_names_invalid} not found in environment"
-            # )
-
-        return func(cls, variable_names)
-
-    return validate
-
-
 def validate_observable_names(func):
     def validate(cls, observable_names: List[str]):
         observable_names_invalid = [
@@ -179,21 +162,20 @@ class Environment(BaseModel, ABC):
 
     # Optimizer will only call this method to get variable bounds
     # Lazy loading -- read the bounds only when they are needed
-    # TODO: considering cache validation (is it needed?)
     @final
-    @validate_variable_names
     def _get_bounds(
         self, variable_names: Optional[List[str]] = None
     ) -> Dict[str, List[float]]:
         if variable_names is None:
             variable_names = self.variable_names
 
-        variable_names_new = [
+        # variable_names_unset also includes those defined but not initialized vars
+        variable_names_unset = [
             name for name in variable_names if not len(self.variables.get(name, []))
         ]
 
         # Get bound one by one due to potential failure
-        for name in variable_names_new:
+        for name in variable_names_unset:
             try:
                 bound = self.get_bound(name)
             except Exception:
@@ -202,6 +184,8 @@ class Environment(BaseModel, ABC):
             if bound[1] <= bound[0]:
                 raise BadgerEnvVarError(f"Invalid bound for {name}: {bound}")
 
+            # TODO:The tmp vars will go into the class vars,
+            # it might be better to use a different name
             self.variables.update({name: bound})
 
         return {k: self.variables[k] for k in variable_names}
