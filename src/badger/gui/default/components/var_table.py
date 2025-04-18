@@ -11,10 +11,13 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
 )
 from PyQt5.QtCore import pyqtSignal, Qt, QSize
-from PyQt5.QtGui import QColor, QPalette, QIcon
+from PyQt5.QtGui import QColor, QIcon
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 from badger.gui.default.windows.expandable_message_box import (
     ExpandableMessageBox,
+)
+from badger.gui.acr.windows.ind_lim_vrange_dialog import (
+    BadgerIndividualLimitVariableRangeDialog,
 )
 
 from badger.environment import instantiate_env
@@ -297,8 +300,24 @@ class VariableTable(QTableWidget):
             self.sig_sel_changed.emit()
 
     def handle_config_button(self, var_name):
-        # Handle the "Config" button click for the given variable
-        QMessageBox.information(self, "Config Button Clicked", f"Config button clicked for variable: {var_name}")
+        # Handle the config button click for the given variable
+        bounds = [var[var_name] for var in self.all_variables if var_name in var][0]
+        configs = {
+            "current_value": 0,
+            "lower_bound": bounds[0],
+            "upper_bound": bounds[1],
+            "limit_option_idx": 0,
+            "ratio_curr": 0.1,
+            "ratio_full": 0.1,
+        }
+
+        BadgerIndividualLimitVariableRangeDialog(
+            self,
+            var_name,
+            lambda: None,
+            lambda _: None,
+            configs,
+        ).exec_()
 
     def add_additional_variable(self, item):
         row = idx = item.row()
