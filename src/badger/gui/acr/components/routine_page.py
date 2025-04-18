@@ -7,7 +7,7 @@ import yaml
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
 from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
@@ -855,7 +855,13 @@ class BadgerRoutinePage(QWidget):
         var_curr = env._get_variables(vname_selected)
 
         # get small region around current point to sample
-        vocs, _ = self._compose_vocs()
+        try:
+            vocs, _ = self._compose_vocs()
+        except Exception:
+            # Switch to manual mode to allow the user fixing the vocs issue
+            QMessageBox.warning(self, "VOCS is not valid!", "Auto mode disabled due to invalid VOCS. Please fix the VOCS before enabling auto mode.")
+            return self.env_box.relative_to_curr.setChecked(False)
+
         n_point = add_rand_config["n_points"]
         fraction = add_rand_config["fraction"]
         random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
@@ -1011,9 +1017,8 @@ class BadgerRoutinePage(QWidget):
         self.update_init_table()  # auto populate if option is set
 
         # Record the ratio var ranges
-        if self.env_box.relative_to_curr.isChecked():
-            for vname in vname_selected:
-                self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
+        for vname in vname_selected:
+            self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
 
     def save_limit_option(self, limit_option):
         self.limit_option = limit_option
@@ -1092,6 +1097,15 @@ class BadgerRoutinePage(QWidget):
 
     def toggle_relative_to_curr(self, checked, refresh=True):
         if checked:
+            try:
+                _ = self._compose_vocs()
+            except Exception:
+                # Switch to manual mode to allow the user fixing the vocs issue
+                # Schedule the checkbox to be clicked after the event loop finishes
+                QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
+                QMessageBox.warning(self, "VOCS is not valid!", "Please fix the VOCS before enabling auto mode.")
+                return
+
             self.env_box.switch_var_panel_style(True)
 
             if refresh and self.env_box.var_table.selected:

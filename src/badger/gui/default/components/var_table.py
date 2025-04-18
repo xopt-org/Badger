@@ -9,6 +9,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QColor
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
+from badger.gui.default.windows.expandable_message_box import (
+    ExpandableMessageBox,
+)
 
 from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError
@@ -303,18 +306,22 @@ class VariableTable(QTableWidget):
                         f"Variable {name} cannot be found through the interface!",
                     )
                     return
-                # except Exception as e: # TODO: fix this
-                #     print(e)
-                #     # Raised when PV exists but value/hard limits cannot be found
-                #     # Set to some default values
-                #     _bounds = vrange = [-1, 1]
-                #     QMessageBox.warning(self, 'Bounds could not be found!',
-                #                         f'Variable {name} bounds could not be found.' +
-                #                         'Please check default values!'
-                #                         )
+                except Exception as e:
+                    # Raised when PV exists but value/hard limits cannot be found
+                    # Set to some default values
+                    _bounds = vrange = [0, 0]
+                    detailed_text = (
+                        "Encountered issues when tried to fetch bounds for"
+                        f" variable {name}. Please manually set the bounds."
+                    )
+                    dialog = ExpandableMessageBox(
+                        text=str(e), detailedText=detailed_text
+                    )
+                    dialog.setIcon(QMessageBox.Critical)
+                    dialog.exec_()
             else:
                 # TODO: handle this case? Right now I don't think it should happen
-                raise "Environment cannot be found for new variable bounds!"
+                raise Exception("Environment cannot be found for new variable bounds!")
 
             # Add checkbox only when a PV is entered
             self.setCellWidget(idx, 0, QCheckBox())
