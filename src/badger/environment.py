@@ -131,28 +131,16 @@ class Environment(BaseModel, ABC):
     # Optimizer will only call this method to get variable values
     @final
     def _get_variables(self, variable_names: List[str]) -> Dict:
-        # Deal with variables defined in env
-        # TODO: check these with the interface through routine page/var table?
-        variable_names_def = [v for v in variable_names]
-        variable_outputs_def = self.get_variables(variable_names_def)
+        # We'll let the users handle the case when the variable is not defined
+        variable_outputs = self.get_variables(variable_names)
 
-        return {**variable_outputs_def}
-
-    # The reason for this method is we cannot know the bounds of a variable
-    # that exists in interface but not defined in environment.
-    # So we can only validate the setpoints for the defined variables
-    @final
-    @validate_setpoints
-    def _set_variables_def(self, variable_inputs: Dict[str, float]):
-        self.set_variables(variable_inputs)
+        return variable_outputs
 
     # Optimizer will only call this method to set variable values
     @final
+    @validate_setpoints
     def _set_variables(self, variable_inputs: Dict[str, float]):
-        # Deal with variables defined in env
-        # TODO: check these with the interface through routine page/var table?
-        variable_inputs_def = dict([v for v in variable_inputs.items()])
-        self._set_variables_def(variable_inputs_def)
+        self.set_variables(variable_inputs)
 
     # Optimizer will only call this method to get observable values
     @final
@@ -178,8 +166,8 @@ class Environment(BaseModel, ABC):
         for name in variable_names_unset:
             try:
                 bound = self.get_bound(name)
-            except Exception:
-                raise BadgerEnvVarError(f"Failed to get bound for {name}")
+            except Exception as e:
+                raise e
 
             if bound[1] <= bound[0]:
                 raise BadgerEnvVarError(f"Invalid bound for {name}: {bound}")
