@@ -60,7 +60,7 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
-        self.setColumnWidth(4, 30)
+        self.setColumnWidth(4, 44)
 
         self.all_variables = []  # store all variables
         self.variables = []  # store variables to be displayed
@@ -268,8 +268,8 @@ class VariableTable(QTableWidget):
             button_container = QWidget()
             layout = QHBoxLayout(button_container)
             layout.addWidget(config_button)
-            layout.setAlignment(Qt.AlignCenter)
-            layout.setContentsMargins(0, 0, 0, 0)  # Remove extra margins
+            layout.setAlignment(Qt.AlignLeft)
+            layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
             self.setCellWidget(i, 4, button_container)
 
             config_button.clicked.connect(lambda _, var_name=name: self.handle_config_button(var_name))
