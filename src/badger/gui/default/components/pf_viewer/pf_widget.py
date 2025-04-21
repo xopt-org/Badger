@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
     QLayout,
+    QGridLayout,
     QPushButton,
     QComboBox,
     QCheckBox,
@@ -183,7 +184,7 @@ class ParetoFrontWidget(QWidget):
         layouts: PFUILayouts = {
             "main": QHBoxLayout(),
             "settings": QVBoxLayout(),
-            "plot": QVBoxLayout(),
+            "plot": QGridLayout(),
             "options": QVBoxLayout(),
             "variables": QVBoxLayout(),
             "update": QVBoxLayout(),
@@ -248,8 +249,8 @@ class ParetoFrontWidget(QWidget):
 
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
 
-        plot_layout.addWidget(plot_tab_widget)
-        plot_layout.addLayout(plot_hypervolume)
+        plot_layout.addWidget(plot_tab_widget, 0, 1, Qt.AlignmentFlag.AlignCenter)
+        plot_layout.addLayout(plot_hypervolume, 1, 1, Qt.AlignmentFlag.AlignCenter)
 
         main_layout.addLayout(plot_layout)
 

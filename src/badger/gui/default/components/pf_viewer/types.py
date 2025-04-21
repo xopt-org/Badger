@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QTabWidget,
 )
 
@@ -53,7 +54,7 @@ class PFVariablesLayouts(TypedDict):
 class PFUILayouts(TypedDict):
     main: QHBoxLayout
     settings: QVBoxLayout
-    plot: QVBoxLayout
+    plot: QGridLayout
     options: QVBoxLayout
     variables: QVBoxLayout
     update: QVBoxLayout
