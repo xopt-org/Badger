@@ -859,7 +859,7 @@ class BadgerRoutinePage(QWidget):
             vocs, _ = self._compose_vocs()
         except Exception:
             # Switch to manual mode to allow the user fixing the vocs issue
-            QMessageBox.warning(self, "VOCS is not valid!", "Auto mode disabled due to invalid VOCS. Please fix the VOCS before enabling auto mode.")
+            QMessageBox.warning(self, "Variable range is not valid!", "Auto mode disabled due to invalid variable range. Please fix it before enabling auto mode.")
             return self.env_box.relative_to_curr.setChecked(False)
 
         n_point = add_rand_config["n_points"]
@@ -1103,7 +1103,7 @@ class BadgerRoutinePage(QWidget):
                 # Switch to manual mode to allow the user fixing the vocs issue
                 # Schedule the checkbox to be clicked after the event loop finishes
                 QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
-                QMessageBox.warning(self, "VOCS is not valid!", "Please fix the VOCS before enabling auto mode.")
+                QMessageBox.warning(self, "Variable range is not valid!", "Please fix it before enabling auto mode.")
                 return
 
             self.env_box.switch_var_panel_style(True)
