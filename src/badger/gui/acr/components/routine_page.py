@@ -1103,7 +1103,7 @@ class BadgerRoutinePage(QWidget):
                 # Switch to manual mode to allow the user fixing the vocs issue
                 # Schedule the checkbox to be clicked after the event loop finishes
                 QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
-                QMessageBox.warning(self, "Variable range is not valid!", "Please fix it before enabling auto mode.")
+                QMessageBox.warning(self, "Variable range is not valid!", "Please fix the invalid variable range before enabling auto mode.")
                 return
 
             self.env_box.switch_var_panel_style(True)
