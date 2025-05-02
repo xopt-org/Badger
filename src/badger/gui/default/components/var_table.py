@@ -16,9 +16,6 @@ from badger.gui.default.components.robust_spinbox import RobustSpinBox
 from badger.gui.default.windows.expandable_message_box import (
     ExpandableMessageBox,
 )
-from badger.gui.acr.windows.ind_lim_vrange_dialog import (
-    BadgerIndividualLimitVariableRangeDialog,
-)
 
 from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError
@@ -27,6 +24,7 @@ from badger.errors import BadgerInterfaceChannelError
 class VariableTable(QTableWidget):
     sig_sel_changed = pyqtSignal()
     sig_pv_added = pyqtSignal()
+    sig_var_config = pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -147,6 +145,23 @@ class VariableTable(QTableWidget):
             self.update_variables(self.variables, 2)
         else:
             self.update_variables(self.variables, 3)
+
+    def refresh_variable(self, name: str, bounds: list, hard_bounds: list):
+        self.bounds[name] = bounds
+
+        # Update the variable in self.variables
+        for var in self.variables:
+            if name in var:
+                var[name] = hard_bounds
+                break
+
+        # Update the variable in self.all_variables
+        for var in self.all_variables:
+            if name in var:
+                var[name] = hard_bounds
+            break
+
+        self.update_variables(self.variables, 2)
 
     def update_selected(self, _):
         for i in range(self.rowCount() - 1):
@@ -302,24 +317,7 @@ class VariableTable(QTableWidget):
             self.sig_sel_changed.emit()
 
     def handle_config_button(self, var_name):
-        # Handle the config button click for the given variable
-        bounds = [var[var_name] for var in self.all_variables if var_name in var][0]
-        configs = {
-            "current_value": 0,
-            "lower_bound": bounds[0],
-            "upper_bound": bounds[1],
-            "limit_option_idx": 0,
-            "ratio_curr": 0.1,
-            "ratio_full": 0.1,
-        }
-
-        BadgerIndividualLimitVariableRangeDialog(
-            self,
-            var_name,
-            lambda: None,
-            lambda _: None,
-            configs,
-        ).exec_()
+        self.sig_var_config.emit(var_name)
 
     def add_additional_variable(self, item):
         row = idx = item.row()

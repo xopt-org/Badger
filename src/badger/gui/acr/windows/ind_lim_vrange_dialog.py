@@ -17,12 +17,11 @@ from PyQt5.QtCore import Qt
 
 
 class BadgerIndividualLimitVariableRangeDialog(QDialog):
-    def __init__(self, parent, name, set_vrange, save_config, configs=None):
+    def __init__(self, parent, name, apply_config, configs=None):
         super().__init__(parent)
 
         self.name = name
-        self.set_vrange = set_vrange
-        self.save_config = save_config
+        self.apply_config = apply_config
         self.configs = configs
         if configs is None:
             self.configs = {}
@@ -109,6 +108,7 @@ will be clipped by the variable range."""
             [
                 "ratio wrt current value",
                 "ratio wrt full range",
+                "delta around current value",
             ]
         )
         cb.setCurrentIndex(self.configs.get("limit_option_idx", 0))
@@ -147,9 +147,23 @@ will be clipped by the variable range."""
         sb_ratio_full.setSingleStep(0.01)
         hbox_ratio_full.addWidget(lbl)
         hbox_ratio_full.addWidget(sb_ratio_full, 1)
+        # Delta config
+        delta_config = QWidget()
+        hbox_delta = QHBoxLayout(delta_config)
+        hbox_delta.setContentsMargins(0, 0, 0, 0)
+        lbl = QLabel("Delta")
+        self.sb_delta = sb_delta = QDoubleSpinBox()
+        sb_delta.setMinimum(0)
+        sb_delta.setMaximum(1e4)
+        sb_delta.setValue(self.configs.get("delta", 0.1))
+        sb_delta.setDecimals(4)
+        sb_delta.setSingleStep(0.01)
+        hbox_delta.addWidget(lbl)
+        hbox_delta.addWidget(sb_delta, 1)
 
         stacks.addWidget(ratio_curr_config)
         stacks.addWidget(ratio_full_config)
+        stacks.addWidget(delta_config)
 
         stacks.setCurrentIndex(self.configs.get("limit_option_idx", 0))
         vbox_config.addWidget(stacks)
@@ -177,6 +191,17 @@ will be clipped by the variable range."""
         self.btn_set.clicked.connect(self.set)
         self.sb_ratio_curr.valueChanged.connect(self.ratio_curr_changed)
         self.sb_ratio_full.valueChanged.connect(self.ratio_full_changed)
+        self.sb_delta.valueChanged.connect(self.delta_changed)
+
+    def update_config(self):
+        try:
+            lower = float(self.lbl_hard_lower.text())
+            upper = float(self.lbl_hard_upper.text())
+            self.configs["lower_bound"] = lower
+            self.configs["upper_bound"] = upper
+        except ValueError as e:
+            print(e)
+            pass  # Optionally handle invalid input
 
     def ratio_curr_changed(self, ratio_curr):
         self.configs["ratio_curr"] = ratio_curr
@@ -184,9 +209,12 @@ will be clipped by the variable range."""
     def ratio_full_changed(self, ratio_full):
         self.configs["ratio_full"] = ratio_full
 
+    def delta_changed(self, delta):
+        self.configs["delta"] = delta
+
     def set(self):
-        self.save_config(self.configs)
-        self.set_vrange()
+        self.update_config()
+        self.apply_config(self.name, self.configs)
         self.close()
 
     def limit_option_changed(self, i):
@@ -200,6 +228,7 @@ will be clipped by the variable range."""
             self.set()
 
     def closeEvent(self, event):
-        self.save_config(self.configs)
+        self.update_config()
+        self.apply_config(self.name, self.configs)
 
         event.accept()
