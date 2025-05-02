@@ -1428,12 +1428,13 @@ class BadgerRoutinePage(QWidget):
             relative_to_current = True
             vrange_limit_options = self.ratio_var_ranges
             initial_point_actions = self.init_table_actions
-            vrange_hard_limit = self.var_hard_limit
         else:
             relative_to_current = False
             vrange_limit_options = None
             initial_point_actions = None
-            vrange_hard_limit = {}
+
+        # Save hard limits no matter relative to current or not
+        vrange_hard_limit = self.var_hard_limit
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(
