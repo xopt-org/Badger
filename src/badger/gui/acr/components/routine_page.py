@@ -1022,6 +1022,7 @@ class BadgerRoutinePage(QWidget):
         var_curr = env._get_variables(vname_selected)
 
         option_idx = self.limit_option["limit_option_idx"]
+        # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
         if option_idx == 1:
             ratio = self.limit_option["ratio_full"]
             for i, name in enumerate(vname_selected):
@@ -1071,6 +1072,7 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         curr = env._get_variables([vname])[vname]
 
+        # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
         if option_idx == 1:
             ratio = option["ratio_full"]
             delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
@@ -1157,6 +1159,7 @@ class BadgerRoutinePage(QWidget):
                 limit_option = self.limit_option
 
             option_idx = limit_option["limit_option_idx"]
+            # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
             if option_idx == 1:
                 ratio = limit_option["ratio_full"]
                 hard_bounds = vrange[name]
