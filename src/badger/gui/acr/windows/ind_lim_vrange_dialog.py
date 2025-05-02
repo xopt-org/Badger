@@ -45,7 +45,9 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         hbox_current = QHBoxLayout()
         lbl_current = QLabel("Current value")
         lbl_current.setFixedWidth(128)
-        self.lbl_current_value = lbl_current_value = QLineEdit(f"{self.configs.get('current_value', 0):.2f}")
+        self.lbl_current_value = lbl_current_value = QLineEdit(
+            f"{self.configs.get('current_value', 0):.2f}"
+        )
         hbox_current.addWidget(lbl_current)
         hbox_current.addWidget(lbl_current_value, 1)
 
@@ -53,7 +55,9 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         hbox_lower = QHBoxLayout()
         lbl_lower = QLabel("Hard lower bound")
         lbl_lower.setFixedWidth(128)
-        self.lbl_hard_lower = lbl_hard_lower = QLineEdit(f"{self.configs.get('lower_bound', 0):.2f}")
+        self.lbl_hard_lower = lbl_hard_lower = QLineEdit(
+            f"{self.configs.get('lower_bound', 0):.2f}"
+        )
         hbox_lower.addWidget(lbl_lower)
         hbox_lower.addWidget(lbl_hard_lower, 1)
 
@@ -61,7 +65,9 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         hbox_upper = QHBoxLayout()
         lbl_upper = QLabel("Hard upper bound")
         lbl_upper.setFixedWidth(128)
-        self.lbl_hard_upper = lbl_hard_upper = QLineEdit(f"{self.configs.get('upper_bound', 0):.2f}")
+        self.lbl_hard_upper = lbl_hard_upper = QLineEdit(
+            f"{self.configs.get('upper_bound', 0):.2f}"
+        )
         hbox_upper.addWidget(lbl_upper)
         hbox_upper.addWidget(lbl_hard_upper, 1)
 

@@ -275,7 +275,9 @@ class VariableTable(QTableWidget):
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
             self.setCellWidget(i, 4, button_container)
 
-            config_button.clicked.connect(lambda _, var_name=name: self.handle_config_button(var_name))
+            config_button.clicked.connect(
+                lambda _, var_name=name: self.handle_config_button(var_name)
+            )
 
             if self.bounds_locked:
                 sb_lower.setEnabled(False)
