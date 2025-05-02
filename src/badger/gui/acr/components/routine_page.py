@@ -811,7 +811,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.update_variables(vars_combine)
         # Auto apply the limited variable ranges if the option is set
         if self.env_box.relative_to_curr.isChecked():
-            self.set_vrange(set_all=True)
+            self.set_vrange()
 
         # Needed for getting bounds on the fly
         self.env_box.var_table.env_class, self.env_box.var_table.configs = (
@@ -1009,11 +1009,17 @@ class BadgerRoutinePage(QWidget):
         )
         dlg.exec()
 
-    def set_vrange(self, set_all=False):
+    def set_vrange(self, set_all=True):
+        # By default update all variables no matter if selected or not
         vname_selected = []
         vrange = {}
 
-        for var in self.env_box.var_table.variables:
+        # Only set vranges to the visible variables
+        _variables = self.env_box.var_table.get_visible_variables(
+            self.env_box.var_table.variables
+        )
+
+        for var in _variables:
             name = next(iter(var))
             if set_all or self.env_box.var_table.is_checked(name):
                 vname_selected.append(name)

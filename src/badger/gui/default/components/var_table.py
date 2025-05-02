@@ -208,6 +208,18 @@ class VariableTable(QTableWidget):
 
         return _checked
 
+    def get_visible_variables(self, variables):
+        _variables = []  # store variables to be displayed
+        if self.checked_only:
+            for var in variables:
+                name = next(iter(var))
+                if self.is_checked(name):
+                    _variables.append(var)
+        else:
+            _variables = variables
+
+        return _variables
+
     def update_variables(self, variables, filtered=0):
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
@@ -232,14 +244,7 @@ class VariableTable(QTableWidget):
         if not variables:
             return
 
-        _variables = []
-        if self.checked_only:
-            for var in variables:
-                name = next(iter(var))
-                if self.is_checked(name):
-                    _variables.append(var)
-        else:
-            _variables = variables
+        _variables = self.get_visible_variables(variables)
 
         n = len(_variables) + 1
         self.setRowCount(n)
