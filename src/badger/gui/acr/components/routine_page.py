@@ -806,6 +806,7 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.check_only_var.blockSignals(True)
         self.env_box.check_only_var.setChecked(False)
+        self.env_box.var_table.checked_only = False  # reset the checked only flag
         self.env_box.check_only_var.blockSignals(False)
         self.env_box.var_table.update_variables(vars_combine)
         # Auto apply the limited variable ranges if the option is set
