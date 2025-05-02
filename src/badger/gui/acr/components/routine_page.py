@@ -315,7 +315,7 @@ class BadgerRoutinePage(QWidget):
             try:  # this one is optional
                 vrange_hard_limit = template_dict["vrange_hard_limit"]
             except KeyError:
-                vrange_hard_limit = None
+                vrange_hard_limit = {}
             initial_point_actions = template_dict[
                 "initial_point_actions"
             ]  # should be type: add_curr
@@ -578,6 +578,10 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.edit_var.clear()
 
+        try:
+            self.var_hard_limit = routine.vrange_hard_limit
+        except AttributeError:
+            self.var_hard_limit = {}
         # Add additional variables to table as well
         # Combine the variables from the env with the additional variables
         all_variables = {}  # note this stores the hard bounds of the variables
@@ -586,6 +590,8 @@ class BadgerRoutinePage(QWidget):
         if routine.additional_variables:  # there are additional variables
             env = self.create_env()
             all_variables.update(env._get_bounds(routine.additional_variables))
+        # Override the hard limits with the ones from the routine
+        all_variables.update(self.var_hard_limit)
         # Format for update_variables method
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
@@ -598,7 +604,6 @@ class BadgerRoutinePage(QWidget):
         if flag_relative:  # load the relative to current settings
             self.ratio_var_ranges = routine.vrange_limit_options
             self.init_table_actions = routine.initial_point_actions
-            self.var_hard_limit = routine.vrange_hard_limit
         self.env_box.relative_to_curr.blockSignals(True)
         self.env_box.relative_to_curr.setChecked(flag_relative)
         self.env_box.relative_to_curr.blockSignals(False)
@@ -1413,7 +1418,7 @@ class BadgerRoutinePage(QWidget):
             relative_to_current = False
             vrange_limit_options = None
             initial_point_actions = None
-            vrange_hard_limit = None
+            vrange_hard_limit = {}
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(

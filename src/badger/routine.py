@@ -33,7 +33,7 @@ class Routine(Xopt):
     # Store relative to current params
     relative_to_current: Optional[bool] = Field(False)
     vrange_limit_options: Optional[dict] = Field(None)
-    vrange_hard_limit: Optional[dict] = Field(None)  # override hard limits
+    vrange_hard_limit: Optional[dict] = Field({})  # override hard limits
     initial_point_actions: Optional[List] = Field(None)
     additional_variables: Optional[List[str]] = Field([])
     # Other meta data
