@@ -172,6 +172,8 @@ will be clipped by the variable range."""
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             self.set()
+        elif event.key() == Qt.Key_Escape:
+            self.close()
 
     def closeEvent(self, event):
         self.save_config(self.configs)
