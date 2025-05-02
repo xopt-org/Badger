@@ -180,7 +180,7 @@ class VariableTable(QTableWidget):
         for vname in variable_names:
             self.selected[vname] = True
 
-        self.update_variables(self.variables, 2)
+        self.update_variables(self.variables, 3)
 
     def toggle_show_mode(self, checked_only):
         self.checked_only = checked_only
@@ -195,10 +195,10 @@ class VariableTable(QTableWidget):
             name = next(iter(var))
             if self.is_checked(name):
                 checked_variables.append(var)
-        self.update_variables(checked_variables, 2)
+        self.update_variables(checked_variables, 3)
 
     def show_all(self):
-        self.update_variables(self.variables, 2)
+        self.update_variables(self.variables, 3)
 
     def is_checked(self, name):
         try:
@@ -318,7 +318,7 @@ class VariableTable(QTableWidget):
         header = self.horizontalHeader()
         header.setVisible(True)
 
-        if filtered != 3:
+        if filtered not in [1, 3]:
             self.sig_sel_changed.emit()
 
     def handle_config_button(self, var_name):
