@@ -199,8 +199,16 @@ will be clipped by the variable range."""
             upper = float(self.lbl_hard_upper.text())
             self.configs["lower_bound"] = lower
             self.configs["upper_bound"] = upper
-        except ValueError as e:
-            print(e)
+            # Fill in default values if not exist
+            if "limit_option_idx" not in self.configs:
+                self.configs["limit_option_idx"] = self.cb.currentIndex()
+            if "ratio_curr" not in self.configs:
+                self.configs["ratio_curr"] = self.sb_ratio_curr.value()
+            if "ratio_full" not in self.configs:
+                self.configs["ratio_full"] = self.sb_ratio_full.value()
+            if "delta" not in self.configs:
+                self.configs["delta"] = self.sb_delta.value()
+        except ValueError:
             pass  # Optionally handle invalid input
 
     def ratio_curr_changed(self, ratio_curr):
@@ -226,9 +234,5 @@ will be clipped by the variable range."""
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             self.set()
-
-    def closeEvent(self, event):
-        self.update_config()
-        self.apply_config(self.name, self.configs)
-
-        event.accept()
+        elif event.key() == Qt.Key_Escape:
+            self.close()
