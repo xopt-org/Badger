@@ -621,6 +621,9 @@ class BadgerRoutinePage(QWidget):
 
         # Fill in initial points stored in routine if available
         try:
+            # Update the header
+            update_init_data_table(self.env_box.init_table, variables)
+            # Fill in the table
             init_points = routine.initial_points
             set_init_data_table(self.env_box.init_table, init_points)
         except KeyError:
