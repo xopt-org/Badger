@@ -154,10 +154,10 @@ def load_run(run_fname):
 
         # Check if any user warnings were caught
         for warning in caught_warnings:
-            if isinstance(warning.category, UserWarning):
+            if issubclass(warning.category, UserWarning):
                 pass
             else:
-                print(f"Caught user warning: {warning.message}")
+                print(f"Caught warning: {warning.message}")
 
     return routine
 

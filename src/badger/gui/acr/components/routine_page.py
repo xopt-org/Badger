@@ -1349,17 +1349,21 @@ class BadgerRoutinePage(QWidget):
 
             # Check if any user warnings were caught
             for warning in caught_warnings:
-                if isinstance(warning.category, UserWarning):
-                    pass
+                if issubclass(warning.category, UserWarning):
+                    QMessageBox.warning(
+                        self,
+                        "Warning!",
+                        f"Warning: {warning.message}",
+                    )
                 else:
-                    print(f"Caught user warning: {warning.message}")
+                    print(f"Caught warning: {warning.message}")
 
             return routine
 
     def review(self):
         try:
             routine = self._compose_routine()
-        except:
+        except Exception:
             return QMessageBox.critical(
                 self, "Invalid routine!", traceback.format_exc()
             )
