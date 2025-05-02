@@ -41,7 +41,7 @@ from badger.gui.default.utils import filter_generator_config
 from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
-from badger.errors import BadgerRoutineError
+from badger.errors import BadgerRoutineError, BadgerEnvVarError
 from badger.factory import list_generators, list_env, get_env
 from badger.routine import Routine
 from badger.settings import init_settings
@@ -589,7 +589,14 @@ class BadgerRoutinePage(QWidget):
             all_variables.update(i)
         if routine.additional_variables:  # there are additional variables
             env = self.create_env()
-            all_variables.update(env._get_bounds(routine.additional_variables))
+            for vname in routine.additional_variables:
+                try:
+                    bounds = env._get_bounds([vname])[vname]
+                except BadgerEnvVarError as e:
+                    msg = str(e)
+                    bounds = eval(msg.split(": ")[1])
+
+                all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
         all_variables.update(self.var_hard_limit)
         # Format for update_variables method
@@ -1243,7 +1250,11 @@ class BadgerRoutinePage(QWidget):
         try:
             bounds = self.var_hard_limit[vname]
         except KeyError:
-            bounds = env._get_bounds([vname])[vname]
+            try:
+                bounds = env._get_bounds([vname])[vname]
+            except BadgerEnvVarError as e:
+                msg = str(e)
+                bounds = eval(msg.split(": ")[1])
 
         # Get the option
         try:
