@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from PyQt5.QtWidgets import (
     QDialog,
     QWidget,
@@ -22,7 +24,7 @@ class BadgerLimitVariableRangeDialog(QDialog):
 
         self.set_vrange = set_vrange
         self.save_config = save_config
-        self.configs = configs
+        self.configs = deepcopy(configs)
         if configs is None:
             self.configs = {
                 "limit_option_idx": 0,
@@ -174,8 +176,3 @@ will be clipped by the variable range."""
             self.set()
         elif event.key() == Qt.Key_Escape:
             self.close()
-
-    def closeEvent(self, event):
-        self.save_config(self.configs)
-
-        event.accept()

@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from PyQt5.QtWidgets import (
     QDialog,
     QWidget,
@@ -22,7 +24,7 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
 
         self.name = name
         self.apply_config = apply_config
-        self.configs = configs
+        self.configs = deepcopy(configs)
         if configs is None:
             self.configs = {}
 
