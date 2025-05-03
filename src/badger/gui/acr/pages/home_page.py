@@ -193,8 +193,8 @@ class BadgerHomePage(QWidget):
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
-        self.routine_editor.sig_load_template.connect(self.update_status)
-        self.routine_editor.sig_save_template.connect(self.update_status)
+        self.routine_editor.routine_page.sig_load_template.connect(self.update_status)
+        self.routine_editor.routine_page.sig_save_template.connect(self.update_status)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
