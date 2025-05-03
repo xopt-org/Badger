@@ -45,6 +45,7 @@ from badger.errors import BadgerRoutineError, BadgerEnvVarError
 from badger.factory import list_generators, list_env, get_env
 from badger.routine import Routine
 from badger.settings import init_settings
+from datetime import datetime
 from badger.utils import (
     get_yaml_string,
     load_config,
@@ -484,10 +485,15 @@ class BadgerRoutinePage(QWidget):
         template_dict = self.generate_template_dict_from_gui()
 
         options = QFileDialog.Options()
+        # Suggest a filename based on the routine name or placeholder
+        routine_name = self.edit_save.text() or self.edit_save.placeholderText()
+        if not routine_name:
+            routine_name = "template_" + datetime.now().strftime("%y%m%d_%H%M%S")
+        suggested_filename = f"{routine_name}.yaml"
         template_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save Template",
-            self.template_dir,
+            os.path.join(self.template_dir, suggested_filename),
             "YAML Files (*.yaml);;All Files (*)",
             options=options,
         )
