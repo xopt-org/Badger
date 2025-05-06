@@ -1,16 +1,15 @@
 import logging
-from typing import List
-from PyQt5.QtGui import QDrag, QKeyEvent
-from PyQt5.QtCore import (
+from typing import Any, List
+from qtpy.QtGui import QDrag, QKeyEvent
+from qtpy.QtCore import (
     QAbstractTableModel,
     QMimeData,
     QModelIndex,
     QObject,
     Qt,
-    QVariant,
-    pyqtSignal,
+    Signal,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
@@ -54,17 +53,17 @@ class ArchiveResultsTableModel(QAbstractTableModel):
             return 0
         return len(self.column_names)
 
-    def data(self, index: QModelIndex, role: int) -> QVariant:
+    def data(self, index: QModelIndex, role: int) -> str | None:
         """Return the data for the associated role. Currently only supporting DisplayRole."""
         if not index.isValid():
-            return QVariant()
+            return None
 
         if role != Qt.DisplayRole:
-            return QVariant()
+            return None
 
         return self.results_list[index.row()]
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole) -> QVariant:
+    def headerData(self, section, orientation, role=Qt.DisplayRole) -> Any:
         """Return data associated with the header"""
         if role != Qt.DisplayRole:
             return super().headerData(section, orientation, role)
@@ -117,7 +116,7 @@ class ArchiveSearchWidget(QWidget):
         The parent item of this widget
     """
 
-    append_variables_requested = pyqtSignal(str)
+    append_variables_requested = Signal(str)
 
     def __init__(self, environment, parent: QObject = None) -> None:
         super().__init__(parent=parent)

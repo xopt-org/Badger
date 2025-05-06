@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem
+from qtpy.QtGui import QFont
+from qtpy.QtCore import Qt
 from badger.archive import get_base_run_filename
 from badger.utils import run_names_to_dict
 

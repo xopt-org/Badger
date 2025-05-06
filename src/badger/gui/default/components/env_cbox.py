@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
@@ -6,14 +6,14 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit,
     QLineEdit,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QCheckBox,
     QStyledItemDelegate,
     QLabel,
     QListWidget,
     QFrame,
 )
-from PyQt5.QtCore import QRegExp
+from qtpy.QtCore import QRegularExpression
 
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
@@ -364,12 +364,12 @@ class BadgerEnvBox(CollapsibleBox):
 
     def filter_var(self):
         keyword = self.edit_var.text()
-        rx = QRegExp(keyword)
+        rx = QRegularExpression(keyword)
 
         _variables = []
         for var in self.var_table.all_variables:
             vname = next(iter(var))
-            if rx.indexIn(vname, 0) != -1:
+            if rx.match(vname).hasMatch():
                 _variables.append(var)
 
         self.var_table.update_variables(_variables, 1)
@@ -379,12 +379,12 @@ class BadgerEnvBox(CollapsibleBox):
 
     def filter_obj(self):
         keyword = self.edit_obj.text()
-        rx = QRegExp(keyword)
+        rx = QRegularExpression(keyword)
 
         _objectives = []
         for obj in self.obj_table.all_objectives:
             oname = next(iter(obj))
-            if rx.indexIn(oname, 0) != -1:
+            if rx.match(oname).hasMatch():
                 _objectives.append(obj)
 
         self.obj_table.update_objectives(_objectives, 1)

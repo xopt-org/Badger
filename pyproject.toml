@@ -25,6 +25,7 @@ classifiers = [
 requires-python = ">=3.10, <3.13"
 dependencies = [
     "coolname",
+    "qtpy",
     "pyqt5",
     "pyqtgraph",
     "qdarkstyle>=3.0",
@@ -38,6 +39,7 @@ version_file = "src/badger/_version.py"
 
 [project.optional-dependencies]
 dev = [
+    "pyside6",
     "pytest",
     "pytest-cov",
     "pytest-qt",

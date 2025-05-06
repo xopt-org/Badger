@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QMessageBox,
     QVBoxLayout,
@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QTextEdit,
 )
-from PyQt5.QtGui import QTextOption, QFont, QFontDatabase
+from qtpy.QtGui import QTextOption, QFont, QFontDatabase
 
 
 class ExpandableMessageBox(QDialog):

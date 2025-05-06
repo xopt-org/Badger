@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from PyQt5.QtWidgets import QStyledItemDelegate
+from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
+from qtpy.QtWidgets import QStyledItemDelegate
 from badger.gui.default.utils import NoHoverFocusComboBox
 
 

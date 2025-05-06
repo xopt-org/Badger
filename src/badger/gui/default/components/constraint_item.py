@@ -1,12 +1,12 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QWidget,
     QDoubleSpinBox,
     QAbstractSpinBox,
 )
-from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate
+from qtpy.QtCore import Qt
 from badger.gui.default.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,

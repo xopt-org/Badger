@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 
-from PyQt5.QtCore import pyqtSignal, QObject
+from qtpy.QtCore import Signal, QObject
 
 
 class ProcessManager(QObject):
@@ -9,7 +9,7 @@ class ProcessManager(QObject):
     which can be used by Badger to run optimizations.
     """
 
-    processQueueUpdated = pyqtSignal(object)
+    processQueueUpdated = Signal(object)
 
     def __init__(self) -> None:
         super().__init__()

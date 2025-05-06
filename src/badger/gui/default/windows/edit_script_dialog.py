@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout, QWidget
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton
-from PyQt5.QtGui import QFont
+from qtpy.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QPushButton
+from qtpy.QtGui import QFont
 from badger.gui.default.components.syntax import PythonHighlighter
 
 

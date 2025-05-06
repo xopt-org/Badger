@@ -3,11 +3,10 @@ import traceback
 from importlib import resources
 
 from pandas import DataFrame
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QIcon, QKeySequence
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QIcon, QKeySequence, QShortcut
+from qtpy.QtWidgets import (
     QMessageBox,
-    QShortcut,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -35,7 +34,7 @@ from badger.gui.acr.components.action_bar import BadgerActionBar
 from badger.utils import get_header
 from badger.settings import init_settings
 
-# from PyQt5.QtGui import QBrush, QColor
+# from qtpy.QtGui import QBrush, QColor
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.utils import ModalOverlay
 
@@ -60,8 +59,8 @@ QPushButton
 
 
 class BadgerHomePage(QWidget):
-    sig_routine_activated = pyqtSignal(bool)
-    sig_routine_invalid = pyqtSignal()
+    sig_routine_activated = Signal(bool)
+    sig_routine_invalid = Signal()
 
     def __init__(self, process_manager=None):
         super().__init__()

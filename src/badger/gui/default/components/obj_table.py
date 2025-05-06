@@ -1,5 +1,5 @@
 from typing import Any, List, Dict, Optional
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
 )
-from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent
+from qtpy.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent
 
 
 class ObjectiveTable(QTableWidget):

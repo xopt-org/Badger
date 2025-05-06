@@ -2,9 +2,9 @@ from importlib import resources
 import signal
 import sys
 import time
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5 import QtCore
+from qtpy.QtWidgets import QApplication
+from qtpy.QtGui import QFont, QIcon
+from qtpy import QtCore
 from qdarkstyle import load_stylesheet, LightPalette, DarkPalette
 
 from badger.settings import init_settings

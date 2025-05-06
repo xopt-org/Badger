@@ -9,11 +9,11 @@ import yaml
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton
-from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtWidgets import QGroupBox, QLineEdit, QLabel, QPushButton
+from qtpy.QtWidgets import QListWidgetItem, QMessageBox, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QHBoxLayout
+from qtpy.QtWidgets import QTableWidgetItem, QPlainTextEdit, QSizePolicy
 from coolname import generate_slug
 from pydantic import ValidationError
 from xopt import VOCS
@@ -61,7 +61,7 @@ CONS_RELATION_DICT = {
 
 
 class BadgerRoutinePage(QWidget):
-    sig_updated = pyqtSignal(str, str)  # routine name, routine description
+    sig_updated = Signal(str, str)  # routine name, routine description
 
     def __init__(self):
         super().__init__()

@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QDoubleSpinBox, QAbstractSpinBox
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QDoubleSpinBox, QAbstractSpinBox
+from qtpy.QtCore import Qt
 from badger.gui.default.utils import MouseWheelWidgetAdjustmentGuard
 
 

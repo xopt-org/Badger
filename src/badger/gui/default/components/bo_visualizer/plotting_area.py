@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLayout
+from qtpy.QtWidgets import QVBoxLayout, QWidget, QLayout
 from xopt.generators.bayesian.visualize import (
     visualize_generator_model,
 )

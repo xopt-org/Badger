@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
-from PyQt5.QtWidgets import QGroupBox, QMessageBox
+from qtpy.QtWidgets import QGroupBox, QMessageBox
 from badger.gui.default.components.labeled_lineedit import labeled_lineedit
 from badger.environment import instantiate_env
 

@@ -2,9 +2,9 @@ from abc import abstractmethod
 from typing import Optional, cast
 
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox
-from PyQt5.QtGui import QCloseEvent
+from qtpy.QtCore import Signal
+from qtpy.QtWidgets import QDialog, QVBoxLayout, QMessageBox
+from qtpy.QtGui import QCloseEvent
 from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
 from badger.routine import Routine
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class AnalysisExtension(QDialog):
-    window_closed = pyqtSignal(object)
+    window_closed = Signal(object)
 
     def __init__(self, parent: Optional[QDialog] = None):
         super().__init__(parent=parent)

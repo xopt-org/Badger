@@ -6,9 +6,9 @@ from typing import List
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Signal
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
@@ -43,23 +43,23 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class BadgerOptMonitor(QWidget):
-    sig_pause = pyqtSignal(bool)  # True: pause, False: resume
-    sig_stop = pyqtSignal()
-    sig_lock = pyqtSignal(bool)  # True: lock GUI, False: unlock GUI
-    sig_new_run = pyqtSignal()  # start the new run
-    sig_run_started = pyqtSignal()  # run started
-    sig_stop_run = pyqtSignal()  # stop the run
-    sig_run_name = pyqtSignal(str)  # filename of the new run
-    sig_status = pyqtSignal(str)  # status information
-    sig_inspect = pyqtSignal(int)  # index of the inspector
-    sig_progress = pyqtSignal(pd.DataFrame)  # new evaluated solution
-    sig_del = pyqtSignal()
-    sig_routine_finished = pyqtSignal()
-    sig_lock_action = pyqtSignal()
-    sig_toggle_reset = pyqtSignal(bool)
-    sig_toggle_run = pyqtSignal(bool)
-    sig_toggle_other = pyqtSignal(bool)
-    sig_env_ready = pyqtSignal()
+    sig_pause = Signal(bool)  # True: pause, False: resume
+    sig_stop = Signal()
+    sig_lock = Signal(bool)  # True: lock GUI, False: unlock GUI
+    sig_new_run = Signal()  # start the new run
+    sig_run_started = Signal()  # run started
+    sig_stop_run = Signal()  # stop the run
+    sig_run_name = Signal(str)  # filename of the new run
+    sig_status = Signal(str)  # status information
+    sig_inspect = Signal(int)  # index of the inspector
+    sig_progress = Signal(pd.DataFrame)  # new evaluated solution
+    sig_del = Signal()
+    sig_routine_finished = Signal()
+    sig_lock_action = Signal()
+    sig_toggle_reset = Signal(bool)
+    sig_toggle_run = Signal(bool)
+    sig_toggle_other = Signal(bool)
+    sig_env_ready = Signal()
 
     def __init__(self, process_manager=None):
         super().__init__()

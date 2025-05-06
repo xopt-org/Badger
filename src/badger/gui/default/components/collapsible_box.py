@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 
 stylesheet_toolbutton = """
@@ -11,7 +11,7 @@ QToolButton
 
 # https://stackoverflow.com/a/56293688
 class ScrollArea(QtWidgets.QScrollArea):
-    resized = QtCore.pyqtSignal()
+    resized = QtCore.Signal()
 
     def resizeEvent(self, e):
         self.resized.emit()
@@ -71,7 +71,7 @@ class CollapsibleBox(QtWidgets.QWidget):
             QtCore.QPropertyAnimation(self.content_area, b"maximumHeight")
         )
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def start_animation(self):
         checked = self.toggle_button.isChecked()
         arrow_type = QtCore.Qt.DownArrow if checked else QtCore.Qt.RightArrow
@@ -92,7 +92,7 @@ class CollapsibleBox(QtWidgets.QWidget):
     def updateContentLayout(self):
         if (
             self.toggle_button.isChecked()
-            and self.toggle_animation.state() != self.toggle_animation.Running
+            and self.toggle_animation.state() != QtCore.QAbstractAnimation.Running
         ):
             content_height = self.content_area.layout().sizeHint().height()
             self.setMinimumHeight(self.collapsed_height + content_height)

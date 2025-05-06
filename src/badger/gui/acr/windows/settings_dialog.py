@@ -1,6 +1,5 @@
-# from PyQt5.QtCore import QRegExp
-# from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import (
+# from qtpy.QtGui import QRegularExpressionValidator
+from qtpy.QtWidgets import (
     # QComboBox,
     QGridLayout,
     QVBoxLayout,
@@ -8,7 +7,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QApplication,
@@ -42,7 +41,7 @@ class BadgerSettingsDialog(QDialog):
 
         vbox = QVBoxLayout(self)
 
-        # validator = QRegExpValidator(QRegExp(r"^[0-9]\d*(\.\d+)?$"))
+        # validator = QRegularExpressionValidator(r"^[0-9]\d*(\.\d+)?$")
 
         widget_settings = QWidget(self)
         grid = QGridLayout(widget_settings)

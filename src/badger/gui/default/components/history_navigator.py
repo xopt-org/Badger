@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QComboBox, QTreeWidget, QTreeWidgetItem
-from PyQt5.QtCore import QModelIndex, Qt
+from qtpy.QtWidgets import QComboBox, QTreeWidget, QTreeWidgetItem
+from qtpy.QtCore import QModelIndex, Qt
 from badger.archive import get_base_run_filename
 from badger.utils import run_names_to_dict
 

@@ -1,7 +1,7 @@
 from importlib import resources
-from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QSize
+from qtpy.QtWidgets import QHBoxLayout, QWidget, QPushButton
+from qtpy.QtGui import QIcon
+from qtpy.QtCore import Qt, QSize
 from badger.gui.acr.windows.settings_dialog import BadgerSettingsDialog
 from badger.gui.default.components.eliding_label import SimpleElidedLabel
 

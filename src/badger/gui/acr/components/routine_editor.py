@@ -1,18 +1,18 @@
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QTextEdit, QStackedWidget
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QFont
+from qtpy.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
+from qtpy.QtWidgets import QTextEdit, QStackedWidget
+from qtpy.QtCore import Signal
+from qtpy.QtGui import QFont
 from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
 from badger.routine import Routine
 
 
 class BadgerRoutineEditor(QWidget):
-    sig_saved = pyqtSignal()
-    sig_canceled = pyqtSignal()
-    sig_deleted = pyqtSignal()
-    sig_load_template = pyqtSignal(str)
-    sig_save_template = pyqtSignal(str)
+    sig_saved = Signal()
+    sig_canceled = Signal()
+    sig_deleted = Signal()
+    sig_load_template = Signal(str)
+    sig_save_template = Signal(str)
 
     def __init__(self):
         super().__init__()

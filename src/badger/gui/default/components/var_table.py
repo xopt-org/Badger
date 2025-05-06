@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QAbstractItemView,
 )
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QColor
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QColor
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
@@ -15,8 +15,8 @@ from badger.errors import BadgerInterfaceChannelError
 
 
 class VariableTable(QTableWidget):
-    sig_sel_changed = pyqtSignal()
-    sig_pv_added = pyqtSignal()
+    sig_sel_changed = Signal()
+    sig_pv_added = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

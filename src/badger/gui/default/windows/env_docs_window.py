@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QTextEdit,
     QHBoxLayout,
     QVBoxLayout,

@@ -1,14 +1,14 @@
 from functools import wraps
 from typing import Callable, Optional, ParamSpec, cast
-from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout
-from PyQt5.QtWidgets import QSizePolicy
+from qtpy.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout
+from qtpy.QtWidgets import QSizePolicy
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.routine import Routine
 from .ui_components import UIComponents
 from .plotting_area import PlottingArea
 from .model_logic import ModelLogic
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 import logging

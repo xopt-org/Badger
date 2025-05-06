@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QComboBox,
@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QHeaderView,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from typing import Optional, cast
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions

@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
     QWidget,
     QPlainTextEdit,
 )
-from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
+from qtpy.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.settings import init_settings
 from badger.gui.default.utils import (

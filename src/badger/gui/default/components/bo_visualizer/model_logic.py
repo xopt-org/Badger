@@ -1,7 +1,7 @@
 from typing import Optional
 from xopt import VOCS
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QTableWidgetItem,
 )
 

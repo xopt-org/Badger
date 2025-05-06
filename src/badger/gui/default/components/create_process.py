@@ -1,6 +1,6 @@
 from multiprocessing import Event, Pipe, Process, Queue
 
-from PyQt5.QtCore import pyqtSignal, QObject
+from qtpy.QtCore import Signal, QObject
 
 from badger.core_subprocess import run_routine_subprocess
 
@@ -13,8 +13,8 @@ class CreateProcess(QObject):
         The new process will be started, but will be holding until the wait_event is set.
     """
 
-    finished = pyqtSignal()
-    subprocess_prepared = pyqtSignal(object)
+    finished = Signal()
+    subprocess_prepared = Signal(object)
 
     def create_subprocess(self) -> None:
         """
