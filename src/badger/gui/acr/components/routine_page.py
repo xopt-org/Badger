@@ -179,7 +179,7 @@ class BadgerRoutinePage(QWidget):
         self.save_template_button = save_template_button = QPushButton(
             "Save as Template"
         )
-        save_template_button.setFixedWidth(128)
+        save_template_button.setFixedSize(128, 24)
         hbox_name.addWidget(save_template_button, alignment=Qt.AlignRight)
         vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
         template_button.show()
