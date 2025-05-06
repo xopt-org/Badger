@@ -11,8 +11,6 @@ class BadgerRoutineEditor(QWidget):
     sig_saved = pyqtSignal()
     sig_canceled = pyqtSignal()
     sig_deleted = pyqtSignal()
-    sig_load_template = pyqtSignal(str)
-    sig_save_template = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -43,8 +41,6 @@ class BadgerRoutineEditor(QWidget):
         # scroll_area.setWidgetResizable(True)
         # scroll_area.setWidget(routine_page)
         stacks.addWidget(routine_page)
-        routine_page.sig_load_template.connect(self.sig_load_template.emit)
-        routine_page.sig_save_template.connect(self.sig_save_template.emit)
 
         stacks.setCurrentIndex(1)
         vbox.addWidget(stacks)

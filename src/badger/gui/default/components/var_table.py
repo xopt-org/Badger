@@ -1,3 +1,4 @@
+from importlib import resources
 from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -5,10 +6,16 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QMessageBox,
     QAbstractItemView,
+    QPushButton,
+    QWidget,
+    QHBoxLayout,
 )
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import pyqtSignal, Qt, QSize
+from PyQt5.QtGui import QColor, QIcon
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
+from badger.gui.default.windows.expandable_message_box import (
+    ExpandableMessageBox,
+)
 
 from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError
@@ -17,9 +24,14 @@ from badger.errors import BadgerInterfaceChannelError
 class VariableTable(QTableWidget):
     sig_sel_changed = pyqtSignal()
     sig_pv_added = pyqtSignal()
+    sig_var_config = pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        icon_ref = resources.files(__package__) / "../images/gear.png"
+        with resources.as_file(icon_ref) as icon_path:
+            self.icon_settings = QIcon(str(icon_path))
 
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
@@ -34,7 +46,7 @@ class VariableTable(QTableWidget):
         # self.setDragDropOverwriteMode(False)
 
         self.setRowCount(0)
-        self.setColumnCount(4)
+        self.setColumnCount(5)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
         # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -49,6 +61,7 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
+        self.setColumnWidth(4, 44)
 
         self.all_variables = []  # store all variables
         self.variables = []  # store variables to be displayed
@@ -102,6 +115,27 @@ class VariableTable(QTableWidget):
             sb_lower = self.cellWidget(i, 2)
             sb_upper = self.cellWidget(i, 3)
             self.bounds[name] = [sb_lower.value(), sb_upper.value()]
+            self.validate_row(i)  # Validate the row after updating bounds
+
+    def validate_row(self, row):
+        """
+        Validate the bounds for a given row. If invalid, apply a red border to the row.
+        """
+        sb_lower = self.cellWidget(row, 2)  # Min value spinbox
+        sb_upper = self.cellWidget(row, 3)  # Max value spinbox
+
+        if sb_lower.value() >= sb_upper.value():  # Invalid bounds
+            # Apply a red border to the entire row
+            for col in range(2, 4):
+                widget = self.cellWidget(row, col)
+                if widget:
+                    widget.setStyleSheet("border: 1px solid red;")
+        else:  # Valid bounds
+            # Remove the red border
+            for col in range(2, 4):
+                widget = self.cellWidget(row, col)
+                if widget:
+                    widget.setStyleSheet("")
 
     def set_bounds(self, variables: dict, signal=True):
         for name in variables:
@@ -111,6 +145,23 @@ class VariableTable(QTableWidget):
             self.update_variables(self.variables, 2)
         else:
             self.update_variables(self.variables, 3)
+
+    def refresh_variable(self, name: str, bounds: list, hard_bounds: list):
+        self.bounds[name] = bounds
+
+        # Update the variable in self.variables
+        for var in self.variables:
+            if name in var:
+                var[name] = hard_bounds
+                break
+
+        # Update the variable in self.all_variables
+        for var in self.all_variables:
+            if name in var:
+                var[name] = hard_bounds
+                break
+
+        self.update_variables(self.variables, 2)
 
     def update_selected(self, _):
         for i in range(self.rowCount() - 1):
@@ -129,7 +180,7 @@ class VariableTable(QTableWidget):
         for vname in variable_names:
             self.selected[vname] = True
 
-        self.update_variables(self.variables, 2)
+        self.update_variables(self.variables, 3)
 
     def toggle_show_mode(self, checked_only):
         self.checked_only = checked_only
@@ -144,10 +195,10 @@ class VariableTable(QTableWidget):
             name = next(iter(var))
             if self.is_checked(name):
                 checked_variables.append(var)
-        self.update_variables(checked_variables, 2)
+        self.update_variables(checked_variables, 3)
 
     def show_all(self):
-        self.update_variables(self.variables, 2)
+        self.update_variables(self.variables, 3)
 
     def is_checked(self, name):
         try:
@@ -156,6 +207,18 @@ class VariableTable(QTableWidget):
             _checked = False
 
         return _checked
+
+    def get_visible_variables(self, variables):
+        _variables = []  # store variables to be displayed
+        if self.checked_only:
+            for var in variables:
+                name = next(iter(var))
+                if self.is_checked(name):
+                    _variables.append(var)
+        else:
+            _variables = variables
+
+        return _variables
 
     def update_variables(self, variables, filtered=0):
         # filtered = 0: completely refresh
@@ -181,14 +244,7 @@ class VariableTable(QTableWidget):
         if not variables:
             return
 
-        _variables = []
-        if self.checked_only:
-            for var in variables:
-                name = next(iter(var))
-                if self.is_checked(name):
-                    _variables.append(var)
-        else:
-            _variables = variables
+        _variables = self.get_visible_variables(variables)
 
         n = len(_variables) + 1
         self.setRowCount(n)
@@ -223,6 +279,25 @@ class VariableTable(QTableWidget):
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(i, 2, sb_lower)
             self.setCellWidget(i, 3, sb_upper)
+            self.validate_row(i)  # Validate the row after setting bounds
+
+            # Add the config button
+            config_button = QPushButton()
+            config_button.setFixedSize(24, 24)
+            config_button.setIcon(self.icon_settings)
+            config_button.setIconSize(QSize(12, 12))
+
+            # Center-align the button in the cell
+            button_container = QWidget()
+            layout = QHBoxLayout(button_container)
+            layout.addWidget(config_button)
+            layout.setAlignment(Qt.AlignLeft)
+            layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
+            self.setCellWidget(i, 4, button_container)
+
+            config_button.clicked.connect(
+                lambda _, var_name=name: self.handle_config_button(var_name)
+            )
 
             if self.bounds_locked:
                 sb_lower.setEnabled(False)
@@ -237,15 +312,17 @@ class VariableTable(QTableWidget):
         item.setForeground(QColor("gray"))
         self.setItem(n - 1, 1, item)
 
-        self.setHorizontalHeaderLabels(["", "Name", "Min", "Max"])
+        self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
         header = self.horizontalHeader()
-        # header.setSectionResizeMode(0, QHeaderView.Interactive)
         header.setVisible(True)
 
-        if filtered != 3:
+        if filtered not in [1, 3]:
             self.sig_sel_changed.emit()
+
+    def handle_config_button(self, var_name):
+        self.sig_var_config.emit(var_name)
 
     def add_additional_variable(self, item):
         row = idx = item.row()
@@ -303,18 +380,22 @@ class VariableTable(QTableWidget):
                         f"Variable {name} cannot be found through the interface!",
                     )
                     return
-                # except Exception as e: # TODO: fix this
-                #     print(e)
-                #     # Raised when PV exists but value/hard limits cannot be found
-                #     # Set to some default values
-                #     _bounds = vrange = [-1, 1]
-                #     QMessageBox.warning(self, 'Bounds could not be found!',
-                #                         f'Variable {name} bounds could not be found.' +
-                #                         'Please check default values!'
-                #                         )
+                except Exception as e:
+                    # Raised when PV exists but value/hard limits cannot be found
+                    # Set to some default values
+                    _bounds = vrange = [0, 0]
+                    detailed_text = (
+                        "Encountered issues when tried to fetch bounds for"
+                        f" variable {name}. Please manually set the bounds."
+                    )
+                    dialog = ExpandableMessageBox(
+                        text=str(e), detailedText=detailed_text
+                    )
+                    dialog.setIcon(QMessageBox.Critical)
+                    dialog.exec_()
             else:
                 # TODO: handle this case? Right now I don't think it should happen
-                raise "Environment cannot be found for new variable bounds!"
+                raise Exception("Environment cannot be found for new variable bounds!")
 
             # Add checkbox only when a PV is entered
             self.setCellWidget(idx, 0, QCheckBox())

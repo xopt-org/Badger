@@ -23,7 +23,6 @@ ALGO_EXCLUDED = [
     "mggpo",
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
-    "upper_confidence_bound",
     "nsga2",
 ]
 

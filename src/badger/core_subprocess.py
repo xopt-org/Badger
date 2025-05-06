@@ -92,6 +92,11 @@ def run_routine_subprocess(
     # set required arguments
     try:
         routine = load_run(args["routine_filename"])
+
+        # Patch env with override variable ranges
+        if routine.vrange_hard_limit:
+            routine.environment.variables.update(routine.vrange_hard_limit)
+
         # TODO: might need to consider the case where routine.data is None?
         if routine.data is not None:
             routine.data = routine.data.iloc[0:0]  # reset the data
