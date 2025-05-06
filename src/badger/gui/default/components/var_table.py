@@ -159,7 +159,7 @@ class VariableTable(QTableWidget):
         for var in self.all_variables:
             if name in var:
                 var[name] = hard_bounds
-            break
+                break
 
         self.update_variables(self.variables, 2)
 
