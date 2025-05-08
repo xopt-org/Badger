@@ -809,18 +809,20 @@ class BadgerOptMonitor(QWidget):
             pos = idx = int(self.inspector_objective.value())
         variable_names = self.vocs.variable_names
         solution = df[variable_names].to_numpy()[idx]
+        curr_vars = get_current_vars(self.routine)
 
         reply = QMessageBox.question(
             self,
             "Apply Solution",
-            f"Are you sure you want to apply the selected solution at {solution} to env?",
+            f"Are you sure you want to apply the selected solution:\n"
+            + "\n".join(f"{variable_names[i]}: {round(curr_vars[i],3)} -> {solution[i]}," for i in range(len(variable_names)))
+            + "\nto " + f"{self.routine.environment.name}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
         if reply != QMessageBox.Yes:
             return
 
-        curr_vars = get_current_vars(self.routine)
         self.routine.environment._set_variables(dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
