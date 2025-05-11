@@ -814,9 +814,13 @@ class BadgerOptMonitor(QWidget):
         reply = QMessageBox.question(
             self,
             "Apply Solution",
-            f"Are you sure you want to apply the selected solution:\n"
-            + "\n".join(f"{variable_names[i]}: {round(curr_vars[i],3)} -> {round(solution[i],3)}," for i in range(len(variable_names)))
-            + "\nto " + f"{self.routine.environment.name}?",
+            "Are you sure you want to apply the selected solution:\n"
+            + "\n".join(
+                f"{variable_names[i]}: {round(curr_vars[i],3)} -> {round(solution[i],3)},"
+                for i in range(len(variable_names))
+            )
+            + "\nto "
+            + f"{self.routine.environment.name}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
