@@ -1,3 +1,5 @@
+from importlib import resources
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -11,9 +13,12 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QLabel,
     QListWidget,
+    QSizePolicy,
 )
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
+from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
@@ -60,6 +65,22 @@ stylesheet_manual_msg = """
     }
 """
 
+stylesheet_load = """
+QPushButton:hover:pressed
+{
+    background-color: #4DB6AC;
+}
+QPushButton:hover
+{
+    background-color: #26A69A;
+}
+QPushButton
+{
+    color: #FFFFFF;
+    background-color: #00897B;
+}
+"""
+
 MSG_AUTO_RELATIVE = (
     "The values you see in the variable ranges spin "
     "boxes and initial points table are preview that "
@@ -95,16 +116,31 @@ class BadgerEnvBox(QWidget):
 
     def init_ui(self):
         config_singleton = init_settings()
+
+        icon_ref = resources.files(__package__) / "../images/import.png"
+        with resources.as_file(icon_ref) as icon_path:
+            self.icon_import = QIcon(str(icon_path))
+
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(8, 8, 8, 8)
 
         # Load Template Button
         template_button = QWidget()
-        template_button.setFixedWidth(128)
-        hbox_name = QHBoxLayout(template_button)
-        hbox_name.setContentsMargins(0, 0, 0, 0)
-        self.load_template_button = load_template_button = QPushButton("Load Template")
-        hbox_name.addWidget(load_template_button, 0)
+        # template_button.setFixedWidth(128)
+        hbox_temp = QHBoxLayout(template_button)
+        hbox_temp.setContentsMargins(0, 0, 0, 0)
+
+        cool_font = QFont()
+        cool_font.setWeight(QFont.DemiBold)
+
+        self.load_template_button = load_template_button = QPushButton(" Load Template")
+        load_template_button.setFixedHeight(36)
+        load_template_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        load_template_button.setIcon(self.icon_import)
+        load_template_button.setFont(cool_font)
+        load_template_button.setStyleSheet(stylesheet_load)
+
+        hbox_temp.addWidget(load_template_button, 1)
         vbox.addWidget(template_button)
         template_button.show()
 
@@ -124,6 +160,8 @@ class BadgerEnvBox(QWidget):
         btn_env_play.setFixedSize(128, 24)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             btn_env_play.hide()
+        self.btn_pv = btn_pv = QPushButton("Variable Search")
+        btn_pv.setFixedSize(128, 24)
         self.btn_docs = btn_docs = QPushButton("Open Docs")
         btn_docs.setFixedSize(96, 24)
         self.btn_params = btn_params = QPushButton("Parameters")
@@ -135,6 +173,7 @@ class BadgerEnvBox(QWidget):
         hbox_name.addWidget(cb, 1)
         hbox_name.addWidget(btn_env_play)
         hbox_name.addWidget(btn_params)
+        hbox_name.addWidget(btn_pv)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
@@ -518,3 +557,7 @@ class BadgerEnvBox(QWidget):
         else:
             stylesheet = ""
         self.setStyleSheet(stylesheet)
+
+    def archiveSearchMenu(self):
+        self.archive_search = ArchiveSearchWidget()
+        self.archive_search.show()

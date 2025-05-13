@@ -45,18 +45,21 @@ def create_button(icon_file, tooltip, stylesheet=None, size=(32, 32), icon_size=
 def filter_generator_config(name, config):
     filtered_config = {}
     if name == "neldermead":
-        filtered_config["xatol"] = config["xatol"]
-        filtered_config["fatol"] = config["fatol"]
         filtered_config["adaptive"] = config["adaptive"]
     elif name == "expected_improvement":
         filtered_config["turbo_controller"] = config["turbo_controller"]
         filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
         filtered_config["max_travel_distances"] = config["max_travel_distances"]
         filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
+    elif name == "upper_confidence_bound":
+        filtered_config["turbo_controller"] = config["turbo_controller"]
+        filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
+        filtered_config["max_travel_distances"] = config["max_travel_distances"]
+        filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
+        filtered_config["beta"] = config["beta"]
     elif name == "rcds":
         filtered_config["noise"] = config["noise"]
         filtered_config["step"] = config["step"]
-        filtered_config["tol"] = config["tol"]
     else:
         filtered_config = config
 

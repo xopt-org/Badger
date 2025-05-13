@@ -1,6 +1,9 @@
+from copy import deepcopy
+
 from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QStackedWidget
 from PyQt5.QtWidgets import QVBoxLayout, QSpinBox, QPushButton
 from PyQt5.QtWidgets import QGroupBox, QLabel, QComboBox, QStyledItemDelegate
+from PyQt5.QtCore import Qt
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 
@@ -10,7 +13,7 @@ class BadgerAddRandomDialog(QDialog):
 
         self.add_points = add_points
         self.save_config = save_config
-        self.configs = configs
+        self.configs = deepcopy(configs)
         if configs is None:
             self.configs = {
                 "method": 0,
@@ -127,7 +130,8 @@ class BadgerAddRandomDialog(QDialog):
         # Update configs
         self.configs["method"] = i
 
-    def closeEvent(self, event):
-        self.save_config(self.configs)
-
-        event.accept()
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            self.add()
+        elif event.key() == Qt.Key_Escape:
+            self.close()
