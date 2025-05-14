@@ -827,6 +827,13 @@ class BadgerOptMonitor(QWidget):
         if reply != QMessageBox.Yes:
             return
 
+        curr_vars = get_current_vars(self.routine)
+        # Patch the hard limit to the environment
+        # TODO: this could lead to unexpected behavior
+        # since we patched the class variable directly
+        # there ought to be a better way to do this
+        if self.routine.vrange_hard_limit:
+            self.routine.environment.variables.update(self.routine.vrange_hard_limit)
         self.routine.environment._set_variables(dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
