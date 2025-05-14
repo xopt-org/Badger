@@ -169,8 +169,9 @@ class Environment(BaseModel, ABC):
             except Exception as e:
                 raise e
 
-            if bound[1] <= bound[0]:
-                raise BadgerEnvVarError(f"Invalid bound for {name}: {bound}")
+            # Ignore invalid bounds issue for now
+            # if bound[1] <= bound[0]:
+            #     raise BadgerEnvVarError(f"Invalid bound for {name}: {bound}")
 
             # TODO:The tmp vars will go into the class vars,
             # it might be better to use a different name
