@@ -1389,16 +1389,6 @@ class BadgerRoutinePage(QWidget):
                 elif turbo_config["name"] == "safety":
                     turbo_config["center_x"] = None
 
-            # Fix reference_point not being set
-            if "reference_point" in generator_params:
-                reference_point: dict[str, float] | None = generator_params[
-                    "reference_point"
-                ]
-                if reference_point is None or len(reference_point) == 0:
-                    generator_params["reference_point"] = {
-                        name: 0.0 for name in self.configs["observations"]
-                    }
-
         # Environment
         env_params = load_config(self.env_box.edit.toPlainText())
 
