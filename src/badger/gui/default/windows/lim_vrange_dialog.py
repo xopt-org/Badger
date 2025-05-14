@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QDoubleSpinBox,
+    QRadioButton,
 )
 from PyQt5.QtWidgets import (
     QGroupBox,
@@ -126,6 +127,19 @@ will be clipped by the variable range."""
         stacks.setCurrentIndex(self.configs["limit_option_idx"])
         vbox_config.addWidget(stacks)
         vbox_config.addStretch(1)
+        
+        # Apply to group
+        apply_to_group = QWidget()
+        hbox_apply_to = QHBoxLayout(apply_to_group)
+        hbox_apply_to.setContentsMargins(0, 0, 0, 0)
+        lbl_apply_to = QLabel("Apply to:")
+        self.rb_all_variables = rb_all_variables = QRadioButton("All Variables")
+        self.rb_only_visible = rb_only_visible = QRadioButton("Only Visible")
+        rb_all_variables.setChecked(True) # Default selection
+        hbox_apply_to.addWidget(lbl_apply_to)
+        hbox_apply_to.addWidget(rb_all_variables)
+        hbox_apply_to.addWidget(rb_only_visible)
+        vbox_config.addWidget(apply_to_group)
 
         # Button set
         button_set = QWidget()
@@ -146,7 +160,9 @@ will be clipped by the variable range."""
     def config_logic(self):
         self.cb.currentIndexChanged.connect(self.limit_option_changed)
         self.btn_cancel.clicked.connect(self.close)
-        self.btn_set.clicked.connect(self.set)
+        self.btn_set.clicked.connect(
+            lambda: self.set(set_all=self.rb_all_variables.isChecked())
+        )
         self.sb_ratio_curr.valueChanged.connect(self.ratio_curr_changed)
         self.sb_ratio_full.valueChanged.connect(self.ratio_full_changed)
         self.sb_delta.valueChanged.connect(self.delta_changed)
@@ -160,9 +176,9 @@ will be clipped by the variable range."""
     def delta_changed(self, delta):
         self.configs["delta"] = delta
 
-    def set(self):
+    def set(self, set_all: bool):
         self.save_config(self.configs)
-        self.set_vrange()
+        self.set_vrange(set_all=set_all)
         self.close()
 
     def limit_option_changed(self, i):
