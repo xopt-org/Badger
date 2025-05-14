@@ -109,7 +109,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.setChecked(True)
 
         # Template path
-        self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
+        self.template_dir = "/home/physics/badger/cu_hxr/plugins/templates"
+        # self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
         # self.template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
 
     def init_ui(self):
@@ -1010,11 +1011,14 @@ class BadgerRoutinePage(QWidget):
         # By default update all variables no matter if selected or not
         vname_selected = []
         vrange = {}
-
-        # Only set vranges to the visible variables
-        _variables = self.env_box.var_table.get_visible_variables(
-            self.env_box.var_table.variables
-        )
+        
+        if set_all:
+            _variables = self.env_box.var_table.variables
+        else:
+            # Only set vranges to the visible variables
+            _variables = self.env_box.var_table.get_visible_variables(
+                self.env_box.var_table.variables
+            )
 
         for var in _variables:
             name = next(iter(var))
