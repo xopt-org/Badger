@@ -371,8 +371,9 @@ class BadgerRoutinePage(QWidget):
             additional_variables = template_dict["additional_variables"]
         except KeyError:
             additional_variables = {}
-        for i in self.vars_env:
-            all_variables.update(i)
+        if self.vars_env:
+            for i in self.vars_env:
+                all_variables.update(i)
         if additional_variables:  # there are additional variables
             env = self.create_env()
             for vname in additional_variables:
@@ -399,11 +400,15 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.blockSignals(False)
         self.toggle_relative_to_curr(flag_relative, refresh=False)
 
-        # Always use ranges stored in template
-        self.env_box.var_table.set_bounds(vocs.variables, signal=False)
-        # Populate the initial table anyways, auto mode or not
-        self.clear_init_table(reset_actions=False)
-        self.update_init_table()
+        if env_name:
+            if flag_relative:
+                bounds = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds, signal=False)
+            else:
+                self.env_box.var_table.set_bounds(vocs.variables, signal=False)
+            # Populate the initial table anyways, auto mode or not
+            self.clear_init_table(reset_actions=False)
+            self.update_init_table(force=True)
 
         # set objectives
         self.env_box.obj_table.set_selected(vocs.objectives)
