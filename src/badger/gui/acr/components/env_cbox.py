@@ -18,7 +18,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
-from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
@@ -162,6 +161,8 @@ class BadgerEnvBox(QWidget):
             btn_env_play.hide()
         self.btn_pv = btn_pv = QPushButton("Variable Search")
         btn_pv.setFixedSize(128, 24)
+        self.btn_formula = btn_formula = QPushButton("Formula Editor")
+        btn_formula.setFixedSize(128, 24)
         self.btn_docs = btn_docs = QPushButton("Open Docs")
         btn_docs.setFixedSize(96, 24)
         self.btn_params = btn_params = QPushButton("Parameters")
@@ -174,6 +175,7 @@ class BadgerEnvBox(QWidget):
         hbox_name.addWidget(btn_env_play)
         hbox_name.addWidget(btn_params)
         hbox_name.addWidget(btn_pv)
+        hbox_name.addWidget(btn_formula)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
@@ -557,7 +559,3 @@ class BadgerEnvBox(QWidget):
         else:
             stylesheet = ""
         self.setStyleSheet(stylesheet)
-
-    def archiveSearchMenu(self):
-        self.archive_search = ArchiveSearchWidget()
-        self.archive_search.show()
