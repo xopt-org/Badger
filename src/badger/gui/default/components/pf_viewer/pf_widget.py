@@ -392,6 +392,8 @@ class ParetoFrontWidget(QWidget):
                     plot_tab_widget.addTab(canvas0, "Variable Space")
                 except ValueError:
                     logging.error("No data points available for Variable Space")
+                    blank_canvas = FigureCanvas(fig)
+                    plot_tab_widget.addTab(blank_canvas, "Variable Space")
 
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
@@ -402,6 +404,8 @@ class ParetoFrontWidget(QWidget):
                     plot_tab_widget.addTab(canvas1, "Objective Space")
                 except ValueError:
                     logging.error("No data points available for Objective Space")
+                    blank_canvas = FigureCanvas(fig)
+                    plot_tab_widget.addTab(blank_canvas, "Objective Space")
 
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
 
@@ -412,12 +416,14 @@ class ParetoFrontWidget(QWidget):
         with BlockSignalsContext(plot_hypervolume):
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
-                    fig, ax = self.create_hypervolume_plot(fig, ax)
+                    fig0, ax = self.create_hypervolume_plot(fig, ax)
 
-                    canvas = FigureCanvas(fig)
+                    canvas = FigureCanvas(fig0)
                     plot_hypervolume.addWidget(canvas)
                 except ValueError:
                     logging.error("No data points available for Hypervolume")
+                    canvas = FigureCanvas(fig)
+                    plot_hypervolume.addWidget(canvas)
 
         # Update the last updated time
         self.last_updated = time.time()
