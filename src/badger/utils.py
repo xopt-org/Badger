@@ -60,7 +60,7 @@ def load_config(fname):
     # if fname is a yaml string
     if not os.path.exists(fname):
         try:
-            configs = yaml.safe_load(fname)
+            configs = yaml.load(fname, Loader=yaml.Loader)
             # A string is also a valid yaml
             if type(configs) is str:
                 raise BadgerLoadConfigError(
