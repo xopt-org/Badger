@@ -4,6 +4,7 @@ from typing import Callable, Optional, cast, ParamSpec, Iterable
 from types import TracebackType
 from PyQt5.QtWidgets import (
     QWidget,
+    QSizePolicy,
     QVBoxLayout,
     QHBoxLayout,
     QMessageBox,
@@ -91,8 +92,9 @@ class BlockSignalsContext:
 
 
 class MatplotlibFigureContext:
-    def __init__(self):
-        self.fig = Figure()
+    def __init__(self, fig_size: tuple[float, float] | None = None):
+        self.fig_size = fig_size
+        self.fig = Figure(figsize=self.fig_size)
         self.ax = self.fig.add_subplot()
 
     def __enter__(self):
@@ -117,13 +119,14 @@ class ParetoFrontWidget(QWidget):
     history: list[tuple[int, float]] = []
     parameters: ConfigurableOptions = DEFAULT_PARAMETERS
     initialized: bool = False
-
-    plot_ittr_colors = ("#648FFF", "#FFB000")
+    plot_size: tuple[float, float] = (8, 6)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
 
         self.create_ui()
+        self.setWindowTitle("Pareto Front Viewer")
+        self.setMinimumWidth(1200)
 
     def isValidRoutine(self, routine: Routine):
         if len(routine.vocs.objective_names) < 2:
@@ -239,22 +242,34 @@ class ParetoFrontWidget(QWidget):
 
         update_button = self.ui["components"]["update"]
 
+        settings_layout.addStretch(1)
         settings_layout.addWidget(update_button)
-
-        main_layout.addLayout(settings_layout)
+        settings_widget = QWidget()
+        settings_widget.setLayout(settings_layout)
+        settings_widget.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Expanding
+        )
+        main_layout.addWidget(settings_widget)
 
         # Right side of the layout
         plot_layout = self.ui["layouts"]["plot"]
         plot_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         plot_tab_widget = self.ui["components"]["plot"]["pareto"]
         plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
+        plot_tab_widget.setMinimumWidth(400)
 
+        plot_hypervolume_widget = QWidget()
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
+        plot_hypervolume_widget.setLayout(plot_hypervolume)
+        plot_hypervolume_widget.setMinimumWidth(400)
+        plot_hypervolume_widget.setMaximumWidth(600)
 
-        plot_layout.addWidget(plot_tab_widget, 0, 1, Qt.AlignmentFlag.AlignCenter)
-        plot_layout.addLayout(plot_hypervolume, 1, 1, Qt.AlignmentFlag.AlignCenter)
+        plot_layout.addWidget(plot_tab_widget, 0, 0, Qt.AlignmentFlag.AlignCenter)
+        plot_layout.addWidget(
+            plot_hypervolume_widget, 0, 1, Qt.AlignmentFlag.AlignCenter
+        )
 
-        main_layout.addLayout(plot_layout)
+        main_layout.addLayout(plot_layout, 1)
 
         self.setLayout(main_layout)
 
@@ -368,7 +383,7 @@ class ParetoFrontWidget(QWidget):
         with BlockSignalsContext(plot_tab_widget):
             self.clear_tabs(plot_tab_widget)
 
-            with MatplotlibFigureContext() as (fig, ax):
+            with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
                     fig0, ax0 = self.create_pareto_plot(fig, ax, generator)
                     canvas0 = FigureCanvas(fig0)
@@ -378,7 +393,7 @@ class ParetoFrontWidget(QWidget):
                 except ValueError:
                     logging.error("No data points available for Variable Space")
 
-            with MatplotlibFigureContext() as (fig, ax):
+            with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
                     fig1, ax1 = self.create_pareto_plot(fig, ax, generator)
                     canvas1 = FigureCanvas(fig1)
@@ -395,7 +410,7 @@ class ParetoFrontWidget(QWidget):
         plot_hypervolume.blockSignals
 
         with BlockSignalsContext(plot_hypervolume):
-            with MatplotlibFigureContext() as (fig, ax):
+            with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_hypervolume_plot(fig, ax)
 
