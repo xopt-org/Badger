@@ -120,7 +120,7 @@ class FormulaEditor(QDialog):
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
-        layout_h = QHBoxLayout(self)
+        layout_h = QHBoxLayout()
         layout_h.addWidget(QLabel("Formula Name:"))
         layout_h.addWidget(self.name_field)
 

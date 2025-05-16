@@ -50,6 +50,8 @@ class ObjectiveTable(QTableWidget):
         """
         super().__init__(*args, **kwargs)
 
+        self.formulas: Dict[str, Dict[str, Any]] = {}
+
         # Enable row reordering via internal drag and drop.
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -59,7 +61,7 @@ class ObjectiveTable(QTableWidget):
         self.setAcceptDrops(True)
 
         self.setRowCount(0)
-        self.setColumnCount(3)
+        self.setColumnCount(4)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -69,7 +71,8 @@ class ObjectiveTable(QTableWidget):
         header.setSectionResizeMode(0, QHeaderView.Fixed)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.setColumnWidth(0, 20)
-        self.setColumnWidth(2, 192)
+        self.setColumnWidth(2, 120)
+        self.setColumnWidth(3, 100)
 
         self.all_objectives: List[Dict[str, str]] = []
         self.objectives: List[Dict[str, str]] = []
@@ -300,7 +303,10 @@ class ObjectiveTable(QTableWidget):
             return False
 
     def update_objectives(
-        self, objectives: Optional[List[Dict[str, str]]], filtered: int = 0
+        self,
+        objectives: Optional[List[Dict[str, str]]],
+        filtered: int = 0,
+        formula_data: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Update the table with the given objectives.
@@ -317,6 +323,8 @@ class ObjectiveTable(QTableWidget):
             key-value pair mapping the objective name to its rule.
         filtered : int, optional
             The filter mode (0, 1, or 2), by default 0.
+        formula_data : Optional[Dict[str, Any]], optional
+            Dictionary containing formula details for specific objectives, by default None.
         """
         self.setRowCount(0)
         self.horizontalHeader().setVisible(False)
@@ -331,6 +339,9 @@ class ObjectiveTable(QTableWidget):
                 self.rules[name] = obj[name]
         elif filtered == 1:
             self.objectives = objectives or []
+
+        if formula_data and filtered == 0:
+            self.formulas.update(formula_data)
 
         if not objectives:
             return
@@ -367,22 +378,74 @@ class ObjectiveTable(QTableWidget):
             cb_rule.currentIndexChanged.connect(self.update_rules)
             self.setCellWidget(i, 2, cb_rule)
 
-        self.setHorizontalHeaderLabels(["", "Name", "Rule"])
+            if name in self.formulas:
+                formula_indicator = QTableWidgetItem(self.formulas[name]["formula"])
+                self.setItem(i, 3, formula_indicator)
+
+        self.setHorizontalHeaderLabels(["", "Name", "Rule", "Formula"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
         self.horizontalHeader().setVisible(True)
 
-    def export_objectives(self) -> Dict[str, str]:
+    def export_objectives(self) -> Dict[str, Any]:
         """
-        Export the selected objectives along with their rules.
+        Extended export to include formula information.
 
         Returns
         -------
-        Dict[str, str]
-            A dictionary mapping the name of each selected objective to its rule.
+        Dict[str, Any]
+            Dictionary with selected objectives, their rules, and formula details if applicable.
         """
-        objectives_exported: Dict[str, str] = {}
+        exported = {"objectives": {}, "formulas": {}}
+
         for obj in self.all_objectives:
             name = next(iter(obj))
             if self.is_checked(name):
-                objectives_exported[name] = self.rules.get(name, "MINIMIZE")
-        return objectives_exported
+                exported["objectives"][name] = self.rules.get(name, "MINIMIZE")
+
+                if name in self.formulas:
+                    exported["formulas"][name] = self.formulas[name]
+
+        return exported
+
+    def add_formula_objective(self, formula_tuple: tuple) -> None:
+        """
+        Add a formula-based objective to the table.
+
+        Parameters
+        ----------
+        formula_tuple : tuple
+            A tuple containing (name, formula_string, formula_dict)
+        """
+        name, formula_string, formula_dict = formula_tuple
+
+        rule = "MINIMIZE"
+
+        new_objective = {name: rule}
+
+        if self.all_objectives is None:
+            self.all_objectives = []
+        self.all_objectives.append(new_objective)
+        self.objectives = self.all_objectives
+
+        self.formulas[name] = {
+            "formula": formula_string,
+            "variable_mapping": formula_dict,
+        }
+
+        self.update_objectives(self.objectives, filtered=0)
+
+    def get_formula(self, objective_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get formula details for a specific objective.
+
+        Parameters
+        ----------
+        objective_name : str
+            The name of the objective.
+
+        Returns
+        -------
+        Optional[Dict[str, Any]]
+            Formula details if the objective has an associated formula, None otherwise.
+        """
+        return self.formulas.get(objective_name)

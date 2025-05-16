@@ -995,11 +995,17 @@ class BadgerRoutinePage(QWidget):
         dialog.formula_accepted.connect(self.handle_formula)
         dialog.exec_()
 
-    def handle_formula(self, formula: str) -> None:
-        """Handle the accepted formula"""
-        print(f"Formula accepted: {formula}")
-        # new_formula_obj = {formula[0]: formula}
-        # self.env_box.obj_table.update_objectives(new_formula_obj)
+    def handle_formula(self, formula: tuple) -> None:
+        """
+        Handle the accepted formula
+
+        Parameters
+        ----------
+        formula : tuple
+            A tuple containing (name, formula_string, dict)
+        """
+        # Add the formula objective directly using the new method
+        self.env_box.obj_table.add_formula_objective(formula)
 
     def add_var(self):
         # TODO: Use a cached env
@@ -1341,6 +1347,7 @@ class BadgerRoutinePage(QWidget):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
         objectives = self.env_box.obj_table.export_objectives()
+        print(objectives)
 
         constraints = {}
         critical_constraints = []
