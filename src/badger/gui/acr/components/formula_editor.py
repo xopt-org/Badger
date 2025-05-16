@@ -1,6 +1,5 @@
 import re
 from typing import Dict, List, Optional
-import time
 from qtpy.QtGui import QKeyEvent
 from qtpy.QtCore import Qt, Slot, QObject, QAbstractTableModel, QModelIndex, Signal
 from qtpy.QtWidgets import (
@@ -11,7 +10,9 @@ from qtpy.QtWidgets import (
     QHeaderView,
     QPushButton,
     QVBoxLayout,
+    QHBoxLayout,
     QAbstractItemView,
+    QLabel,
 )
 
 
@@ -103,7 +104,7 @@ class FormulaEditor(QDialog):
         self.setWindowTitle("Formula Input")
 
         layout = QVBoxLayout(self)
-
+        self.name_field = QLineEdit(self)
         self.field = QLineEdit(self)
 
         self.variable_model = VariableModel(variable_names)
@@ -119,16 +120,12 @@ class FormulaEditor(QDialog):
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
-        layout.addWidget(self.variable_list)
-        layout.addWidget(self.field)
-
-        self.variable_list.doubleClicked.connect(self.insert_variable)
-
-        header = self.variable_list.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        layout_h = QHBoxLayout(self)
+        layout_h.addWidget(QLabel("Formula Name:"))
+        layout_h.addWidget(self.name_field)
 
         layout.addWidget(self.variable_list)
+        layout.addLayout(layout_h)
         layout.addWidget(self.field)
 
         self.variable_list.doubleClicked.connect(self.insert_variable)
@@ -192,27 +189,18 @@ class FormulaEditor(QDialog):
     @Slot()
     def accept_formula(self) -> None:
         """Process and emit the entered formula with variable mapping"""
+        formula_name = self.name_field.text()
         formula = self.field.text()
         formula = re.sub(r"\s+", "", formula)
-
         variable_mapping = self.variable_model.get_variable_mapping()
 
-        self.formula_accepted.emit((formula, variable_mapping))
+        self.formula_accepted.emit((formula_name, formula, variable_mapping))
         self.field.setText("")
         self.accept()
 
     @Slot(QModelIndex)
     def insert_variable(self, index: QModelIndex) -> None:
         """Insert the formula name into the formula field when a row is double-clicked"""
-        current_time = time.time()
-        if (
-            hasattr(self, "last_insert_time")
-            and (current_time - self.last_insert_time) < 0.1
-        ):
-            return
-
-        self.last_insert_time = current_time
-
         if not index.isValid():
             return
 

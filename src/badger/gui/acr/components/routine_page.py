@@ -989,7 +989,7 @@ class BadgerRoutinePage(QWidget):
         except AttributeError:
             raise BadgerRoutineError("No environment selected!")
 
-        var_list = list(env.variables.keys())
+        var_list = list(env.observables)
         dialog = FormulaEditor(self, var_list)
 
         dialog.formula_accepted.connect(self.handle_formula)
@@ -997,8 +997,9 @@ class BadgerRoutinePage(QWidget):
 
     def handle_formula(self, formula: str) -> None:
         """Handle the accepted formula"""
-        print(f"Received formula: {formula}")
-        # Process the formula as needed
+        print(f"Formula accepted: {formula}")
+        # new_formula_obj = {formula[0]: formula}
+        # self.env_box.obj_table.update_objectives(new_formula_obj)
 
     def add_var(self):
         # TODO: Use a cached env
