@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 
 
 class PlotOptions(TypedDict):
-    show_raw_data: bool
+    show_only_pareto_front: bool
 
 
 class ConfigurableOptions(TypedDict):
@@ -26,7 +26,7 @@ class ConfigurableOptions(TypedDict):
 
 
 class PFOptionsUIWidgets(TypedDict):
-    show_raw_data: QRadioButton
+    show_only_pareto_front: QRadioButton
 
 
 class PFVariablesUIWidgets(TypedDict):

@@ -24,7 +24,7 @@ from badger.routine import Routine
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.colors import Normalize
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 from xopt.generators.bayesian.mobo import MOBOGenerator
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PARAMETERS: ConfigurableOptions = {
     "plot_options": {
-        "show_raw_data": True,
+        "show_only_pareto_front": False,
     },
     "variable_1": 0,
     "variable_2": 1,
@@ -154,7 +154,7 @@ class ParetoFrontWidget(QWidget):
             lambda: signal_logger("Tab changed")(lambda: self.on_tab_change())()
         )
 
-        self.ui["components"]["options"]["show_raw_data"].clicked.connect(
+        self.ui["components"]["options"]["show_only_pareto_front"].clicked.connect(
             lambda: signal_logger("Sample checkbox changed")(lambda: self.update_ui())()
         )
 
@@ -164,7 +164,7 @@ class ParetoFrontWidget(QWidget):
         variable_1_combo.setMinimumWidth(100)
         variable_2_combo = QComboBox()
         variable_2_combo.setMinimumWidth(100)
-        show_raw_data_checkbox = QCheckBox("Show Raw Data")
+        show_only_pareto_front = QCheckBox("Show only Pareto Front")
 
         components: PFUIWidgets = {
             "variables": {
@@ -172,7 +172,7 @@ class ParetoFrontWidget(QWidget):
                 "variable_2": variable_2_combo,
             },
             "options": {
-                "show_raw_data": show_raw_data_checkbox,
+                "show_only_pareto_front": show_only_pareto_front,
             },
             "update": update_button,
             "plot": {
@@ -224,12 +224,14 @@ class ParetoFrontWidget(QWidget):
         # Options layout
         options_layout = self.ui["layouts"]["options"]
 
-        show_raw_data_checkbox = self.ui["components"]["options"]["show_raw_data"]
-        show_raw_data_checkbox.setChecked(
-            self.parameters["plot_options"]["show_raw_data"]
+        show_only_pareto_front = self.ui["components"]["options"][
+            "show_only_pareto_front"
+        ]
+        show_only_pareto_front.setChecked(
+            self.parameters["plot_options"]["show_only_pareto_front"]
         )
 
-        options_layout.addWidget(show_raw_data_checkbox)
+        options_layout.addWidget(show_only_pareto_front)
 
         settings_layout.addLayout(options_layout)
 
@@ -407,7 +409,9 @@ class ParetoFrontWidget(QWidget):
 
     def create_pareto_plot(self, fig: Figure, ax: Axes, generator: MOBOGenerator):
         current_tab = self.parameters["plot_tab"]
-        show_raw_data = self.ui["components"]["options"]["show_raw_data"].isChecked()
+        show_only_pareto_front = self.ui["components"]["options"][
+            "show_only_pareto_front"
+        ].isChecked()
 
         if current_tab == 0:
             x_axis = self.parameters["variable_1"]
@@ -438,7 +442,7 @@ class ParetoFrontWidget(QWidget):
 
         raw_data = generator.data
 
-        if raw_data is not None and show_raw_data:
+        if raw_data is not None and not show_only_pareto_front:
             x = raw_data[f"{x_var_name}"]
             y = raw_data[f"{y_var_name}"]
 
@@ -456,11 +460,12 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid plot index")
             raise ValueError("Invalid plot index")
 
+        # Color bar
+
         num_of_points = len(data_points)
 
-        color_map = LinearSegmentedColormap.from_list(
-            "custom", self.plot_ittr_colors, N=num_of_points
-        )
+        color_map = plt.cm.get_cmap("viridis")
+        norm = Normalize(0, num_of_points - 1)
 
         # Map the indices to the colormap, normalizing by the total number of points
         if num_of_points > 1:
@@ -475,7 +480,10 @@ class ParetoFrontWidget(QWidget):
         )
 
         fig.colorbar(
-            plt.cm.ScalarMappable(cmap=color_map, norm=Normalize(0, num_of_points - 1)),
+            plt.cm.ScalarMappable(
+                cmap=color_map,
+                norm=norm,
+            ),
             ax=ax,
             orientation="vertical",
             label="Iterations",
