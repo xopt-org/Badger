@@ -39,6 +39,7 @@ from badger.gui.default.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.utils import filter_generator_config
 from badger.gui.acr.components.archive_search import ArchiveSearchWidget
+from badger.gui.acr.components.formula_editor import FormulaEditor
 from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import BadgerRoutineError, BadgerEnvVarError
@@ -247,6 +248,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.cb.currentIndexChanged.connect(self.select_env)
         self.env_box.btn_env_play.clicked.connect(self.open_playground)
         self.env_box.btn_pv.clicked.connect(self.open_archive_search)
+        self.env_box.btn_formula.clicked.connect(self.open_formula_editor)
         self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
@@ -984,6 +986,32 @@ class BadgerRoutinePage(QWidget):
             self.archive_search.raise_()
             self.archive_search.activateWindow()
 
+    def open_formula_editor(self) -> None:
+        """Open the formula editor with variable names from the get_variable_names function"""
+
+        try:
+            env = self.create_env()
+        except AttributeError:
+            raise BadgerRoutineError("No environment selected!")
+
+        var_list = list(env.observables)
+        dialog = FormulaEditor(self, var_list)
+
+        dialog.formula_accepted.connect(self.handle_formula)
+        dialog.exec_()
+
+    def handle_formula(self, formula: tuple) -> None:
+        """
+        Handle the accepted formula
+
+        Parameters
+        ----------
+        formula : tuple
+            A tuple containing (name, formula_string, dict)
+        """
+        # Add the formula objective directly using the new method
+        self.env_box.obj_table.add_formula_objective(formula)
+
     def add_var(self):
         # TODO: Use a cached env
         env_params = load_config(self.env_box.edit.toPlainText())
@@ -1324,6 +1352,7 @@ class BadgerRoutinePage(QWidget):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
         objectives = self.env_box.obj_table.export_objectives()
+        print(objectives)
 
         constraints = {}
         critical_constraints = []
