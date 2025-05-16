@@ -176,7 +176,7 @@ will be clipped by the variable range."""
     def delta_changed(self, delta):
         self.configs["delta"] = delta
 
-    def set(self, set_all: bool):
+    def set(self, set_all: bool = True):
         self.save_config(self.configs)
         self.set_vrange(set_all=set_all)
         self.close()
@@ -189,6 +189,6 @@ will be clipped by the variable range."""
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
-            self.set()
+            self.set(set_all=self.rb_all_variables.isChecked())
         elif event.key() == Qt.Key_Escape:
             self.close()
