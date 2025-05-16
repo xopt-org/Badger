@@ -109,9 +109,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.setChecked(True)
 
         # Template path
-        self.template_dir = "/home/physics/badger/cu_hxr/plugins/templates"
-        # self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
-        # self.template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
+        self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
     def init_ui(self):
         config_singleton = init_settings()
