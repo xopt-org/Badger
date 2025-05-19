@@ -135,7 +135,7 @@ will be clipped by the variable range."""
         lbl_apply_to = QLabel("Apply to:")
         self.rb_all_variables = rb_all_variables = QRadioButton("All Variables")
         self.rb_only_visible = rb_only_visible = QRadioButton("Only Visible")
-        rb_all_variables.setChecked(True) # Default selection
+        rb_all_variables.setChecked(True)  # Default selection
         hbox_apply_to.addWidget(lbl_apply_to)
         hbox_apply_to.addWidget(rb_all_variables)
         hbox_apply_to.addWidget(rb_only_visible)
@@ -178,7 +178,7 @@ will be clipped by the variable range."""
 
     def set(self, set_all: bool = True):
         self.save_config(self.configs)
-        self.set_vrange(set_all=set_all)
+        self.set_vrange(set_all=set_all)  # pass set_all flag to set_vrange
         self.close()
 
     def limit_option_changed(self, i):
