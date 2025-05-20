@@ -555,17 +555,23 @@ class ParetoFrontWidget(QWidget):
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
             self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
             return True
 
         if self.routine_identifier != self.routine.name:
             logger.debug("Reset - Routine name has changed")
             self.routine_identifier = self.routine.name
             self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
             return True
 
         if self.routine.data is None:
             logger.debug("Reset - No data available")
             self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
             return True
 
         previous_len = self.df_length
@@ -575,6 +581,8 @@ class ParetoFrontWidget(QWidget):
         if previous_len > new_length:
             logger.debug("Reset - Data length is the same or smaller")
             self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
             self.df_length = len(self.routine.data)
             return True
 
