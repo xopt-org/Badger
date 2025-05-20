@@ -27,6 +27,8 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+import pandas as pd
+from torch import Tensor
 
 from xopt.generators.bayesian.mobo import MOBOGenerator
 
@@ -116,7 +118,9 @@ class ParetoFrontWidget(QWidget):
     correct_generator: bool
     last_updated: Optional[float] = None
     routine_identifier: str = ""
-    history: list[tuple[int, float]] = []
+    hypervolume_history: pd.DataFrame = pd.DataFrame()
+    pf_1: Optional[Tensor] = None
+    pf_2: Optional[Tensor] = None
     parameters: ConfigurableOptions = DEFAULT_PARAMETERS
     initialized: bool = False
     plot_size: tuple[float, float] = (8, 6)
@@ -354,7 +358,7 @@ class ParetoFrontWidget(QWidget):
         self.update_ui()
 
     def update_ui(self):
-        self.create_plots(self.generator, requires_rebuild=True)
+        self.create_plots(requires_rebuild=True)
 
     def clear_tabs(self, tab_widget: QTabWidget):
         max_index = tab_widget.count()
@@ -363,7 +367,6 @@ class ParetoFrontWidget(QWidget):
 
     def create_plots(
         self,
-        generator: MOBOGenerator,
         requires_rebuild: bool = False,
         interval: int = 1000,
     ):
@@ -385,7 +388,7 @@ class ParetoFrontWidget(QWidget):
 
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
-                    fig0, ax0 = self.create_pareto_plot(fig, ax, generator)
+                    fig0, ax0 = self.create_pareto_plot(fig, ax)
                     canvas0 = FigureCanvas(fig0)
 
                     ax0.set_title("Data Points")
@@ -397,7 +400,7 @@ class ParetoFrontWidget(QWidget):
 
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
-                    fig1, ax1 = self.create_pareto_plot(fig, ax, generator)
+                    fig1, ax1 = self.create_pareto_plot(fig, ax)
                     canvas1 = FigureCanvas(fig1)
 
                     ax1.set_title("Pareto Front")
@@ -422,13 +425,13 @@ class ParetoFrontWidget(QWidget):
                     plot_hypervolume.addWidget(canvas)
                 except ValueError:
                     logging.error("No data points available for Hypervolume")
-                    canvas = FigureCanvas(fig)
-                    plot_hypervolume.addWidget(canvas)
+                    blank_canvas = FigureCanvas(fig)
+                    plot_hypervolume.addWidget(blank_canvas)
 
         # Update the last updated time
         self.last_updated = time.time()
 
-    def create_pareto_plot(self, fig: Figure, ax: Axes, generator: MOBOGenerator):
+    def create_pareto_plot(self, fig: Figure, ax: Axes):
         current_tab = self.parameters["plot_tab"]
         show_only_pareto_front = self.ui["components"]["options"][
             "show_only_pareto_front"
@@ -438,30 +441,28 @@ class ParetoFrontWidget(QWidget):
             x_axis = self.parameters["variable_1"]
             y_axis = self.parameters["variable_2"]
 
-            x_var_name = generator.vocs.variable_names[x_axis]
-            x_var_index = generator.vocs.variable_names.index(x_var_name)
-            y_var_name = generator.vocs.variable_names[y_axis]
-            y_var_index = generator.vocs.variable_names.index(y_var_name)
+            x_var_name = self.generator.vocs.variable_names[x_axis]
+            x_var_index = self.generator.vocs.variable_names.index(x_var_name)
+            y_var_name = self.generator.vocs.variable_names[y_axis]
+            y_var_index = self.generator.vocs.variable_names.index(y_var_name)
 
         elif current_tab == 1:
             x_axis = self.parameters["objective_1"]
             y_axis = self.parameters["objective_2"]
 
-            x_var_name = generator.vocs.objective_names[x_axis]
-            x_var_index = generator.vocs.objective_names.index(x_var_name)
-            y_var_name = generator.vocs.objective_names[y_axis]
-            y_var_index = generator.vocs.objective_names.index(y_var_name)
+            x_var_name = self.generator.vocs.objective_names[x_axis]
+            x_var_index = self.generator.vocs.objective_names.index(x_var_name)
+            y_var_name = self.generator.vocs.objective_names[y_axis]
+            y_var_index = self.generator.vocs.objective_names.index(y_var_name)
         else:
             logging.error("Invalid plot index")
             raise ValueError("Invalid plot index")
 
-        pf_1, pf_2 = generator.get_pareto_front()
-
-        if pf_1 is None or pf_2 is None:
+        if self.pf_1 is None or self.pf_2 is None:
             logging.error("No pareto front")
             raise ValueError("No pareto front")
 
-        raw_data = generator.data
+        raw_data = self.generator.data
 
         if raw_data is not None and not show_only_pareto_front:
             x = raw_data[f"{x_var_name}"]
@@ -473,10 +474,11 @@ class ParetoFrontWidget(QWidget):
                     y,
                     color="black",
                 )
+
         if current_tab == 0:
-            data_points = pf_1
+            data_points = self.pf_1
         elif current_tab == 1:
-            data_points = pf_2
+            data_points = self.pf_2
         else:
             logging.error("Invalid plot index")
             raise ValueError("Invalid plot index")
@@ -516,12 +518,12 @@ class ParetoFrontWidget(QWidget):
         return fig, ax
 
     def create_hypervolume_plot(self, fig: Figure, ax: Axes):
-        data_points = self.history
+        data_points = self.hypervolume_history
         if len(data_points) == 0:
             raise ValueError("No data points available")
         # Extract the x and y coordinates from the data points
-        x = [point[0] for point in data_points]
-        y = [point[1] for point in data_points]
+        x = data_points["iteration"].values
+        y = data_points["hypervolume"].values
         # Create a scatter plot
         ax.scatter(x, y, color="black")
         # Set the x and y axis labels
@@ -552,18 +554,18 @@ class ParetoFrontWidget(QWidget):
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
-            self.history = []
+            self.hypervolume_history = pd.DataFrame()
             return True
 
         if self.routine_identifier != self.routine.name:
             logger.debug("Reset - Routine name has changed")
             self.routine_identifier = self.routine.name
-            self.history = []
+            self.hypervolume_history = pd.DataFrame()
             return True
 
         if self.routine.data is None:
             logger.debug("Reset - No data available")
-            self.history = []
+            self.hypervolume_history = pd.DataFrame()
             return True
 
         previous_len = self.df_length
@@ -572,7 +574,7 @@ class ParetoFrontWidget(QWidget):
 
         if previous_len > new_length:
             logger.debug("Reset - Data length is the same or smaller")
-            self.history = []
+            self.hypervolume_history = pd.DataFrame()
             self.df_length = len(self.routine.data)
             return True
 
@@ -591,30 +593,28 @@ class ParetoFrontWidget(QWidget):
             self.setup_connections(self.routine)
             self.initialize_ui()
 
+        self.update_pareto_front()
         self.update_hypervolume()
-        self.create_plots(self.generator)
+        self.create_plots()
 
     def update_hypervolume(self):
         # Get the hypervolume from the generator
-        hypervolume = self.generator.calculate_hypervolume()
-
-        if self.generator.data is None:
-            logger.error("No data available in generator")
+        self.generator.update_pareto_front_history()
+        pareto_front_history_df = self.generator.pareto_front_history
+        if pareto_front_history_df is None or len(pareto_front_history_df) == 0:
+            logger.error("No hypervolume data available")
             return
-        # Append the hypervolume to the history
-        current_iteration = int(sorted(self.generator.data.index, key=int)[-1])
-        logger.debug(
-            f"Current iteration: {current_iteration}, Hypervolume: {hypervolume}"
-        )
-        if len(self.history) > 0:
-            last_iteration = self.history[-1][0]
-            if current_iteration <= last_iteration:
-                logger.debug(
-                    "Current iteration is less than or equal to the last iteration"
-                )
-                return
 
-        self.history.append((current_iteration, hypervolume))
+        self.hypervolume_history = pareto_front_history_df
+
+    def update_pareto_front(self):
+        pf_1, pf_2, _ = self.generator.get_pareto_front_and_hypervolume()
+
+        if pf_1 is None or pf_2 is None:
+            logging.error("No pareto front")
+            return
+        self.pf_1 = pf_1
+        self.pf_2 = pf_2
 
     def update_routine(self, routine: Routine):
         logger.debug("Updating routine in Pareto Front Viewer")
