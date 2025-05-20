@@ -413,10 +413,10 @@ class ParetoFrontWidget(QWidget):
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
 
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
-        self.clearLayout(plot_hypervolume)
-        plot_hypervolume.blockSignals
 
         with BlockSignalsContext(plot_hypervolume):
+            self.clearLayout(plot_hypervolume)
+
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
                     fig0, ax = self.create_hypervolume_plot(fig, ax)
@@ -509,7 +509,7 @@ class ParetoFrontWidget(QWidget):
             ),
             ax=ax,
             orientation="vertical",
-            label="Iterations",
+            label="Development Iteration",
         )
 
         ax.set_xlabel(x_var_name)
@@ -544,8 +544,7 @@ class ParetoFrontWidget(QWidget):
             if widget is None:
                 break
 
-            with BlockSignalsContext(widget):
-                widget.deleteLater()
+            widget.deleteLater()
 
     def requires_reinitialization(self):
         # Check if the extension needs to be reinitialized
