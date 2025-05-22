@@ -14,7 +14,7 @@
             <guid>https://xopt-org.github.io/Badger/blog/welcome</guid>
             <pubDate>Wed, 24 Nov 2021 00:00:00 GMT</pubDate>
             <description><![CDATA[Badger Banner]]></description>
-            <content:encoded><![CDATA[<p><img loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/Badger/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
+            <content:encoded><![CDATA[<p><img decoding="async" loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/Badger/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
 <p>Hello world from Badger!</p>]]></content:encoded>
             <category>SLAC</category>
             <category>hello</category>

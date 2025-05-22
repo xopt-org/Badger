@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbadger_home=self.webpackChunkbadger_home||[]).push([[1903],{1912:e=>{e.exports=JSON.parse('{"blogBasePath":"/Badger/blog","blogTitle":"Blog","authorsListPath":"/Badger/blog/authors"}')}}]);

@@ -13,7 +13,7 @@
         <link href="https://xopt-org.github.io/Badger/blog/welcome"/>
         <updated>2021-11-24T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Badger Banner]]></summary>
-        <content type="html"><![CDATA[<p><img loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/Badger/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
+        <content type="html"><![CDATA[<p><img decoding="async" loading="lazy" alt="Badger Banner" src="https://xopt-org.github.io/Badger/assets/images/badger-banner-5ff8b6b2d174e4d922a483033a76c69e.png" width="1280" height="640" class="img_ev3q"></p>
 <p>Hello world from Badger!</p>]]></content>
         <author>
             <name>Zhe Zhang</name>

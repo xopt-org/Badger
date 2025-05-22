@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbadger_home=self.webpackChunkbadger_home||[]).push([[8913],{8913:(e,h,s)=>{s.r(h)}}]);

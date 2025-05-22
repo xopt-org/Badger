@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkbadger_home=self.webpackChunkbadger_home||[]).push([[7472],{5513:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"Welcome","permalink":"/Badger/blog/welcome","unlisted":false,"date":"2021-11-24T00:00:00.000Z"}]}')}}]);
