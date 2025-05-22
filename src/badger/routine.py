@@ -78,6 +78,9 @@ class Routine(Xopt):
                     except IndexError:
                         data["data"] = pd.DataFrame(data["data"], index=[0])
 
+                    data["data"].index = data["data"].index.astype(int)
+                    data["data"].sort_index(inplace=True)
+
                     # Add data one row at a time to avoid generator issues
                     if isinstance(data["generator"], SequentialGenerator):
                         data["generator"].set_data(data["data"])
