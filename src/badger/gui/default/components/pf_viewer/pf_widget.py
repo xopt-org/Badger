@@ -22,6 +22,7 @@ from PyQt5.QtCore import Qt
 from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions
 from badger.routine import Routine
 
+from badger.utils import create_archive_run_filename
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -142,7 +143,7 @@ class ParetoFrontWidget(QWidget):
     def setup_connections(self, routine: Routine):
         self.ui["components"]["update"].clicked.connect(
             lambda: signal_logger("Update button clicked")(
-                lambda: self.update_plot(routine)
+                lambda: self.update_plot(routine, requires_rebuild=True)
             )()
         )
 
@@ -333,7 +334,8 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid plot tab")
             raise ValueError("Invalid plot tab")
 
-        self.update_ui()
+        # Update the plot
+        self.update_pareto_front_plot()
 
     def on_variable_change(self):
         plot_tab = self.parameters["plot_tab"]
@@ -355,7 +357,7 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid plot tab")
             raise ValueError("Invalid plot tab")
 
-        self.update_ui()
+        self.update_pareto_front_plot()
 
     def update_ui(self):
         self.create_plots(requires_rebuild=True)
@@ -365,21 +367,10 @@ class ParetoFrontWidget(QWidget):
         for i in range(max_index - 1, -1, -1):
             tab_widget.removeTab(i)
 
-    def create_plots(
+    def update_pareto_front_plot(
         self,
-        requires_rebuild: bool = False,
-        interval: int = 1000,
     ):
-        # Check if the plot was updated recently
-        if self.last_updated is not None and not requires_rebuild:
-            logger.debug(f"Time since last update: {time.time() - self.last_updated}")
-
-            time_diff = time.time() - self.last_updated
-
-            # If the plot was updated less than 1 second ago, skip this update
-            if time_diff < interval / 1000:
-                logger.debug("Skipping update")
-                return
+        self.update_pareto_front()
 
         plot_tab_widget = self.ui["components"]["plot"]["pareto"]
 
@@ -412,6 +403,11 @@ class ParetoFrontWidget(QWidget):
 
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
 
+    def update_hypervolume_plot(
+        self,
+    ):
+        self.update_hypervolume()
+
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
 
         with BlockSignalsContext(plot_hypervolume):
@@ -427,6 +423,26 @@ class ParetoFrontWidget(QWidget):
                     logging.error("No data points available for Hypervolume")
                     blank_canvas = FigureCanvas(fig)
                     plot_hypervolume.addWidget(blank_canvas)
+
+    def create_plots(
+        self,
+        requires_rebuild: bool = False,
+        interval: int = 1000,
+    ):
+        # Check if the plot was updated recently
+        if self.last_updated is not None and not requires_rebuild:
+            logger.debug(f"Time since last update: {time.time() - self.last_updated}")
+
+            time_diff = time.time() - self.last_updated
+
+            # If the plot was updated less than 1 second ago, skip this update
+            if time_diff < interval / 1000:
+                logger.debug("Skipping update")
+                return
+
+        self.update_pareto_front_plot()
+
+        self.update_hypervolume_plot()
 
         # Update the last updated time
         self.last_updated = time.time()
@@ -550,17 +566,21 @@ class ParetoFrontWidget(QWidget):
         # Check if the extension needs to be reinitialized
         logger.debug("Checking if extension needs to be reinitialized")
 
+        archive_name = create_archive_run_filename(self.routine)
+
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
+            self.routine_identifier = archive_name
             self.hypervolume_history = pd.DataFrame()
             self.pf_1 = None
             self.pf_2 = None
+            self.setup_connections(self.routine)
             return True
 
-        if self.routine_identifier != self.routine.name:
+        if self.routine_identifier != archive_name:
             logger.debug("Reset - Routine name has changed")
-            self.routine_identifier = self.routine.name
+            self.routine_identifier = archive_name
             self.hypervolume_history = pd.DataFrame()
             self.pf_1 = None
             self.pf_2 = None
@@ -578,16 +598,16 @@ class ParetoFrontWidget(QWidget):
         new_length = self.df_length
 
         if previous_len > new_length:
-            logger.debug("Reset - Data length is the same or smaller")
+            logger.debug("Reset - Data length is smaller")
             self.hypervolume_history = pd.DataFrame()
             self.pf_1 = None
             self.pf_2 = None
-            self.df_length = len(self.routine.data)
+            self.df_length = float("inf")
             return True
 
         return False
 
-    def update_plot(self, routine: Routine):
+    def update_plot(self, routine: Routine, requires_rebuild: bool = False):
         if not self.update_routine(routine):
             logging.error("Failed to update routine")
             return
@@ -597,12 +617,9 @@ class ParetoFrontWidget(QWidget):
             return
 
         if self.requires_reinitialization():
-            self.setup_connections(self.routine)
             self.initialize_ui()
 
-        self.update_pareto_front()
-        self.update_hypervolume()
-        self.create_plots()
+        self.create_plots(requires_rebuild)
 
     def update_hypervolume(self):
         # Get the hypervolume from the generator
@@ -647,7 +664,7 @@ class ParetoFrontWidget(QWidget):
             logger.error("No data available in generator")
             return is_success
 
-        self.df_length = len(generator.data)
         self.generator = generator
+        self.df_length = len(generator.data)
         is_success = True
         return is_success
