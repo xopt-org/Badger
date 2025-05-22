@@ -1346,8 +1346,7 @@ class BadgerRoutinePage(QWidget):
     def _compose_vocs(self) -> (VOCS, list[str]):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
-        objectives = self.env_box.obj_table.export_objectives()
-        print(objectives)
+        objectives = self.env_box.obj_table.export_objectives()["objectives"]
 
         constraints = {}
         critical_constraints = []
