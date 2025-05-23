@@ -440,14 +440,33 @@ class BadgerRoutinePage(QWidget):
 
         vocs, critical_constraints = self._compose_vocs()
 
+        # Filter generator
+        generator_name = self.generator_box.cb.currentText()
+        generator_config = load_config(self.generator_box.edit.toPlainText())
+
+
+        if generator_name == "expected_improvement":
+            # Filter turbo_controller
+            if (
+                "turbo_controller" in generator_config
+                and generator_config["turbo_controller"] is not None
+            ):
+                turbo = generator_config["turbo_controller"]
+                # Only keep selected keys
+                generator_config["turbo_controller"] = {
+                    k: v
+                    for k, v in turbo.items()
+                    if k in {"name", "length", "length_max", "length_min"}
+                }
+
         template_dict = {
             "name": self.edit_save.text(),
             "description": str(self.edit_descr.toPlainText()),
             "relative_to_current": self.env_box.relative_to_curr.isChecked(),
             "generator": {
-                "name": self.generator_box.cb.currentText(),
+                "name": generator_name,
             }
-            | load_config(self.generator_box.edit.toPlainText()),
+            | generator_config,
             "environment": {
                 "name": self.env_box.cb.currentText(),
                 "params": load_config(self.env_box.edit.toPlainText()),
