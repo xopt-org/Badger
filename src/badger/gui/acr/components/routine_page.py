@@ -108,9 +108,6 @@ class BadgerRoutinePage(QWidget):
         # Trigger the re-rendering of the environment box
         self.env_box.relative_to_curr.setChecked(True)
 
-        # Template path
-        self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
-
     def init_ui(self):
         config_singleton = init_settings()
 
@@ -234,6 +231,12 @@ class BadgerRoutinePage(QWidget):
         tabs.setCurrentIndex(1)  # Show the env box by default
 
         # vbox.addStretch()
+
+        # Template path
+        try:
+            self.template_dir = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
+        except KeyError:
+            self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
@@ -442,12 +445,11 @@ class BadgerRoutinePage(QWidget):
 
         # Filter generator
         generator_name = self.generator_box.cb.currentText()
-        # generator_config = load_config(self.generator_box.edit.toPlainText())
 
         generator_config = self._filter_generator_params(
-            generator_name = generator_name,
-            generator_config = load_config(self.generator_box.edit.toPlainText()),
-            )
+            generator_name=generator_name,
+            generator_config=load_config(self.generator_box.edit.toPlainText()),
+        )
 
         template_dict = {
             "name": self.edit_save.text(),
@@ -488,7 +490,7 @@ class BadgerRoutinePage(QWidget):
                     for k, v in turbo.items()
                     if k in {"name", "length", "length_max", "length_min"}
                 }
-        
+
         return generator_config
 
     def save_template_yaml(self):
