@@ -13,7 +13,7 @@ def suppress_popups(mocker):
 
 @pytest.fixture(scope="module", autouse=True)
 def config_test_settings(
-    mock_plugin_root, mock_db_root, mock_logbook_root, mock_archive_root
+    mock_plugin_root, mock_template_root, mock_logbook_root, mock_archive_root
 ):
     from badger.settings import init_settings
 
@@ -21,13 +21,13 @@ def config_test_settings(
 
     # Store the old values
     old_root = config_singleton.read_value("BADGER_PLUGIN_ROOT")
-    old_db = config_singleton.read_value("BADGER_DB_ROOT")
+    old_template = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
     old_logbook = config_singleton.read_value("BADGER_LOGBOOK_ROOT")
     old_archived = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
 
     # Assign values for test
     config_singleton.write_value("BADGER_PLUGIN_ROOT", mock_plugin_root)
-    config_singleton.write_value("BADGER_DB_ROOT", mock_db_root)
+    config_singleton.write_value("BADGER_TEMPLATE_ROOT", mock_template_root)
     config_singleton.write_value("BADGER_LOGBOOK_ROOT", mock_logbook_root)
     config_singleton.write_value("BADGER_ARCHIVE_ROOT", mock_archive_root)
 
@@ -35,22 +35,22 @@ def config_test_settings(
 
     # Restoring the original settings
     config_singleton.write_value("BADGER_PLUGIN_ROOT", old_root)
-    config_singleton.write_value("BADGER_DB_ROOT", old_db)
+    config_singleton.write_value("BADGER_TEMPLATE_ROOT", old_template)
     config_singleton.write_value("BADGER_LOGBOOK_ROOT", old_logbook)
     config_singleton.write_value("BADGER_ARCHIVE_ROOT", old_archived)
 
 
 @pytest.fixture(scope="module", autouse=True)
-def clean_up(mock_db_root, mock_logbook_root, mock_archive_root):
+def clean_up(mock_template_root, mock_logbook_root, mock_archive_root):
     # Clean before tests
-    shutil.rmtree(mock_db_root, True)  # ignore errors
+    shutil.rmtree(mock_template_root, True)  # ignore errors
     shutil.rmtree(mock_logbook_root, True)
     shutil.rmtree(mock_archive_root, True)
 
     yield
 
     # Clean after tests
-    shutil.rmtree(mock_db_root, True)
+    shutil.rmtree(mock_template_root, True)
     shutil.rmtree(mock_logbook_root, True)
     shutil.rmtree(mock_archive_root, True)
 
@@ -66,8 +66,8 @@ def mock_plugin_root(mock_root):
 
 
 @pytest.fixture(scope="module")
-def mock_db_root(mock_root):
-    return os.path.join(mock_root, "db")
+def mock_template_root(mock_root):
+    return os.path.join(mock_root, "templates")
 
 
 @pytest.fixture(scope="module")
