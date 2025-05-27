@@ -15,13 +15,19 @@ from badger.errors import BadgerConfigError, BadgerDBError
 logger = logging.getLogger(__name__)
 
 # Check badger database root
+flag_use_db = True
 config_singleton = init_settings()
-BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
-if BADGER_DB_ROOT is None:
-    raise BadgerConfigError("Please set the BADGER_DB_ROOT env var!")
-elif not os.path.exists(BADGER_DB_ROOT):
-    os.makedirs(BADGER_DB_ROOT)
-    logger.info(f"Badger database root {BADGER_DB_ROOT} created")
+try:
+    BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
+except KeyError:
+    flag_use_db = False
+
+if flag_use_db:
+    if BADGER_DB_ROOT is None:
+        raise BadgerConfigError("Please set the BADGER_DB_ROOT env var!")
+    elif not os.path.exists(BADGER_DB_ROOT):
+        os.makedirs(BADGER_DB_ROOT)
+        logger.info(f"Badger database root {BADGER_DB_ROOT} created")
 
 
 def ensure_routines_db_exists(func):
@@ -211,14 +217,16 @@ def list_routine(keyword="", tags={}):
     cur.execute("pragma table_info(routine)")
     columns = [row[1] for row in cur.fetchall()]
     if "id" not in columns:
-        cur.execute("""
+        cur.execute(
+            """
         create table new_table (
             id text primary key,
             name text,
             config,
             savedAt timestamp
         )
-        """)
+        """
+        )
         db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
         con_run = sqlite3.connect(db_run)
         cur_run = con_run.cursor()
