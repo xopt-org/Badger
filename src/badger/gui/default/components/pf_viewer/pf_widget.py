@@ -122,6 +122,7 @@ class ParetoFrontWidget(QWidget):
     hypervolume_history: pd.DataFrame = pd.DataFrame()
     pf_1: Optional[Tensor] = None
     pf_2: Optional[Tensor] = None
+    pf_mask: Optional[Tensor] = None
     parameters: ConfigurableOptions = DEFAULT_PARAMETERS
     initialized: bool = False
     plot_size: tuple[float, float] = (8, 6)
@@ -525,7 +526,7 @@ class ParetoFrontWidget(QWidget):
             ),
             ax=ax,
             orientation="vertical",
-            label="Development Iteration",
+            label="Iterations",
         )
 
         ax.set_xlabel(x_var_name)
@@ -546,7 +547,7 @@ class ParetoFrontWidget(QWidget):
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Hypervolume")
         # Set the title of the plot
-        ax.set_title("Hypervolume over iterations")
+        ax.set_title("Hypervolume")
 
         return fig, ax
 
@@ -584,6 +585,7 @@ class ParetoFrontWidget(QWidget):
             self.hypervolume_history = pd.DataFrame()
             self.pf_1 = None
             self.pf_2 = None
+            self.pf_mask = None
             return True
 
         if self.routine.data is None:
@@ -591,6 +593,7 @@ class ParetoFrontWidget(QWidget):
             self.hypervolume_history = pd.DataFrame()
             self.pf_1 = None
             self.pf_2 = None
+            self.pf_mask = None
             return True
 
         previous_len = self.df_length
@@ -602,6 +605,7 @@ class ParetoFrontWidget(QWidget):
             self.hypervolume_history = pd.DataFrame()
             self.pf_1 = None
             self.pf_2 = None
+            self.pf_mask = None
             self.df_length = float("inf")
             return True
 
@@ -632,11 +636,13 @@ class ParetoFrontWidget(QWidget):
         self.hypervolume_history = pareto_front_history_df
 
     def update_pareto_front(self):
-        pf_1, pf_2, _ = self.generator.get_pareto_front_and_hypervolume()
+        pf_mask, pf_1, pf_2, _ = self.generator.get_pareto_front_and_hypervolume()
 
-        if pf_1 is None or pf_2 is None:
+        if pf_mask is None or pf_1 is None or pf_2 is None:
             logging.error("No pareto front")
             return
+
+        self.pf_mask = pf_mask
         self.pf_1 = pf_1
         self.pf_2 = pf_2
 
