@@ -1375,19 +1375,20 @@ class BadgerRoutinePage(QWidget):
                 }
             # or else we use whatever specified by the users
 
-            # Patch the BO generators to turn on TuRBO by default
-            if "turbo_controller" not in generator_params:
-                generator_params["turbo_controller"] = "optimize"
+            if generator_name != "mobo":
+                # Patch the BO generators to turn on TuRBO by default
+                if "turbo_controller" not in generator_params:
+                    generator_params["turbo_controller"] = "optimize"
 
-            # TODO: remove this patch when Xopt reset API works
-            # Nullify a few properties in turbo that can cause issues
-            turbo_config = generator_params["turbo_controller"]
-            if type(turbo_config) is dict:
-                if turbo_config["name"] == "optimize":
-                    turbo_config["center_x"] = None
-                    turbo_config["best_value"] = None
-                elif turbo_config["name"] == "safety":
-                    turbo_config["center_x"] = None
+                # TODO: remove this patch when Xopt reset API works
+                # Nullify a few properties in turbo that can cause issues
+                turbo_config = generator_params["turbo_controller"]
+                if type(turbo_config) is dict:
+                    if turbo_config["name"] == "optimize":
+                        turbo_config["center_x"] = None
+                        turbo_config["best_value"] = None
+                    elif turbo_config["name"] == "safety":
+                        turbo_config["center_x"] = None
 
         # Environment
         env_params = load_config(self.env_box.edit.toPlainText())
