@@ -28,6 +28,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 from torch import Tensor
 
@@ -475,22 +476,15 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid plot index")
             raise ValueError("Invalid plot index")
 
-        if self.pf_1 is None or self.pf_2 is None:
+        if self.pf_mask is None or self.pf_1 is None or self.pf_2 is None:
             logging.error("No pareto front")
             raise ValueError("No pareto front")
 
         raw_data = self.generator.data
 
-        if raw_data is not None and not show_only_pareto_front:
-            x = raw_data[f"{x_var_name}"]
-            y = raw_data[f"{y_var_name}"]
-
-            if len(x) > 0 and len(y) > 0:
-                ax.scatter(
-                    x,
-                    y,
-                    color="black",
-                )
+        if raw_data is None or len(raw_data) == 0:
+            logging.error("No raw data available")
+            raise ValueError("No raw data available")
 
         if current_tab == 0:
             data_points = self.pf_1
@@ -500,9 +494,13 @@ class ParetoFrontWidget(QWidget):
             logging.error("Invalid plot index")
             raise ValueError("Invalid plot index")
 
+        data_indices: list[int] = [
+            x for x in range(len(self.pf_mask)) if self.pf_mask[x]
+        ]
+
         # Color bar
 
-        num_of_points = len(data_points)
+        num_of_points = len(raw_data)
 
         color_map = plt.cm.get_cmap("viridis")
         norm = Normalize(0, num_of_points - 1)
@@ -513,17 +511,29 @@ class ParetoFrontWidget(QWidget):
         else:
             colors = [color_map(0)]
 
+        if not show_only_pareto_front:
+            x = raw_data[f"{x_var_name}"]
+            y = raw_data[f"{y_var_name}"]
+
+            if len(x) > 0 and len(y) > 0:
+                ax.scatter(
+                    x,
+                    y,
+                    c=colors,
+                )
+
+        pf_colors = [colors[i] for i in data_indices]
+
         ax.scatter(
             data_points[:, x_var_index],
             data_points[:, y_var_index],
-            c=colors,
+            c=pf_colors,
         )
 
+        mappable = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
+
         fig.colorbar(
-            plt.cm.ScalarMappable(
-                cmap=color_map,
-                norm=norm,
-            ),
+            mappable,
             ax=ax,
             orientation="vertical",
             label="Iterations",
@@ -543,6 +553,7 @@ class ParetoFrontWidget(QWidget):
         y = data_points["hypervolume"].values
         # Create a scatter plot
         ax.scatter(x, y, color="black")
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         # Set the x and y axis labels
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Hypervolume")
@@ -642,7 +653,7 @@ class ParetoFrontWidget(QWidget):
             logging.error("No pareto front")
             return
 
-        self.pf_mask = pf_mask
+        self.pf_mask = pf_mask[1:]
         self.pf_1 = pf_1
         self.pf_2 = pf_2
 
