@@ -483,6 +483,7 @@ class BadgerRoutinePage(QWidget):
             if (
                 "turbo_controller" in generator_config
                 and generator_config["turbo_controller"] is not None
+                and isinstance(generator_config["turbo_controller"], dict)
             ):
                 turbo = generator_config["turbo_controller"]
                 generator_config["turbo_controller"] = {
