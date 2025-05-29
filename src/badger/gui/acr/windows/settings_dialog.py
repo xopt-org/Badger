@@ -66,6 +66,14 @@ class BadgerSettingsDialog(QDialog):
         grid.addWidget(plugin_root, 1, 0)
         grid.addWidget(plugin_root_path, 1, 1)
 
+        # Template Root
+        self.template_root = template_root = QLabel("Template Root")
+        self.template_root_path = template_root_path = QLineEdit(
+            self.config_singleton.read_value("BADGER_TEMPLATE_ROOT")
+        )
+        grid.addWidget(template_root, 2, 0)
+        grid.addWidget(template_root_path, 2, 1)
+
         # Logbook Root
         self.logbook_root = logbook_root = QLabel("Logbook Root")
         self.logbook_root_path = logbook_root_path = QLineEdit(
@@ -162,6 +170,9 @@ class BadgerSettingsDialog(QDialog):
         self.accept()
         self.config_singleton.write_value(
             "BADGER_PLUGIN_ROOT", self.plugin_root_path.text()
+        )
+        self.config_singleton.write_value(
+            "BADGER_TEMPLATE_ROOT", self.template_root_path.text()
         )
         self.config_singleton.write_value(
             "BADGER_LOGBOOK_ROOT", self.logbook_root_path.text()

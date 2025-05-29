@@ -1051,7 +1051,7 @@ class BadgerRoutinePage(QWidget):
 
         if set_all:
             # Set vranges for all variables
-            _variables = self.env_box.var_table.variables
+            _variables = self.env_box.var_table.all_variables
         else:
             # Only set vranges for the visible variables
             _variables = self.env_box.var_table.get_visible_variables(
@@ -1060,9 +1060,10 @@ class BadgerRoutinePage(QWidget):
 
         for var in _variables:
             name = next(iter(var))
-            if set_all or self.env_box.var_table.is_checked(name):
-                vname_selected.append(name)
-                vrange[name] = var[name]
+            # Set vrange no matter if selected or not
+            # if set_all or self.env_box.var_table.is_checked(name):
+            vname_selected.append(name)
+            vrange[name] = var[name]
 
         env = self.create_env()
         var_curr = env._get_variables(vname_selected)
