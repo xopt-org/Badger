@@ -21,7 +21,6 @@ from xopt.generators import get_generator_defaults, all_generator_names
 from xopt.utils import get_local_region
 
 from badger.gui.default.components.generator_cbox import BadgerAlgoBox
-from badger.gui.default.components.constraint_item import constraint_item
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
@@ -52,12 +51,6 @@ from badger.utils import (
     get_badger_version,
     get_xopt_version,
 )
-
-CONS_RELATION_DICT = {
-    ">": "GREATER_THAN",
-    "<": "LESS_THAN",
-    "=": "EQUAL_TO",
-}
 
 
 class BadgerRoutinePage(QWidget):
@@ -217,7 +210,7 @@ class BadgerRoutinePage(QWidget):
         self.generators = list_generators()
         self.envs = list_env()
         # Clean up the constraints/observables list
-        self.env_box.list_con.clear()
+        self.env_box.con_table.clear_constraints()
         self.env_box.list_obs.clear()
 
         if routine is None:
@@ -519,7 +512,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(False)
         self.env_box.obj_table.update_objectives(objs_env)
 
-        self.env_box.list_con.clear()
+        self.env_box.con_table.clear_constraints()
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
         # self.routine = None
@@ -831,20 +824,13 @@ class BadgerRoutinePage(QWidget):
             return
 
         options = self.configs["observations"]
-        item = QListWidgetItem(self.env_box.list_con)
-        con_item = constraint_item(
+        self.env_box.con_table.add_constraint(
             options,
-            lambda: self.env_box.list_con.takeItem(self.env_box.list_con.row(item)),
             name,
             relation,
             threshold,
             critical,
         )
-        item.setSizeHint(con_item.sizeHint())
-        self.env_box.list_con.addItem(item)
-        self.env_box.list_con.setItemWidget(item, con_item)
-        # self.env_box.dict_con[''] = item
-        self.env_box.fit_content()
 
     def add_state(self, name=None):
         if self.configs is None:
@@ -870,14 +856,14 @@ class BadgerRoutinePage(QWidget):
 
         constraints = {}
         critical_constraints = []
-        for i in range(self.env_box.list_con.count()):
-            item = self.env_box.list_con.item(i)
-            item_widget = self.env_box.list_con.itemWidget(item)
-            critical = item_widget.check_crit.isChecked()
-            con_name = item_widget.cb_obs.currentText()
-            relation = CONS_RELATION_DICT[item_widget.cb_rel.currentText()]
-            value = item_widget.sb.value()
-            constraints[con_name] = [relation, value]
+        for (
+            con_name,
+            relation,
+            threshold,
+            critical,
+            _,
+        ) in self.env_box.con_table.export_constraints():
+            constraints[con_name] = [relation, threshold]
             if critical:
                 critical_constraints.append(con_name)
 
