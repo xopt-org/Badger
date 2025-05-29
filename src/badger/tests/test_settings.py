@@ -23,10 +23,10 @@ class TestBadgerConfig:
                 value="/mock/plugin/root",
                 is_path=True,
             ),
-            BADGER_DB_ROOT=Setting(
-                display_name="database root",
-                description="Mock database root",
-                value="/mock/db/root",
+            BADGER_TEMPLATE_ROOT=Setting(
+                display_name="template root",
+                description="Mock template root",
+                value="/mock/template/root",
                 is_path=True,
             ),
             BADGER_LOGBOOK_ROOT=Setting(
@@ -127,7 +127,10 @@ class TestBadgerConfig:
                     config_singleton.config.BADGER_PLUGIN_ROOT.value
                     == "/mock/plugin/root"
                 )
-                assert config_singleton.config.BADGER_DB_ROOT.value == "/mock/db/root"
+                assert (
+                    config_singleton.config.BADGER_TEMPLATE_ROOT.value
+                    == "/mock/template/root"
+                )
 
     def test_config_singleton_create_new_config_if_not_exists(self):
         with patch("os.path.exists", return_value=False):

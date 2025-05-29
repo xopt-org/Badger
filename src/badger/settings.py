@@ -40,8 +40,8 @@ class BadgerConfig(BaseModel):
     ----------
     BADGER_PLUGIN_ROOT : Setting
         Setting for the plugin root directory.
-    BADGER_DB_ROOT : Setting
-        Setting for the database root directory.
+    BADGER_TEMPLATE_ROOT : Setting
+        Setting for the template root directory.
     BADGER_LOGBOOK_ROOT : Setting
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
@@ -60,9 +60,9 @@ class BadgerConfig(BaseModel):
         value=None,
         is_path=True,
     )
-    BADGER_DB_ROOT: Setting = Setting(
-        display_name="database root",
-        description="This setting (BADGER_DB_ROOT) tells Badger where to store the routine database",
+    BADGER_TEMPLATE_ROOT: Setting = Setting(
+        display_name="template root",
+        description="This setting (BADGER_TEMPLATE_ROOT) tells Badger where to store the routine templates",
         value=None,
         is_path=True,
     )

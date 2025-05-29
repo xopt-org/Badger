@@ -188,6 +188,11 @@ def get_vars_in_row(routine, idx=0):
 
 
 def fix_path_issues():
+    from badger.settings import init_settings
     from badger.archive import BADGER_ARCHIVE_ROOT
 
+    config_singleton = init_settings()
+    BADGER_TEMPLATE_ROOT = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
+
     os.makedirs(BADGER_ARCHIVE_ROOT, exist_ok=True)
+    os.makedirs(BADGER_TEMPLATE_ROOT, exist_ok=True)
