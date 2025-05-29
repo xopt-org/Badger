@@ -479,7 +479,7 @@ class BadgerRoutinePage(QWidget):
         """
         Filter which generator parameters get saved to template
         """
-        if generator_name == "expected_improvement":
+        if generator_name in ["expected_improvement", "upper_confidence_bound"]:
             if (
                 "turbo_controller" in generator_config
                 and generator_config["turbo_controller"] is not None
@@ -488,7 +488,17 @@ class BadgerRoutinePage(QWidget):
                 generator_config["turbo_controller"] = {
                     k: v
                     for k, v in turbo.items()
-                    if k in {"name", "length", "length_max", "length_min"}
+                    if k
+                    in {
+                        "name",
+                        "length",
+                        "length_max",
+                        "length_min",
+                        "failure_tolerance",
+                        "success_tolerance",
+                        "scale_factor",
+                        "restrict_model_data",
+                    }
                 }
 
         return generator_config
