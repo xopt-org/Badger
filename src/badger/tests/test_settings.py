@@ -119,7 +119,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -145,7 +147,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -161,7 +165,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -174,7 +180,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -186,7 +194,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -198,7 +208,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -210,7 +222,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
@@ -222,7 +236,9 @@ class TestBadgerConfig:
             with patch(
                 "builtins.open",
                 mock_open(
-                    read_data=yaml.dump(self.mock_badger_config.dict(by_alias=True))
+                    read_data=yaml.dump(
+                        self.mock_badger_config.model_dump(by_alias=True)
+                    )
                 ),
             ):
                 config_singleton = ConfigSingleton(self.config_file)
