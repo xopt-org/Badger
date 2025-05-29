@@ -636,7 +636,7 @@ class BadgerRoutinePage(QWidget):
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
 
-        self.env_box.var_table.update_variables(all_variables)
+        self.env_box.var_table.update_variables(variables=all_variables, filtered=2)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.addtl_vars = routine.additional_variables
 
