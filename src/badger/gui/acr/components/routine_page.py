@@ -108,6 +108,7 @@ class BadgerRoutinePage(QWidget):
         # Trigger the re-rendering of the environment box
         self.env_box.relative_to_curr.setChecked(True)
         # remember user selection from lim_vrange_dialog gui
+        # 2: not initialized, 1: apply to all, 0: apply to only visible
         self.lim_apply_to_vars = 2
 
     def init_ui(self):
