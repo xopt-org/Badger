@@ -60,8 +60,7 @@ def load_config(fname):
     # if fname is a yaml string
     if not os.path.exists(fname):
         try:
-            configs = yaml.safe_load(fname)
-            # A string is also a valid yaml
+            configs = yaml.safe_load(fname)  # A string is also a valid yaml
             if type(configs) is str:
                 raise BadgerLoadConfigError(
                     f"Error loading config {fname}: file not found"
@@ -140,6 +139,16 @@ def curr_ts():
 
 def curr_ts_to_str(format="lcls-log"):
     return ts_to_str(datetime.now(), format)
+
+
+def create_archive_run_filename(routine, format: str = "lcls-fname"):
+    data = routine.sorted_data
+    env_name = routine.environment.name
+    data_dict = data.to_dict("list")
+    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
+    suffix = ts_float_to_str(ts_float, format)
+    fname = f"{env_name}-{suffix}.yaml"
+    return fname
 
 
 def get_header(routine):

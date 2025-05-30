@@ -1,4 +1,5 @@
 from importlib import resources
+from typing import Any
 from PyQt5.QtWidgets import QWidget, QAbstractSpinBox, QPushButton, QComboBox
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt, QObject, QEvent, QSize
@@ -42,8 +43,8 @@ def create_button(icon_file, tooltip, stylesheet=None, size=(32, 32), icon_size=
     return btn
 
 
-def filter_generator_config(name, config):
-    filtered_config = {}
+def filter_generator_config(name: str, config: dict[str, Any]):
+    filtered_config: dict[str, Any] = {}
     if name == "neldermead":
         filtered_config["adaptive"] = config["adaptive"]
     elif name == "expected_improvement":
@@ -60,6 +61,11 @@ def filter_generator_config(name, config):
     elif name == "rcds":
         filtered_config["noise"] = config["noise"]
         filtered_config["step"] = config["step"]
+    elif name == "mobo":
+        filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
+        filtered_config["max_travel_distances"] = config["max_travel_distances"]
+        filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
+        filtered_config["reference_point"] = config["reference_point"]
     else:
         filtered_config = config
 
