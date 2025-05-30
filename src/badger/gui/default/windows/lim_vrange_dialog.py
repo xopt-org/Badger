@@ -20,7 +20,9 @@ from PyQt5.QtCore import Qt
 
 
 class BadgerLimitVariableRangeDialog(QDialog):
-    def __init__(self, parent, set_vrange, save_config, configs=None):
+    def __init__(
+        self, parent, set_vrange, save_config, configs=None, apply_to_all=False
+    ):
         super().__init__(parent)
 
         self.set_vrange = set_vrange
@@ -33,6 +35,7 @@ class BadgerLimitVariableRangeDialog(QDialog):
                 "ratio_full": 0.1,
                 "delta": 0.1,
             }
+        self.apply_to_all = apply_to_all
 
         self.init_ui()
         self.config_logic()
@@ -135,7 +138,10 @@ will be clipped by the variable range."""
         lbl_apply_to = QLabel("Apply to:")
         self.rb_all_variables = rb_all_variables = QRadioButton("All Variables")
         self.rb_only_visible = rb_only_visible = QRadioButton("Only Visible")
-        rb_all_variables.setChecked(True)  # Default selection
+        if self.apply_to_all:
+            rb_all_variables.setChecked(True)
+        else:
+            rb_only_visible.setChecked(True)  # Default selection
         hbox_apply_to.addWidget(lbl_apply_to)
         hbox_apply_to.addWidget(rb_all_variables)
         hbox_apply_to.addWidget(rb_only_visible)

@@ -107,6 +107,8 @@ class BadgerRoutinePage(QWidget):
 
         # Trigger the re-rendering of the environment box
         self.env_box.relative_to_curr.setChecked(True)
+        # remember user selection from lim_vrange_dialog gui
+        self.lim_apply_to_vars = 2
 
     def init_ui(self):
         config_singleton = init_settings()
@@ -1037,11 +1039,16 @@ class BadgerRoutinePage(QWidget):
         # dlg.exec()
 
     def limit_variable_ranges(self):
+        if self.lim_apply_to_vars == 2:
+            # Initialize the lim_apply_to_vars to 0 (set only visible vars)
+            self.lim_apply_to_vars = 0
+
         dlg = BadgerLimitVariableRangeDialog(
             self,
             self.set_vrange,
             self.save_limit_option,
             self.limit_option,
+            self.lim_apply_to_vars,
         )
         dlg.exec()
 
@@ -1101,6 +1108,12 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.set_bounds(vrange)
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
+
+        # remember user selection for applying limit changes
+        if not self.lim_apply_to_vars == 2:
+            # Check if lim_apply_to_vars has been initialized
+            # It will be set to 2 until the btn_lim_vrange is clicked
+            self.lim_apply_to_vars = set_all
 
         # Record the ratio var ranges
         for vname in vname_selected:
