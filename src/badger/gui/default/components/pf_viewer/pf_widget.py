@@ -83,6 +83,10 @@ class BlockSignalsContext:
 
     def __enter__(self):
         for widget in self.widgets:
+            if widget.signalsBlocked():
+                logger.warning(
+                    f"Signals already blocked for {widget} when entering context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
+                )
             widget.blockSignals(True)
 
     def __exit__(
@@ -92,6 +96,10 @@ class BlockSignalsContext:
         exc_traceback: Optional[TracebackType],
     ):
         for widget in self.widgets:
+            if not widget.signalsBlocked():
+                logger.warning(
+                    f"Signals not blocked for {widget} when exiting context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
+                )
             widget.blockSignals(False)
 
 
@@ -552,7 +560,7 @@ class ParetoFrontWidget(QWidget):
         x = data_points["iteration"].values
         y = data_points["hypervolume"].values
         # Create a scatter plot
-        ax.scatter(x, y, color="black")
+        ax.plot(x, y, color="black")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         # Set the x and y axis labels
         ax.set_xlabel("Iterations")
@@ -647,7 +655,7 @@ class ParetoFrontWidget(QWidget):
         self.hypervolume_history = pareto_front_history_df
 
     def update_pareto_front(self):
-        pf_mask, pf_1, pf_2, _ = self.generator.get_pareto_front_and_hypervolume()
+        pf_1, pf_2, pf_mask, _ = self.generator.get_pareto_front_and_hypervolume()
 
         if pf_mask is None or pf_1 is None or pf_2 is None:
             logging.error("No pareto front")
