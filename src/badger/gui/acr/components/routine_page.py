@@ -482,6 +482,7 @@ class BadgerRoutinePage(QWidget):
         """
         Filter which generator parameters get saved to template
         """
+
         if generator_name in ["expected_improvement", "upper_confidence_bound"]:
             if (
                 "turbo_controller" in generator_config

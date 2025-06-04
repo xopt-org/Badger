@@ -138,6 +138,7 @@ will be clipped by the variable range."""
         lbl_apply_to = QLabel("Apply to:")
         self.rb_all_variables = rb_all_variables = QRadioButton("All Variables")
         self.rb_only_visible = rb_only_visible = QRadioButton("Only Visible")
+
         if self.apply_to_all:
             rb_all_variables.setChecked(True)
         else:

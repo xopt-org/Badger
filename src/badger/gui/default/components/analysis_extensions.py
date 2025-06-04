@@ -43,7 +43,10 @@ class ParetoFrontViewer(AnalysisExtension):
         self.setLayout(layout)
 
     def update_window(self, routine: Routine):
-        self.pw_widget.update_plot(routine)
+        try:
+            self.pw_widget.update_plot(routine)
+        except:
+            self.close()
 
 
 class BOVisualizer(AnalysisExtension):
@@ -103,8 +106,11 @@ class BOVisualizer(AnalysisExtension):
         # Updating the BO Visualizer window
         logger.debug("Updating BO Visualizer window")
 
-        # Update the routine with new generator model if applicable
-        self.update_routine(routine)
+        try:
+            # Update the routine with new generator model if applicable
+            self.update_routine(routine)
+        except:
+            self.close()
 
         if not self.correct_generator:
             logger.debug("Incorrect generator type")
@@ -129,7 +135,9 @@ class BOVisualizer(AnalysisExtension):
                 "Invalid Generator",
                 f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports BayesianGenerator",
             )
-            return
+            raise TypeError(
+                f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports BayesianGenerator"
+            )
 
         self.correct_generator = True
 
