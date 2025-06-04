@@ -10,9 +10,10 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QWidget,
     QHBoxLayout,
+    QMenu,
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QSize
-from PyQt5.QtGui import QColor, QIcon
+from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
+from PyQt5.QtGui import QColor, QIcon, QGuiApplication
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
@@ -32,6 +33,7 @@ class VariableTable(QTableWidget):
         with resources.as_file(icon_ref) as icon_path:
             self.icon_settings = QIcon(str(icon_path))
 
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
@@ -75,6 +77,7 @@ class VariableTable(QTableWidget):
         self.configs = None  # needed to get bounds on the fly
         self.previous_values = {}  # to track changes in table
         self.config_logic()
+        self.customContextMenuRequested.connect(self.display_conext_menu)
 
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
@@ -497,3 +500,14 @@ class VariableTable(QTableWidget):
         if index.column() == 1:
             flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
         return flags
+
+    def copy_name(self, checked: bool, item: QTableWidgetItem|None):
+        if item is None: return
+        QGuiApplication.clipboard().setText(item.text())
+
+    def display_conext_menu(self, pt: QPoint):
+        menu = QMenu(self)
+        item = self.itemAt(pt)
+        menu.addAction('&Copy').triggered.connect(lambda checked: self.copy_name(checked, item))
+        if item.column() == 1: # Only display for the 'Name' column
+            menu.exec(self.mapToGlobal(pt))
