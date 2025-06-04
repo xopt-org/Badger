@@ -989,7 +989,7 @@ class BadgerRoutinePage(QWidget):
         except AttributeError:
             raise BadgerRoutineError("No environment selected!")
 
-        var_list = list(env.observables)
+        var_list = list(env.observables) + list(self.env_box.obj_table.formulas.keys())
         dialog = FormulaEditor(self, var_list)
 
         dialog.formula_accepted.connect(self.handle_formula)
@@ -1311,7 +1311,7 @@ class BadgerRoutinePage(QWidget):
             return
 
         options = self.configs["observations"] + list(
-            self.env_cbox.obj_table.formulas.keys()
+            self.env_box.obj_table.formulas.keys()
         )
 
         item = QListWidgetItem(self.env_box.list_con)
@@ -1334,7 +1334,11 @@ class BadgerRoutinePage(QWidget):
             return
 
         var_names = [next(iter(d)) for d in self.configs["variables"]]
-        options = self.configs["observations"] + var_names
+        options = (
+            self.configs["observations"]
+            + var_names
+            + list(self.env_box.obj_table.formulas.keys())
+        )
         item = QListWidgetItem(self.env_box.list_obs)
         sta_item = state_item(
             options,

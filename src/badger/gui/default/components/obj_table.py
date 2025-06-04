@@ -159,7 +159,7 @@ class ObjectiveTable(QTableWidget):
                         continue
 
                     # If a rule is provided, use it; otherwise, default to "MINIMIZE".
-                    rule = parts[1].strip() if len(parts) > 1 else "MINIMIZE"
+                    # rule = parts[1].strip() if len(parts) > 1 else "MINIMIZE"
 
                     # Check if objective already exists
                     existing_names = [
@@ -167,10 +167,11 @@ class ObjectiveTable(QTableWidget):
                     ]
                     if name not in existing_names:
                         # Append the new objective.
-                        self.all_objectives.append({name: rule})
+                        # self.all_objectives.append({name: rule})
+                        self.add_formula_objective((name, "", {}))
 
-            self.objectives = self.all_objectives
-            self.update_objectives(self.objectives, filtered=0)
+            # self.objectives = self.all_objectives
+            # self.update_objectives(self.objectives, filtered=0)
             event.acceptProposedAction()
         else:
             event.ignore()
