@@ -1310,7 +1310,10 @@ class BadgerRoutinePage(QWidget):
         if self.configs is None:
             return
 
-        options = self.configs["observations"]
+        options = self.configs["observations"] + list(
+            self.env_cbox.obj_table.formulas.keys()
+        )
+
         item = QListWidgetItem(self.env_box.list_con)
         con_item = constraint_item(
             options,
