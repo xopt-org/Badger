@@ -108,10 +108,6 @@ class BadgerRoutinePage(QWidget):
         # Trigger the re-rendering of the environment box
         self.env_box.relative_to_curr.setChecked(True)
 
-        # Template path
-        self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
-        # self.template_dir = "/home/physics/mlans/workspace/badger_test/Badger/src/badger/built_in_plugins/templates"
-
     def init_ui(self):
         config_singleton = init_settings()
 
@@ -235,6 +231,12 @@ class BadgerRoutinePage(QWidget):
         tabs.setCurrentIndex(1)  # Show the env box by default
 
         # vbox.addStretch()
+
+        # Template path
+        try:
+            self.template_dir = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
+        except KeyError:
+            self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
     def config_logic(self):
         self.btn_descr_update.clicked.connect(self.update_description)
@@ -371,8 +373,9 @@ class BadgerRoutinePage(QWidget):
             additional_variables = template_dict["additional_variables"]
         except KeyError:
             additional_variables = {}
-        for i in self.vars_env:
-            all_variables.update(i)
+        if self.vars_env:
+            for i in self.vars_env:
+                all_variables.update(i)
         if additional_variables:  # there are additional variables
             env = self.create_env()
             for vname in additional_variables:
@@ -399,11 +402,15 @@ class BadgerRoutinePage(QWidget):
         self.env_box.relative_to_curr.blockSignals(False)
         self.toggle_relative_to_curr(flag_relative, refresh=False)
 
-        # Always use ranges stored in template
-        self.env_box.var_table.set_bounds(vocs.variables, signal=False)
-        # Populate the initial table anyways, auto mode or not
-        self.clear_init_table(reset_actions=False)
-        self.update_init_table()
+        if env_name:
+            if flag_relative:
+                bounds = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds, signal=False)
+            else:
+                self.env_box.var_table.set_bounds(vocs.variables, signal=False)
+            # Populate the initial table anyways, auto mode or not
+            self.clear_init_table(reset_actions=False)
+            self.update_init_table(force=True)
 
         # set objectives
         self.env_box.obj_table.set_selected(vocs.objectives)
@@ -436,14 +443,22 @@ class BadgerRoutinePage(QWidget):
 
         vocs, critical_constraints = self._compose_vocs()
 
+        # Filter generator
+        generator_name = self.generator_box.cb.currentText()
+
+        generator_config = self._filter_generator_params(
+            generator_name=generator_name,
+            generator_config=load_config(self.generator_box.edit.toPlainText()),
+        )
+
         template_dict = {
             "name": self.edit_save.text(),
             "description": str(self.edit_descr.toPlainText()),
             "relative_to_current": self.env_box.relative_to_curr.isChecked(),
             "generator": {
-                "name": self.generator_box.cb.currentText(),
+                "name": generator_name,
             }
-            | load_config(self.generator_box.edit.toPlainText()),
+            | generator_config,
             "environment": {
                 "name": self.env_box.cb.currentText(),
                 "params": load_config(self.env_box.edit.toPlainText()),
@@ -459,6 +474,24 @@ class BadgerRoutinePage(QWidget):
         }
 
         return template_dict
+
+    def _filter_generator_params(self, generator_name: str, generator_config: dict):
+        """
+        Filter which generator parameters get saved to template
+        """
+        if generator_name == "expected_improvement":
+            if (
+                "turbo_controller" in generator_config
+                and generator_config["turbo_controller"] is not None
+            ):
+                turbo = generator_config["turbo_controller"]
+                generator_config["turbo_controller"] = {
+                    k: v
+                    for k, v in turbo.items()
+                    if k in {"name", "length", "length_max", "length_min"}
+                }
+
+        return generator_config
 
     def save_template_yaml(self):
         """
@@ -1006,16 +1039,21 @@ class BadgerRoutinePage(QWidget):
         vname_selected = []
         vrange = {}
 
-        # Only set vranges to the visible variables
-        _variables = self.env_box.var_table.get_visible_variables(
-            self.env_box.var_table.variables
-        )
+        if set_all:
+            # Set vranges for all variables
+            _variables = self.env_box.var_table.all_variables
+        else:
+            # Only set vranges for the visible variables
+            _variables = self.env_box.var_table.get_visible_variables(
+                self.env_box.var_table.variables
+            )
 
         for var in _variables:
             name = next(iter(var))
-            if set_all or self.env_box.var_table.is_checked(name):
-                vname_selected.append(name)
-                vrange[name] = var[name]
+            # Set vrange no matter if selected or not
+            # if set_all or self.env_box.var_table.is_checked(name):
+            vname_selected.append(name)
+            vrange[name] = var[name]
 
         env = self.create_env()
         var_curr = env._get_variables(vname_selected)

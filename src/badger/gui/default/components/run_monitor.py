@@ -809,11 +809,18 @@ class BadgerOptMonitor(QWidget):
             pos = idx = int(self.inspector_objective.value())
         variable_names = self.vocs.variable_names
         solution = df[variable_names].to_numpy()[idx]
+        curr_vars = get_current_vars(self.routine)
 
         reply = QMessageBox.question(
             self,
             "Apply Solution",
-            f"Are you sure you want to apply the selected solution at {solution} to env?",
+            "Are you sure you want to apply the selected solution:\n"
+            + "\n".join(
+                f"{variable_names[i]}: {round(curr_vars[i],3)} -> {round(solution[i],3)},"
+                for i in range(len(variable_names))
+            )
+            + "\nto "
+            + f"{self.routine.environment.name}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -821,6 +828,12 @@ class BadgerOptMonitor(QWidget):
             return
 
         curr_vars = get_current_vars(self.routine)
+        # Patch the hard limit to the environment
+        # TODO: this could lead to unexpected behavior
+        # since we patched the class variable directly
+        # there ought to be a better way to do this
+        if self.routine.vrange_hard_limit:
+            self.routine.environment.variables.update(self.routine.vrange_hard_limit)
         self.routine.environment._set_variables(dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
@@ -829,7 +842,7 @@ class BadgerOptMonitor(QWidget):
 
         updated_vars = get_current_vars(self.routine)
         self.sig_status.emit(
-            f"Dial in solution: Env vars {curr_vars} -> {updated_vars}"
+            f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i],4)} -> {round(updated_vars[i],4)}' for i in range(len(variable_names))]}"
         )
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
