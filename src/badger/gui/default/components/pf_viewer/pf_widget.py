@@ -679,7 +679,9 @@ class ParetoFrontWidget(QWidget):
                 "Invalid Generator",
                 f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports BayesianGenerator",
             )
-            return is_success
+            raise TypeError(
+                f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports MOBOGenerator"
+            )
 
         self.correct_generator = True
 
