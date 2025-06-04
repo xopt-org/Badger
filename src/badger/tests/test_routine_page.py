@@ -158,9 +158,9 @@ def test_constraints(qtbot):
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
     # Select constraint
     qtbot.mouseClick(window.env_box.btn_add_con, Qt.MouseButton.LeftButton)
-    con_widget_name = window.env_box.con_table.cellWidget(0, 1)
+    con_widget_name = window.env_box.con_table.cellWidget(0, 0)
     qtbot.keyClicks(con_widget_name, "c")
-    con_widget_critical = window.env_box.con_table.cellWidget(0, 0)
+    con_widget_critical = window.env_box.con_table.cellWidget(0, 3)
     con_widget_critical.setChecked(True)
 
     routine = window._compose_routine()

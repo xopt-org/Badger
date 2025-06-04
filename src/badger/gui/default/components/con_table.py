@@ -29,8 +29,6 @@ CONS_RELATION_DICT = {
     "=": "EQUAL_TO",
 }
 
-REMOVE_BUTTON_WIDTH = 32
-
 
 class ConstraintTable(QTableWidget):
     """
@@ -68,16 +66,18 @@ class ConstraintTable(QTableWidget):
         self.setStyleSheet("alternate-background-color: #262E38;")
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        self.setColumnWidth(0, 20)
-        self.setColumnWidth(1, 192)
-        self.setColumnWidth(2, 64)
+        self.setColumnWidth(0, 192)
+        self.setColumnWidth(1, 64)
+        self.setColumnWidth(3, 64)
         self.setColumnWidth(4, 32)
 
         self.verticalHeader().setVisible(False)
         self.update_header_visibility()
 
     def update_header_visibility(self):
-        self.setHorizontalHeaderLabels(["Crit.", "Name", "Relation", "Threshold", ""])
+        self.setHorizontalHeaderLabels(
+            ["Name", "Relation", "Threshold", "Critical", ""]
+        )
         self.horizontalHeader().setVisible(self.rowCount() > 0)
 
     def add_constraint(
@@ -91,7 +91,7 @@ class ConstraintTable(QTableWidget):
 
         check_crit = QCheckBox()
         check_crit.setChecked(critical)
-        self.setCellWidget(currentRow, 0, check_crit)
+        self.setCellWidget(currentRow, 3, check_crit)
 
         cb_obs = NoHoverFocusComboBox()
         cb_obs.setItemDelegate(QStyledItemDelegate())
@@ -101,14 +101,14 @@ class ConstraintTable(QTableWidget):
         except:
             idx = 0
         cb_obs.setCurrentIndex(idx)
-        self.setCellWidget(currentRow, 1, cb_obs)
+        self.setCellWidget(currentRow, 0, cb_obs)
 
         cb_rel = NoHoverFocusComboBox()
         cb_rel.setItemDelegate(QStyledItemDelegate())
         cb_rel.addItems(CONS_RELATION_DICT.keys())
         cb_rel.setFixedWidth(64)
         cb_rel.setCurrentIndex(relation)
-        self.setCellWidget(currentRow, 2, cb_rel)
+        self.setCellWidget(currentRow, 1, cb_rel)
 
         sb = QDoubleSpinBox()
         sb.setDecimals(decimals)
@@ -120,10 +120,10 @@ class ConstraintTable(QTableWidget):
         sb.setRange(lb, ub)
         sb.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
         sb.setValue(default_value)
-        self.setCellWidget(currentRow, 3, sb)
+        self.setCellWidget(currentRow, 2, sb)
 
         btn_del = QPushButton(self.icon_trash, None)
-        btn_del.setFixedSize(REMOVE_BUTTON_WIDTH, 24)
+        btn_del.setFixedSize(32, 24)
         btn_del.clicked.connect(self.remove_constraint_clicked)
         btn_del_container = QWidget()
         btn_del_layout = QHBoxLayout(btn_del_container)
@@ -133,7 +133,6 @@ class ConstraintTable(QTableWidget):
         self.setCellWidget(self.rowCount() - 1, 4, btn_del_container)
 
         self.update_header_visibility()
-        self.hide_all_remove_buttons()
 
     @pyqtSlot()
     def remove_constraint_clicked(self):
@@ -142,20 +141,6 @@ class ConstraintTable(QTableWidget):
         if button:
             row = self.indexAt(button.pos()).row()
             self.removeRow(row)
-            self.hide_all_remove_buttons()
-            if (button := self.cellWidget(row, 4)) is not None:
-                button.setFixedWidth(REMOVE_BUTTON_WIDTH)
-
-    def hide_all_remove_buttons(self):
-        for i in range(self.rowCount()):
-            self.cellWidget(i, 4).setFixedWidth(0)
-
-    def mouseMoveEvent(self, e):
-        self.hide_all_remove_buttons()
-        row = self.indexAt(e.localPos().toPoint()).row()
-        if (button := self.cellWidget(row, 4)) is not None:
-            button.setFixedWidth(REMOVE_BUTTON_WIDTH)
-        return super().mouseMoveEvent(e)
 
     def export_constraints(self) -> List[Tuple[str, int, float, bool, float]]:
         """
@@ -170,11 +155,11 @@ class ConstraintTable(QTableWidget):
         for i in range(self.rowCount()):
             constraints_exported.append(
                 (
-                    self.cellWidget(i, 1).currentText(),
-                    CONS_RELATION_DICT[self.cellWidget(i, 2).currentText()],
-                    self.cellWidget(i, 3).value(),
-                    self.cellWidget(i, 0).isChecked(),
-                    self.cellWidget(i, 3).decimals(),
+                    self.cellWidget(i, 0).currentText(),
+                    CONS_RELATION_DICT[self.cellWidget(i, 1).currentText()],
+                    self.cellWidget(i, 2).value(),
+                    self.cellWidget(i, 3).isChecked(),
+                    self.cellWidget(i, 2).decimals(),
                 )
             )
         return constraints_exported
