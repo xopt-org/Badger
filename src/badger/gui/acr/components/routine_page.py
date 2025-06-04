@@ -493,7 +493,6 @@ class BadgerRoutinePage(QWidget):
                 generator_config["turbo_controller"] = {
                     k: v
                     for k, v in turbo.items()
-
                     if k
                     in {
                         "name",
