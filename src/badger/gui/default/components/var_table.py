@@ -325,18 +325,106 @@ class VariableTable(QTableWidget):
         self.sig_var_config.emit(var_name)
 
     def add_additional_variable(self, item):
-        """
-        Original method with safety check for Qt object deletion
-        """
-        try:
-            row = item.row()
-            column = item.column()
-            name = item.text()
-        except RuntimeError:
+        row = idx = item.row()
+        column = item.column()
+        name = item.text()
+
+        if (
+            row != self.rowCount() - 1
+            and column == 1
+            and name != "Enter new variable here...."
+        ):
+            # check that the new text is not equal to the previous value at that cell
+            prev_name = self.previous_values.get((row, column), "")
+            if name == prev_name:
+                return
+            else:
+                # delete row and additional variable
+                self.removeRow(row)
+                self.addtl_vars.remove(prev_name)
+                self.variables = [
+                    var for var in self.variables if next(iter(var)) != prev_name
+                ]
+                del self.bounds[prev_name]
+                del self.selected[prev_name]
+
+                self.update_variables(self.variables, 2)
             return
 
-        if column == 1:
-            self.add_additional_variable_by_row(row, name)
+        if (
+            row == self.rowCount() - 1
+            and column == 1
+            and name != "Enter new variable here...."
+        ):
+            # Check that variables doesn't already exist in table
+            if name in [list(d.keys())[0] for d in self.variables]:
+                self.update_variables(self.variables, 2)
+                QMessageBox.warning(
+                    self, "Variable already exists!", f"Variable {name} already exists!"
+                )
+                return
+
+            # Get bounds from interface, if PV exists on interface
+            _bounds = None
+            if self.env_class is not None:
+                try:
+                    _, _bounds = self.get_bounds(name)
+                    vrange = _bounds
+                except BadgerInterfaceChannelError:
+                    # Raised when PV does not exist after attempting to call value
+                    # Revert table to previous state
+                    self.update_variables(self.variables, 2)
+                    QMessageBox.critical(
+                        self,
+                        "Variable Not Found!",
+                        f"Variable {name} cannot be found through the interface!",
+                    )
+                    return
+                except Exception as e:
+                    # Raised when PV exists but value/hard limits cannot be found
+                    # Set to some default values
+                    _bounds = vrange = [0, 0]
+                    detailed_text = (
+                        "Encountered issues when tried to fetch bounds for"
+                        f" variable {name}. Please manually set the bounds."
+                    )
+                    dialog = ExpandableMessageBox(
+                        text=str(e), detailedText=detailed_text
+                    )
+                    dialog.setIcon(QMessageBox.Critical)
+                    dialog.exec_()
+            else:
+                # TODO: handle this case? Right now I don't think it should happen
+                raise Exception("Environment cannot be found for new variable bounds!")
+
+            # Add checkbox only when a PV is entered
+            self.setCellWidget(idx, 0, QCheckBox())
+
+            _cb = self.cellWidget(idx, 0)
+
+            # Checked by default when entered
+            _cb.setChecked(True)
+            self.selected[name] = True
+
+            _cb.stateChanged.connect(self.update_selected)
+
+            sb_lower = RobustSpinBox(
+                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+            )
+            sb_lower.valueChanged.connect(self.update_bounds)
+            sb_upper = RobustSpinBox(
+                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+            )
+            sb_upper.valueChanged.connect(self.update_bounds)
+            self.setCellWidget(idx, 2, sb_lower)
+            self.setCellWidget(idx, 3, sb_upper)
+
+            self.add_variable(name, vrange[0], vrange[1])
+            self.addtl_vars.append(name)
+
+            self.update_variables(self.variables, 2)
+
+            self.sig_pv_added.emit()  # notify the routine page that a new PV has been added
 
     def get_bounds(self, name):
         # TODO: move elsewhere?
@@ -392,30 +480,19 @@ class VariableTable(QTableWidget):
             if drop_row == -1:
                 drop_row = self.rowCount()
 
-            current_row = drop_row
-
-            for string in strings:
+            for i, string in enumerate(strings):
                 string = string.strip()
                 if not string:
                     continue
 
-                # Split by comma and process each item
-                items = [item.strip() for item in string.split(",")]
+                row = drop_row + i
+                if row >= self.rowCount():
+                    self.insertRow(row)
 
-                for item_name in items:
-                    if not item_name:  # Skip empty items
-                        continue
+                item = QTableWidgetItem(string)
+                self.setItem(row, 1, item)
 
-                    if current_row >= self.rowCount():
-                        self.insertRow(current_row)
-
-                    item = QTableWidgetItem(item_name)
-                    self.setItem(current_row, 1, item)
-
-                    # Pass the row index instead of relying on item.row()
-                    self.add_additional_variable_by_row(current_row, item_name)
-
-                    current_row += 1
+                self.add_additional_variable(item)
 
             event.acceptProposedAction()
         else:
@@ -428,102 +505,3 @@ class VariableTable(QTableWidget):
         if index.column() == 1:
             flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
         return flags
-
-    def add_additional_variable_by_row(self, row, name):
-        """
-        Helper method to add additional variable by row index and name
-        instead of relying on QTableWidgetItem.row() which can be unreliable
-        """
-        column = 1  # Name column
-
-        if row != self.rowCount() - 1 and name != "Enter new variable here....":
-            # check that the new text is not equal to the previous value at that cell
-            prev_name = self.previous_values.get((row, column), "")
-            if name == prev_name:
-                return
-            else:
-                # delete row and additional variable
-                self.removeRow(row)
-                if prev_name in self.addtl_vars:
-                    self.addtl_vars.remove(prev_name)
-                self.variables = [
-                    var for var in self.variables if next(iter(var)) != prev_name
-                ]
-                if prev_name in self.bounds:
-                    del self.bounds[prev_name]
-                if prev_name in self.selected:
-                    del self.selected[prev_name]
-
-                self.update_variables(self.variables, 2)
-            return
-
-        if row == self.rowCount() - 1 and name != "Enter new variable here....":
-            # Check that variables doesn't already exist in table
-            if name in [list(d.keys())[0] for d in self.variables]:
-                self.update_variables(self.variables, 2)
-                QMessageBox.warning(
-                    self, "Variable already exists!", f"Variable {name} already exists!"
-                )
-                return
-
-            # Get bounds from interface, if PV exists on interface
-            _bounds = None
-            if self.env_class is not None:
-                try:
-                    _, _bounds = self.get_bounds(name)
-                    vrange = _bounds
-                except BadgerInterfaceChannelError:
-                    # Raised when PV does not exist after attempting to call value
-                    # Revert table to previous state
-                    self.update_variables(self.variables, 2)
-                    QMessageBox.critical(
-                        self,
-                        "Variable Not Found!",
-                        f"Variable {name} cannot be found through the interface!",
-                    )
-                    return
-                except Exception as e:
-                    # Raised when PV exists but value/hard limits cannot be found
-                    # Set to some default values
-                    _bounds = vrange = [0, 0]
-                    detailed_text = (
-                        "Encountered issues when tried to fetch bounds for"
-                        f" variable {name}. Please manually set the bounds."
-                    )
-                    dialog = ExpandableMessageBox(
-                        text=str(e), detailedText=detailed_text
-                    )
-                    dialog.setIcon(QMessageBox.Critical)
-                    dialog.exec_()
-            else:
-                # TODO: handle this case? Right now I don't think it should happen
-                raise Exception("Environment cannot be found for new variable bounds!")
-
-            # Add checkbox only when a PV is entered
-            self.setCellWidget(row, 0, QCheckBox())
-
-            _cb = self.cellWidget(row, 0)
-
-            # Checked by default when entered
-            _cb.setChecked(True)
-            self.selected[name] = True
-
-            _cb.stateChanged.connect(self.update_selected)
-
-            sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
-            )
-            sb_lower.valueChanged.connect(self.update_bounds)
-            sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
-            )
-            sb_upper.valueChanged.connect(self.update_bounds)
-            self.setCellWidget(row, 2, sb_lower)
-            self.setCellWidget(row, 3, sb_upper)
-
-            self.add_variable(name, vrange[0], vrange[1])
-            self.addtl_vars.append(name)
-
-            self.update_variables(self.variables, 2)
-
-            self.sig_pv_added.emit()  # notify the routine page that a new PV has been added
