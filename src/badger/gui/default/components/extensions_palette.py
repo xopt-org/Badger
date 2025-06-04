@@ -73,7 +73,7 @@ class ExtensionsPalette(QMainWindow):
         self.base_text = "Number of active exensions: "
         self.text_box = QLabel(self.base_text + "0", self)
         self.text_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self.text_box.setAlignment(Qt.AlignCenter)
+        self.text_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.btn_data_viewer = QPushButton("ParetoFrontViewer")
         self.btn_bo_visualizer = QPushButton("BOVisualizer")
@@ -109,14 +109,14 @@ class ExtensionsPalette(QMainWindow):
         Open the ParetoFrontViewer extension.
 
         """
-        self.add_child_window_to_monitor(ParetoFrontViewer(self))
+        self.add_child_window_to_monitor(ParetoFrontViewer())
 
     def add_bo_visualizer(self):
         """
         Open the BOVisualizer extension.
 
         """
-        self.add_child_window_to_monitor(BOVisualizer(self))
+        self.add_child_window_to_monitor(BOVisualizer())
 
     def add_child_window_to_monitor(self, child_window: AnalysisExtension):
         """
