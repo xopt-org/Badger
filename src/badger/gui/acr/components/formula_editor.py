@@ -138,7 +138,7 @@ class FormulaEditor(QDialog):
             "1",   "2",      "3",      "*",       "^-1",    "ln()",
             "0",   "e",      "pi",     "/",       "sin()",  "asin()",
             ".",   "abs()",  "min()",  "^",       "cos()",  "acos()",
-            "Var", "Clear",  "max()",  "mean()",  "tan()",  "atan()",
+            "Clear",  "max()",  "mean()",  "tan()",  "atan()",
         ]
         # fmt: on
 
@@ -149,12 +149,7 @@ class FormulaEditor(QDialog):
             col = i % 6
             grid_layout.addWidget(button, row, col)
 
-            if button_text == "Var":
-                self.var_button = button
-                self.var_button.setCheckable(True)
-                self.var_button.setChecked(True)
-                self.var_button.clicked.connect(self.toggle_variable_list)
-            elif button_text == "Clear":
+            if button_text == "Clear":
                 button.clicked.connect(lambda _: self.field.clear())
             else:
                 button.clicked.connect(
@@ -167,24 +162,11 @@ class FormulaEditor(QDialog):
         ok_button.clicked.connect(self.accept_formula)
         layout.addWidget(ok_button)
 
-        self.toggle_variable_list()
-
     def keyPressEvent(self, e: QKeyEvent) -> None:
         """Handle key press events - submit on Enter/Return"""
         if e.key() == Qt.Key_Return or e.key() == Qt.Key_Enter:
             self.accept_formula()
         return super().keyPressEvent(e)
-
-    @Slot(bool)
-    def toggle_variable_list(self, checked: bool = None) -> None:
-        """Toggle visibility of the variable list"""
-        if checked is None:
-            checked = self.var_button.isChecked()
-
-        if checked:
-            self.variable_list.show()
-        else:
-            self.variable_list.hide()
 
     @Slot()
     def accept_formula(self) -> None:
