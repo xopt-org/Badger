@@ -420,7 +420,7 @@ class BadgerRoutinePage(QWidget):
             for name, val in constraints.items():
                 relation, thres = val
                 critical = name in critical_constraint_names
-                relation = ["GREATER_THAN", "LESS_THAN", "EQUAL_TO"].index(relation)
+                relation = ["GREATER_THAN", "LESS_THAN"].index(relation)
                 self.add_constraint(name, relation, thres, critical)
         else:
             self.env_box.con_table.clear_constraints()
