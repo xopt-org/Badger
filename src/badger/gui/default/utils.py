@@ -51,12 +51,10 @@ def filter_generator_config(name: str, config: dict[str, Any]):
         filtered_config["turbo_controller"] = config["turbo_controller"]
         filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
         filtered_config["max_travel_distances"] = config["max_travel_distances"]
-        filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
     elif name == "upper_confidence_bound":
         filtered_config["turbo_controller"] = config["turbo_controller"]
         filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
         filtered_config["max_travel_distances"] = config["max_travel_distances"]
-        filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
         filtered_config["beta"] = config["beta"]
     elif name == "rcds":
         filtered_config["noise"] = config["noise"]
@@ -64,7 +62,6 @@ def filter_generator_config(name: str, config: dict[str, Any]):
     elif name == "mobo":
         filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
         filtered_config["max_travel_distances"] = config["max_travel_distances"]
-        filtered_config["n_interpolate_points"] = config["n_interpolate_points"]
         filtered_config["reference_point"] = config["reference_point"]
     else:
         filtered_config = config
