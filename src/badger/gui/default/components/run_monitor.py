@@ -503,7 +503,7 @@ class BadgerOptMonitor(QWidget):
         if results is not None:
             self.routine.data = results
 
-        if not self.routine or not hasattr(self.routine, 'sorted_data'):
+        if not self.routine or not hasattr(self.routine, "sorted_data"):
             # if no routine or sorted_data is available, return
             return
         data_copy = self.routine.sorted_data
