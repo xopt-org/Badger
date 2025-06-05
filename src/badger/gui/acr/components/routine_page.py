@@ -1419,13 +1419,18 @@ class BadgerRoutinePage(QWidget):
             obs_name = item_widget.cb_sta.currentText()
             observables.append(obs_name)
 
-        vocs = VOCS(
-            variables=variables,
-            objectives=objectives,
-            constraints=constraints,
-            constants={},
-            observables=observables,
-        )
+        try:
+            vocs = VOCS(
+                variables=variables,
+                objectives=objectives,
+                constraints=constraints,
+                constants={},
+                observables=observables,
+            )
+        except ValidationError as e:
+            raise BadgerRoutineError(
+                f"\n\nVOCS validation failed: {format_validation_error(e)}"
+            ) from e
 
         return vocs, critical_constraints
 
