@@ -13,6 +13,8 @@ from badger.logger.event import Events
 from badger.routine import Routine
 from badger.archive import archive_run
 
+from xopt.errors import FeasibilityError
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,9 +39,10 @@ def convert_to_solution(result: DataFrame, routine: Routine):
                 is_optimal = True
         else:  # no feasible solution
             is_optimal = False
+
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
-    except IndexError:  # no feasible data
+    except FeasibilityError:  # no feasible data
         logger.info("no feasible solutions found")
         is_optimal = False
 
