@@ -311,6 +311,18 @@ class ObjectiveTable(QTableWidget):
         except KeyError:
             return False
 
+    def get_visible_objectives(self, objectives):
+        _objectives = []  # store objectives to be displayed
+        if self.checked_only:
+            for obj in objectives:
+                name = next(iter(obj))
+                if self.is_checked(name):
+                    _objectives.append(obj)
+        else:
+            _objectives = objectives
+
+        return _objectives
+
     def update_objectives(
         self, objectives: Optional[List[Dict[str, str]]], filtered: int = 0
     ) -> None:
@@ -335,7 +347,7 @@ class ObjectiveTable(QTableWidget):
 
         if filtered == 0:
             self.all_objectives = objectives or []
-            self.objectives = self.all_objectives
+            self.objectives = self.all_objectives[:]  # make a copy
             self.selected = {}
             self.rules = {}
             self.addtl_objs = []
@@ -348,20 +360,13 @@ class ObjectiveTable(QTableWidget):
         if not objectives:
             return
 
-        current_objectives: List[Dict[str, str]] = []
-        if self.checked_only:
-            for obj in objectives:
-                name = next(iter(obj))
-                if self.is_checked(name):
-                    current_objectives.append(obj)
-        else:
-            current_objectives = objectives
+        _objectives = self.get_visible_objectives(objectives)
 
-        n = len(current_objectives) + 1
+        n = len(_objectives) + 1
         self.setRowCount(n)
         self.previous_values = {}  # to track changes in table
 
-        for i, obj in enumerate(current_objectives):
+        for i, obj in enumerate(_objectives):
             name = next(iter(obj))
 
             # Create and set checkbox for objective selection.
