@@ -107,6 +107,8 @@ class FormulaEditor(QDialog):
         self.name_field = QLineEdit(self)
         self.field = QLineEdit(self)
 
+        self.name_field.textChanged.connect(self.on_name_field_changed)
+
         self.variable_model = VariableModel(variable_names)
         self.variable_list = QTableView(self)
         self.variable_list.setModel(self.variable_model)
@@ -171,6 +173,13 @@ class FormulaEditor(QDialog):
     @Slot()
     def accept_formula(self) -> None:
         """Process and emit the entered formula with variable mapping"""
+        formula_name = self.name_field.text().strip()
+
+        if not formula_name:
+            self.name_field.setStyleSheet("QLineEdit { border: 2px solid red; }")
+            self.name_field.setFocus()
+            return
+
         formula_name = self.name_field.text()
         formula = self.field.text()
         formula = re.sub(r"\s+", "", formula)
@@ -178,6 +187,7 @@ class FormulaEditor(QDialog):
 
         self.formula_accepted.emit((formula_name, formula, variable_mapping))
         self.field.setText("")
+        self.name_field.setText("")
         self.accept()
 
     @Slot(QModelIndex)
@@ -215,3 +225,9 @@ class FormulaEditor(QDialog):
             List of variable names
         """
         self.variable_model.set_variable_names(variable_names)
+
+    @Slot(str)
+    def on_name_field_changed(self, text: str) -> None:
+        """Remove red outline when text is added to name field"""
+        if text.strip():
+            self.name_field.setStyleSheet("")
