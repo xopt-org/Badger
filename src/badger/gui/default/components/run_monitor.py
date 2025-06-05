@@ -503,11 +503,10 @@ class BadgerOptMonitor(QWidget):
         if results is not None:
             self.routine.data = results
 
-        try:
-            data_copy = self.routine.sorted_data
-        except AttributeError:
-            # if no data is available, return
+        if not self.routine or not hasattr(self.routine, 'sorted_data'):
+            # if no routine or sorted_data is available, return
             return
+        data_copy = self.routine.sorted_data
 
         # Get timestamps
         if use_time_axis:
