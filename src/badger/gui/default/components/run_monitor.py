@@ -169,7 +169,10 @@ class BadgerOptMonitor(QWidget):
         monitor.nextRow()
 
         self.plot_var = plot_var = add_axes(
-            monitor, "variables", "Evaluation History (X)", self.inspector_variable
+            monitor,
+            "Relative Variable Value",
+            "Relative Variable History (X)",
+            self.inspector_variable,
         )
 
         plot_var.setXLink(plot_obj)
@@ -500,6 +503,9 @@ class BadgerOptMonitor(QWidget):
         if results is not None:
             self.routine.data = results
 
+        if not self.routine or not hasattr(self.routine, "sorted_data"):
+            # if no routine or sorted_data is available, return
+            return
         data_copy = self.routine.sorted_data
 
         # Get timestamps
@@ -738,8 +744,7 @@ class BadgerOptMonitor(QWidget):
         reply = QMessageBox.question(
             self,
             "Reset Environment",
-            f"Are you sure you want to reset the env vars "
-            f"back to {self.init_vars}?",
+            f"Are you sure you want to reset the env vars back to {self.init_vars}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -783,8 +788,7 @@ class BadgerOptMonitor(QWidget):
             QMessageBox.warning(
                 self,
                 "Jump to optimum",
-                "Jump to optimum is not supported for "
-                "multi-objective optimization yet",
+                "Jump to optimum is not supported for multi-objective optimization yet",
             )
 
     def jump_to_solution(self, idx):
@@ -816,7 +820,7 @@ class BadgerOptMonitor(QWidget):
             "Apply Solution",
             "Are you sure you want to apply the selected solution:\n"
             + "\n".join(
-                f"{variable_names[i]}: {round(curr_vars[i],3)} -> {round(solution[i],3)},"
+                f"{variable_names[i]}: {round(curr_vars[i], 3)} -> {round(solution[i], 3)},"
                 for i in range(len(variable_names))
             )
             + "\nto "
@@ -842,7 +846,7 @@ class BadgerOptMonitor(QWidget):
 
         updated_vars = get_current_vars(self.routine)
         self.sig_status.emit(
-            f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i],4)} -> {round(updated_vars[i],4)}' for i in range(len(variable_names))]}"
+            f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
         )
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
@@ -888,6 +892,15 @@ class BadgerOptMonitor(QWidget):
 
     def toggle_x_plot_y_axis_relative(self):
         self.x_plot_relative = self.check_relative.isChecked()
+
+        # Change axes labels depending on if relative is checked
+        if self.x_plot_relative:
+            self.plot_var.setLabel("left", "Relative Variable Value")
+            self.plot_var.setTitle("Relative Variable History (X)")
+        else:
+            self.plot_var.setLabel("left", "Variable Value")
+            self.plot_var.setTitle("Variable History (X)")
+
         self.update_curves()
 
     def on_mouse_click(self, event):
