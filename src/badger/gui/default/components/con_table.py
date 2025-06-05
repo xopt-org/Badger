@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QAbstractSpinBox,
     QDoubleSpinBox,
     QTableWidget,
+    QHeaderView,
     QAbstractItemView,
     QCheckBox,
     QPushButton,
@@ -78,6 +79,8 @@ class ConstraintTable(QTableWidget):
         self.setHorizontalHeaderLabels(
             ["Name", "Relation", "Threshold", "Critical", ""]
         )
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.horizontalHeader().setVisible(self.rowCount() > 0)
 
     def add_constraint(
