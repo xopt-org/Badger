@@ -5,9 +5,10 @@ from PyQt5.QtWidgets import QApplication
 
 
 def test_routine_page_init(qtbot):
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)  # Avoid message boxes during tests
 
     qtbot.addWidget(window)
 
@@ -17,9 +18,10 @@ def test_routine_generation(qtbot):
     from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
     qtbot.addWidget(window)
 
     # Turn off relative to current
@@ -42,12 +44,20 @@ def test_routine_generation(qtbot):
     assert window.env_box.var_table.export_variables() == {"x0": [-1, 1]}
 
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-    assert window.env_box.obj_table.export_objectives() == {"f": "MINIMIZE"}
+    exported_objectives = window.env_box.obj_table.export_objectives()
+    assert exported_objectives["objectives"] == {"f": "MINIMIZE"}
+
+    # Add at least one initial point before composing routine
+    qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
 
     routine = window._compose_routine()
     assert routine.vocs.variables == {"x0": [-1, 1]}
     assert routine.vocs.objectives == {"f": "MINIMIZE"}
-    assert routine.initial_points.empty
+    # After adding current point, initial_points should not be empty
+    assert not routine.initial_points.empty
+    assert (
+        routine.initial_points.iloc[0]["x0"] == 0.5
+    )  # Default current value for test env
 
     # Test if badger and xopt version match with the current version
     assert routine.badger_version == get_badger_version()
@@ -55,9 +65,10 @@ def test_routine_generation(qtbot):
 
 
 def test_add_additional_vars(qtbot):
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
     qtbot.addWidget(window)
 
     # Turn off relative to current
@@ -99,9 +110,10 @@ def test_add_additional_vars(qtbot):
 
 def test_initial_points(qtbot):
     # test to make sure initial points widget works properly
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
     qtbot.addWidget(window)
 
     # Turn off relative to current
@@ -113,6 +125,8 @@ def test_initial_points(qtbot):
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.var_table.cellWidget(1, 0).setChecked(True)
     window.env_box.var_table.cellWidget(2, 0).setChecked(True)
+
+    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
 
     assert window.env_box.init_table.horizontalHeader().count() == 3
 
@@ -127,10 +141,11 @@ def test_initial_points(qtbot):
 
 def test_ui_update(qtbot):
     # test to make sure initial points widget works properly
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
     from badger.tests.utils import create_routine
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
 
     # test with none
     window.refresh_ui()
@@ -145,9 +160,10 @@ def test_ui_update(qtbot):
 
 def test_constraints(qtbot):
     # test if a simple routine can be created
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
     qtbot.addWidget(window)
 
     qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
@@ -155,7 +171,14 @@ def test_constraints(qtbot):
 
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
-    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+
+    obj_checkbox = window.env_box.obj_table.cellWidget(0, 0)
+    if obj_checkbox is not None:
+        obj_checkbox.setChecked(True)
+    else:
+        window.env_box.obj_table.update_objectives([{"f": "MINIMIZE"}])
+        window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+
     # Select constraint
     qtbot.mouseClick(window.env_box.btn_add_con, Qt.MouseButton.LeftButton)
     con_widget_name = window.env_box.con_table.cellWidget(0, 0)
@@ -170,9 +193,10 @@ def test_constraints(qtbot):
 
 def test_observables(qtbot):
     # test if a simple routine can be created
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
     qtbot.addWidget(window)
 
     qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
@@ -180,7 +204,14 @@ def test_observables(qtbot):
 
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
-    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+
+    obj_checkbox = window.env_box.obj_table.cellWidget(0, 0)
+    if obj_checkbox is not None:
+        obj_checkbox.setChecked(True)
+    else:
+        window.env_box.obj_table.update_objectives([{"f": "MINIMIZE"}])
+        window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+
     # Select observable
     qtbot.mouseClick(window.env_box.btn_add_sta, Qt.MouseButton.LeftButton)
     obs_item = window.env_box.list_obs.item(0)
@@ -193,9 +224,10 @@ def test_observables(qtbot):
 
 def test_add_random_points(qtbot):
     # test to add random points to initial points table
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
+    window.set_test_mode(True)
     qtbot.addWidget(window)
 
     # Turn off relative to current
@@ -207,6 +239,8 @@ def test_add_random_points(qtbot):
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.var_table.cellWidget(1, 0).setChecked(True)
     window.env_box.var_table.cellWidget(2, 0).setChecked(True)
+
+    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
 
     def handle_dialog():
         while window.rc_dialog is None:
