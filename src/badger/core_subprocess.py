@@ -13,6 +13,8 @@ from badger.logger.event import Events
 from badger.routine import Routine
 from badger.archive import archive_run
 
+from xopt.errors import FeasibilityError
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,9 +39,10 @@ def convert_to_solution(result: DataFrame, routine: Routine):
                 is_optimal = True
         else:  # no feasible solution
             is_optimal = False
+
     except NotImplementedError:
         is_optimal = False  # disable the optimal highlight for MO problems
-    except IndexError:  # no feasible data
+    except FeasibilityError:  # no feasible data
         logger.info("no feasible solutions found")
         is_optimal = False
 
@@ -153,16 +156,17 @@ def run_routine_subprocess(
 
     # evaluate initial points:
     # timeout logic will be handled in the specific environment
-    for _, ele in initial_points.iterrows():
-        result = routine.evaluate_data(ele.to_dict())
-        solution = convert_to_solution(result, routine)
-        opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-        if evaluate:
-            time.sleep(0.1)  # give it some break tp catch up
-            evaluate_queue[0].send((routine.data, routine.generator))
-
-    # perform optimization
     try:
+        # initial sampling
+        for _, ele in initial_points.iterrows():
+            result = routine.evaluate_data(ele.to_dict())
+            solution = convert_to_solution(result, routine)
+            opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+            if evaluate:
+                time.sleep(0.1)  # give it some break tp catch up
+                evaluate_queue[0].send((routine.data, routine.generator))
+
+        # optimization loop
         while True:
             if stop_process.is_set():
                 evaluate_queue[0].close()

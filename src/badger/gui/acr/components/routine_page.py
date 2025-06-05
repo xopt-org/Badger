@@ -14,8 +14,13 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
 from xopt import VOCS
-from xopt.generators import get_generator_defaults, all_generator_names
+from xopt.generators import (
+    get_generator_defaults,
+    all_generator_names,
+    get_generator_dynamic,
+)
 from xopt.utils import get_local_region
+from pydantic import ValidationError
 
 from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
 from badger.gui.default.components.data_table import (
@@ -54,6 +59,16 @@ from badger.utils import (
 )
 
 LABEL_WIDTH = 96
+
+
+def format_validation_error(e: ValidationError) -> str:
+    """Convert Pydantic ValidationError into a friendly message."""
+    messages = ["\n"]
+    for err in e.errors():
+        loc = " -> ".join(str(item) for item in err["loc"])
+        msg = f"{loc}: {err['msg']}\n"
+        messages.append(msg)
+    return "\n".join(messages)
 
 
 class BadgerRoutinePage(QWidget):
@@ -1391,13 +1406,18 @@ class BadgerRoutinePage(QWidget):
             obs_name = item_widget.cb_sta.currentText()
             observables.append(obs_name)
 
-        vocs = VOCS(
-            variables=variables,
-            objectives=objectives,
-            constraints=constraints,
-            constants={},
-            observables=observables,
-        )
+        try:
+            vocs = VOCS(
+                variables=variables,
+                objectives=objectives,
+                constraints=constraints,
+                constants={},
+                observables=observables,
+            )
+        except ValidationError as e:
+            raise BadgerRoutineError(
+                f"\n\nVOCS validation failed: {format_validation_error(e)}"
+            ) from e
 
         return vocs, critical_constraints
 
@@ -1486,6 +1506,15 @@ class BadgerRoutinePage(QWidget):
         # Save hard limits no matter relative to current or not
         vrange_hard_limit = self.var_hard_limit
 
+        try:
+            generator = get_generator_dynamic(generator_name)(
+                vocs=vocs, **generator_params
+            )
+        except ValidationError as e:
+            raise BadgerRoutineError(
+                f"\n\nAlgorithm validation failed: {format_validation_error(e)}"
+            ) from e
+
         with warnings.catch_warnings(record=True) as caught_warnings:
             routine = Routine(
                 # Metadata
@@ -1493,7 +1522,7 @@ class BadgerRoutinePage(QWidget):
                 xopt_version=get_xopt_version(),
                 # Xopt part
                 vocs=vocs,
-                generator={"name": generator_name} | generator_params,
+                generator=generator,
                 # Badger part
                 name=name,
                 description=description,
