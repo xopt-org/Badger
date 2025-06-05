@@ -27,7 +27,6 @@ from badger.gui.default.utils import (
 CONS_RELATION_DICT = {
     ">": "GREATER_THAN",
     "<": "LESS_THAN",
-    "=": "EQUAL_TO",
 }
 
 
