@@ -384,7 +384,7 @@ class BadgerRoutinePage(QWidget):
         try:
             additional_variables = template_dict["additional_variables"]
         except KeyError:
-            additional_variables = {}
+            additional_variables = []  # init to empty list if not present
         if self.vars_env:
             for i in self.vars_env:
                 all_variables.update(i)
