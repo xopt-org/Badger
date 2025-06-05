@@ -171,7 +171,7 @@ class BadgerOptMonitor(QWidget):
         self.plot_var = plot_var = add_axes(
             monitor,
             "Relative Variable Value",
-            "Relative Evaluation History (X)",
+            "Relative Variable History (X)",
             self.inspector_variable,
         )
 
