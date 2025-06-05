@@ -158,10 +158,10 @@ def test_constraints(qtbot):
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
     # Select constraint
     qtbot.mouseClick(window.env_box.btn_add_con, Qt.MouseButton.LeftButton)
-    con_item = window.env_box.list_con.item(0)
-    con_widget = window.env_box.list_con.itemWidget(con_item)
-    qtbot.keyClicks(con_widget.cb_obs, "c")
-    con_widget.check_crit.setChecked(True)
+    con_widget_name = window.env_box.con_table.cellWidget(0, 0)
+    qtbot.keyClicks(con_widget_name, "c")
+    con_widget_critical = window.env_box.con_table.cellWidget(0, 3)
+    con_widget_critical.setChecked(True)
 
     routine = window._compose_routine()
     assert routine.vocs.constraints == {"c": ["GREATER_THAN", 0]}

@@ -22,6 +22,7 @@ from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
+from badger.gui.default.components.con_table import ConstraintTable
 from badger.gui.default.components.data_table import init_data_table
 from badger.settings import init_settings
 from badger.gui.default.utils import (
@@ -410,6 +411,7 @@ class BadgerEnvBox(QWidget):
         edit_con_col = QWidget()
         vbox_con_edit = QVBoxLayout(edit_con_col)
         vbox_con_edit.setContentsMargins(0, 0, 0, 0)
+
         action_con = QWidget()
         hbox_action_con = QHBoxLayout(action_con)
         hbox_action_con.setContentsMargins(0, 0, 0, 0)
@@ -419,12 +421,10 @@ class BadgerEnvBox(QWidget):
         btn_add_con.setDisabled(True)
         hbox_action_con.addWidget(btn_add_con)
         hbox_action_con.addStretch()
-        self.list_con = QListWidget()
-        self.list_con.setMaximumHeight(80)
-        # self.list_con.setFixedHeight(64)
-        self.list_con.setViewportMargins(2, 2, 17, 2)
-        vbox_con_edit.addWidget(self.list_con)
-        # vbox_con_edit.addStretch()
+
+        self.con_table = ConstraintTable()
+        self.con_table.setMinimumHeight(120)
+        vbox_con_edit.addWidget(self.con_table)
         hbox_con.addWidget(edit_con_col)
 
         # States config
@@ -454,8 +454,7 @@ class BadgerEnvBox(QWidget):
         hbox_action_sta.addWidget(btn_add_sta)
         hbox_action_sta.addStretch()
         self.list_obs = QListWidget()
-        self.list_obs.setMaximumHeight(80)
-        # self.list_obs.setFixedHeight(64)
+        self.list_obs.setMinimumHeight(120)
         self.list_obs.setViewportMargins(2, 2, 17, 2)
         vbox_sta_edit.addWidget(self.list_obs)
         # vbox_sta_edit.addStretch()
@@ -530,9 +529,6 @@ class BadgerEnvBox(QWidget):
 
     def fit_content(self):
         return
-        self._fit_content(self.list_obj)
-        self._fit_content(self.list_con)
-        self._fit_content(self.list_obs)
 
     def switch_var_panel_style(self, auto=True):
         if auto:
