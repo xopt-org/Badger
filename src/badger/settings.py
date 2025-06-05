@@ -182,7 +182,7 @@ class ConfigSingleton:
         updates : dict of {str: Any}
             A dictionary containing the dot-separated keys and new values to update in the YAML file.
         """
-        config_data = self._config.dict(by_alias=True)
+        config_data = self._config.model_dump(by_alias=True)
 
         # Apply updates to the config data using dot-separated keys
         for dot_key, value in updates.items():
@@ -217,7 +217,7 @@ class ConfigSingleton:
             A dictionary containing the settings. Keys in the dict are fields of the
             settings, the value for each key is the current value for that setting.
         """
-        return self._config.dict(by_alias=True)
+        return self._config.model_dump(by_alias=True)
 
     def list_path_settings(self) -> Dict[str, Any]:
         """List all the path-related settings in Badger
@@ -265,7 +265,7 @@ class ConfigSingleton:
         KeyError
             If the key is not found in the configuration.
         """
-        data = self._config.dict(by_alias=True)
+        data = self._config.model_dump(by_alias=True)
         if key in data:
             return data[key]["value"] if return_value_field else data[key]
         raise KeyError(f"Key '{key}' not found in the configuration.")
@@ -291,7 +291,7 @@ class ConfigSingleton:
         KeyError
             If the key is not found in the configuration.
         """
-        data = self._config.dict(by_alias=True)
+        data = self._config.model_dump(by_alias=True)
         if key in data:
             return data[key]["description"] if return_description_field else data[key]
         raise KeyError(f"Key '{key}' not found in the configuration.")
@@ -319,7 +319,7 @@ class ConfigSingleton:
         KeyError
             If the key is not found in the configuration.
         """
-        data = self._config.dict(by_alias=True)
+        data = self._config.model_dump(by_alias=True)
         if key in data:
             return data[key]["display_name"] if return_display_name_field else data[key]
         raise KeyError(f"Key '{key}' not found in the configuration.")
@@ -345,7 +345,7 @@ class ConfigSingleton:
         KeyError
             If the key is not found in the configuration.
         """
-        data = self._config.dict(by_alias=True)
+        data = self._config.model_dump(by_alias=True)
         if key in data:
             return data[key]["is_path"] if return_is_path_field else data[key]
         raise KeyError(f"Key '{key}' not found in the configuration.")
@@ -373,7 +373,7 @@ class ConfigSingleton:
     def reset_settings(self) -> None:
         """Resets all the settings to their default values."""
         default_config = BadgerConfig()
-        self.update_and_save_config(default_config.dict(by_alias=True))
+        self.update_and_save_config(default_config.model_dump(by_alias=True))
         print(
             f"All settings have been reset to their default values in {self.config_path}"
         )
@@ -433,13 +433,13 @@ def mock_settings():
     config_singleton.write_value("BADGER_ARCHIVE_ROOT", archive_dir)
 
     # Set other settings to the default values
-    for key in config_singleton.config.dict(by_alias=True).keys():
+    for key in config_singleton.config.model_dump(by_alias=True).keys():
         config_singleton.write_value(
-            key, config_singleton.config.dict(by_alias=True)[key]["value"]
+            key, config_singleton.config.model_dump(by_alias=True)[key]["value"]
         )
-    for key in config_singleton.config.dict(by_alias=True).keys():
+    for key in config_singleton.config.model_dump(by_alias=True).keys():
         config_singleton.write_value(
-            key, config_singleton.config.dict(by_alias=True)[key]["value"]
+            key, config_singleton.config.model_dump(by_alias=True)[key]["value"]
         )
 
 
