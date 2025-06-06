@@ -817,6 +817,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
+            self.env_box.btn_formula.setDisabled(True)
             self.env_box.btn_refresh.setDisabled(True)
             self.routine = None
             self.env_box.update_stylesheets()
@@ -833,6 +834,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(False)
             self.env_box.btn_add_var.setDisabled(False)
             self.env_box.btn_lim_vrange.setDisabled(False)
+            self.env_box.btn_formula.setDisabled(False)
             self.env_box.btn_refresh.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
@@ -844,6 +846,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
+            self.env_box.btn_formula.setDisabled(True)
             self.routine = None
             return QMessageBox.critical(self, "Error!", traceback.format_exc())
 

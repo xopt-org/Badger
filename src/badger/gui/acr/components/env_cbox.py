@@ -162,8 +162,6 @@ class BadgerEnvBox(QWidget):
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             btn_env_play.hide()
         self.btn_pv = btn_pv = QPushButton("Variable Search")
-        self.btn_formula = btn_formula = QPushButton("Formula Editor")
-        btn_formula.setFixedSize(128, 24)
         btn_pv.setFixedSize(128, 24)
         self.btn_docs = btn_docs = QPushButton("Open Docs")
         btn_docs.setFixedSize(96, 24)
@@ -177,7 +175,6 @@ class BadgerEnvBox(QWidget):
         hbox_name.addWidget(btn_env_play)
         hbox_name.addWidget(btn_params)
         hbox_name.addWidget(btn_pv)
-        hbox_name.addWidget(btn_formula)
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
@@ -383,9 +380,13 @@ class BadgerEnvBox(QWidget):
         self.edit_obj = edit_obj = QLineEdit()
         edit_obj.setPlaceholderText("Filter objectives...")
         edit_obj.setFixedWidth(192)
+        self.btn_formula = btn_formula = QPushButton("Formula")
+        btn_formula.setFixedSize(128, 24)
+        btn_formula.setDisabled(True)
         self.check_only_obj = check_only_obj = QCheckBox("Show Checked Only")
         check_only_obj.setChecked(False)
         hbox_action_obj.addWidget(edit_obj)
+        hbox_action_obj.addWidget(btn_formula)
         hbox_action_obj.addStretch()
         hbox_action_obj.addWidget(check_only_obj)
 
