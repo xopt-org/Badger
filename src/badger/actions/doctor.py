@@ -95,4 +95,6 @@ def check_n_config_paths(config_filepath=None):
             except KeyboardInterrupt:
                 pass
 
-    return fixed or good
+        return fixed
+
+    return good
