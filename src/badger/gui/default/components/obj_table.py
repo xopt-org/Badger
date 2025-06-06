@@ -69,9 +69,9 @@ class ObjectiveTable(QTableWidget):
         header = self.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Fixed)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
-        header.setVisible(False)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 192)
+        self.setHorizontalHeaderLabels(["", "Name", "Rule"])
 
         self.all_objectives: List[Dict[str, str]] = []
         self.objectives: List[Dict[str, str]] = []
@@ -343,7 +343,6 @@ class ObjectiveTable(QTableWidget):
             The filter mode (0, 1, or 2), by default 0.
         """
         self.setRowCount(0)
-        self.horizontalHeader().setVisible(False)
 
         if filtered == 0:
             self.all_objectives = objectives or []
@@ -399,9 +398,7 @@ class ObjectiveTable(QTableWidget):
         item.setForeground(QColor("gray"))
         self.setItem(n - 1, 1, item)
 
-        self.setHorizontalHeaderLabels(["", "Name", "Rule"])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
-        self.horizontalHeader().setVisible(True)
 
     def add_additional_objective(self, item):
         row = idx = item.row()
