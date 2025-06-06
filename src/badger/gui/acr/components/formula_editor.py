@@ -146,6 +146,8 @@ class FormulaEditor(QDialog):
         self.variable_list.setEditTriggers(QAbstractItemView.EditTriggers(0))
         self.variable_list.setSelectionMode(QAbstractItemView.SingleSelection)
         self.variable_list.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.variable_list.setAlternatingRowColors(True)
+        self.variable_list.setStyleSheet("alternate-background-color: #262E38;")
         self.variable_list.setMaximumWidth(1000)
         self.variable_list.setMaximumHeight(1000)
 
