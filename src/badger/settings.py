@@ -420,10 +420,6 @@ def mock_settings():
     built_in_plugins_dir = resources.files(__package__) / "built_in_plugins"
     shutil.copytree(built_in_plugins_dir, plugins_dir, dirs_exist_ok=True)
 
-    db_dir = str(app_data_dir / "db")
-    os.makedirs(db_dir, exist_ok=True)
-    config_singleton.write_value("BADGER_DB_ROOT", db_dir)
-
     logbook_dir = str(app_data_dir / "logbook")
     os.makedirs(logbook_dir, exist_ok=True)
     config_singleton.write_value("BADGER_LOGBOOK_ROOT", logbook_dir)
@@ -432,11 +428,11 @@ def mock_settings():
     os.makedirs(archive_dir, exist_ok=True)
     config_singleton.write_value("BADGER_ARCHIVE_ROOT", archive_dir)
 
+    templates_dir = str(app_data_dir / "templates")
+    os.makedirs(templates_dir, exist_ok=True)
+    config_singleton.write_value("BADGER_TEMPLATE_ROOT", templates_dir)
+
     # Set other settings to the default values
-    for key in config_singleton.config.model_dump(by_alias=True).keys():
-        config_singleton.write_value(
-            key, config_singleton.config.model_dump(by_alias=True)[key]["value"]
-        )
     for key in config_singleton.config.model_dump(by_alias=True).keys():
         config_singleton.write_value(
             key, config_singleton.config.model_dump(by_alias=True)[key]["value"]
