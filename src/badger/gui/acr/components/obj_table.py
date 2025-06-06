@@ -80,7 +80,6 @@ class ObjectiveTable(QTableWidget):
         self.selected: Dict[str, bool] = {}  # Track objective selected status.
         self.rules: Dict[str, str] = {}  # Track objective rules.
         self.checked_only: bool = False
-        self.addtl_objs = []
         self.previous_values = {}  # to track changes in table
         self.formulas: Dict[str, Dict[str, Any]] = {}
 
@@ -175,7 +174,7 @@ class ObjectiveTable(QTableWidget):
                     ]
                     if name not in existing_names:
                         # self.all_objectives.append({name: rule})
-                        self.add_formula_objective((name, "", {}))
+                        self.add_plain_objective(name)
 
             # self.objectives = self.all_objectives
             # self.update_objectives(self.objectives, filtered=0)
@@ -193,24 +192,15 @@ class ObjectiveTable(QTableWidget):
         """
         try:
             name, formula_string, formula_dict = formula_tuple
-
             rule = "MINIMIZE"
-
             new_objective = {name: rule}
 
-            if self.all_objectives is None:
-                self.all_objectives = []
-
-            existing_names = [list(obj.keys())[0] for obj in self.all_objectives]
-            if name in existing_names:
-                for obj in self.all_objectives:
-                    if list(obj.keys())[0] == name:
-                        obj[name] = rule
-                        break
-            else:
+            existing_names = [next(iter(obj)) for obj in self.all_objectives]
+            if name not in existing_names:
                 self.all_objectives.append(new_objective)
-
-            self.objectives = self.all_objectives
+                self.objectives.append(new_objective)
+                self.selected[name] = True
+                self.rules[name] = rule
 
             self.formulas[name] = {
                 "formula": formula_string,
@@ -222,6 +212,9 @@ class ObjectiveTable(QTableWidget):
         except (ValueError, TypeError, IndexError) as e:
             print(f"Error adding formula objective: {e}")
             return
+
+    def add_plain_objective(self, name):
+        self.add_formula_objective((name, "", {}))
 
     def get_visible_objectives(self, objectives):
         _objectives = []  # store objectives to be displayed
@@ -283,7 +276,7 @@ class ObjectiveTable(QTableWidget):
                     checkbox.stateChanged.connect(self.update_selected)
 
                     name_item = QTableWidgetItem(name)
-                    if name in self.addtl_objs:
+                    if name in self.formulas:
                         # Make new PVs a different color
                         name_item.setForeground(QColor("darkCyan"))
                     else:
@@ -508,7 +501,7 @@ class ObjectiveTable(QTableWidget):
             else:
                 # delete row and additional objective
                 self.removeRow(row)
-                self.addtl_objs.remove(prev_name)
+                del self.formulas[prev_name]
                 self.objectives = [
                     var for var in self.objectives if next(iter(var)) != prev_name
                 ]
@@ -563,7 +556,10 @@ class ObjectiveTable(QTableWidget):
             self.setItem(idx, 3, formula_indicator)
 
             self.add_objective(name, _rule)
-            self.addtl_objs.append(name)
+            self.formulas[name] = {
+                "formula": "",
+                "variable_mapping": {},
+            }
 
             self.update_objectives(self.objectives, 2)
 
