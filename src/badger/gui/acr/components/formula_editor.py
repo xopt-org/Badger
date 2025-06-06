@@ -15,6 +15,37 @@ from qtpy.QtWidgets import (
     QLabel,
 )
 
+stylesheet_add = """
+QPushButton:hover:pressed
+{
+    background-color: #4DB6AC;
+}
+QPushButton:hover
+{
+    background-color: #26A69A;
+}
+QPushButton
+{
+    color: #FFFFFF;
+    background-color: #00897B;
+}
+"""
+
+stylesheet_clear = """
+QPushButton:hover:pressed
+{
+    background-color: #C7737B;
+}
+QPushButton:hover
+{
+    background-color: #BF616A;
+}
+QPushButton
+{
+    background-color: #A9444E;
+}
+"""
+
 
 class VariableModel(QAbstractTableModel):
     """Model to display variables from a table for use in formulas"""
@@ -32,7 +63,7 @@ class VariableModel(QAbstractTableModel):
         self._headers: List[str] = ["Formula Variable", "Variable Name"]
         self._variable_names: List[str] = variable_names or []
         self._formula_names: List[str] = [
-            f"x{i}" for i in range(len(self._variable_names))
+            f"{{{i}}}" for i in range(len(self._variable_names))
         ]
 
     def set_variable_names(self, variable_names: List[str]) -> None:
@@ -45,7 +76,7 @@ class VariableModel(QAbstractTableModel):
         """
         self.beginResetModel()
         self._variable_names = variable_names
-        self._formula_names = [f"x{i}" for i in range(len(self._variable_names))]
+        self._formula_names = [f"{{{i}}}" for i in range(len(self._variable_names))]
         self.endResetModel()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
@@ -121,9 +152,10 @@ class FormulaEditor(QDialog):
         header = self.variable_list.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
+        self.variable_list.verticalHeader().setVisible(False)
 
         layout_h = QHBoxLayout()
-        layout_h.addWidget(QLabel("Formula Name:"))
+        layout_h.addWidget(QLabel("Formula Name"))
         layout_h.addWidget(self.name_field)
 
         layout.addWidget(self.variable_list)
@@ -136,31 +168,47 @@ class FormulaEditor(QDialog):
         # fmt: off
         buttons = [
             "7",   "8",      "9",      "+",       "(",      ")",
-            "4",   "5",      "6",      "-",       "^2",     "sqrt()",
-            "1",   "2",      "3",      "*",       "^-1",    "ln()",
-            "0",   "e",      "pi",     "/",       "sin()",  "asin()",
-            ".",   "abs()",  "min()",  "^",       "cos()",  "acos()",
-            "Clear",  "max()",  "mean()",  "tan()",  "atan()",
+            "4",   "5",      "6",      "-",       "^2",     "sqrt",
+            "1",   "2",      "3",      "*",       "^-1",    "ln",
+            "0",   "e",      "pi",     "/",       "sin",  "asin",
+            ".",   "abs",  "min",  "^",       "cos",  "acos",
+            "Clear",  "max",  "mean",  "tan",  "atan",
         ]
+
+        button_to_formula = {
+            "7": "7", "8": "8", "9": "9", "+": "+", "(": "(", ")": ")",
+            "4": "4", "5": "5", "6": "6", "-": "-", "^2": "^2", "sqrt": "sqrt()",
+            "1": "1", "2": "2", "3": "3", "*": "*", "^-1": "^-1", "ln": "ln()",
+            "0": "0", "e": "e", "pi": "pi", "/": "/", "sin": "sin()", "asin": "asin()",
+            ".": ".", "abs": "abs()", "min": "min()", "^": "^", "cos": "cos()", "acos": "acos()",
+            "Clear": "", "max": "max()", "mean": "mean()", "tan": "tan()", "atan": "atan()",
+        }
+
         # fmt: on
 
         grid_layout = QGridLayout()
         for i, button_text in enumerate(buttons):
             button = QPushButton(button_text, self)
+            button.setFixedWidth(42)  # Set a fixed size for buttons
             row = i // 6
             col = i % 6
             grid_layout.addWidget(button, row, col)
 
             if button_text == "Clear":
+                button.setStyleSheet(stylesheet_clear)
                 button.clicked.connect(lambda _: self.field.clear())
             else:
                 button.clicked.connect(
-                    lambda _, text=button_text: self.field.insert(text)
+                    lambda _, text=button_text: self.field.insert(
+                        button_to_formula[text]
+                    )
                 )
 
         layout.addLayout(grid_layout)
 
         ok_button = QPushButton("Add Formula", self)
+        ok_button.setFixedHeight(32)
+        ok_button.setStyleSheet(stylesheet_add)
         ok_button.clicked.connect(self.accept_formula)
         layout.addWidget(ok_button)
 
@@ -207,11 +255,7 @@ class FormulaEditor(QDialog):
             current_text = self.field.text()
             cursor_pos = self.field.cursorPosition()
             new_text = (
-                current_text[:cursor_pos]
-                + "{"
-                + formula_name
-                + "}"
-                + current_text[cursor_pos:]
+                current_text[:cursor_pos] + formula_name + current_text[cursor_pos:]
             )
             self.field.setText(new_text)
             self.field.setCursorPosition(cursor_pos + len(formula_name) + 2)
