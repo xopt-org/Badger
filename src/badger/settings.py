@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 from badger.errors import BadgerLoadConfigError
 
+ENABLE_FORMULAS = False
+
 
 class Setting(BaseModel):
     """

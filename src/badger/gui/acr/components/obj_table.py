@@ -12,6 +12,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
 
+from badger.settings import ENABLE_FORMULAS
+
 
 class ObjectiveTable(QTableWidget):
     """
@@ -61,7 +63,13 @@ class ObjectiveTable(QTableWidget):
         self.setAcceptDrops(True)
 
         self.setRowCount(0)
-        self.setColumnCount(4)
+        if ENABLE_FORMULAS:
+            # The last column is for formulas.
+            self.setColumnCount(4)
+        else:
+            # If formulas are not enabled, only show 3 columns
+            self.setColumnCount(3)
+        # Set alternating row colors for better visibility
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
         # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -72,8 +80,11 @@ class ObjectiveTable(QTableWidget):
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 118)
-        self.setColumnWidth(3, 118)
-        self.setHorizontalHeaderLabels(["", "Name", "Rule", "Formula"])
+        if ENABLE_FORMULAS:
+            self.setColumnWidth(3, 118)
+            self.setHorizontalHeaderLabels(["", "Name", "Rule", "Formula"])
+        else:
+            self.setHorizontalHeaderLabels(["", "Name", "Rule"])
 
         self.all_objectives: List[Dict[str, str]] = []
         self.objectives: List[Dict[str, str]] = []
@@ -292,16 +303,17 @@ class ObjectiveTable(QTableWidget):
                     cb_rule.currentIndexChanged.connect(self.update_rules)
                     self.setCellWidget(i, 2, cb_rule)
 
-                    if name in self.formulas:
-                        formula_indicator = QTableWidgetItem(
-                            self.formulas[name]["formula"]
+                    if ENABLE_FORMULAS:
+                        if name in self.formulas:
+                            formula_indicator = QTableWidgetItem(
+                                self.formulas[name]["formula"]
+                            )
+                        else:
+                            formula_indicator = QTableWidgetItem("")
+                        formula_indicator.setFlags(
+                            formula_indicator.flags() & ~Qt.ItemIsEditable
                         )
-                    else:
-                        formula_indicator = QTableWidgetItem("")
-                    formula_indicator.setFlags(
-                        formula_indicator.flags() & ~Qt.ItemIsEditable
-                    )
-                    self.setItem(i, 3, formula_indicator)
+                        self.setItem(i, 3, formula_indicator)
 
                 except (StopIteration, RuntimeError, KeyError) as e:
                     print(f"Error processing objective at row {i}: {e}")
@@ -548,12 +560,15 @@ class ObjectiveTable(QTableWidget):
             cb_rule.currentIndexChanged.connect(self.update_rules)
             self.setCellWidget(idx, 2, cb_rule)
 
-            if name in self.formulas:
-                formula_indicator = QTableWidgetItem(self.formulas[name]["formula"])
-            else:
-                formula_indicator = QTableWidgetItem("")
-            formula_indicator.setFlags(formula_indicator.flags() & ~Qt.ItemIsEditable)
-            self.setItem(idx, 3, formula_indicator)
+            if ENABLE_FORMULAS:
+                if name in self.formulas:
+                    formula_indicator = QTableWidgetItem(self.formulas[name]["formula"])
+                else:
+                    formula_indicator = QTableWidgetItem("")
+                formula_indicator.setFlags(
+                    formula_indicator.flags() & ~Qt.ItemIsEditable
+                )
+                self.setItem(idx, 3, formula_indicator)
 
             self.add_objective(name, _rule)
             self.formulas[name] = {

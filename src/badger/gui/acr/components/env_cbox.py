@@ -24,7 +24,7 @@ from badger.gui.default.components.var_table import VariableTable
 from badger.gui.acr.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
 from badger.gui.default.components.data_table import init_data_table
-from badger.settings import init_settings
+from badger.settings import init_settings, ENABLE_FORMULAS
 from badger.gui.default.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
@@ -383,6 +383,8 @@ class BadgerEnvBox(QWidget):
         self.btn_formula = btn_formula = QPushButton("Formula")
         btn_formula.setFixedSize(128, 24)
         btn_formula.setDisabled(True)
+        if not ENABLE_FORMULAS:
+            btn_formula.hide()
         self.check_only_obj = check_only_obj = QCheckBox("Show Checked Only")
         check_only_obj.setChecked(False)
         hbox_action_obj.addWidget(edit_obj)
