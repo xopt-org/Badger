@@ -82,6 +82,10 @@ class Environment(BaseModel, ABC):
 
         return self.interface.get_values(observable_names)
 
+    def reset_environment(self):
+        if self.interface:
+            return self.interface.reset_interface()
+
     def get_bounds(self, variable_names: List[str]) -> Dict[str, List[float]]:
         return {}
 

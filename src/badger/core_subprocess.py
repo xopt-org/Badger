@@ -96,6 +96,9 @@ def run_routine_subprocess(
     try:
         routine = load_run(args["routine_filename"])
 
+        # Let interfaces reset any global state
+        routine.environment.reset_environment()
+
         # Patch env with override variable ranges
         if routine.vrange_hard_limit:
             routine.environment.variables.update(routine.vrange_hard_limit)
