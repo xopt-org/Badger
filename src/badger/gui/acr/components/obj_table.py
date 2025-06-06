@@ -217,7 +217,7 @@ class ObjectiveTable(QTableWidget):
                 "variable_mapping": formula_dict,
             }
 
-            self.update_objectives(self.objectives, filtered=0)
+            self.update_objectives(self.objectives, 2)
 
         except (ValueError, TypeError, IndexError) as e:
             print(f"Error adding formula objective: {e}")
@@ -239,7 +239,6 @@ class ObjectiveTable(QTableWidget):
         self,
         objectives: Optional[List[Dict[str, str]]],
         filtered: int = 0,
-        formula_data: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Update the table with the given objectives.
@@ -250,8 +249,6 @@ class ObjectiveTable(QTableWidget):
             key-value pair mapping the objective name to its rule.
         filtered : int, optional
             The filter mode (0, 1, or 2), by default 0.
-        formula_data : Optional[Dict[str, Any]], optional
-            Dictionary containing formula details for specific objectives, by default None.
         """
         try:
             self.setRowCount(0)
@@ -266,9 +263,6 @@ class ObjectiveTable(QTableWidget):
                     self.rules[name] = obj[name]
             elif filtered == 1:
                 self.objectives = objectives or []
-
-            if formula_data and filtered == 0:
-                self.formulas.update(formula_data)
 
             if not objectives:
                 return
