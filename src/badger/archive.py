@@ -134,7 +134,7 @@ def get_runs():
     return run_list
 
 
-def load_run(run_fname):
+def load_run(run_fname) -> Routine:
     if run_fname.startswith(".tmp"):  # temp run file
         filename = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp", run_fname)
     else:

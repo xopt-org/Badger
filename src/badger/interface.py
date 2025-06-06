@@ -81,6 +81,13 @@ class Interface(BaseModel, ABC):
     def set_values(self, channel_inputs: Dict[str, Any]):
         pass
 
+    def reset_interface(self):
+        """
+        Called after the application forks (i.e. after spawning a new multiprocess.Process)
+        Subclasses should use this to reset any undesirable process wide state
+        """
+        pass
+
     def get_value(self, channel_name: str, **kwargs) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]
 
