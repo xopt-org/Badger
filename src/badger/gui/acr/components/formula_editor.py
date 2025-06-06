@@ -60,7 +60,7 @@ class VariableModel(QAbstractTableModel):
             a list of variable names
         """
         super().__init__()
-        self._headers: List[str] = ["Formula Variable", "Variable Name"]
+        self._headers: List[str] = ["Formula Variable", "Observable Name"]
         self._variable_names: List[str] = variable_names or []
         self._formula_names: List[str] = [
             f"{{{i}}}" for i in range(len(self._variable_names))
