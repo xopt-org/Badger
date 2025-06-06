@@ -21,10 +21,10 @@ from PyQt5.QtCore import QRegExp, QPropertyAnimation
 from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
-from badger.gui.default.components.obj_table import ObjectiveTable
+from badger.gui.acr.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
 from badger.gui.default.components.data_table import init_data_table
-from badger.settings import init_settings
+from badger.settings import init_settings, ENABLE_FORMULAS
 from badger.gui.default.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
@@ -380,9 +380,15 @@ class BadgerEnvBox(QWidget):
         self.edit_obj = edit_obj = QLineEdit()
         edit_obj.setPlaceholderText("Filter objectives...")
         edit_obj.setFixedWidth(192)
+        self.btn_formula = btn_formula = QPushButton("Formula")
+        btn_formula.setFixedSize(128, 24)
+        btn_formula.setDisabled(True)
+        if not ENABLE_FORMULAS:
+            btn_formula.hide()
         self.check_only_obj = check_only_obj = QCheckBox("Show Checked Only")
         check_only_obj.setChecked(False)
         hbox_action_obj.addWidget(edit_obj)
+        hbox_action_obj.addWidget(btn_formula)
         hbox_action_obj.addStretch()
         hbox_action_obj.addWidget(check_only_obj)
 

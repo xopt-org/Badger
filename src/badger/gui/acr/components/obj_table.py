@@ -12,6 +12,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
 
+from badger.settings import ENABLE_FORMULAS
+
 
 class ObjectiveTable(QTableWidget):
     """
@@ -53,6 +55,7 @@ class ObjectiveTable(QTableWidget):
         super().__init__(*args, **kwargs)
 
         # Enable row reordering via internal drag and drop.
+        # self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         # self.setShowGrid(False)
         self.setDragDropMode(QAbstractItemView.InternalMove)
@@ -60,7 +63,13 @@ class ObjectiveTable(QTableWidget):
         self.setAcceptDrops(True)
 
         self.setRowCount(0)
-        self.setColumnCount(3)
+        if ENABLE_FORMULAS:
+            # The last column is for formulas.
+            self.setColumnCount(4)
+        else:
+            # If formulas are not enabled, only show 3 columns
+            self.setColumnCount(3)
+        # Set alternating row colors for better visibility
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
         # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -70,16 +79,20 @@ class ObjectiveTable(QTableWidget):
         header.setSectionResizeMode(0, QHeaderView.Fixed)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.setColumnWidth(0, 20)
-        self.setColumnWidth(2, 192)
-        self.setHorizontalHeaderLabels(["", "Name", "Rule"])
+        self.setColumnWidth(2, 118)
+        if ENABLE_FORMULAS:
+            self.setColumnWidth(3, 118)
+            self.setHorizontalHeaderLabels(["", "Name", "Rule", "Formula"])
+        else:
+            self.setHorizontalHeaderLabels(["", "Name", "Rule"])
 
         self.all_objectives: List[Dict[str, str]] = []
         self.objectives: List[Dict[str, str]] = []
         self.selected: Dict[str, bool] = {}  # Track objective selected status.
         self.rules: Dict[str, str] = {}  # Track objective rules.
         self.checked_only: bool = False
-        self.addtl_objs = []
         self.previous_values = {}  # to track changes in table
+        self.formulas: Dict[str, Dict[str, Any]] = {}
 
         self.config_logic()
 
@@ -135,6 +148,7 @@ class ObjectiveTable(QTableWidget):
         and contains text, the text is parsed to create new objectives.
         Each dropped line is interpreted as an objective name, with an optional
         tab-delimited rule (defaulting to "MINIMIZE" if not provided).
+        Comma-separated values within each line are treated as separate objectives.
 
         Parameters
         ----------
@@ -148,17 +162,223 @@ class ObjectiveTable(QTableWidget):
             text: str = event.mimeData().text()
             lines = text.splitlines()
             for line in lines:
-                parts = line.split("\t")
-                name = parts[0].strip()
-                # If a rule is provided, use it; otherwise, default to "MINIMIZE".
-                rule = parts[1].strip() if len(parts) > 1 else "MINIMIZE"
-                # Append the new objective.
-                self.all_objectives.append({name: rule})
-            self.objectives = self.all_objectives
-            self.update_objectives(self.objectives, filtered=0)
+                line = line.strip()
+                if not line:
+                    continue
+
+                comma_items = [item.strip() for item in line.split(",")]
+
+                for item in comma_items:
+                    if not item:
+                        continue
+
+                    parts = item.split("\t")
+                    name = parts[0].strip()
+                    if not name:
+                        continue
+
+                    # If a rule is provided, use it; otherwise, default to "MINIMIZE".
+                    # rule = parts[1].strip() if len(parts) > 1 else "MINIMIZE"
+
+                    existing_names = [
+                        list(obj.keys())[0] for obj in self.all_objectives
+                    ]
+                    if name not in existing_names:
+                        # self.all_objectives.append({name: rule})
+                        self.add_plain_objective(name)
+
+            # self.objectives = self.all_objectives
+            # self.update_objectives(self.objectives, filtered=0)
             event.acceptProposedAction()
         else:
             event.ignore()
+
+    def add_formula_objective(self, formula_tuple: tuple) -> None:
+        """
+        Add a formula-based objective to the table.
+        Parameters
+        ----------
+        formula_tuple : tuple
+            A tuple containing (name, formula_string, formula_dict)
+        """
+        try:
+            name, formula_string, formula_dict = formula_tuple
+            rule = "MINIMIZE"
+            new_objective = {name: rule}
+
+            existing_names = [next(iter(obj)) for obj in self.all_objectives]
+            if name not in existing_names:
+                self.all_objectives.append(new_objective)
+                self.objectives.append(new_objective)
+                self.selected[name] = True
+                self.rules[name] = rule
+
+            self.formulas[name] = {
+                "formula": formula_string,
+                "variable_mapping": formula_dict,
+            }
+
+            self.update_objectives(self.objectives, 2)
+
+        except (ValueError, TypeError, IndexError) as e:
+            print(f"Error adding formula objective: {e}")
+            return
+
+    def add_plain_objective(self, name):
+        self.add_formula_objective((name, "", {}))
+
+    def get_visible_objectives(self, objectives):
+        _objectives = []  # store objectives to be displayed
+        if self.checked_only:
+            for obj in objectives:
+                name = next(iter(obj))
+                if self.is_checked(name):
+                    _objectives.append(obj)
+        else:
+            _objectives = objectives
+
+        return _objectives
+
+    def update_objectives(
+        self,
+        objectives: Optional[List[Dict[str, str]]],
+        filtered: int = 0,
+    ) -> None:
+        """
+        Update the table with the given objectives.
+        Parameters
+        ----------
+        objectives : Optional[List[Dict[str, str]]]
+            A list of objectives to display. Each objective is a dictionary with a single
+            key-value pair mapping the objective name to its rule.
+        filtered : int, optional
+            The filter mode (0, 1, or 2), by default 0.
+        """
+        try:
+            self.setRowCount(0)
+
+            if filtered == 0:
+                self.all_objectives = objectives or []
+                self.objectives = self.all_objectives[:]  # Make a copy
+                self.selected = {}
+                self.rules = {}
+                for obj in self.objectives:
+                    name = next(iter(obj))
+                    self.rules[name] = obj[name]
+            elif filtered == 1:
+                self.objectives = objectives or []
+
+            if not objectives:
+                return
+
+            _objectives = self.get_visible_objectives(objectives)
+
+            n = len(_objectives) + 1
+            self.setRowCount(n)
+            self.previous_values = {}  # to track changes in table
+
+            for i, obj in enumerate(_objectives):
+                try:
+                    name = next(iter(obj))
+
+                    checkbox = QCheckBox()
+                    self.setCellWidget(i, 0, checkbox)
+                    checkbox.setChecked(self.is_checked(name))
+                    checkbox.stateChanged.connect(self.update_selected)
+
+                    name_item = QTableWidgetItem(name)
+                    if name in self.formulas:
+                        # Make new PVs a different color
+                        name_item.setForeground(QColor("darkCyan"))
+                    else:
+                        # Make non-new PVs not editable
+                        name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
+                    self.setItem(i, 1, name_item)
+
+                    _rule = self.rules.get(name, "MINIMIZE")
+                    cb_rule = QComboBox()
+                    cb_rule.setItemDelegate(QStyledItemDelegate())
+                    cb_rule.addItems(["MINIMIZE", "MAXIMIZE"])
+                    cb_rule.setCurrentIndex(0 if _rule == "MINIMIZE" else 1)
+                    cb_rule.currentIndexChanged.connect(self.update_rules)
+                    self.setCellWidget(i, 2, cb_rule)
+
+                    if ENABLE_FORMULAS:
+                        if name in self.formulas:
+                            formula_indicator = QTableWidgetItem(
+                                self.formulas[name]["formula"]
+                            )
+                        else:
+                            formula_indicator = QTableWidgetItem("")
+                        formula_indicator.setFlags(
+                            formula_indicator.flags() & ~Qt.ItemIsEditable
+                        )
+                        self.setItem(i, 3, formula_indicator)
+
+                except (StopIteration, RuntimeError, KeyError) as e:
+                    print(f"Error processing objective at row {i}: {e}")
+                    continue
+
+            # Make extra editable row
+            item = QTableWidgetItem("Enter new objective here....")
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            item.setForeground(QColor("gray"))
+            self.setItem(n - 1, 1, item)
+
+            self.setVerticalHeaderLabels([str(i) for i in range(n)])
+
+        except Exception as e:
+            print(f"Error in update_objectives: {e}")
+
+    def update_selected(self, _: int) -> None:
+        """
+        Update the internal selected dictionary based on checkbox states.
+        Parameters
+        ----------
+        _ : int
+            A dummy parameter typically representing the checkbox state change.
+        """
+        try:
+            for i in range(self.rowCount()):
+                try:
+                    checkbox = self.cellWidget(i, 0)
+                    name_item = self.item(i, 1)
+
+                    if checkbox is not None and name_item is not None:
+                        name = name_item.text()
+                        self.selected[name] = checkbox.isChecked()
+                except (RuntimeError, AttributeError) as e:
+                    print(f"Error accessing row {i}: {e}")
+                    continue
+
+            if self.checked_only:
+                self.show_checked_only()
+
+        except Exception as e:
+            print(f"Error in update_selected: {e}")
+
+    def update_rules(self) -> None:
+        """
+        Update the internal rules dictionary based on the current selections.
+        """
+        try:
+            for i in range(self.rowCount()):
+                try:
+                    name_item = self.item(i, 1)
+                    if name_item is None:
+                        continue
+
+                    name = name_item.text()
+                    rule_widget = self.cellWidget(i, 2)
+
+                    if rule_widget is not None:
+                        self.rules[name] = rule_widget.currentText()
+                except (RuntimeError, AttributeError) as e:
+                    print(f"Error accessing rule at row {i}: {e}")
+                    continue
+
+        except Exception as e:
+            print(f"Error in update_rules: {e}")
 
     def is_all_checked(self) -> bool:
         """
@@ -197,22 +417,6 @@ class ObjectiveTable(QTableWidget):
                 widget.blockSignals(False)
         self.update_selected(0)
 
-    def update_rules(self) -> None:
-        """
-        Update the internal rules dictionary based on the current selections.
-
-        Iterates through all rows and updates each objective's rule based on the value
-        of the combo box in the third column.
-        """
-        for i in range(self.rowCount()):
-            name_item = self.item(i, 1)
-            if name_item is None:
-                continue
-            name = name_item.text()
-            rule_widget = self.cellWidget(i, 2)
-            if rule_widget is not None:
-                self.rules[name] = rule_widget.currentText()
-
     def set_rules(self, objectives: Dict[str, str]) -> None:
         """
         Set the rules for objectives.
@@ -225,25 +429,6 @@ class ObjectiveTable(QTableWidget):
         for name in objectives:
             self.rules[name] = objectives[name]
         self.update_objectives(self.objectives, filtered=2)
-
-    def update_selected(self, _: int) -> None:
-        """
-        Update the internal selected dictionary based on checkbox states.
-
-        Parameters
-        ----------
-        _ : int
-            A dummy parameter typically representing the checkbox state change.
-        """
-        for i in range(self.rowCount()):
-            checkbox = self.cellWidget(i, 0)
-            name_item = self.item(i, 1)
-            if checkbox is not None and name_item is not None:
-                name = name_item.text()
-                self.selected[name] = checkbox.isChecked()
-
-        if self.checked_only:
-            self.show_checked_only()
 
     def set_selected(self, objective_names: List[str]) -> None:
         """
@@ -311,95 +496,6 @@ class ObjectiveTable(QTableWidget):
         except KeyError:
             return False
 
-    def get_visible_objectives(self, objectives):
-        _objectives = []  # store objectives to be displayed
-        if self.checked_only:
-            for obj in objectives:
-                name = next(iter(obj))
-                if self.is_checked(name):
-                    _objectives.append(obj)
-        else:
-            _objectives = objectives
-
-        return _objectives
-
-    def update_objectives(
-        self, objectives: Optional[List[Dict[str, str]]], filtered: int = 0
-    ) -> None:
-        """
-        Update the table with the given objectives.
-
-        The update behavior depends on the value of the filtered parameter:
-          - filtered = 0: Fully refresh the table.
-          - filtered = 1: Update based on a keyword filter.
-          - filtered = 2: Re-render based on the current check status.
-
-        Parameters
-        ----------
-        objectives : Optional[List[Dict[str, str]]]
-            A list of objectives to display. Each objective is a dictionary with a single
-            key-value pair mapping the objective name to its rule.
-        filtered : int, optional
-            The filter mode (0, 1, or 2), by default 0.
-        """
-        self.setRowCount(0)
-
-        if filtered == 0:
-            self.all_objectives = objectives or []
-            self.objectives = self.all_objectives[:]  # make a copy
-            self.selected = {}
-            self.rules = {}
-            self.addtl_objs = []
-            for obj in self.objectives:
-                name = next(iter(obj))
-                self.rules[name] = obj[name]
-        elif filtered == 1:
-            self.objectives = objectives or []
-
-        if not objectives:
-            return
-
-        _objectives = self.get_visible_objectives(objectives)
-
-        n = len(_objectives) + 1
-        self.setRowCount(n)
-        self.previous_values = {}  # to track changes in table
-
-        for i, obj in enumerate(_objectives):
-            name = next(iter(obj))
-
-            # Create and set checkbox for objective selection.
-            checkbox = QCheckBox()
-            self.setCellWidget(i, 0, checkbox)
-            checkbox.setChecked(self.is_checked(name))
-            checkbox.stateChanged.connect(self.update_selected)
-
-            item = QTableWidgetItem(name)
-            if name in self.addtl_objs:
-                # Make new PVs a different color
-                item.setForeground(QColor("darkCyan"))
-            else:
-                # Make non-new PVs not editable
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-            self.setItem(i, 1, item)
-
-            # Create and set the rule combo box.
-            _rule = self.rules.get(name, "MINIMIZE")
-            cb_rule = QComboBox()
-            cb_rule.setItemDelegate(QStyledItemDelegate())
-            cb_rule.addItems(["MINIMIZE", "MAXIMIZE"])
-            cb_rule.setCurrentIndex(0 if _rule == "MINIMIZE" else 1)
-            cb_rule.currentIndexChanged.connect(self.update_rules)
-            self.setCellWidget(i, 2, cb_rule)
-
-        # Make extra editable row
-        item = QTableWidgetItem("Enter new objective here....")
-        item.setFlags(item.flags() | Qt.ItemIsEditable)
-        item.setForeground(QColor("gray"))
-        self.setItem(n - 1, 1, item)
-
-        self.setVerticalHeaderLabels([str(i) for i in range(n)])
-
     def add_additional_objective(self, item):
         row = idx = item.row()
         column = item.column()
@@ -417,7 +513,7 @@ class ObjectiveTable(QTableWidget):
             else:
                 # delete row and additional objective
                 self.removeRow(row)
-                self.addtl_objs.remove(prev_name)
+                del self.formulas[prev_name]
                 self.objectives = [
                     var for var in self.objectives if next(iter(var)) != prev_name
                 ]
@@ -464,8 +560,21 @@ class ObjectiveTable(QTableWidget):
             cb_rule.currentIndexChanged.connect(self.update_rules)
             self.setCellWidget(idx, 2, cb_rule)
 
+            if ENABLE_FORMULAS:
+                if name in self.formulas:
+                    formula_indicator = QTableWidgetItem(self.formulas[name]["formula"])
+                else:
+                    formula_indicator = QTableWidgetItem("")
+                formula_indicator.setFlags(
+                    formula_indicator.flags() & ~Qt.ItemIsEditable
+                )
+                self.setItem(idx, 3, formula_indicator)
+
             self.add_objective(name, _rule)
-            self.addtl_objs.append(name)
+            self.formulas[name] = {
+                "formula": "",
+                "variable_mapping": {},
+            }
 
             self.update_objectives(self.objectives, 2)
 
@@ -476,21 +585,42 @@ class ObjectiveTable(QTableWidget):
         self.objectives.append(obj)
         self.rules[name] = rule
 
-    def export_objectives(self) -> Dict[str, str]:
+    def export_objectives(self) -> Dict[str, Any]:
         """
         Export the selected objectives along with their rules.
 
         Returns
         -------
-        Dict[str, str]
-            A dictionary mapping the name of each selected objective to its rule.
+        Dict[str, Any]
+            Dictionary with selected objectives, their rules, and formula details if applicable.
         """
-        objectives_exported: Dict[str, str] = {}
+        exported = {"objectives": {}, "formulas": {}}
+
         for obj in self.all_objectives:
             name = next(iter(obj))
             if self.is_checked(name):
-                objectives_exported[name] = self.rules.get(name, "MINIMIZE")
-        return objectives_exported
+                exported["objectives"][name] = self.rules.get(name, "MINIMIZE")
+
+                if name in self.formulas:
+                    exported["formulas"][name] = self.formulas[name]
+
+        return exported
+
+    def get_formula(self, objective_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get formula details for a specific objective.
+
+        Parameters
+        ----------
+        objective_name : str
+            The name of the objective.
+
+        Returns
+        -------
+        Optional[Dict[str, Any]]
+            Formula details if the objective has an associated formula, None otherwise.
+        """
+        return self.formulas.get(objective_name)
 
     def flags(self, index):
         if not index.isValid():

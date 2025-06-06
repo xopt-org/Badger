@@ -36,6 +36,7 @@ class Routine(Xopt):
     vrange_hard_limit: Optional[dict] = Field({})  # override hard limits
     initial_point_actions: Optional[List] = Field(None)
     additional_variables: Optional[List[str]] = Field([])
+    formulas: Optional[dict[str, dict[str, Any]]] = Field({})
     # Other meta data
     badger_version: Optional[str] = Field(None)
     xopt_version: Optional[str] = Field(None)

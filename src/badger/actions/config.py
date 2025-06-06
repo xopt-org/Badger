@@ -86,9 +86,14 @@ def _config_path_var(var_name):
     if res == "R":
         config_singleton.write_value(var_name, None)
         print(f"You reset the Badger {display_name} folder setting")
+        return False  # fault value
     elif res != "S":
         config_singleton.write_value(var_name, res)
         print(f"You set the Badger {display_name} folder to {res}")
+        return True  # success value
+    else:
+        print(f"You skipped the Badger {display_name} folder setting")
+        return False
 
 
 def _config_core_var(var_name):

@@ -62,6 +62,7 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
         self.setColumnWidth(4, 44)
+        self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
 
         self.all_variables = []  # store all variables
         self.variables = []  # store variables to be displayed
@@ -227,7 +228,6 @@ class VariableTable(QTableWidget):
         # filtered = 3: same as 2 but do not emit the signal
 
         self.setRowCount(0)
-        self.horizontalHeader().setVisible(False)
 
         if not filtered:
             self.all_variables = variables or []
@@ -314,9 +314,6 @@ class VariableTable(QTableWidget):
 
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
-
-        header = self.horizontalHeader()
-        header.setVisible(True)
 
         if filtered not in [1, 3]:
             self.sig_sel_changed.emit()
