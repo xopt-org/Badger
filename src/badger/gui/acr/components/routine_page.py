@@ -384,7 +384,7 @@ class BadgerRoutinePage(QWidget):
         try:
             additional_variables = template_dict["additional_variables"]
         except KeyError:
-            additional_variables = {}
+            additional_variables = []  # init to empty list if not present
         if self.vars_env:
             for i in self.vars_env:
                 all_variables.update(i)
@@ -430,6 +430,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(True)
 
         # set constraints
+        self.env_box.con_table.clear_constraints()
         constraints = vocs.constraints
         if len(constraints):
             for name, val in constraints.items():
@@ -437,16 +438,13 @@ class BadgerRoutinePage(QWidget):
                 critical = name in critical_constraint_names
                 relation = ["GREATER_THAN", "LESS_THAN"].index(relation)
                 self.add_constraint(name, relation, thres, critical)
-        else:
-            self.env_box.con_table.clear_constraints()
 
         # set observables
+        self.env_box.list_obs.clear()
         observables = vocs.observable_names
         if len(observables):
             for name_sta in observables:
                 self.add_state(name_sta)
-        else:
-            self.env_box.list_obs.clear()
 
     def generate_template_dict_from_gui(self):
         """
