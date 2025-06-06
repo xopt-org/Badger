@@ -425,6 +425,17 @@ class BadgerRoutinePage(QWidget):
             self.update_init_table(force=True)
 
         # set objectives
+        try:
+            formulas = template_dict["formulas"]
+        except KeyError:
+            formulas = {}
+        for name, formula in formulas.items():
+            formula_tuple = (
+                name,
+                formula["formula"],
+                formula["variable_mapping"],
+            )
+            self.env_box.obj_table.add_formula_objective(formula_tuple)
         self.env_box.obj_table.set_selected(vocs.objectives)
         self.env_box.obj_table.set_rules(vocs.objectives)
         self.env_box.check_only_obj.setChecked(True)
@@ -476,6 +487,7 @@ class BadgerRoutinePage(QWidget):
             "vrange_limit_options": self.ratio_var_ranges,
             "vrange_hard_limit": self.var_hard_limit,
             "additional_variables": self.env_box.var_table.addtl_vars,
+            "formulas": self.env_box.obj_table.formulas,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
             "vocs": vars(vocs),
@@ -1534,6 +1546,7 @@ class BadgerRoutinePage(QWidget):
                 vrange_hard_limit=vrange_hard_limit,
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
+                formulas=self.env_box.obj_table.formulas,
             )
 
             # Check if any user warnings were caught
