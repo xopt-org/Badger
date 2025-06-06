@@ -124,11 +124,13 @@ class ArchiveSearchWidget(QWidget):
         self.env = environment
 
         self.resize(400, 800)
+        self.setWindowTitle("Variable Search")
         self.layout = QVBoxLayout()
 
-        self.search_label = QLabel("Pattern:")
+        self.search_label = QLabel("Pattern")
         self.search_box = QLineEdit()
         self.search_button = QPushButton("Search")
+        self.search_button.setFixedSize(96, 24)
         self.search_button.setDefault(True)
         self.search_button.clicked.connect(self.request_variable_search)
 
