@@ -18,9 +18,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
-from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.gui.default.components.collapsible_box import CollapsibleBox
-from badger.gui.default.components.var_table import VariableTable
+from badger.gui.acr.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
 from badger.gui.default.components.data_table import init_data_table
@@ -553,7 +552,3 @@ class BadgerEnvBox(QWidget):
         else:
             stylesheet = ""
         self.setStyleSheet(stylesheet)
-
-    def archiveSearchMenu(self):
-        self.archive_search = ArchiveSearchWidget()
-        self.archive_search.show()
