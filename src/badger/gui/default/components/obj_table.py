@@ -166,6 +166,12 @@ class ObjectiveTable(QTableWidget):
                     ]
                     if name not in existing_names:
                         self.add_plain_objective(name)
+                    else:
+                        QMessageBox.warning(
+                            self,
+                            "Objective already exists!",
+                            f"Objective {name} already exists!",
+                        )
 
             event.acceptProposedAction()
         else:
@@ -463,6 +469,9 @@ class ObjectiveTable(QTableWidget):
                 # delete row and additional objective
                 self.removeRow(row)
                 del self.formulas[prev_name]
+                self.all_objectives = [
+                    var for var in self.all_objectives if next(iter(var)) != prev_name
+                ]
                 self.objectives = [
                     var for var in self.objectives if next(iter(var)) != prev_name
                 ]
