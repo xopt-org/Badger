@@ -81,7 +81,7 @@ class Environment(BaseModel, ABC):
     # If return is not None, the states would be saved at the start of each run
     # Should return a dict if not None
     def get_system_states(self) -> Optional[Dict]:
-        return None
+        return {}
 
     # Shortcuts for getting/setting single variable
     def get_variable(self, variable_name):
