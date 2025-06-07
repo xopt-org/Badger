@@ -5,26 +5,10 @@ from typing import ClassVar, Dict, final, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 
 from badger.errors import (
-    BadgerEnvObsError,
     BadgerEnvVarError,
     BadgerNoInterfaceError,
 )
 from badger.interface import Interface
-
-
-def validate_observable_names(func):
-    def validate(cls, observable_names: List[str]):
-        observable_names_invalid = [
-            name for name in observable_names if name not in cls.observables
-        ]
-        if len(observable_names_invalid):
-            raise BadgerEnvObsError(
-                f"Observables {observable_names_invalid} " + "not found in environment"
-            )
-
-        return func(cls, observable_names)
-
-    return validate
 
 
 def validate_setpoints(func):
@@ -148,7 +132,6 @@ class Environment(BaseModel, ABC):
 
     # Optimizer will only call this method to get observable values
     @final
-    @validate_observable_names
     def _get_observables(self, observable_names: List[str]) -> Dict:
         return self.get_observables(observable_names)
 

@@ -142,7 +142,7 @@ def test_set_variables():
 
 def test_get_observables():
     from badger.factory import get_env, get_intf
-    from badger.errors import BadgerEnvObsError, BadgerNoInterfaceError
+    from badger.errors import BadgerNoInterfaceError
 
     Interface, _ = get_intf("test")
     intf = Interface()
@@ -164,11 +164,3 @@ def test_get_observables():
     env._set_variables(variable_inputs)
     variable_outputs = env._get_observables(["f"])
     assert variable_outputs == {"f": 6.5}
-
-    # Test getting observables not defined in env
-    with pytest.raises(Exception) as e:
-        variable_outputs = env._get_observables(["g"])
-
-    assert e.type == BadgerEnvObsError
-    assert "g" in str(e.value)
-    assert "not found in environment" in str(e.value)

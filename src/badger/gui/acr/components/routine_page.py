@@ -425,6 +425,25 @@ class BadgerRoutinePage(QWidget):
             self.update_init_table(force=True)
 
         # set objectives
+        try:
+            formulas = template_dict["formulas"]
+        except KeyError:
+            formulas = {}
+
+        # Initialize the objective table with env observables
+        objectives = []
+        for name in self.configs["observations"]:
+            obj = {name: "MINIMIZE"}
+            objectives.append(obj)
+        self.env_box.obj_table.update_objectives(objectives)
+
+        for name, formula in formulas.items():
+            formula_tuple = (
+                name,
+                formula["formula"],
+                formula["variable_mapping"],
+            )
+            self.env_box.obj_table.add_formula_objective(formula_tuple)
         self.env_box.obj_table.set_selected(vocs.objectives)
         self.env_box.obj_table.set_rules(vocs.objectives)
         self.env_box.check_only_obj.setChecked(True)
@@ -476,6 +495,7 @@ class BadgerRoutinePage(QWidget):
             "vrange_limit_options": self.ratio_var_ranges,
             "vrange_hard_limit": self.var_hard_limit,
             "additional_variables": self.env_box.var_table.addtl_vars,
+            "formulas": self.env_box.obj_table.formulas,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
             "vocs": vars(vocs),
@@ -647,7 +667,7 @@ class BadgerRoutinePage(QWidget):
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
 
-        self.env_box.var_table.update_variables(variables=all_variables, filtered=2)
+        self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.addtl_vars = routine.additional_variables
 
@@ -1534,6 +1554,7 @@ class BadgerRoutinePage(QWidget):
                 vrange_hard_limit=vrange_hard_limit,
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
+                formulas=self.env_box.obj_table.formulas,
             )
 
             # Check if any user warnings were caught

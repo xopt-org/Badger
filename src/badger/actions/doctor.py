@@ -38,34 +38,38 @@ def check_n_config_paths(config_filepath=None):
         config = init_settings()
 
     good = True
+    all_bad = True  # if all config paths are empty, we'll suggest initialization
     issue_list = []
 
-    for pname in config._config.dict(by_alias=True):
+    for pname in config._config.model_dump(by_alias=True):
         if config.read_value(pname) is None:
             good = False
             issue_list.append(pname)
+        else:
+            all_bad = False
 
     if not good:
-        # Initial setup
-        init = True
-        while True:
-            _res = input(
-                "If this is your first time launching Badger, you should initialize it now.\n"
-                "Proceed ([y]/n)? "
-            )
-            if (not _res) or (_res == "y"):
-                init = True
-                break
-            elif _res == "n":
-                init = False
-                break
-            else:
-                print(f"Invalid choice: {_res}")
+        if all_bad:
+            # Initial setup
+            init = True
+            while True:
+                _res = input(
+                    "It looks like this is your first time launching Badger. Would you like to initialize it now?\n"
+                    "Proceed ([y]/n): "
+                )
+                if (not _res) or (_res == "y"):
+                    init = True
+                    break
+                elif _res == "n":
+                    init = False
+                    break
+                else:
+                    print(f"Invalid choice: {_res}")
 
-        if init:  # fill in the mock up settings so user can go immediately
-            mock_settings()
+            if init:  # fill in the mock up settings so user can go immediately
+                mock_settings()
 
-            return True
+                return True
 
         # Let the users deal with the issues
         while True:
@@ -80,12 +84,17 @@ def check_n_config_paths(config_filepath=None):
             else:
                 print(f"Invalid choice: {_res}")
 
+        fixed = True
         for pname in issue_list:
             try:
                 print("")
-                _config_path_var(pname)
+                success = _config_path_var(pname)
+                if not success:
+                    fixed = False
                 # TODO potential keyError here
             except KeyboardInterrupt:
                 pass
+
+        return fixed
 
     return good
