@@ -394,6 +394,7 @@ class ObjectiveTable(QTableWidget):
             self.objectives = self.all_objectives[:]  # make a copy
             self.selected = {}
             self.rules = {}
+            self.formulas = {}  # reset formulas, or formulas could be carried over
             for obj in self.objectives:
                 name = next(iter(obj))
                 self.rules[name] = obj[name]
