@@ -142,7 +142,7 @@ def test_set_variables():
 
 def test_get_observables():
     from badger.factory import get_env, get_intf
-    from badger.errors import BadgerEnvObsError, BadgerNoInterfaceError
+    from badger.errors import BadgerNoInterfaceError
 
     Interface, _ = get_intf("test")
     intf = Interface()
