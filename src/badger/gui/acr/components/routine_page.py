@@ -429,6 +429,14 @@ class BadgerRoutinePage(QWidget):
             formulas = template_dict["formulas"]
         except KeyError:
             formulas = {}
+
+        # Initialize the objective table with env observables
+        objectives = []
+        for name in self.configs["observations"]:
+            obj = {name: "MINIMIZE"}
+            objectives.append(obj)
+        self.env_box.obj_table.update_objectives(objectives)
+
         for name, formula in formulas.items():
             formula_tuple = (
                 name,
