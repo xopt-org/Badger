@@ -78,7 +78,7 @@ class ObjectiveTable(QTableWidget):
         self.selected: Dict[str, bool] = {}  # Track objective selected status.
         self.rules: Dict[str, str] = {}  # Track objective rules.
         self.checked_only: bool = False
-        self.addtl_objs = []
+        self.formulas: Dict[str, Dict[str, Any]] = {}  # Track formula objectives.
         self.previous_values = {}  # to track changes in table
 
         self.config_logic()
@@ -135,30 +135,75 @@ class ObjectiveTable(QTableWidget):
         and contains text, the text is parsed to create new objectives.
         Each dropped line is interpreted as an objective name, with an optional
         tab-delimited rule (defaulting to "MINIMIZE" if not provided).
+        Comma-separated values within each line are treated as separate objectives.
 
         Parameters
         ----------
         event : QDropEvent
             The drop event.
         """
-        if event.source() == self:
-            # Internal move: allow default behavior for reordering rows.
-            super().dropEvent(event)
-        elif event.mimeData().hasText():
+        if event.mimeData().hasText():
             text: str = event.mimeData().text()
             lines = text.splitlines()
             for line in lines:
-                parts = line.split("\t")
-                name = parts[0].strip()
-                # If a rule is provided, use it; otherwise, default to "MINIMIZE".
-                rule = parts[1].strip() if len(parts) > 1 else "MINIMIZE"
-                # Append the new objective.
-                self.all_objectives.append({name: rule})
-            self.objectives = self.all_objectives
-            self.update_objectives(self.objectives, filtered=0)
+                line = line.strip()
+                if not line:
+                    continue
+
+                comma_items = [item.strip() for item in line.split(",")]
+
+                for item in comma_items:
+                    if not item:
+                        continue
+
+                    parts = item.split("\t")
+                    name = parts[0].strip()
+                    if not name:
+                        continue
+
+                    existing_names = [
+                        list(obj.keys())[0] for obj in self.all_objectives
+                    ]
+                    if name not in existing_names:
+                        self.add_plain_objective(name)
+
             event.acceptProposedAction()
         else:
             event.ignore()
+
+    def add_formula_objective(self, formula_tuple: tuple) -> None:
+        """
+        Add a formula-based objective to the table.
+        Parameters
+        ----------
+        formula_tuple : tuple
+            A tuple containing (name, formula_string, formula_dict)
+        """
+        try:
+            name, formula_string, formula_dict = formula_tuple
+            rule = "MINIMIZE"
+            new_objective = {name: rule}
+
+            existing_names = [next(iter(obj)) for obj in self.all_objectives]
+            if name not in existing_names:
+                self.all_objectives.append(new_objective)
+                self.objectives.append(new_objective)
+                self.selected[name] = True
+                self.rules[name] = rule
+
+            self.formulas[name] = {
+                "formula": formula_string,
+                "variable_mapping": formula_dict,
+            }
+
+            self.update_objectives(self.objectives, 2)
+
+        except (ValueError, TypeError, IndexError) as e:
+            print(f"Error adding formula objective: {e}")
+            return
+
+    def add_plain_objective(self, name):
+        self.add_formula_objective((name, "", {}))
 
     def is_all_checked(self) -> bool:
         """
@@ -349,7 +394,6 @@ class ObjectiveTable(QTableWidget):
             self.objectives = self.all_objectives[:]  # make a copy
             self.selected = {}
             self.rules = {}
-            self.addtl_objs = []
             for obj in self.objectives:
                 name = next(iter(obj))
                 self.rules[name] = obj[name]
@@ -375,7 +419,7 @@ class ObjectiveTable(QTableWidget):
             checkbox.stateChanged.connect(self.update_selected)
 
             item = QTableWidgetItem(name)
-            if name in self.addtl_objs:
+            if name in self.formulas:
                 # Make new PVs a different color
                 item.setForeground(QColor("darkCyan"))
             else:
@@ -417,7 +461,7 @@ class ObjectiveTable(QTableWidget):
             else:
                 # delete row and additional objective
                 self.removeRow(row)
-                self.addtl_objs.remove(prev_name)
+                del self.formulas[prev_name]
                 self.objectives = [
                     var for var in self.objectives if next(iter(var)) != prev_name
                 ]
@@ -465,7 +509,10 @@ class ObjectiveTable(QTableWidget):
             self.setCellWidget(idx, 2, cb_rule)
 
             self.add_objective(name, _rule)
-            self.addtl_objs.append(name)
+            self.formulas[name] = {
+                "formula": "",
+                "variable_mapping": {},
+            }
 
             self.update_objectives(self.objectives, 2)
 
