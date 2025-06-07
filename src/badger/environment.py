@@ -71,7 +71,7 @@ class Environment(BaseModel, ABC):
             return self.interface.reset_interface()
 
     def get_bounds(self, variable_names: List[str]) -> Dict[str, List[float]]:
-        return {}
+        raise NotImplementedError
 
     # Actions to preform after changing vars and before reading vars/obj
     def variables_changed(self, variables_input: Dict[str, float]):
