@@ -5,7 +5,6 @@ from typing import ClassVar, Dict, final, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 
 from badger.errors import (
-    BadgerEnvObsError,
     BadgerEnvVarError,
     BadgerNoInterfaceError,
 )
