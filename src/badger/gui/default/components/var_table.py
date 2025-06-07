@@ -322,7 +322,7 @@ class VariableTable(QTableWidget):
         self.sig_var_config.emit(var_name)
 
     def add_additional_variable(self, item):
-        row = idx = item.row()
+        row = item.row()
         column = item.column()
         name = item.text()
 
