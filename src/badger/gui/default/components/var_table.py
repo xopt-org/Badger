@@ -353,75 +353,78 @@ class VariableTable(QTableWidget):
             and column == 1
             and name != "Enter new variable here...."
         ):
-            # Check that variables doesn't already exist in table
-            if name in [list(d.keys())[0] for d in self.variables]:
+            self.try_insert_variable(name)
+
+    def try_insert_variable(self, name):
+        idx = self.rowCount() - 1
+
+        # Check that variables doesn't already exist in table
+        if name in [next(iter(d)) for d in self.variables]:
+            self.update_variables(self.variables, 2)
+            QMessageBox.warning(
+                self, "Variable already exists!", f"Variable {name} already exists!"
+            )
+            return
+
+        # Get bounds from interface, if PV exists on interface
+        _bounds = None
+        if self.env_class is not None:
+            try:
+                _, _bounds = self.get_bounds(name)
+                vrange = _bounds
+            except BadgerInterfaceChannelError:
+                # Raised when PV does not exist after attempting to call value
+                # Revert table to previous state
                 self.update_variables(self.variables, 2)
-                QMessageBox.warning(
-                    self, "Variable already exists!", f"Variable {name} already exists!"
+                QMessageBox.critical(
+                    self,
+                    "Variable Not Found!",
+                    f"Variable {name} cannot be found through the interface!",
                 )
                 return
+            except Exception as e:
+                # Raised when PV exists but value/hard limits cannot be found
+                # Set to some default values
+                _bounds = vrange = [0, 0]
+                detailed_text = (
+                    "Encountered issues when tried to fetch bounds for"
+                    f" variable {name}. Please manually set the bounds."
+                )
+                dialog = ExpandableMessageBox(text=str(e), detailedText=detailed_text)
+                dialog.setIcon(QMessageBox.Critical)
+                dialog.exec_()
+        else:
+            # TODO: handle this case? Right now I don't think it should happen
+            raise Exception("Environment cannot be found for new variable bounds!")
 
-            # Get bounds from interface, if PV exists on interface
-            _bounds = None
-            if self.env_class is not None:
-                try:
-                    _, _bounds = self.get_bounds(name)
-                    vrange = _bounds
-                except BadgerInterfaceChannelError:
-                    # Raised when PV does not exist after attempting to call value
-                    # Revert table to previous state
-                    self.update_variables(self.variables, 2)
-                    QMessageBox.critical(
-                        self,
-                        "Variable Not Found!",
-                        f"Variable {name} cannot be found through the interface!",
-                    )
-                    return
-                except Exception as e:
-                    # Raised when PV exists but value/hard limits cannot be found
-                    # Set to some default values
-                    _bounds = vrange = [0, 0]
-                    detailed_text = (
-                        "Encountered issues when tried to fetch bounds for"
-                        f" variable {name}. Please manually set the bounds."
-                    )
-                    dialog = ExpandableMessageBox(
-                        text=str(e), detailedText=detailed_text
-                    )
-                    dialog.setIcon(QMessageBox.Critical)
-                    dialog.exec_()
-            else:
-                # TODO: handle this case? Right now I don't think it should happen
-                raise Exception("Environment cannot be found for new variable bounds!")
+        # Add checkbox only when a PV is entered
+        self.setCellWidget(idx, 0, QCheckBox())
 
-            # Add checkbox only when a PV is entered
-            self.setCellWidget(idx, 0, QCheckBox())
+        _cb = self.cellWidget(idx, 0)
 
-            _cb = self.cellWidget(idx, 0)
+        # Checked by default when entered
+        _cb.setChecked(True)
+        self.selected[name] = True
 
-            # Checked by default when entered
-            _cb.setChecked(True)
-            self.selected[name] = True
+        _cb.stateChanged.connect(self.update_selected)
 
-            _cb.stateChanged.connect(self.update_selected)
+        sb_lower = RobustSpinBox(
+            default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+        )
+        sb_lower.valueChanged.connect(self.update_bounds)
+        sb_upper = RobustSpinBox(
+            default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+        )
+        sb_upper.valueChanged.connect(self.update_bounds)
+        self.setCellWidget(idx, 2, sb_lower)
+        self.setCellWidget(idx, 3, sb_upper)
 
-            sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
-            )
-            sb_lower.valueChanged.connect(self.update_bounds)
-            sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
-            )
-            sb_upper.valueChanged.connect(self.update_bounds)
-            self.setCellWidget(idx, 2, sb_lower)
-            self.setCellWidget(idx, 3, sb_upper)
+        self.add_variable(name, vrange[0], vrange[1])
+        self.addtl_vars.append(name)
 
-            self.add_variable(name, vrange[0], vrange[1])
-            self.addtl_vars.append(name)
+        self.update_variables(self.variables, 2)
 
-            self.update_variables(self.variables, 2)
-
-            self.sig_pv_added.emit()  # notify the routine page that a new PV has been added
+        self.sig_pv_added.emit()  # notify the routine page that a new PV has been added
 
     def get_bounds(self, name):
         # TODO: move elsewhere?
@@ -472,24 +475,14 @@ class VariableTable(QTableWidget):
             text = event.mimeData().text()
             strings = text.strip().split("\n")
 
-            position = event.pos()
-            drop_row = self.rowAt(position.y())
-            if drop_row == -1:
-                drop_row = self.rowCount()
-
-            for i, string in enumerate(strings):
+            for string in strings:
                 string = string.strip()
                 if not string:
                     continue
 
-                row = drop_row + i
-                if row >= self.rowCount():
-                    self.insertRow(row)
-
-                item = QTableWidgetItem(string)
-                self.setItem(row, 1, item)
-
-                self.add_additional_variable(item)
+                variable_names = [item.strip() for item in string.split(",")]
+                for name in variable_names:
+                    self.try_insert_variable(name)
 
             event.acceptProposedAction()
         else:

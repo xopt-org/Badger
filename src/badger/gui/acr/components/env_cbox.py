@@ -19,7 +19,7 @@ from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
 from badger.gui.default.components.collapsible_box import CollapsibleBox
-from badger.gui.acr.components.var_table import VariableTable
+from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
 from badger.gui.default.components.data_table import init_data_table
