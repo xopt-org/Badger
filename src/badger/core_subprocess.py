@@ -2,18 +2,17 @@ from copy import deepcopy
 import logging
 import time
 import traceback
-import torch  # noqa: F401. For converting dtype str to torch object.
 from pandas import DataFrame
 import multiprocessing as mp
 
 from badger.archive import load_run
-from badger.errors import BadgerRunTerminated
+from badger.errors import BadgerRunTerminated, BadgerEnvObsError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
 from badger.archive import archive_run
 
-from xopt.errors import FeasibilityError
+from xopt.errors import FeasibilityError, XoptError
 
 logger = logging.getLogger(__name__)
 
@@ -222,9 +221,16 @@ def run_routine_subprocess(
             if archive:
                 if not testing:
                     archive_run(routine)
+
     except BadgerRunTerminated:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
+    except XoptError as e:
+        opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
+        error_title = "BadgerEnvObsError: There was an error getting observables from the environment. See the traceback for more details."
+        queue.put((error_title, traceback.format_exc()))
+        evaluate_queue[0].close()
+        raise BadgerEnvObsError(e)
     except Exception as e:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         error_title = f"{type(e).__name__}: {e}"
