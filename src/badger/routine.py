@@ -82,9 +82,6 @@ class Routine(Xopt):
                     data["data"].index = data["data"].index.astype(int)
                     data["data"].sort_index(inplace=True)
 
-                    # replace None with np.nan
-                    data["data"].replace({"None": np.nan}, inplace=True)
-
                     # Add data one row at a time to avoid generator issues
                     if isinstance(data["generator"], SequentialGenerator):
                         data["generator"].set_data(data["data"])
