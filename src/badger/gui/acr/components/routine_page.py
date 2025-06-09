@@ -49,6 +49,7 @@ from badger.errors import (
     BadgerRoutineError,
     BadgerEnvVarError,
     BadgerEnvInstantiationError,
+    VariableRangeError,
 )
 from badger.factory import list_generators, list_env, get_env
 from badger.routine import Routine
@@ -989,9 +990,16 @@ class BadgerRoutinePage(QWidget):
         fraction = add_rand_config["fraction"]
         random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
         with warnings.catch_warnings(record=True) as caught_warnings:
-            random_points = vocs.random_inputs(
-                n_point, custom_bounds=random_sample_region
-            )
+            try:
+                random_points = vocs.random_inputs(
+                    n_point, custom_bounds=random_sample_region
+                )
+            except ValueError:
+                raise VariableRangeError(
+                    "Current value is not within variable range!\n"
+                    "This is likely due to the hard variable bounds being overridden, "
+                    "please examine the individual variable settings."
+                )
 
             for warning in caught_warnings:
                 # Ignore runtime warnings (usually caused by clip by bounds)
