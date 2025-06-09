@@ -66,14 +66,26 @@ class TableWithCopy(QTableWidget):
         self.setEditTriggers(QTableWidget.DoubleClicked)
 
 
-def update_table(table, data=None):
+def format_value(v):
+    try:
+        f = f"{v:.4g}"
+    except (ValueError, TypeError):
+        f = str(v)
+    return f
+
+
+def update_table(table, data=None, vocs=None):
     table.setRowCount(0)
     table.horizontalHeader().setVisible(False)
 
     if data is None:
         return table
 
-    _data = data.drop(columns=["timestamp", "xopt_error", "xopt_runtime"])
+    if vocs is None:
+        raise ValueError("vocs must be provided to update the table")
+
+    columns = vocs.output_names + vocs.variable_names
+    _data = data[columns]
 
     m, n = _data.shape
     table.setRowCount(m)
@@ -81,7 +93,10 @@ def update_table(table, data=None):
     for i in range(m):
         for j in range(n):
             v = _data.iloc[i, j]
-            table.setItem(i, j, QTableWidgetItem(f"{v:.4g}"))
+            if isinstance(v, str):
+                table.setItem(i, j, QTableWidgetItem(v))
+            else:
+                table.setItem(i, j, QTableWidgetItem(format_value(v)))
     table.setHorizontalHeaderLabels(list(_data.columns))
     table.setVerticalHeaderLabels(
         list(map(str, _data.index))
@@ -107,7 +122,7 @@ def add_row(table, row):
     r = table.rowCount()
     table.insertRow(r)
     for i, v in enumerate(row):
-        table.setItem(r, i, QTableWidgetItem(f"{v:.4g}"))
+        table.setItem(r, i, QTableWidgetItem(format_value(v)))
     table.setVerticalHeaderItem(r, QTableWidgetItem(str(r)))
 
     return table
@@ -203,4 +218,6 @@ def set_init_data_table(table, data: DataFrame):
     # Fill the table
     for col, name in enumerate(variable_names):
         for row in range(len(data_dict[name])):
-            table.setItem(row, col, QTableWidgetItem(f"{data_dict[name][row]:.4g}"))
+            table.setItem(
+                row, col, QTableWidgetItem(format_value(data_dict[name][row]))
+            )

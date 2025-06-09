@@ -95,7 +95,7 @@ class TestCore:
         assert len(self.candidates_list) == self.count - 1
         assert len(self.points_eval_list) == self.count
 
-        assert self.states is None
+        assert self.states == {}
 
         path = "./test.yaml"
         assert os.path.exists(path) is True

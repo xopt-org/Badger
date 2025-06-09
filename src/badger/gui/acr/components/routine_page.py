@@ -45,7 +45,12 @@ from badger.gui.default.utils import filter_generator_config
 from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
-from badger.errors import BadgerRoutineError, BadgerEnvVarError
+from badger.errors import (
+    BadgerRoutineError,
+    BadgerEnvVarError,
+    BadgerEnvInstantiationError,
+    VariableRangeError,
+)
 from badger.factory import list_generators, list_env, get_env
 from badger.routine import Routine
 from badger.settings import init_settings
@@ -693,11 +698,29 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             set_init_data_table(self.env_box.init_table, None)
 
-        objectives = routine.vocs.objective_names
-        self.env_box.check_only_obj.setChecked(True)
-        self.env_box.edit_obj.clear()
-        self.env_box.obj_table.set_selected(objectives)
+        # set objectives
+        try:
+            formulas = routine.formulas
+        except AttributeError:
+            formulas = {}
+
+        # Initialize the objective table with env observables
+        objectives = []
+        for name in self.configs["observations"]:
+            obj = {name: "MINIMIZE"}
+            objectives.append(obj)
+        self.env_box.obj_table.update_objectives(objectives)
+
+        for name, formula in formulas.items():
+            formula_tuple = (
+                name,
+                formula["formula"],
+                formula["variable_mapping"],
+            )
+            self.env_box.obj_table.add_formula_objective(formula_tuple)
+        self.env_box.obj_table.set_selected(routine.vocs.objectives)
         self.env_box.obj_table.set_rules(routine.vocs.objectives)
+        self.env_box.check_only_obj.setChecked(True)
 
         constraints = routine.vocs.constraints
         if len(constraints):
@@ -783,7 +806,10 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             intf_name = None
         configs = {"params": env_params, "interface": [intf_name]}
-        env = instantiate_env(self.env, configs)
+        try:
+            env = instantiate_env(self.env, configs)
+        except Exception as e:
+            raise BadgerEnvInstantiationError(f"Failed to instantiate environment: {e}")
 
         return env
 
@@ -964,9 +990,16 @@ class BadgerRoutinePage(QWidget):
         fraction = add_rand_config["fraction"]
         random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
         with warnings.catch_warnings(record=True) as caught_warnings:
-            random_points = vocs.random_inputs(
-                n_point, custom_bounds=random_sample_region
-            )
+            try:
+                random_points = vocs.random_inputs(
+                    n_point, custom_bounds=random_sample_region
+                )
+            except ValueError:
+                raise VariableRangeError(
+                    "Current value is not within variable range!\n"
+                    "This is likely due to the hard variable bounds being overridden, "
+                    "please examine the individual variable settings."
+                )
 
             for warning in caught_warnings:
                 # Ignore runtime warnings (usually caused by clip by bounds)
