@@ -693,11 +693,29 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             set_init_data_table(self.env_box.init_table, None)
 
-        objectives = routine.vocs.objective_names
-        self.env_box.check_only_obj.setChecked(True)
-        self.env_box.edit_obj.clear()
-        self.env_box.obj_table.set_selected(objectives)
+        # set objectives
+        try:
+            formulas = routine.formulas
+        except AttributeError:
+            formulas = {}
+
+        # Initialize the objective table with env observables
+        objectives = []
+        for name in self.configs["observations"]:
+            obj = {name: "MINIMIZE"}
+            objectives.append(obj)
+        self.env_box.obj_table.update_objectives(objectives)
+
+        for name, formula in formulas.items():
+            formula_tuple = (
+                name,
+                formula["formula"],
+                formula["variable_mapping"],
+            )
+            self.env_box.obj_table.add_formula_objective(formula_tuple)
+        self.env_box.obj_table.set_selected(routine.vocs.objectives)
         self.env_box.obj_table.set_rules(routine.vocs.objectives)
+        self.env_box.check_only_obj.setChecked(True)
 
         constraints = routine.vocs.constraints
         if len(constraints):
