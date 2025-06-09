@@ -45,7 +45,11 @@ from badger.gui.default.utils import filter_generator_config
 from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
-from badger.errors import BadgerRoutineError, BadgerEnvVarError
+from badger.errors import (
+    BadgerRoutineError,
+    BadgerEnvVarError,
+    BadgerEnvInstantiationError,
+)
 from badger.factory import list_generators, list_env, get_env
 from badger.routine import Routine
 from badger.settings import init_settings
@@ -801,7 +805,10 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             intf_name = None
         configs = {"params": env_params, "interface": [intf_name]}
-        env = instantiate_env(self.env, configs)
+        try:
+            env = instantiate_env(self.env, configs)
+        except Exception as e:
+            raise BadgerEnvInstantiationError(f"Failed to instantiate environment: {e}")
 
         return env
 
