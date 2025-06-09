@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal
+from pyqtgraph.Qt import QtGui, QtCore
+
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -399,7 +401,20 @@ class BadgerOptMonitor(QWidget):
         for i, name in enumerate(names):
             color = self.colors[i % len(self.colors)]
             # symbol = self.symbols[i % len(self.colors)]
-            _curve = plot_object.plot(pen=pg.mkPen(color, width=3), name=name)
+
+            # add a dot symbol to the plot to handle cases were there are many nans
+            dot_symbol = QtGui.QPainterPath()
+            size = 0.075  # size of the dot symbol
+            dot_symbol.addEllipse(QtCore.QRectF(-size / 2, -size / 2, size, size))
+
+            pen = pg.mkPen(color, width=3)
+            _curve = plot_object.plot(
+                pen=pen,
+                symbol=dot_symbol,
+                symbolPen=pen,
+                name=name,
+                symbolBrush=pen.color(),
+            )
             curves[name] = _curve
 
         return curves
