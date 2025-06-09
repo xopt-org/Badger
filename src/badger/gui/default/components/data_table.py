@@ -81,11 +81,11 @@ def update_table(table, data=None, vocs=None):
     if data is None:
         return table
 
-    if vocs:
-        columns = vocs.output_names + vocs.variable_names
-        _data = data[columns]
-    else:
-        _data = data.drop(columns=["timestamp", "xopt_error", "xopt_runtime"])
+    if vocs is None:
+        raise ValueError("vocs must be provided to update the table")
+
+    columns = vocs.output_names + vocs.variable_names
+    _data = data[columns]
 
     m, n = _data.shape
     table.setRowCount(m)
