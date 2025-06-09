@@ -296,7 +296,7 @@ class BadgerHomePage(QWidget):
             return
 
         self.current_routine = routine  # update the current routine
-        update_table(self.run_table, routine.sorted_data)
+        update_table(self.run_table, routine.sorted_data, routine.vocs)
         self.run_monitor.init_plots(routine, run_filename)
         self.routine_editor.set_routine(routine, silent=True)
         self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")

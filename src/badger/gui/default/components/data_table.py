@@ -74,14 +74,18 @@ def format_value(v):
     return f
 
 
-def update_table(table, data=None):
+def update_table(table, data=None, vocs=None):
     table.setRowCount(0)
     table.horizontalHeader().setVisible(False)
 
     if data is None:
         return table
 
-    _data = data.drop(columns=["timestamp", "xopt_error", "xopt_runtime"])
+    if vocs:
+        columns = vocs.output_names + vocs.variable_names
+        _data = data[columns]
+    else:
+        _data = data.drop(columns=["timestamp", "xopt_error", "xopt_runtime"])
 
     m, n = _data.shape
     table.setRowCount(m)
