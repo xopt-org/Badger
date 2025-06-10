@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkbadger_home=self.webpackChunkbadger_home||[]).push([[8158],{8158:(e,a,h)=>{h.r(a),h.d(a,{DocSearchModal:()=>r.a1});var r=h(5600)}}]);
