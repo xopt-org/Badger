@@ -41,12 +41,13 @@ def check_n_config_paths(config_filepath=None):
     all_bad = True  # if all config paths are empty, we'll suggest initialization
     issue_list = []
 
-    for pname in config._config.model_dump(by_alias=True):
+    for pname, pvalue in config._config.model_dump(by_alias=True).items():
         if config.read_value(pname) is None:
             good = False
             issue_list.append(pname)
         else:
-            all_bad = False
+            if pvalue["is_path"]:
+                all_bad = False
 
     if not good:
         if all_bad:
