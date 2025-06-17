@@ -60,7 +60,7 @@ def test_list_observables():
     assert env.observables == ["f", "c"]
 
 
-def testget_variables():
+def test_get_variables():
     from badger.factory import get_env, get_intf
     from badger.errors import (
         BadgerNoInterfaceError,
