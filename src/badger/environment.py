@@ -50,17 +50,19 @@ def process_formulas(func):
                 observable_names_needed.append(name)
 
         # pass to the original method
-        observable_outputs = func(cls, observable_names_needed)
+        raw_data = func(cls, observable_names_needed)
 
         # for each observable name, if it is a formula,
         # evaluate the formula and add it to the output
+        observable_outputs = {}
         for name in observable_names:
             if any(ele in name for ele in ["'", '"', "`"]):
                 # If the name contains a formula, evaluate it
                 # and add it to the output
-                observable_outputs[name] = interpret_expression(
-                    name, observable_outputs
-                )
+                observable_outputs[name] = interpret_expression(name, raw_data)
+
+        # add raw data tracking
+        # observable_outputs.update({"raw_data": raw_data})
 
         return observable_outputs
 
