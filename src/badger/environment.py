@@ -32,6 +32,43 @@ def validate_setpoints(func):
     return validate
 
 
+def process_formulas(func):
+    """
+    Decorator function that wraps get_observables method
+    to process formulas if they exist in the observable names.
+    """
+
+    def process(cls, observable_names: List[str]) -> Dict[str, float]:
+        # get the list of observable names needed by themselves and any formulas
+        observable_names_needed = []
+        for name in observable_names:
+            if any(ele in name for ele in ["'", '"', "`"]):
+                # If the name contains a formula, extract the variables
+                # and add them to the list of observable names needed
+                observable_names_needed += list(extract_variable_keys(name))
+
+            else:
+                # If the name is a regular observable, just add it
+                observable_names_needed.append(name)
+
+        # pass to the original method
+        observable_outputs = func(cls, observable_names_needed)
+
+        # for each observable name, if it is a formula,
+        # evaluate the formula and add it to the output
+        for name in observable_names:
+            if any(ele in name for ele in ["'", '"', "`"]):
+                # If the name contains a formula, evaluate it
+                # and add it to the output
+                observable_outputs[name] = interpret_expression(
+                    name, observable_outputs
+                )
+
+        return observable_outputs
+
+    return process
+
+
 def validate_bounds(func):
     def validate(cls, variable_names: List[str]):
         bounds = func(cls, variable_names)
@@ -56,13 +93,16 @@ def validate_bounds(func):
     return validate
 
 
-
 class EnvMeta(ModelMetaclass):
     def __new__(mcs, name, bases, namespace):
         # Wrap get_bounds with validate_bounds if defined
         if "get_bounds" in namespace:
             namespace["get_bounds"] = validate_bounds(namespace["get_bounds"])
-
+        # Wrap get_observables with process_formulas if defined
+        if "get_observables" in namespace:
+            namespace["get_observables"] = process_formulas(
+                namespace["get_observables"]
+            )
         # Wrap set_variables with validate_setpoints if defined
         if "set_variables" in namespace:
             namespace["set_variables"] = validate_setpoints(namespace["set_variables"])
