@@ -13,12 +13,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt, QSize
 from PyQt5.QtGui import QColor, QIcon
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
-from badger.gui.default.windows.expandable_message_box import (
-    ExpandableMessageBox,
-)
 
 from badger.environment import instantiate_env
-from badger.errors import BadgerInterfaceChannelError
+from badger.errors import BadgerInterfaceChannelError, BadgerEnvVarError
 
 
 class VariableTable(QTableWidget):
@@ -383,16 +380,10 @@ class VariableTable(QTableWidget):
                 )
                 return
             except Exception as e:
-                # Raised when PV exists but value/hard limits cannot be found
-                # Set to some default values
-                _bounds = vrange = [0, 0]
-                detailed_text = (
-                    "Encountered issues when tried to fetch bounds for"
-                    f" variable {name}. Please manually set the bounds."
+                raise BadgerEnvVarError(
+                    f"Error getting bounds for variable {name}: {str(e)}"
                 )
-                dialog = ExpandableMessageBox(text=str(e), detailedText=detailed_text)
-                dialog.setIcon(QMessageBox.Critical)
-                dialog.exec_()
+                
         else:
             # TODO: handle this case? Right now I don't think it should happen
             raise Exception("Environment cannot be found for new variable bounds!")

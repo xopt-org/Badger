@@ -224,6 +224,52 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
             "The search method is not implemented in this environment."
         )
 
+    # convience methods
+    def get_variable(self, variable_name: str) -> float:
+        """
+        Get the value of a single variable from the environment.
+
+        Parameters
+        ----------
+        variable_name : str
+            The name of the variable to retrieve.
+
+        Returns
+        -------
+        float
+            The value of the specified variable.
+        """
+        return self.get_variables([variable_name])[variable_name]
+
+    def set_variable(self, variable_name: str, value: float):
+        """
+        Set the value of a single variable in the environment.
+
+        Parameters
+        ----------
+        variable_name : str
+            The name of the variable to set.
+        value : float
+            The value to set for the specified variable.
+        """
+        self.set_variables({variable_name: value})
+
+    def get_observable(self, observable_name: str) -> float:
+        """
+        Get the value of a single observable from the environment.
+
+        Parameters
+        ----------
+        observable_name : str
+            The name of the observable to retrieve.
+
+        Returns
+        -------
+        float
+            The value of the specified observable.
+        """
+        return self.get_observables([observable_name])[observable_name]
+
 
 class Environment(BaseEnvironment):
     # Interface
