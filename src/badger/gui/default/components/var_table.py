@@ -383,7 +383,7 @@ class VariableTable(QTableWidget):
                 raise BadgerEnvVarError(
                     f"Error getting bounds for variable {name}: {str(e)}"
                 )
-                
+
         else:
             # TODO: handle this case? Right now I don't think it should happen
             raise Exception("Environment cannot be found for new variable bounds!")
