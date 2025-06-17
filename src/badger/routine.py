@@ -109,8 +109,8 @@ class Routine(Xopt):
             def evaluate_point(point: dict):
                 # sanitize inputs
                 point = pd.Series(point).explode().to_dict()
-                env._set_variables(point)
-                obs = env._get_observables(data["vocs"].output_names)
+                env.set_variables(point)
+                obs = env.get_observables(data["vocs"].output_names)
 
                 ts = curr_ts()
                 obs["timestamp"] = ts.timestamp()
@@ -175,8 +175,8 @@ class Routine(Xopt):
 
 def calculate_variable_bounds(limit_options, vocs, env):
     vnames = vocs.variable_names
-    var_curr = env._get_variables(vnames)
-    var_range = env._get_bounds(vnames)
+    var_curr = env.get_variables(vnames)
+    var_range = env.get_bounds(vnames)
 
     variables_updated = {}
     for name in vnames:
@@ -213,11 +213,11 @@ def calculate_initial_points(init_actions, vocs, env):
 
     for action in init_actions:
         if action["type"] == "add_curr":
-            var_curr = env._get_variables(vnames)
+            var_curr = env.get_variables(vnames)
             for name in vnames:
                 init_points[name].append(var_curr[name])
         elif action["type"] == "add_rand":
-            var_curr = env._get_variables(vnames)
+            var_curr = env.get_variables(vnames)
             n_point = action["config"]["n_points"]
             fraction = action["config"]["fraction"]
             random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)

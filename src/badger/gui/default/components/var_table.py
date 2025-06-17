@@ -431,7 +431,7 @@ class VariableTable(QTableWidget):
         self.env = instantiate_env(self.env_class, self.configs)
 
         value = self.env.get_variable(name)
-        bound = self.env._get_bounds([name])[name]
+        bound = self.env.get_bounds([name])[name]
         return value, bound
 
     def add_variable(self, name, lb, ub):

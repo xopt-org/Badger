@@ -12,6 +12,9 @@ class Environment(environment.Environment):
     flag: int = 0
     delay: float = 0.0
 
+    def get_variables(self, variable_names):
+        return self.interface.get_values(variable_names)
+
     def set_variables(self, variable_inputs: dict[str, float]):
         if not self.interface:
             raise BadgerNoInterfaceError
