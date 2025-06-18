@@ -380,7 +380,7 @@ class VariableTable(QTableWidget):
                     f"Variable {name} cannot be found through the interface!",
                 )
                 return
-            except Exception as e:
+            except Exception:
                 # Raised when PV exists but value/hard limits cannot be found
                 # Set to some default values
                 _bounds = [0, 0]
@@ -389,7 +389,8 @@ class VariableTable(QTableWidget):
                     f" variable {name}. Please manually set the bounds."
                 )
                 dialog = ExpandableMessageBox(
-                    text=detailed_text, detailedText=traceback.format_exc()
+                    text=detailed_text,
+                    detailedText=traceback.format_exc(),
                 )
                 dialog.setIcon(QMessageBox.Critical)
                 dialog.exec_()

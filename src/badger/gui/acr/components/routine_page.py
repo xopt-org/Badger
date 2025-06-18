@@ -945,7 +945,15 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
-        var_curr = env.get_variables(vname_selected)
+
+        try:
+            # Get the current variables from the environment
+            var_curr = env.get_variables(vname_selected)
+        except Exception as e:
+            raise BadgerEnvVarError(
+                f"Failed to get current variable values : {e}\n"
+                "Please ensure the environment is properly configured."
+            )
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -1136,7 +1144,14 @@ class BadgerRoutinePage(QWidget):
             vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env.get_variables(vname_selected)
+        try:
+            # Get the current variables from the environment
+            var_curr = env.get_variables(vname_selected)
+        except Exception as e:
+            raise BadgerEnvVarError(
+                f"Failed to get current variable values : {e}\n"
+                "Please ensure the environment is properly configured."
+            )
 
         option_idx = self.limit_option["limit_option_idx"]
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
