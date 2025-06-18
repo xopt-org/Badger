@@ -38,28 +38,30 @@ def process_formulas(func):
 
     def process(cls, observable_names: List[str]) -> Dict[str, float]:
         # get the list of observable names needed by themselves and any formulas
-        observable_names_needed = []
+        formula_observables = []
+        basic_observables = []
         for name in observable_names:
             if any(ele in name for ele in ["'", '"', "`"]):
                 # If the name contains a formula, extract the variables
                 # and add them to the list of observable names needed
-                observable_names_needed += list(extract_variable_keys(name))
+                formula_observables += list(extract_variable_keys(name))
 
             else:
                 # If the name is a regular observable, just add it
-                observable_names_needed.append(name)
+                basic_observables.append(name)
 
         # pass to the original method
-        raw_data = func(cls, observable_names_needed)
+        all_observables_needed = set(basic_observables + formula_observables)
+        raw_data = func(cls, list(all_observables_needed))
 
         # for each observable name, if it is a formula,
         # evaluate the formula and add it to the output
         observable_outputs = {}
-        for name in observable_names:
-            if any(ele in name for ele in ["'", '"', "`"]):
-                # If the name contains a formula, evaluate it
-                # and add it to the output
-                observable_outputs[name] = interpret_expression(name, raw_data)
+        for name in basic_observables:
+            observable_outputs[name] = raw_data[name]
+
+        for name in formula_observables:
+            observable_outputs[name] = interpret_expression(name, raw_data)
 
         # add raw data tracking
         # observable_outputs.update({"raw_data": raw_data})
