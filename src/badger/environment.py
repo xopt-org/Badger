@@ -40,10 +40,12 @@ def process_formulas(func):
         # get the list of observable names needed by themselves and any formulas
         formula_observables = []
         basic_observables = []
+        formulas = []
         for name in observable_names:
-            if any(ele in name for ele in ["'", '"', "`"]):
+            if any(ele in name for ele in ["`"]):
                 # If the name contains a formula, extract the variables
                 # and add them to the list of observable names needed
+                formulas.append(name)
                 formula_observables += list(extract_variable_keys(name))
 
             else:
@@ -60,7 +62,7 @@ def process_formulas(func):
         for name in basic_observables:
             observable_outputs[name] = raw_data[name]
 
-        for name in formula_observables:
+        for name in formulas:
             observable_outputs[name] = interpret_expression(name, raw_data)
 
         # add raw data tracking
