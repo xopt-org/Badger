@@ -11,8 +11,8 @@
 
 <link rel="search" type="application/opensearchdescription+xml" title="Badger" href="/Badger/opensearch.xml">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.24/dist/katex.min.css" integrity="sha384-odtC+0UGzzFL/6PNoE8rX/SPcQDXBJ+uRepguP4QkPCm2LBxH3FA3y+fKSiJ+AmM" crossorigin="anonymous"><link rel="stylesheet" href="/Badger/assets/css/styles.67758685.css">
-<script src="/Badger/assets/js/runtime~main.c5f1ee39.js" defer="defer"></script>
-<script src="/Badger/assets/js/main.c12bb8f2.js" defer="defer"></script>
+<script src="/Badger/assets/js/runtime~main.93679fa0.js" defer="defer"></script>
+<script src="/Badger/assets/js/main.9954f323.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -45,7 +45,7 @@
 <p>Before you can run the optimization, you need to set up the environment, VOCS, and algorithm. For your first routine, let&#x27;s select the <code>expected_improvement</code> generator<sup><a href="#user-content-fn-generator" id="user-content-fnref-generator" data-footnote-ref="true" aria-describedby="footnote-label">1</a></sup> in the <strong>Algorithm</strong> section. In the <strong>Environment + VOCS</strong> section, select the <code>sphere_2d</code> environment that&#x27;s shipped with Badger.</p>
 <p>Now we can shape our optimization problem by configuring the VOCS. Click the blank cell on top of the checkboxes in the variable table to include all the variables. If automatic mode is enabled, the <strong>Initial Points</strong> table should populate after this action. If it&#x27;s not enabled, click the <em>Add Current</em> button in the <strong>Initial Points</strong> section to add the current values of the variables as the initial points where the optimization starts from. You of course can add more initial points as you wish but for now let&#x27;s keep it simple -- we only start the run from the current values. Finally check the <code>f</code> observable shown in the objectives table and change the rule (direction of the optimization) to <code>MAXIMIZE</code>, this means we&#x27;ll maximize <code>f</code> instead of minimize it (which is the default setting).</p>
 <p>Now go ahead and click the green <em>Run</em> button, feel free to pause/resume the run anytime by clicking the button to the left of the run button, and click the run button (should be turned red now) again to terminate the run.</p>
-<p><img decoding="async" loading="lazy" alt="Badger GUI after the first run" src="/Badger/assets/images/run_1-351e73d614172d11167924d5b6b79932.png" width="1852" height="1119" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Badger GUI after the first run" src="/Badger/assets/images/run_1-f0795397a6b225ed0d6aa930bf1ed8f4.png" width="1852" height="1119" class="img_ev3q"></p>
 <p>Congrats! You just run your very first routine in Badger!</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="customize-the-environment">Customize the environment<a href="#customize-the-environment" class="hash-link" aria-label="Direct link to Customize the environment" title="Direct link to Customize the environment">​</a></h2>
 <p>Now it&#x27;s time to do some more serious stuff -- such as performing optimization on your own optimization problem. In order to do that, we need to create our own custom environment (and optionally, the corresponding interface).</p>
