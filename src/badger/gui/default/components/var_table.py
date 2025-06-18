@@ -1,4 +1,5 @@
 from importlib import resources
+import traceback
 from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -387,7 +388,9 @@ class VariableTable(QTableWidget):
                     "Encountered issues when tried to fetch bounds for"
                     f" variable {name}. Please manually set the bounds."
                 )
-                dialog = ExpandableMessageBox(text=str(e), detailedText=detailed_text)
+                dialog = ExpandableMessageBox(
+                    text=detailed_text, detailedText=traceback.format_exc()
+                )
                 dialog.setIcon(QMessageBox.Critical)
                 dialog.exec_()
 
