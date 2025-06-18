@@ -16,7 +16,7 @@ from PyQt5.QtGui import QColor, QIcon
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
-from badger.errors import BadgerInterfaceChannelError, BadgerEnvVarError
+from badger.errors import BadgerInterfaceChannelError
 from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 
 
