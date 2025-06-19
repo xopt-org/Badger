@@ -3,6 +3,7 @@ import traceback
 from importlib import resources
 from typing import List
 
+from badger.gui.default.components.analysis_extensions import AnalysisExtension
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -91,7 +92,7 @@ class BadgerOptMonitor(QWidget):
         self.termination_condition = None
 
         self.extensions_palette = ExtensionsPalette(self)
-        self.active_extensions = []
+        self.active_extensions: list[AnalysisExtension] = []
 
         self.testing = False
         self.tc_dialog = None
@@ -475,7 +476,7 @@ class BadgerOptMonitor(QWidget):
     def open_extensions_palette(self):
         self.extensions_palette.show()
 
-    def extension_window_closed(self, child_window):
+    def extension_window_closed(self, child_window: AnalysisExtension):
         self.active_extensions.remove(child_window)
         self.extensions_palette.update_palette()
 

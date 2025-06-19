@@ -1,14 +1,11 @@
-from functools import wraps
 import time
-from typing import Callable, Optional, cast, ParamSpec, Iterable
-from types import TracebackType
+from typing import Optional
+
 from PyQt5.QtWidgets import (
     QWidget,
     QSizePolicy,
     QVBoxLayout,
     QHBoxLayout,
-    QMessageBox,
-    QLayout,
     QGridLayout,
     QPushButton,
     QComboBox,
@@ -39,6 +36,17 @@ from badger.gui.default.components.pf_viewer.types import (
     PFUILayouts,
 )
 
+from badger.gui.default.components.analysis_widget import AnalysisWidget
+
+from badger.gui.default.components.extension_utilities import (
+    BlockSignalsContext,
+    MatplotlibFigureContext,
+    signal_logger,
+    requires_update,
+    clear_tabs,
+    clear_layout,
+)
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,83 +65,15 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
     "plot_tab": 0,
 }
 
-Param = ParamSpec("Param")
 
-
-def signal_logger(text: str):
-    def decorator(fn: Callable[Param, None]) -> Callable[Param, None]:
-        @wraps(fn)
-        def wrapper(*args: Param.args, **kwargs: Param.kwargs):
-            logger.debug(f"{text}")
-            return fn(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-class BlockSignalsContext:
-    widgets: Iterable[QWidget | QLayout]
-
-    def __init__(self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]):
-        if isinstance(widgets, Iterable):
-            self.widgets = widgets
-        else:
-            self.widgets = [widgets]
-
-    def __enter__(self):
-        for widget in self.widgets:
-            if widget.signalsBlocked():
-                logger.warning(
-                    f"Signals already blocked for {widget} when entering context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
-                )
-            widget.blockSignals(True)
-
-    def __exit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
-    ):
-        for widget in self.widgets:
-            if not widget.signalsBlocked():
-                logger.warning(
-                    f"Signals not blocked for {widget} when exiting context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
-                )
-            widget.blockSignals(False)
-
-
-class MatplotlibFigureContext:
-    def __init__(self, fig_size: tuple[float, float] | None = None):
-        self.fig_size = fig_size
-        self.fig = Figure(figsize=self.fig_size)
-        self.ax = self.fig.add_subplot()
-
-    def __enter__(self):
-        return self.fig, self.ax
-
-    def __exit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
-    ):
-        plt.close(self.fig)
-
-
-class ParetoFrontWidget(QWidget):
-    routine: Routine
+class ParetoFrontWidget(AnalysisWidget):
     generator: MOBOGenerator
-    df_length: float = float("inf")
-    correct_generator: bool
-    last_updated: Optional[float] = None
-    routine_identifier: str = ""
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
+
     hypervolume_history: pd.DataFrame = pd.DataFrame()
     pf_1: Optional[Tensor] = None
     pf_2: Optional[Tensor] = None
     pf_mask: Optional[Tensor] = None
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
-    initialized: bool = False
     plot_size: tuple[float, float] = (8, 6)
 
     def __init__(self, parent: Optional[QWidget] = None):
@@ -150,10 +90,74 @@ class ParetoFrontWidget(QWidget):
 
         return True
 
-    def setup_connections(self, routine: Routine):
+    def requires_reinitialization(self):
+        # Check if the extension needs to be reinitialized
+        logger.debug("Checking if extension needs to be reinitialized")
+
+        archive_name = create_archive_run_filename(self.routine)
+
+        if not self.initialized:
+            logger.debug("Reset - Extension never initialized")
+            self.initialized = True
+            self.routine_identifier = archive_name
+            self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
+            self.setup_connections()
+            return True
+
+        if self.routine_identifier != archive_name:
+            logger.debug("Reset - Routine name has changed")
+            self.routine_identifier = archive_name
+            self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
+            self.pf_mask = None
+            return True
+
+        if self.routine.data is None:
+            logger.debug("Reset - No data available")
+            self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
+            self.pf_mask = None
+            return True
+
+        previous_len = self.df_length
+        self.df_length = len(self.routine.data)
+        new_length = self.df_length
+
+        if previous_len > new_length:
+            logger.debug("Reset - Data length is smaller")
+            self.hypervolume_history = pd.DataFrame()
+            self.pf_1 = None
+            self.pf_2 = None
+            self.pf_mask = None
+            self.df_length = float("inf")
+            return True
+
+        return False
+
+    def update_plots(
+        self,
+        requires_rebuild: bool = False,
+        interval: int = 1000,
+    ):
+        if not requires_update(self.last_updated, interval, requires_rebuild):
+            logging.debug("Skipping plot update")
+            return
+
+        self.update_pareto_front_plot()
+
+        self.update_hypervolume_plot()
+
+        # Update the last updated time
+        self.last_updated = time.time()
+
+    def setup_connections(self):
         self.ui["components"]["update"].clicked.connect(
             lambda: signal_logger("Update button clicked")(
-                lambda: self.update_plot(routine, requires_rebuild=True)
+                lambda: self.update_plots(requires_rebuild=True)
             )()
         )
 
@@ -289,11 +293,9 @@ class ParetoFrontWidget(QWidget):
         self.setLayout(main_layout)
 
     def initialize_ui(self):
-        routine = self.routine
-
         # Setup the variable dropdowns
-        variable_names = routine.vocs.variable_names
-        objective_names = routine.vocs.objective_names
+        variable_names = self.routine.vocs.variable_names
+        objective_names = self.routine.vocs.objective_names
 
         self.parameters["variables"] = variable_names
         self.parameters["objectives"] = objective_names
@@ -370,12 +372,7 @@ class ParetoFrontWidget(QWidget):
         self.update_pareto_front_plot()
 
     def update_ui(self):
-        self.create_plots(requires_rebuild=True)
-
-    def clear_tabs(self, tab_widget: QTabWidget):
-        max_index = tab_widget.count()
-        for i in range(max_index - 1, -1, -1):
-            tab_widget.removeTab(i)
+        self.update_plots(requires_rebuild=True)
 
     def update_pareto_front_plot(
         self,
@@ -385,7 +382,7 @@ class ParetoFrontWidget(QWidget):
         plot_tab_widget = self.ui["components"]["plot"]["pareto"]
 
         with BlockSignalsContext(plot_tab_widget):
-            self.clear_tabs(plot_tab_widget)
+            clear_tabs(plot_tab_widget)
 
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
@@ -421,7 +418,7 @@ class ParetoFrontWidget(QWidget):
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
 
         with BlockSignalsContext(plot_hypervolume):
-            self.clearLayout(plot_hypervolume)
+            clear_layout(plot_hypervolume)
 
             with MatplotlibFigureContext(self.plot_size) as (fig, ax):
                 try:
@@ -433,29 +430,6 @@ class ParetoFrontWidget(QWidget):
                     logging.error("No data points available for Hypervolume")
                     blank_canvas = FigureCanvas(fig)
                     plot_hypervolume.addWidget(blank_canvas)
-
-    def create_plots(
-        self,
-        requires_rebuild: bool = False,
-        interval: int = 1000,
-    ):
-        # Check if the plot was updated recently
-        if self.last_updated is not None and not requires_rebuild:
-            logger.debug(f"Time since last update: {time.time() - self.last_updated}")
-
-            time_diff = time.time() - self.last_updated
-
-            # If the plot was updated less than 1 second ago, skip this update
-            if time_diff < interval / 1000:
-                logger.debug("Skipping update")
-                return
-
-        self.update_pareto_front_plot()
-
-        self.update_hypervolume_plot()
-
-        # Update the last updated time
-        self.last_updated = time.time()
 
     def create_pareto_plot(self, fig: Figure, ax: Axes):
         current_tab = self.parameters["plot_tab"]
@@ -570,80 +544,6 @@ class ParetoFrontWidget(QWidget):
 
         return fig, ax
 
-    def clearLayout(self, layout: QLayout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child is None:
-                break
-
-            widget = child.widget()
-            if widget is None:
-                break
-
-            widget.deleteLater()
-
-    def requires_reinitialization(self):
-        # Check if the extension needs to be reinitialized
-        logger.debug("Checking if extension needs to be reinitialized")
-
-        archive_name = create_archive_run_filename(self.routine)
-
-        if not self.initialized:
-            logger.debug("Reset - Extension never initialized")
-            self.initialized = True
-            self.routine_identifier = archive_name
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.setup_connections(self.routine)
-            return True
-
-        if self.routine_identifier != archive_name:
-            logger.debug("Reset - Routine name has changed")
-            self.routine_identifier = archive_name
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.pf_mask = None
-            return True
-
-        if self.routine.data is None:
-            logger.debug("Reset - No data available")
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.pf_mask = None
-            return True
-
-        previous_len = self.df_length
-        self.df_length = len(self.routine.data)
-        new_length = self.df_length
-
-        if previous_len > new_length:
-            logger.debug("Reset - Data length is smaller")
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.pf_mask = None
-            self.df_length = float("inf")
-            return True
-
-        return False
-
-    def update_plot(self, routine: Routine, requires_rebuild: bool = False):
-        if not self.update_routine(routine):
-            logging.error("Failed to update routine")
-            return
-
-        if not self.isValidRoutine(self.routine):
-            logging.error("Invalid routine")
-            return
-
-        if self.requires_reinitialization():
-            self.initialize_ui()
-
-        self.create_plots(requires_rebuild)
-
     def update_hypervolume(self):
         # Get the hypervolume from the generator
         self.generator.update_pareto_front_history()
@@ -664,34 +564,3 @@ class ParetoFrontWidget(QWidget):
         self.pf_mask = pf_mask[1:]
         self.pf_1 = pf_1
         self.pf_2 = pf_2
-
-    def update_routine(self, routine: Routine):
-        logger.debug("Updating routine in Pareto Front Viewer")
-        is_success = False
-
-        self.routine = routine
-
-        # Check if the generator is a BayesianGenerator
-        if not issubclass(self.routine.generator.__class__, MOBOGenerator):
-            self.correct_generator = False
-            QMessageBox.critical(
-                self,
-                "Invalid Generator",
-                f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports BayesianGenerator",
-            )
-            raise TypeError(
-                f"Invalid generator type: {type(self.routine.generator)}, BO Visualizer only supports MOBOGenerator"
-            )
-
-        self.correct_generator = True
-
-        generator = cast(MOBOGenerator, self.routine.generator)
-
-        if generator.data is None:
-            logger.error("No data available in generator")
-            return is_success
-
-        self.generator = generator
-        self.df_length = len(generator.data)
-        is_success = True
-        return is_success

@@ -1,9 +1,13 @@
 from typing import Optional, cast
+from badger.gui.default.components.extension_utilities import (
+    clear_layout,
+    requires_update,
+)
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QLayout
+from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from xopt.generators.bayesian.visualize import (
     visualize_generator_model,
 )
@@ -41,7 +45,7 @@ class PlottingArea(QWidget):
         show_feasibility: bool,
         n_grid: int,
         requires_rebuild: bool = False,
-        interval: Optional[float] = 1000.0,  # Interval in milliseconds
+        interval: int = 1000,  # Interval in milliseconds
     ):
         logger.debug("Updating plot in PlottingArea")
 
@@ -58,19 +62,9 @@ class PlottingArea(QWidget):
         }
 
         # Check if the plot was updated recently
-        if (
-            self.last_updated is not None
-            and interval is not None
-            and not requires_rebuild
-        ):
-            logger.debug(f"Time since last update: {time.time() - self.last_updated}")
-
-            time_diff = time.time() - self.last_updated
-
-            # If the plot was updated less than 1 second ago, skip this update
-            if time_diff < interval / 1000:
-                logger.debug("Skipping update")
-                return
+        if not requires_update(self.last_updated, interval, requires_rebuild):
+            logger.debug("Plot not updated due to interval restriction")
+            return
 
         if generator.model is None:
             logger.debug("Model not found")
@@ -100,7 +94,7 @@ class PlottingArea(QWidget):
 
         if layout is not None:
             # Clear the existing layout (remove previous plot if any)
-            self.clearLayout(layout)
+            clear_layout(layout)
 
             # Create a new figure and canvas
             canvas = FigureCanvas(fig)
@@ -120,15 +114,3 @@ class PlottingArea(QWidget):
 
         # Update the last updated time
         self.last_updated = time.time()
-
-    def clearLayout(self, layout: QLayout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child is None:
-                break
-
-            widget = child.widget()
-            if widget is None:
-                break
-
-            widget.deleteLater()
