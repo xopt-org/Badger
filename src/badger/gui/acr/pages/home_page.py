@@ -217,6 +217,7 @@ class BadgerHomePage(QWidget):
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
+        self.run_action_bar.sig_start_with_data.connect(self.start_with_data)
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -363,6 +364,10 @@ class BadgerHomePage(QWidget):
     def start_run_until(self):
         self.prepare_run()
         self.run_monitor.start_until()
+    
+    def start_with_data(self):
+        self.prepare_run()
+        self.run_monitor.start_with_data()
 
     def new_run(self):
         self.cover_page()

@@ -446,16 +446,17 @@ class BadgerOptMonitor(QWidget):
             self.sig_stop.disconnect()
             self.routine_runner = None
 
-    def start(self, use_termination_condition=False):
+    def start(self, use_termination_condition=False, use_data=False):
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
-        self.routine.data = None  # reset data if any
+        if not use_data:
+            self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        self.routine_runner.run()
+        self.routine_runner.run(use_data=use_data)
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 
@@ -957,6 +958,9 @@ class BadgerOptMonitor(QWidget):
             dlg.exec()
         finally:
             self.tc_dialog = None
+
+    def start_with_data(self):
+        self.start(use_data=True)
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)
