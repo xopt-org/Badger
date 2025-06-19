@@ -54,16 +54,19 @@ def process_formulas(func):
 
         # pass to the original method
         all_observables_needed = set(basic_observables + formula_observables)
-        raw_data = func(cls, list(all_observables_needed))
+        observable_outputs = func(cls, list(all_observables_needed))
 
         # for each observable name, if it is a formula,
         # evaluate the formula and add it to the output
-        observable_outputs = {}
-        for name in basic_observables:
-            observable_outputs[name] = raw_data[name]
-
         for name in formulas:
-            observable_outputs[name] = interpret_expression(name, raw_data)
+            observable_outputs[name] = interpret_expression(name, observable_outputs)
+
+        # pop data used in formulas
+        for name in formula_observables:
+            if name in observable_outputs:
+                # remove the variable from the output
+                # as it is not needed anymore
+                observable_outputs.pop(name)
 
         # add raw data tracking
         # observable_outputs.update({"raw_data": raw_data})
