@@ -74,17 +74,17 @@ def test_get_variables():
     env = Environment()
 
     with pytest.raises(BadgerNoInterfaceError):
-        env._get_variables(["x1", "x2"])
+        env.get_variables(["x1", "x2"])
 
     # With interface
     env.interface = intf
 
-    variable_outputs = env._get_variables(["x1", "x2"])
+    variable_outputs = env.get_variables(["x1", "x2"])
     assert variable_outputs == {"x1": 0.5, "x2": 0.5}
 
     # Test getting variables not defined in env
     # with pytest.raises(Exception) as e:
-    #     variable_outputs = env._get_variables(["x19", "x20"])
+    #     variable_outputs = env.get_variables(["x19", "x20"])
 
     # assert e.type == BadgerInterfaceChannelError
     # assert "x19" not in str(e.value)
@@ -92,7 +92,7 @@ def test_get_variables():
     # assert "Getting them through interface is not allowed" in str(e.value)
 
 
-def test_set_variables():
+def testset_variables():
     from badger.factory import get_env, get_intf
     from badger.errors import (
         BadgerEnvVarError,
@@ -108,19 +108,19 @@ def test_set_variables():
 
     variable_inputs = {"x1": 1, "x2": -1}
     with pytest.raises(BadgerNoInterfaceError):
-        env._set_variables(variable_inputs)
+        env.set_variables(variable_inputs)
 
     # With interface
     env.interface = intf
 
-    env._set_variables(variable_inputs)
-    variable_outputs = env._get_variables(["x1", "x2"])
+    env.set_variables(variable_inputs)
+    variable_outputs = env.get_variables(["x1", "x2"])
     assert variable_outputs == {"x1": 1, "x2": -1}
 
     # Test setting variables not defined in env
     # variable_inputs_undef = {"x21": 1, "x22": -1}
     # with pytest.raises(Exception) as e:
-    #     env._set_variables(variable_inputs_undef)
+    #     env.set_variables(variable_inputs_undef)
 
     # assert e.type == BadgerInterfaceChannelError
     # assert "x21" in str(e.value)
@@ -129,18 +129,18 @@ def test_set_variables():
     # Test setting variables out of range
     variable_inputs_out_range = {"x1": 0, "x2": -2}
     with pytest.raises(Exception) as e:
-        env._set_variables(variable_inputs_out_range)
+        env.set_variables(variable_inputs_out_range)
 
     assert e.type == BadgerEnvVarError  # getting crazy w/ custom error
     assert "x1" not in str(e.value)
     assert "x2" in str(e.value)
     assert "outside its bounds" in str(e.value)
 
-    variable_outputs = env._get_variables(["x1", "x2"])
+    variable_outputs = env.get_variables(["x1", "x2"])
     assert variable_outputs == {"x1": 1, "x2": -1}  # values shouldn't change
 
 
-def test_get_observables():
+def testget_observables():
     from badger.factory import get_env, get_intf
     from badger.errors import BadgerNoInterfaceError
 
@@ -152,15 +152,15 @@ def test_get_observables():
     env = Environment()
 
     with pytest.raises(BadgerNoInterfaceError):
-        env._get_observables(["f"])
+        env.get_observables(["f"])
 
     # With interface
     env.interface = intf
 
-    variable_outputs = env._get_observables(["f"])
+    variable_outputs = env.get_observables(["f"])
     assert variable_outputs == {"f": 0.5}
 
     variable_inputs = {"x1": 1, "x2": -1}
-    env._set_variables(variable_inputs)
-    variable_outputs = env._get_observables(["f"])
+    env.set_variables(variable_inputs)
+    variable_outputs = env.get_observables(["f"])
     assert variable_outputs == {"f": 6.5}

@@ -397,7 +397,7 @@ class BadgerRoutinePage(QWidget):
             env = self.create_env()
             for vname in additional_variables:
                 try:
-                    bounds = env._get_bounds([vname])[vname]
+                    bounds = env.get_bounds([vname])[vname]
                 except BadgerEnvVarError as e:
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
@@ -660,7 +660,7 @@ class BadgerRoutinePage(QWidget):
             env = self.create_env()
             for vname in routine.additional_variables:
                 try:
-                    bounds = env._get_bounds([vname])[vname]
+                    bounds = env.get_bounds([vname])[vname]
                 except BadgerEnvVarError as e:
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
@@ -945,7 +945,15 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
-        var_curr = env._get_variables(vname_selected)
+
+        try:
+            # Get the current variables from the environment
+            var_curr = env.get_variables(vname_selected)
+        except Exception as e:
+            raise BadgerEnvVarError(
+                f"Failed to get current variable values : {e}\n"
+                "Please ensure the environment is properly configured."
+            )
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -972,7 +980,7 @@ class BadgerRoutinePage(QWidget):
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         # get small region around current point to sample
         try:
@@ -1136,7 +1144,14 @@ class BadgerRoutinePage(QWidget):
             vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env._get_variables(vname_selected)
+        try:
+            # Get the current variables from the environment
+            var_curr = env.get_variables(vname_selected)
+        except Exception as e:
+            raise BadgerEnvVarError(
+                f"Failed to get current variable values : {e}\n"
+                "Please ensure the environment is properly configured."
+            )
 
         option_idx = self.limit_option["limit_option_idx"]
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
@@ -1193,7 +1208,7 @@ class BadgerRoutinePage(QWidget):
         option_idx = option["limit_option_idx"]
 
         env = self.create_env()
-        curr = env._get_variables([vname])[vname]
+        curr = env.get_variables([vname])[vname]
 
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
         if option_idx == 1:
@@ -1273,7 +1288,7 @@ class BadgerRoutinePage(QWidget):
                 vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         for name in vname_selected:
             try:
@@ -1370,14 +1385,14 @@ class BadgerRoutinePage(QWidget):
 
     def handle_var_config(self, vname):
         env = self.create_env()
-        curr = env._get_variables([vname])[vname]
+        curr = env.get_variables([vname])[vname]
 
         # Get the hard limit
         try:
             bounds = self.var_hard_limit[vname]
         except KeyError:
             try:
-                bounds = env._get_bounds([vname])[vname]
+                bounds = env.get_bounds([vname])[vname]
             except BadgerEnvVarError as e:
                 msg = str(e)
                 bounds = eval(msg.split(": ")[1])
