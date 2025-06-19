@@ -7,7 +7,11 @@ from PyQt5.QtCore import QEventLoop, QTimer
 @pytest.fixture(scope="session")
 def init_multiprocessing():
     # Use 'spawn' on Windows, 'fork' on Unix-like systems
-    method = "spawn" if multiprocessing.get_start_method(allow_none=True) != "fork" else "fork"
+    method = (
+        "spawn"
+        if multiprocessing.get_start_method(allow_none=True) != "fork"
+        else "fork"
+    )
     multiprocessing.set_start_method(method, force=True)
 
 
