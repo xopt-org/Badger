@@ -10,12 +10,13 @@ from unittest.mock import Mock
 class TestRoutineRunner:
     @pytest.fixture(scope="session")
     def init_multiprocessing(self):
-        multiprocessing.set_start_method("fork", force=True)
-
-    @pytest.fixture(scope="session")
-    def init_multiprocessing_alt(self):
-        # Use 'spawn' to start new processes instead of 'fork'
-        multiprocessing.set_start_method("spawn", force=True)
+        # Use 'spawn' on Windows, 'fork' on Unix-like systems
+        method = (
+            "spawn"
+            if multiprocessing.get_start_method(allow_none=True) != "fork"
+            else "fork"
+        )
+        multiprocessing.set_start_method(method, force=True)
 
     @pytest.fixture
     def process_manager(self):
@@ -107,7 +108,7 @@ class TestRoutineRunner:
 
     # TODO: check for signal emit message
 
-    def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing_alt):
+    def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing):
         # TODO: make this test more stable
         return
 

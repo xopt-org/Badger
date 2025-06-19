@@ -414,7 +414,7 @@ class BadgerEnvBox(CollapsibleBox):
             stylesheet = f"""
                 #EnvBox {{
                     border-radius: 4px;
-                    border-color: {color_dict['normal']};
+                    border-color: {color_dict["normal"]};
                     border-width: 4px;
                 }}
             """
