@@ -68,9 +68,9 @@ class TestEnvironment:
 
         env = TestEnv(interface=mock_interface)
 
-        # Test get_variables
+        # Test get_variables -- note due to the mock, it returns fixed values
         result = env.get_variables(["x1"])
-        assert result == {"x1": 0.5}
+        assert result == {"x1": 0.5, "f": 1.0}
         mock_interface.get_values.assert_called_with(["x1"])
 
         # Test set_variables

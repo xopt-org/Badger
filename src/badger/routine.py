@@ -18,14 +18,14 @@ from xopt.generators import get_generator
 from xopt.utils import get_local_region
 from xopt.generators.sequential import SequentialGenerator
 from badger.utils import curr_ts
-from badger.environment import Environment, instantiate_env
+from badger.environment import BaseEnvironment, instantiate_env
 
 
 class Routine(Xopt):
     id: Optional[str] = Field(None)
     name: str
     description: Optional[str] = Field(None)
-    environment: SerializeAsAny[Environment]
+    environment: SerializeAsAny[BaseEnvironment]
     initial_points: Optional[DataFrame] = Field(None)
     critical_constraint_names: Optional[List[str]] = Field([])
     tags: Optional[List] = Field(None)
