@@ -9,10 +9,7 @@ def safe_var_name(var_name):
 
 
 def extract_variable_keys(expr):
-    single = re.findall(r"'([^']+)'", expr)
-    double = re.findall(r'"([^"]+)"', expr)
-    back = re.findall(r"`([^`]+)`", expr)
-    return set(single + double + back)
+    return re.findall(r"`([^`]+)`", expr)
 
 
 def find_used_names(expr):
@@ -58,8 +55,6 @@ def interpret_expression(expr, variables):
 
     alias_map = {var: safe_var_name(var) for var in quoted_vars}
     for orig, alias in alias_map.items():
-        expr = expr.replace(f"'{orig}'", alias)
-        expr = expr.replace(f'"{orig}"', alias)
         expr = expr.replace(f"`{orig}`", alias)
 
     expr = re.sub(r"percentile(\d+)\(([^)]+)\)", r"percentile(\2, \1)", expr)
@@ -67,7 +62,10 @@ def interpret_expression(expr, variables):
 
     np_funcs = {name for name in dir(np) if not name.startswith("_")}
     custom_funcs = {"rms", "percentile"}
-    valid_names = np_funcs.union(custom_funcs).union(alias_map.values())
+    builtin_funcs = {"len", "sum", "min", "max", "abs", "round"}  # Add common builtins
+    valid_names = (
+        np_funcs.union(custom_funcs).union(builtin_funcs).union(alias_map.values())
+    )
 
     used_names = find_used_names(expr)
     unknown = used_names - valid_names
@@ -82,6 +80,9 @@ def interpret_expression(expr, variables):
 
     safe_namespace = {name: getattr(np, name) for name in np_funcs}
     safe_namespace["percentile"] = np.percentile
+    # Add common built-in functions
+    for func_name in builtin_funcs:
+        safe_namespace[func_name] = eval(func_name)
     safe_namespace.update({alias_map[k]: variables[k] for k in quoted_vars})
 
     try:
