@@ -29,14 +29,14 @@ def signal_logger(
 
 
 def clear_layout(layout: QLayout) -> None:
-    while layout.count():
+    while layout.count() > 0:
         child = layout.takeAt(0)
         if child is None:
             break
 
         widget = child.widget()
         if widget is None:
-            break
+            raise ValueError("Child of layout is not a widget. Cannot clear layout.")
 
         widget.deleteLater()
 
@@ -95,9 +95,17 @@ class BlockSignalsContext:
 
 
 class MatplotlibFigureContext:
-    def __init__(self, fig_size: tuple[float, float] | None = None):
+    def __init__(
+        self, fig: Figure | None = None, fig_size: tuple[float, float] | None = None
+    ):
         self.fig_size = fig_size
-        self.fig = Figure(figsize=self.fig_size)
+        if fig is None:
+            self.fig = Figure(figsize=self.fig_size, tight_layout=True)
+        else:
+            self.fig = fig
+            self.fig.set_layout_engine("tight")
+            if self.fig_size is not None:
+                self.fig.set_size_inches(*self.fig_size)
         self.ax = self.fig.add_subplot()
 
     def __enter__(self):

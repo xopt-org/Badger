@@ -93,7 +93,7 @@ class BOVisualizer(AnalysisExtension):
         self.widget.update_routine(routine, BayesianGenerator)
 
         if self.widget.requires_reinitialization():
-            self.widget.initialize_widget(self.widget.routine, self.update_window)
+            self.widget.initialize_widget(self.widget.routine)
 
         # Update the plots with the new generator model
         self.widget.update_plot(interval=self.widget.update_interval)
@@ -105,7 +105,7 @@ class BOVisualizer(AnalysisExtension):
         try:
             self.update_extension(routine)
         except:
-            self.close()
+            self.closeEvent(None)
 
     # def update_routine(self, routine: Routine):
     #     logger.debug("Updating routine in BO Visualizer")

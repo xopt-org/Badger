@@ -83,14 +83,14 @@ class ParetoFrontWidget(AnalysisWidget):
         self.setWindowTitle("Pareto Front Viewer")
         self.setMinimumWidth(1200)
 
-    def isValidRoutine(self, routine: Routine):
+    def isValidRoutine(self, routine: Routine) -> bool:
         if len(routine.vocs.objective_names) < 2:
             logging.error("Invalid number of objectives")
             return False
 
         return True
 
-    def requires_reinitialization(self):
+    def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
         logger.debug("Checking if extension needs to be reinitialized")
 
@@ -142,7 +142,7 @@ class ParetoFrontWidget(AnalysisWidget):
         self,
         requires_rebuild: bool = False,
         interval: int = 1000,
-    ):
+    ) -> None:
         if not requires_update(self.last_updated, interval, requires_rebuild):
             logging.debug("Skipping plot update")
             return
@@ -292,7 +292,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
         self.setLayout(main_layout)
 
-    def initialize_ui(self):
+    def initialize_ui(self) -> None:
         # Setup the variable dropdowns
         variable_names = self.routine.vocs.variable_names
         objective_names = self.routine.vocs.objective_names
@@ -384,24 +384,24 @@ class ParetoFrontWidget(AnalysisWidget):
         with BlockSignalsContext(plot_tab_widget):
             clear_tabs(plot_tab_widget)
 
-            with MatplotlibFigureContext(self.plot_size) as (fig, ax):
+            with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
-                    fig0, ax0 = self.create_pareto_plot(fig, ax)
-                    canvas0 = FigureCanvas(fig0)
+                    fig, ax = self.create_pareto_plot(fig, ax)
+                    canvas0 = FigureCanvas(fig)
 
-                    ax0.set_title("Data Points")
+                    ax.set_title("Data Points")
                     plot_tab_widget.addTab(canvas0, "Variable Space")
                 except ValueError:
                     logging.error("No data points available for Variable Space")
                     blank_canvas = FigureCanvas(fig)
                     plot_tab_widget.addTab(blank_canvas, "Variable Space")
 
-            with MatplotlibFigureContext(self.plot_size) as (fig, ax):
+            with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
-                    fig1, ax1 = self.create_pareto_plot(fig, ax)
-                    canvas1 = FigureCanvas(fig1)
+                    fig, ax = self.create_pareto_plot(fig, ax)
+                    canvas1 = FigureCanvas(fig)
 
-                    ax1.set_title("Pareto Front")
+                    ax.set_title("Pareto Front")
                     plot_tab_widget.addTab(canvas1, "Objective Space")
                 except ValueError:
                     logging.error("No data points available for Objective Space")
@@ -409,6 +409,9 @@ class ParetoFrontWidget(AnalysisWidget):
                     plot_tab_widget.addTab(blank_canvas, "Objective Space")
 
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
+
+        plot_tab_widget.updateGeometry()
+        plot_tab_widget.adjustSize()
 
     def update_hypervolume_plot(
         self,
@@ -420,11 +423,10 @@ class ParetoFrontWidget(AnalysisWidget):
         with BlockSignalsContext(plot_hypervolume):
             clear_layout(plot_hypervolume)
 
-            with MatplotlibFigureContext(self.plot_size) as (fig, ax):
+            with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
-                    fig0, ax = self.create_hypervolume_plot(fig, ax)
-
-                    canvas = FigureCanvas(fig0)
+                    fig, ax = self.create_hypervolume_plot(fig, ax)
+                    canvas = FigureCanvas(fig)
                     plot_hypervolume.addWidget(canvas)
                 except ValueError:
                     logging.error("No data points available for Hypervolume")

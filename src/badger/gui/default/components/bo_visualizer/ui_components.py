@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt
 from typing import Optional, cast
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
+from badger.gui.default.components.extension_utilities import BlockSignalsContext
 
 
 from xopt import VOCS
@@ -129,30 +130,31 @@ class UIComponents:
         if self.vocs is None:
             raise Exception("Vocs is None")
 
-        self.reference_table.blockSignals(True)
+        with BlockSignalsContext(self.reference_table):
+            self.reference_table.setRowCount(len(self.vocs.variable_names))
+            self.ref_inputs = []
 
-        self.reference_table.setRowCount(len(self.vocs.variable_names))
-        self.ref_inputs = []
+            for i, var_name in enumerate(self.vocs.variable_names):
+                variable_item = QTableWidgetItem(var_name)
+                itemIsEditable = Qt.ItemFlag.ItemIsEditable
 
-        for i, var_name in enumerate(self.vocs.variable_names):
-            variable_item = QTableWidgetItem(var_name)
-            itemIsEditable = Qt.ItemFlag.ItemIsEditable
+                variable_item.setFlags(
+                    variable_item.flags() & ~Qt.ItemFlags(itemIsEditable)
+                )
+                self.reference_table.setItem(i, 0, variable_item)
 
-            variable_item.setFlags(
-                variable_item.flags() & ~Qt.ItemFlags(itemIsEditable)
-            )
-            self.reference_table.setItem(i, 0, variable_item)
-
-            # Set default reference point to the midpoint of variable bounds
-            default_value = cast(
-                float,
-                (self.vocs.variables[var_name][0] + self.vocs.variables[var_name][1])
-                / 2,
-            )
-            reference_point_item = QTableWidgetItem(str(default_value))
-            self.ref_inputs.append(reference_point_item)
-            self.reference_table.setItem(i, 1, reference_point_item)
-        self.reference_table.blockSignals(False)
+                # Set default reference point to the midpoint of variable bounds
+                default_value = cast(
+                    float,
+                    (
+                        self.vocs.variables[var_name][0]
+                        + self.vocs.variables[var_name][1]
+                    )
+                    / 2,
+                )
+                reference_point_item = QTableWidgetItem(str(default_value))
+                self.ref_inputs.append(reference_point_item)
+                self.reference_table.setItem(i, 1, reference_point_item)
 
     def create_options_section(self):
         group_box = QGroupBox("Plot Options")
@@ -201,21 +203,15 @@ class UIComponents:
                 f"Populating axis combos with variable names: {self.vocs.variable_names}"
             )
 
-            self.x_axis_combo.blockSignals(True)
-            self.y_axis_combo.blockSignals(True)
+            with BlockSignalsContext([self.x_axis_combo, self.y_axis_combo]):
+                self.x_axis_combo.clear()
+                self.y_axis_combo.clear()
 
-            self.x_axis_combo.clear()
-            self.y_axis_combo.clear()
+                self.x_axis_combo.addItems(self.vocs.variable_names)
+                self.y_axis_combo.addItems(self.vocs.variable_names)
 
-            self.x_axis_combo.addItems(self.vocs.variable_names)
-            self.y_axis_combo.addItems(self.vocs.variable_names)
-
-            self.x_axis_combo.setCurrentIndex(configurable_options["variable_1"])
-            self.y_axis_combo.setCurrentIndex(configurable_options["variable_2"])
-
-            self.x_axis_combo.blockSignals(False)
-            self.y_axis_combo.blockSignals(False)
-
+                self.x_axis_combo.setCurrentIndex(configurable_options["variable_1"])
+                self.y_axis_combo.setCurrentIndex(configurable_options["variable_2"])
             self.populate_reference_table()
 
     def update_vocs(

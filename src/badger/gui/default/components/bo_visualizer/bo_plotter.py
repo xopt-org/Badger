@@ -1,10 +1,15 @@
 from typing import Optional, cast
-from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
 from PyQt5.QtWidgets import QSizePolicy
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
-from badger.gui.default.components.extension_utilities import signal_logger
+from badger.gui.default.components.extension_utilities import (
+    BlockSignalsContext,
+    signal_logger,
+)
 from badger.routine import Routine
+
+from xopt.generator import Generator
 from .ui_components import UIComponents
 from .plotting_area import PlottingArea
 from .model_logic import ModelLogic
@@ -79,23 +84,13 @@ class BOPlotWidget(AnalysisWidget):
         self.ui_components.update_vocs(routine.vocs)
         self.ui_components.update_variables(self.parameters)
 
-        # Set up connections
-        logger.debug("Setting up connections")
-        self.setup_connections()
-
         # Initialize UI Components
         self.ui_components.initialize_ui_components(self.parameters)
 
-        # Trigger the axis selection changed to disable reference points for default selected variables
-        logger.debug("Triggering axis selection changed")
         self.on_axis_selection_changed()
 
     def setup_connections(self) -> None:
         # Disconnect existing connections
-        try:
-            self.ui_components.update_button.clicked.disconnect()
-        except TypeError:
-            pass  # No connection to disconnect
 
         self.ui_components.update_button.clicked.connect(
             lambda: signal_logger("Update button clicked")(
@@ -104,30 +99,19 @@ class BOPlotWidget(AnalysisWidget):
         )
 
         # Similarly for other signals
-        try:
-            self.ui_components.x_axis_combo.currentIndexChanged.disconnect()
-        except TypeError:
-            pass
+
         self.ui_components.x_axis_combo.currentIndexChanged.connect(
             lambda: signal_logger("Updated 'x_axis_combo'")(
                 lambda: self.on_axis_selection_changed()
             )()
         )
 
-        try:
-            self.ui_components.y_axis_combo.currentIndexChanged.disconnect()
-        except TypeError:
-            pass
         self.ui_components.y_axis_combo.currentIndexChanged.connect(
             lambda: signal_logger("Updated 'y_axis_combo'")(
                 lambda: self.on_axis_selection_changed()
             )()
         )
 
-        try:
-            self.ui_components.y_axis_checkbox.stateChanged.disconnect()
-        except TypeError:
-            pass
         self.ui_components.y_axis_checkbox.stateChanged.connect(
             lambda: signal_logger("Updated 'y_axis_checkbox'")(
                 lambda: self.on_axis_selection_changed()
@@ -144,19 +128,13 @@ class BOPlotWidget(AnalysisWidget):
 
         for checkbox in plot_options_checkboxes:
             logger.debug(f"Setting up connection for checkbox: {checkbox.text()}")
-            try:
-                checkbox.stateChanged.disconnect()
-            except TypeError:
-                pass
+
             checkbox.stateChanged.connect(
                 lambda: signal_logger("Updated checkbox")(lambda: self.update_plot())()
             )
 
         # No. of Grid Points
-        try:
-            self.ui_components.n_grid.valueChanged.disconnect()
-        except TypeError:
-            pass
+
         self.ui_components.n_grid.valueChanged.connect(
             lambda: signal_logger("Updated 'n_grid' spinbox")(
                 lambda: self.update_plot()
@@ -166,22 +144,21 @@ class BOPlotWidget(AnalysisWidget):
         # Reference inputs
 
         if self.ui_components.reference_table is not None:
-            try:
-                self.ui_components.reference_table.cellChanged.disconnect()
-            except TypeError:
-                pass
             self.ui_components.reference_table.cellChanged.connect(
                 lambda: signal_logger("Updated 'reference_table'")(
                     lambda: self.update_plot()
                 )()
             )
 
-    def requires_reinitialization(self):
+    def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
         logger.debug("Checking if BO Visualizer needs to be reinitialized")
 
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
+            # Set up connections
+            logger.debug("Setting up connections")
+            self.setup_connections()
             self.initialized = True
             return True
 
@@ -254,9 +231,10 @@ class BOPlotWidget(AnalysisWidget):
             print("Selected variables for plotting:", self.selected_variables)
             # Update the reference point table based on the selected variables
             if self.ui_components.reference_table is not None:
-                self.ui_components.reference_table.blockSignals(True)
-                self.update_reference_point_table(self.selected_variables)
-                self.ui_components.reference_table.blockSignals(False)
+                with BlockSignalsContext(
+                    self.ui_components.reference_table,
+                ):
+                    self.update_reference_point_table(self.selected_variables)
             # Only update plot if the selection has changed
             self.update_plot()
 
@@ -343,12 +321,11 @@ class BOPlotWidget(AnalysisWidget):
 
         # Disable signals for the reference table to prevent updating the plot multiple times
         if self.ui_components.reference_table is not None:
-            self.ui_components.reference_table.blockSignals(True)
-
-            # Disable and gray out the reference points for selected variables
-            self.update_reference_point_table(self.selected_variables)
-
-            self.ui_components.reference_table.blockSignals(False)
+            with BlockSignalsContext(
+                self.ui_components.reference_table,
+            ):
+                # Disable and gray out the reference points for selected variables
+                self.update_reference_point_table(self.selected_variables)
 
         # Get reference points for non-selected variables
         reference_point = self.model_logic.get_reference_points(
@@ -371,3 +348,29 @@ class BOPlotWidget(AnalysisWidget):
             requires_rebuild,
             interval,
         )
+
+    def update_routine(self, routine: Routine, generator_type: type[Generator]) -> None:
+        super().update_routine(routine, generator_type)
+
+        # Handle the edge case where the extension has been opened after an optimization has already finished.
+        if self.generator.model is None:
+            logger.warning("Model not found in generator")
+
+            try:
+                if self.routine.data is None:
+                    logger.error("No data available in routine for training model")
+                    QMessageBox.critical(
+                        self,
+                        "No data available",
+                        "No data available in routine for training model",
+                    )
+                    raise ValueError("No data available in routine for training model")
+                self.generator.train_model(self.routine.data)
+            except Exception as e:
+                logger.error(f"Failed to train model: {e}")
+                QMessageBox.critical(
+                    self,
+                    "Failed to train model",
+                    f"Failed to train model: {e}",
+                )
+                raise Exception(f"Error training model: {e}")
