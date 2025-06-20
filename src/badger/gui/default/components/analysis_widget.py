@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import Callable
 from typing import Optional
 
 from PyQt5.QtWidgets import QDialog, QMessageBox
@@ -20,8 +21,12 @@ class AnalysisWidget(QDialog):
     routine_identifier: str = ""
     last_updated: float = -float("inf")
     update_interval: int = 1000  # Default update interval in milliseconds
+    update_extension: Callable[[Routine, bool], None]
 
-    def __init__(self, parent: Optional[QDialog] = None):
+    def __init__(
+        self,
+        parent: Optional[QDialog] = None,
+    ):
         super().__init__(parent=parent)
 
     @abstractmethod
@@ -49,7 +54,7 @@ class AnalysisWidget(QDialog):
         pass
 
     @abstractmethod
-    def isValidRoutine(self, routine: Routine) -> bool:
+    def isValidRoutine(self, routine: Routine) -> None:
         """
         Check if the routine is valid for this widget.
         This method should be implemented to validate the routine before updating the widget.
@@ -74,7 +79,7 @@ class AnalysisWidget(QDialog):
 
         if self.routine.generator.data is None:
             logger.error("No data available in generator")
-            return
+            raise ValueError("No data available in generator")
 
         self.df_length = len(self.routine.generator.data)
         self.generator = self.routine.generator

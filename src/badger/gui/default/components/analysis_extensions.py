@@ -46,28 +46,27 @@ class ParetoFrontViewer(AnalysisExtension):
         self.setWindowTitle("Pareto Front Viewer")
 
         self.widget = ParetoFrontWidget()
+        self.widget.update_extension = self.update_extension
 
         layout = QVBoxLayout()
         layout.addWidget(self.widget)
         self.setLayout(layout)
 
-    def update_extension(self, routine: Routine):
-        if not self.widget.isValidRoutine(routine):
-            logging.error("Invalid routine")
-            return
+    def update_extension(self, routine: Routine, requires_rebuild: bool = False):
+        self.widget.isValidRoutine(routine)
 
         self.widget.update_routine(routine, MOBOGenerator)
 
         if self.widget.requires_reinitialization():
-            self.widget.initialize_ui()
+            self.widget.initialize_widget()
 
-        self.widget.update_plots(interval=self.widget.update_interval)
+        self.widget.update_plots(requires_rebuild, interval=self.widget.update_interval)
 
     def update_window(self, routine: Routine):
         try:
             self.update_extension(routine)
-        except:
-            self.close()
+        except Exception as e:
+            raise e
 
 
 class BOVisualizer(AnalysisExtension):
@@ -79,6 +78,7 @@ class BOVisualizer(AnalysisExtension):
 
         # Initialize BOPlotWidget without a routine
         self.widget = BOPlotWidget()
+        self.widget.update_extension = self.update_extension
 
         logger.debug("Initialized BOPlotWidget")
 
@@ -88,15 +88,15 @@ class BOVisualizer(AnalysisExtension):
 
         logger.debug("Set layout for BOVisualizer")
 
-    def update_extension(self, routine: Routine):
+    def update_extension(self, routine: Routine, requires_rebuild: bool = False):
         # Update the routine with new generator model if applicable
         self.widget.update_routine(routine, BayesianGenerator)
 
         if self.widget.requires_reinitialization():
-            self.widget.initialize_widget(self.widget.routine)
+            self.widget.initialize_widget()
 
         # Update the plots with the new generator model
-        self.widget.update_plot(interval=self.widget.update_interval)
+        self.widget.update_plot(requires_rebuild, interval=self.widget.update_interval)
 
     def update_window(self, routine: Routine):
         # Updating the BO Visualizer window
@@ -104,8 +104,8 @@ class BOVisualizer(AnalysisExtension):
 
         try:
             self.update_extension(routine)
-        except:
-            self.closeEvent(None)
+        except Exception as e:
+            raise e
 
     # def update_routine(self, routine: Routine):
     #     logger.debug("Updating routine in BO Visualizer")

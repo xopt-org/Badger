@@ -4,6 +4,7 @@ from typing import Callable, Optional, Iterable, ParamSpec
 from types import TracebackType
 from PyQt5.QtWidgets import QWidget, QLayout, QTabWidget
 
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
@@ -96,7 +97,10 @@ class BlockSignalsContext:
 
 class MatplotlibFigureContext:
     def __init__(
-        self, fig: Figure | None = None, fig_size: tuple[float, float] | None = None
+        self,
+        fig: Figure | None = None,
+        ax: Axes | None = None,
+        fig_size: tuple[float, float] | None = None,
     ):
         self.fig_size = fig_size
         if fig is None:
@@ -106,7 +110,11 @@ class MatplotlibFigureContext:
             self.fig.set_layout_engine("tight")
             if self.fig_size is not None:
                 self.fig.set_size_inches(*self.fig_size)
-        self.ax = self.fig.add_subplot()
+
+        if ax is None:
+            self.ax = self.fig.add_subplot()
+        else:
+            self.ax = ax
 
     def __enter__(self):
         return self.fig, self.ax

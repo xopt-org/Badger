@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QGroupBox,
     QTabWidget,
+    QMessageBox,
 )
 
 from PyQt5.QtCore import Qt
@@ -83,12 +84,17 @@ class ParetoFrontWidget(AnalysisWidget):
         self.setWindowTitle("Pareto Front Viewer")
         self.setMinimumWidth(1200)
 
-    def isValidRoutine(self, routine: Routine) -> bool:
+    def isValidRoutine(self, routine: Routine) -> None:
         if len(routine.vocs.objective_names) < 2:
-            logging.error("Invalid number of objectives")
-            return False
-
-        return True
+            logger.error("Routine must have at least two objectives")
+            QMessageBox.critical(
+                self,
+                "Invalid Routine",
+                "The routine must have at least two objectives to visualize the Pareto front.",
+            )
+            raise ValueError(
+                "The routine must have at least two objectives to visualize the Pareto front."
+            )
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -157,7 +163,7 @@ class ParetoFrontWidget(AnalysisWidget):
     def setup_connections(self):
         self.ui["components"]["update"].clicked.connect(
             lambda: signal_logger("Update button clicked")(
-                lambda: self.update_plots(requires_rebuild=True)
+                lambda: self.on_button_click()
             )()
         )
 
@@ -292,7 +298,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
         self.setLayout(main_layout)
 
-    def initialize_ui(self) -> None:
+    def initialize_widget(self) -> None:
         # Setup the variable dropdowns
         variable_names = self.routine.vocs.variable_names
         objective_names = self.routine.vocs.objective_names
@@ -370,6 +376,9 @@ class ParetoFrontWidget(AnalysisWidget):
             raise ValueError("Invalid plot tab")
 
         self.update_pareto_front_plot()
+
+    def on_button_click(self):
+        self.update_extension(self.routine, True)
 
     def update_ui(self):
         self.update_plots(requires_rebuild=True)

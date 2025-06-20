@@ -14,4 +14,5 @@ class ConfigurableOptions(TypedDict):
     plot_options: PlotOptions
     variable_1: int
     variable_2: int
+    variables: list[str]
     include_variable_2: bool

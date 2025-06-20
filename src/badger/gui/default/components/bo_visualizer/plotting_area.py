@@ -60,7 +60,7 @@ class PlottingArea(QWidget):
 
         try:
             # Generate the new plot using visualize_generator_model
-            fig, _ = cast(
+            fig, ax = cast(
                 tuple[Figure, Axes],
                 visualize_generator_model(
                     generator,
@@ -74,8 +74,6 @@ class PlottingArea(QWidget):
                 ),
             )
 
-            fig.show()
-
             layout = self.layout()
 
             if layout is not None:
@@ -83,7 +81,7 @@ class PlottingArea(QWidget):
                     # Clear the existing layout (remove previous plot if any)
                     clear_layout(layout)
 
-                    with MatplotlibFigureContext(fig) as (fig, _):
+                    with MatplotlibFigureContext(fig, ax) as (fig, ax):
                         # Set the layout engine to tight
                         # fig.show()
 
@@ -92,6 +90,8 @@ class PlottingArea(QWidget):
 
                         # Add the new canvas to the layout
                         layout.addWidget(canvas)
+
+                    # plt.close(fig)  # Close the figure to free memory
             else:
                 raise Exception("Layout never updated")
         except Exception as e:

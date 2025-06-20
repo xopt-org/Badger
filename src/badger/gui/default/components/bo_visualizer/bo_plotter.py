@@ -1,5 +1,11 @@
-from typing import Optional, cast
-from PyQt5.QtWidgets import QHBoxLayout, QWidget, QVBoxLayout, QMessageBox
+from typing import Optional
+from PyQt5.QtWidgets import (
+    QHBoxLayout,
+    QWidget,
+    QVBoxLayout,
+    QMessageBox,
+    QTableWidgetItem,
+)
 from PyQt5.QtWidgets import QSizePolicy
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
@@ -8,11 +14,11 @@ from badger.gui.default.components.extension_utilities import (
     signal_logger,
 )
 from badger.routine import Routine
+from badger.utils import create_archive_run_filename
 
 from xopt.generator import Generator
 from .ui_components import UIComponents
 from .plotting_area import PlottingArea
-from .model_logic import ModelLogic
 from PyQt5.QtCore import Qt
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from badger.gui.default.components.analysis_widget import AnalysisWidget
@@ -33,6 +39,7 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
     },
     "variable_1": 0,
     "variable_2": 1,
+    "variables": [],
     "include_variable_2": True,
 }
 
@@ -47,16 +54,15 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Initializing BOPlotWidget")
         super().__init__(parent)
 
-        # Set default configuration parameters
-        self.parameters = DEFAULT_PARAMETERS
+        self.create_ui()
 
-        self.selected_variables: list[str] = []  # Initialize selected_variables
+        ExpandingPolicy = QSizePolicy.Policy.Expanding
 
-        # Initialize model logic and UI components with None or default values
-        self.model_logic = ModelLogic(routine, routine.vocs if routine else None)
-        self.ui_components = UIComponents(
-            self.parameters, routine.vocs if routine else None
-        )
+        self.setSizePolicy(ExpandingPolicy, ExpandingPolicy)
+        self.setMinimumSize(1250, 720)
+
+    def create_ui(self) -> None:
+        self.ui_components = UIComponents(self.parameters, self.parameters["variables"])
         self.plotting_area = PlottingArea()
 
         main_layout = QHBoxLayout(self)
@@ -72,16 +78,13 @@ class BOPlotWidget(AnalysisWidget):
 
         self.setLayout(main_layout)
 
-        ExpandingPolicy = QSizePolicy.Policy.Expanding
-
-        self.setSizePolicy(ExpandingPolicy, ExpandingPolicy)
-        self.setMinimumSize(1250, 720)
-
-    def initialize_widget(self, routine: Routine) -> None:
+    def initialize_widget(self) -> None:
         logger.debug("Initializing plot with routine")
-        self.model_logic.update_routine(routine)
         logger.debug("Update vocs in UI components")
-        self.ui_components.update_vocs(routine.vocs)
+
+        variable_names = self.routine.vocs.variable_names
+        self.parameters["variables"] = variable_names
+
         self.ui_components.update_variables(self.parameters)
 
         # Initialize UI Components
@@ -94,7 +97,7 @@ class BOPlotWidget(AnalysisWidget):
 
         self.ui_components.update_button.clicked.connect(
             lambda: signal_logger("Update button clicked")(
-                lambda: self.update_plot(requires_rebuild=True)
+                lambda: self.on_button_clicked()
             )()
         )
 
@@ -130,14 +133,16 @@ class BOPlotWidget(AnalysisWidget):
             logger.debug(f"Setting up connection for checkbox: {checkbox.text()}")
 
             checkbox.stateChanged.connect(
-                lambda: signal_logger("Updated checkbox")(lambda: self.update_plot())()
+                lambda: signal_logger("Updated checkbox")(
+                    lambda: self.on_plot_options_changed()
+                )()
             )
 
         # No. of Grid Points
 
         self.ui_components.n_grid.valueChanged.connect(
             lambda: signal_logger("Updated 'n_grid' spinbox")(
-                lambda: self.update_plot()
+                lambda: self.on_plot_options_changed()
             )()
         )
 
@@ -146,25 +151,38 @@ class BOPlotWidget(AnalysisWidget):
         if self.ui_components.reference_table is not None:
             self.ui_components.reference_table.cellChanged.connect(
                 lambda: signal_logger("Updated 'reference_table'")(
-                    lambda: self.update_plot()
+                    lambda: self.on_reference_points_changed()
                 )()
             )
+
+    def on_button_clicked(self) -> None:
+        self.update_extension(self.routine, True)
+
+    def on_plot_options_changed(self) -> None:
+        self.update_plot(requires_rebuild=True)
+
+    def on_reference_points_changed(self) -> None:
+        # Update the reference points in the plot
+        self.update_plot(requires_rebuild=True)
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
         logger.debug("Checking if BO Visualizer needs to be reinitialized")
+
+        archive_name = create_archive_run_filename(self.routine)
 
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
             # Set up connections
             logger.debug("Setting up connections")
             self.setup_connections()
+            self.routine_identifier = archive_name
             self.initialized = True
             return True
 
         if self.routine_identifier != self.routine.name:
             logger.debug("Reset - Routine name has changed")
-            self.identifier = self.routine.name
+            self.routine_identifier = archive_name
             return True
 
         if self.routine.data is None:
@@ -183,10 +201,6 @@ class BOPlotWidget(AnalysisWidget):
         return False
 
     def on_axis_selection_changed(self):
-        if not self.model_logic.vocs or not self.ui_components.ref_inputs:
-            # vocs or ref_inputs is not yet set; skip processing
-            return
-
         logger.debug("Axis selection changed")
 
         selected_variables: list[str] = []
@@ -199,18 +213,18 @@ class BOPlotWidget(AnalysisWidget):
 
         x_var_index = self.ui_components.x_axis_combo.currentIndex()
         self.parameters["variable_1"] = x_var_index
-        x_var_text = self.ui_components.x_axis_combo.currentText()
-        if x_var_text != "":
-            selected_variables.append(x_var_text)
+        # x_var_text = self.ui_components.x_axis_combo.currentText()
+        # if x_var_text != "":
+        #     selected_variables.append(x_var_text)
 
         include_var2 = self.ui_components.y_axis_checkbox.isChecked()
         self.parameters["include_variable_2"] = include_var2
         if include_var2:
             y_var_index = self.ui_components.y_axis_combo.currentIndex()
             self.parameters["variable_2"] = y_var_index
-            y_var_text = self.ui_components.y_axis_combo.currentText()
-            if y_var_text != "":
-                selected_variables.append(y_var_text)
+            # y_var_text = self.ui_components.y_axis_combo.currentText()
+            # if y_var_text != "":
+            #     selected_variables.append(y_var_text)
 
         current_selected_options = (
             self.parameters["variable_1"],
@@ -240,11 +254,8 @@ class BOPlotWidget(AnalysisWidget):
 
     def update_reference_point_table(self, selected_variables: list[str]):
         """Disable and gray out reference points for selected variables."""
-        if not self.model_logic.vocs or not self.ui_components.ref_inputs:
-            # vocs or ref_inputs is not yet set; skip processing
-            return
 
-        for i, var_name in enumerate(self.model_logic.vocs.variable_names):
+        for i, var_name in enumerate(self.parameters["variables"]):
             # Get the reference point item from the table
             ref_item = self.ui_components.ref_inputs[i]
 
@@ -271,30 +282,45 @@ class BOPlotWidget(AnalysisWidget):
             if viewport is not None:
                 viewport.update()
 
+    def get_reference_points(
+        self, ref_inputs: list[QTableWidgetItem], variable_names: list[str]
+    ):
+        reference_point: dict[str, float] = {}
+
+        # Create a mapping from variable names to ref_inputs
+        ref_inputs_dict = dict(zip(self.parameters["variables"], ref_inputs))
+        for var in self.parameters["variables"]:
+            if var not in variable_names:
+                ref_value = float(ref_inputs_dict[var].text())
+                reference_point[var] = ref_value
+        return reference_point
+
     def update_plot(
         self,
         requires_rebuild: bool = False,
         interval: int = 1000,
     ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
-        if not self.model_logic.routine or not self.model_logic.vocs:
-            print("Cannot update plot: routine or vocs are not available.")
-            return
 
-        # Ensure selected_variables is not empty
-        if len(self.selected_variables) == 0:
-            logger.error("No variables selected for plotting")
-            return
+        # # Ensure selected_variables is not empty
+        # if len(self.parameters["variables"]) == 0:
+        #     logger.error("No variables selected for plotting")
+        #     return
 
-        # **Add validation for the number of variables**
-        if len(self.selected_variables) > 2:
-            logger.error("Too many variables selected for plotting")
-            return
+        # # **Add validation for the number of variables**
+        # if len(self.parameters["variables"]) > 2:
+        #     logger.error("Too many variables selected for plotting")
+        #     return
 
-        for var in self.selected_variables:
-            if var == "":
-                logger.error("Empty variable selected for plotting")
-                return
+        # for var in self.parameters["variables"]:
+        #     if var == "":
+        #         logger.error("Empty variable selected for plotting")
+        #         return
+
+        self.selected_variables = [
+            self.parameters["variables"][self.parameters["variable_1"]],
+            self.parameters["variables"][self.parameters["variable_2"]],
+        ]
 
         n_grid_value = self.ui_components.n_grid.value()
 
@@ -325,19 +351,18 @@ class BOPlotWidget(AnalysisWidget):
                 self.ui_components.reference_table,
             ):
                 # Disable and gray out the reference points for selected variables
-                self.update_reference_point_table(self.selected_variables)
+                self.update_reference_point_table(self.parameters["variables"])
 
         # Get reference points for non-selected variables
-        reference_point = self.model_logic.get_reference_points(
+        reference_point = self.get_reference_points(
             self.ui_components.ref_inputs, self.selected_variables
         )
-        generator = cast(BayesianGenerator, self.model_logic.routine.generator)
 
         logger.debug("Updating plot with selected variables and reference points")
 
         # Update the plot with the selected variables and reference points
         self.plotting_area.update_plot(
-            generator,
+            self.generator,
             self.selected_variables,
             reference_point,
             self.parameters["plot_options"]["show_acq_func"],

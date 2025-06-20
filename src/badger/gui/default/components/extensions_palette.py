@@ -134,7 +134,7 @@ class ExtensionsPalette(QMainWindow):
         try:
             if self.run_monitor.routine is not None:
                 child_window.update_window(self.run_monitor.routine)
-        except ValueError:
+        except Exception:
             QMessageBox.warning(
                 self, "Extension is not applicable!", traceback.format_exc()
             )
