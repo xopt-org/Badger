@@ -2,6 +2,7 @@ from multiprocessing import Event, Pipe, Process, Queue
 
 from PyQt5.QtCore import pyqtSignal, QObject
 
+from badger.settings import init_settings
 from badger.core_subprocess import run_routine_subprocess
 
 
@@ -27,6 +28,7 @@ class CreateProcess(QObject):
         self.data_queue = Queue()
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
+        config_path = init_settings()._instance.config_path
 
         new_process = Process(
             target=run_routine_subprocess,
@@ -36,6 +38,7 @@ class CreateProcess(QObject):
                 self.stop_event,
                 self.pause_event,
                 self.wait_event,
+                config_path,
             ),
         )
         new_process.start()

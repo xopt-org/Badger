@@ -5,12 +5,11 @@ import traceback
 from pandas import DataFrame
 import multiprocessing as mp
 
-from badger.archive import load_run
+from badger.settings import init_settings
 from badger.errors import BadgerRunTerminated, BadgerEnvObsError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
-from badger.archive import archive_run
 
 from xopt.errors import FeasibilityError, XoptError
 
@@ -72,6 +71,7 @@ def run_routine_subprocess(
     stop_process: mp.Event,
     pause_process: mp.Event,
     wait_event: mp.Event,
+    config_path: str = None,
 ) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
@@ -84,6 +84,12 @@ def run_routine_subprocess(
     pause_process: mp.Event
     wait_event: mp.Event
     """
+
+    # Initialize the settings singleton with the provided config path
+    init_settings(config_path)
+    # Now load the archive would use the correct config
+    from badger.archive import load_run, archive_run
+
     wait_event.wait()
 
     try:
