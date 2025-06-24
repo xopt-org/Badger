@@ -1,4 +1,3 @@
-from copy import deepcopy
 from importlib import resources
 
 from PyQt5.QtWidgets import (
@@ -528,29 +527,10 @@ class BadgerEnvBox(QWidget):
         self.obj_table.update_objectives(_objectives, 1)
 
     def toggle_con_show_mode(self, _):
-        self.con_table.update_constraints(
-            show_selected_only=self.check_only_con.isChecked()
-        )
+        self.con_table.update_show_selected_only(self.check_only_con.isChecked())
 
     def filter_con(self):
-        keyword = self.edit_con.text()
-        rx = QRegExp(keyword)
-
-        status = deepcopy(self.con_table.status)
-        for con in self.con_table.constraints:
-            cname = next(iter(con))
-            try:
-                _, selected = status[cname]
-            except KeyError:
-                _, selected = True, False
-            if rx.indexIn(cname, 0) != -1:
-                status[cname] = [True, selected]
-            else:
-                status[cname] = [False, selected]
-
-        self.con_table.update_constraints(
-            status=status, show_selected_only=self.check_only_con.isChecked()
-        )
+        self.con_table.update_keyword(self.edit_con.text())
 
     def _fit_content(self, list):
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4

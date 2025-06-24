@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QDoubleSpinBox,
     QMessageBox,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
 
 
@@ -61,8 +61,11 @@ class ConstraintTable(QTableWidget):
         )
 
         self.constraints: List[Dict[str, Any]] = []
-        self.status: Dict[str, List[bool]] = {}  # Track visibility and selection
+        self.status: Dict[str, bool] = {}  # Track selection
         self.formulas: Dict[str, Dict[str, Any]] = {}  # Track formula constraints
+
+        self.show_selected_only = False
+        self.keyword = ""
 
         self.config_logic()
 
@@ -70,6 +73,7 @@ class ConstraintTable(QTableWidget):
         """
         Configure signal connections and internal logic.
         """
+        self.horizontalHeader().sectionClicked.connect(self.header_clicked)
         self.itemChanged.connect(self.on_edit_table_item)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -177,6 +181,18 @@ class ConstraintTable(QTableWidget):
 
         return wrapper
 
+    @block_signals
+    def header_clicked(self, idx: int) -> None:
+        """
+        Toggle the selection of all objectives when the first header is clicked.
+
+        Parameters
+        ----------
+        idx : int
+            The index of the clicked header section. This method only acts if idx is 0.
+        """
+        pass
+
     def insert_constraint_item(
         self,
         row: int,
@@ -207,7 +223,9 @@ class ConstraintTable(QTableWidget):
         checkbox = QCheckBox()
         checkbox.setChecked(selected)
         self.setCellWidget(row, 0, checkbox)
-        # checkbox.stateChanged.connect(self.update_selected)
+        checkbox.stateChanged.connect(
+            lambda: self.update_selected(name, checkbox.isChecked())
+        )
 
         # Name
         name_item = QTableWidgetItem(name)
@@ -263,7 +281,7 @@ class ConstraintTable(QTableWidget):
                 return
 
             self.constraints.append(new_constraint)
-            self.status[name] = [True, True]  # [visible, selected]
+            self.status[name] = True
 
             self.formulas[name] = {
                 "formula": formula_string,
@@ -317,7 +335,7 @@ class ConstraintTable(QTableWidget):
 
             # Add the constraint to the internal list
             self.constraints.append({name: ["<", 0.0, False]})
-            self.status[name] = [True, True]
+            self.status[name] = True
 
             self.formulas[name] = {
                 "formula": "",
@@ -347,49 +365,105 @@ class ConstraintTable(QTableWidget):
         item.setForeground(QColor("gray"))
         self.setItem(row, 1, item)
 
+    def get_constraint_by_name(self, name: str) -> Dict[str, Any]:
+        """
+        Retrieve the constraint dictionary from the constraints list that matches the given name.
+
+        Parameters
+        ----------
+        name : str
+            The name of the constraint to retrieve.
+
+        Returns
+        -------
+        Dict[str, Any]
+            The matching constraint dictionary.
+
+        Raises
+        ------
+        ValueError
+            If no constraint with the given name is found.
+        """
+        for constraint in self.constraints:
+            if name in constraint:
+                return constraint
+        raise ValueError(f"No constraint found with name: {name}")
+
+    def update_selected(self, name: str, selected: bool) -> None:
+        """
+        Update the internal status dictionary based on the checkbox states.
+        """
+        self.status[name] = selected
+        self.update_constraints()
+
     def update_relations(self):
         """
         Update the internal relations dictionary based on the combo box selections.
         """
         for i in range(self.rowCount() - 1):
-            name_item = self.item(i, 0)
+            name_item = self.item(i, 1)
             if name_item is None:
                 continue
             name = name_item.text()
-            relation_widget = self.cellWidget(i, 1)
+            relation_widget = self.cellWidget(i, 2)
             if relation_widget is not None:
-                self.relations[name] = relation_widget.currentText()
+                constraint = self.get_constraint_by_name(name)
+                constraint[name][0] = relation_widget.currentText()
 
     def update_thresholds(self):
         """
         Update the internal thresholds dictionary based on the spin box values.
         """
         for i in range(self.rowCount() - 1):
-            name_item = self.item(i, 0)
+            name_item = self.item(i, 1)
             if name_item is None:
                 continue
             name = name_item.text()
-            threshold_widget = self.cellWidget(i, 2)
+            threshold_widget = self.cellWidget(i, 3)
             if threshold_widget is not None:
-                self.thresholds[name] = threshold_widget.value()
+                constraint = self.get_constraint_by_name(name)
+                constraint[name][1] = threshold_widget.value()
 
     def update_critical(self):
         """
         Update the internal critical dictionary based on the checkbox states.
         """
         for i in range(self.rowCount() - 1):
-            name_item = self.item(i, 0)
+            name_item = self.item(i, 1)
             if name_item is None:
                 continue
             name = name_item.text()
-            critical_widget = self.cellWidget(i, 3)
+            critical_widget = self.cellWidget(i, 4)
             if critical_widget is not None:
-                self.critical[name] = critical_widget.isChecked()
+                constraint = self.get_constraint_by_name(name)
+                constraint[name][2] = critical_widget.isChecked()
+
+    def update_show_selected_only(self, show: bool) -> None:
+        """
+        Update the visibility of constraints based on the selected state.
+
+        Parameters
+        ----------
+        show : bool
+            If True, only show selected constraints; otherwise, show all.
+        """
+        self.show_selected_only = show
+        self.update_constraints()
+
+    def update_keyword(self, keyword: str) -> None:
+        """
+        Update the keyword for filtering constraints.
+
+        Parameters
+        ----------
+        keyword : str
+            The keyword to filter constraints by name.
+        """
+        self.keyword = keyword
+        self.update_constraints()
 
     @block_signals
-    def update_constraints(
-        self, constraints=None, status=None, show_selected_only=False
-    ) -> None:
+    def update_constraints(self, constraints=None, status=None) -> None:
         """
         Refresh the table with the current constraints.
         """
@@ -400,20 +474,19 @@ class ConstraintTable(QTableWidget):
         if status is not None:
             self.status = status
 
+        rx = QRegExp(self.keyword)
+
         for constraint in self.constraints:
             row = self.rowCount()
 
             name = next(iter(constraint))
-            relation, threshold, critical = constraint[name]
-            try:
-                visible, selected = self.status[name]
-            except KeyError:
-                visible, selected = True, False
-
+            visible = rx.indexIn(name, 0) != -1
             if not visible:
                 continue
 
-            if show_selected_only and not selected:
+            relation, threshold, critical = constraint[name]
+            selected = self.status.get(name, False)
+            if self.show_selected_only and not selected:
                 continue
 
             self.setRowCount(row + 1)

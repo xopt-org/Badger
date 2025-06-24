@@ -729,7 +729,7 @@ class BadgerRoutinePage(QWidget):
         status = {}
         for name in self.configs["observations"]:
             cons = {name: ["<", 0.0, False]}
-            status[name] = [True, False]  # [visible, selected]
+            status[name] = False  # selected
             constraints.append(cons)
         for name, val in routine.vocs.constraints.items():
             relation, thres = val
@@ -742,11 +742,10 @@ class BadgerRoutinePage(QWidget):
                 constraints.append(cons)
             else:
                 constraints[idx] = {name: [relation, thres, critical]}
-            status[name] = [True, True]
+            status[name] = True
         self.env_box.con_table.update_constraints(
             constraints,
             status,
-            show_selected_only=self.env_box.check_only_con.isChecked(),
         )
 
         observables = routine.vocs.observable_names
@@ -944,13 +943,9 @@ class BadgerRoutinePage(QWidget):
         status = {}
         for name in self.configs["observations"]:
             cons = {name: ["<", 0.0, False]}
-            status[name] = [True, False]  # [visible, selected]
+            status[name] = False  # selected
             constraints.append(cons)
-        self.env_box.con_table.update_constraints(
-            constraints,
-            status,
-            show_selected_only=self.env_box.check_only_con.isChecked(),
-        )
+        self.env_box.con_table.update_constraints(constraints, status)
 
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
