@@ -64,6 +64,10 @@ from badger.utils import (
 )
 
 LABEL_WIDTH = 96
+CONS_RELATION_DICT_INV = {
+    "GREATER_THAN": ">",
+    "LESS_THAN": "<",
+}
 
 
 def format_validation_error(e: ValidationError) -> str:
@@ -269,7 +273,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
-        self.env_box.btn_add_con.clicked.connect(self.add_constraint)
+        # self.env_box.btn_add_con.clicked.connect(self.add_constraint)
         self.env_box.btn_add_sta.clicked.connect(self.add_state)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
@@ -454,7 +458,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(True)
 
         # set constraints
-        self.env_box.con_table.clear_constraints()
         constraints = vocs.constraints
         if len(constraints):
             for name, val in constraints.items():
@@ -580,7 +583,6 @@ class BadgerRoutinePage(QWidget):
         self.generators = list_generators()
         self.envs = list_env()
         # Clean up the constraints/observables list
-        self.env_box.con_table.clear_constraints()
         self.env_box.list_obs.clear()
 
         if routine is None:
@@ -722,13 +724,30 @@ class BadgerRoutinePage(QWidget):
         self.env_box.obj_table.set_rules(routine.vocs.objectives)
         self.env_box.check_only_obj.setChecked(True)
 
-        constraints = routine.vocs.constraints
-        if len(constraints):
-            for name, val in constraints.items():
-                relation, thres = val
-                critical = name in routine.critical_constraint_names
-                relation = ["GREATER_THAN", "LESS_THAN", "EQUAL_TO"].index(relation)
-                self.add_constraint(name, relation, thres, critical)
+        # Initialize the constraints table with env observables
+        constraints = []
+        status = {}
+        for name in self.configs["observations"]:
+            cons = {name: ["<", 0.0, False]}
+            status[name] = [True, False]  # [visible, selected]
+            constraints.append(cons)
+        for name, val in routine.vocs.constraints.items():
+            relation, thres = val
+            critical = name in routine.critical_constraint_names
+            relation = CONS_RELATION_DICT_INV[relation]
+
+            idx = self.configs["observations"].index(name)
+            if idx == -1:
+                cons = {name: [relation, thres, critical]}
+                constraints.append(cons)
+            else:
+                constraints[idx] = {name: [relation, thres, critical]}
+            status[name] = [True, True]
+        self.env_box.con_table.update_constraints(
+            constraints,
+            status,
+            show_selected_only=self.env_box.check_only_con.isChecked(),
+        )
 
         observables = routine.vocs.observable_names
         if len(observables):
@@ -857,7 +876,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.obj_table.update_objectives(None)
             self.configs = None
             self.env = None
-            self.env_box.btn_add_con.setDisabled(True)
+            # self.env_box.btn_add_con.setDisabled(True)
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
@@ -873,7 +892,7 @@ class BadgerRoutinePage(QWidget):
             self.env = env
             self.env_box.edit_var.clear()
             self.env_box.edit_obj.clear()
-            self.env_box.btn_add_con.setDisabled(False)
+            # self.env_box.btn_add_con.setDisabled(False)
             self.env_box.btn_add_sta.setDisabled(False)
             self.env_box.btn_add_var.setDisabled(False)
             self.env_box.btn_lim_vrange.setDisabled(False)
@@ -884,7 +903,7 @@ class BadgerRoutinePage(QWidget):
             self.configs = None
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
-            self.env_box.btn_add_con.setDisabled(True)
+            # self.env_box.btn_add_con.setDisabled(True)
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
@@ -920,7 +939,19 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(False)
         self.env_box.obj_table.update_objectives(objs_env)
 
-        self.env_box.con_table.clear_constraints()
+        # Initialize the constraints table with env observables
+        constraints = []
+        status = {}
+        for name in self.configs["observations"]:
+            cons = {name: ["<", 0.0, False]}
+            status[name] = [True, False]  # [visible, selected]
+            constraints.append(cons)
+        self.env_box.con_table.update_constraints(
+            constraints,
+            status,
+            show_selected_only=self.env_box.check_only_con.isChecked(),
+        )
+
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
         # self.routine = None
