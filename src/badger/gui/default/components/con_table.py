@@ -563,7 +563,7 @@ class ConstraintTable(QTableWidget):
         self.update_constraints()
 
     @block_signals
-    def update_constraints(self, constraints=None, status=None) -> None:
+    def update_constraints(self, constraints=None, status=None, formulas=None) -> None:
         """
         Refresh the table with the current constraints.
         """
@@ -573,6 +573,8 @@ class ConstraintTable(QTableWidget):
             self.constraints = constraints
         if status is not None:
             self.status = status
+        if formulas is not None:
+            self.formulas = formulas
 
         rx = QRegExp(self.keyword)
 

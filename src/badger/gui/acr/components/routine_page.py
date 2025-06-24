@@ -467,7 +467,6 @@ class BadgerRoutinePage(QWidget):
             formulas = template_dict["constraint_formulas"]
         except AttributeError:
             formulas = {}
-        self.env_box.con_table.formulas = formulas  # update the formulas
         constraints = []
         status = {}
         constraints_names_full = self.configs["observations"] + list(formulas.keys())
@@ -488,9 +487,14 @@ class BadgerRoutinePage(QWidget):
             else:
                 constraints[idx] = {name: [relation, thres, critical]}
             status[name] = True
-        self.env_box.con_table.constraints = constraints
-        self.env_box.con_table.status = status
+
+        # Show selected constraints only
+        self.env_box.check_only_con.blockSignals(True)
         self.env_box.check_only_con.setChecked(True)
+        self.env_box.check_only_con.blockSignals(False)
+        self.env_box.con_table.show_selected_only = True
+
+        self.env_box.con_table.update_constraints(constraints, status, formulas)
 
         # set observables
         self.env_box.list_obs.clear()
@@ -756,7 +760,6 @@ class BadgerRoutinePage(QWidget):
             formulas = routine.constraint_formulas
         except AttributeError:
             formulas = {}
-        self.env_box.con_table.formulas = formulas  # update the formulas
         constraints = []
         status = {}
         constraints_names_full = self.configs["observations"] + list(formulas.keys())
@@ -777,9 +780,14 @@ class BadgerRoutinePage(QWidget):
             else:
                 constraints[idx] = {name: [relation, thres, critical]}
             status[name] = True
-        self.env_box.con_table.constraints = constraints
-        self.env_box.con_table.status = status
+
+        # Show selected constraints only
+        self.env_box.check_only_con.blockSignals(True)
         self.env_box.check_only_con.setChecked(True)
+        self.env_box.check_only_con.blockSignals(False)
+        self.env_box.con_table.show_selected_only = True
+
+        self.env_box.con_table.update_constraints(constraints, status, formulas)
 
         observables = routine.vocs.observable_names
         if len(observables):
@@ -978,7 +986,7 @@ class BadgerRoutinePage(QWidget):
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
             constraints.append(cons)
-        self.env_box.con_table.update_constraints(constraints, status)
+        self.env_box.con_table.update_constraints(constraints, status, formulas={})
 
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
