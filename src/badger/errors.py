@@ -59,6 +59,7 @@ class BadgerDBError(Exception):
 class BadgerEnvInstantiationError(Exception):
     pass
 
+
 class BadgerEnvNotFoundError(Exception):
     pass
 
