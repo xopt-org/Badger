@@ -189,15 +189,15 @@ class TestEnvironment:
         env = TestEnv()
 
         # Test formula with observables
-        result = env.get_observables(["`f` + `g`", "h"])
+        result = env.get_observables(["`f` + `g`", "h", "g"])
 
         # Should evaluate formula and include regular observable
         assert result["`f` + `g`"] == 5.0  # 2.0 + 3.0
         assert result["h"] == 1.0
+        assert result["g"] == 3.0
 
         # Should not include the formula variables in output
         assert "f" not in result
-        assert "g" not in result
 
     def test_convenience_methods(self):
         """Test convenience methods for single variable/observable operations."""
