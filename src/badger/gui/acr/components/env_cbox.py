@@ -415,11 +415,14 @@ class BadgerEnvBox(QWidget):
         hbox_action_con = QHBoxLayout(action_con)
         hbox_action_con.setContentsMargins(0, 0, 0, 0)
         vbox_con_edit.addWidget(action_con)
-        self.btn_add_con = btn_add_con = QPushButton("Add")
-        btn_add_con.setFixedSize(96, 24)
-        btn_add_con.setDisabled(True)
-        hbox_action_con.addWidget(btn_add_con)
+        self.edit_con = edit_con = QLineEdit()
+        edit_con.setPlaceholderText("Filter constraints...")
+        edit_con.setFixedWidth(192)
+        self.check_only_con = check_only_con = QCheckBox("Show Checked Only")
+        check_only_con.setChecked(False)
+        hbox_action_con.addWidget(edit_con)
         hbox_action_con.addStretch()
+        hbox_action_con.addWidget(check_only_con)
 
         self.con_table = ConstraintTable()
         self.con_table.setMinimumHeight(120)
@@ -467,6 +470,8 @@ class BadgerEnvBox(QWidget):
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
+        self.edit_con.textChanged.connect(self.filter_con)
+        self.check_only_con.stateChanged.connect(self.toggle_con_show_mode)
         self.btn_params.toggled.connect(self.toggle_params)
         self.animation.finished.connect(self.animation_finished)
 
@@ -521,6 +526,12 @@ class BadgerEnvBox(QWidget):
 
         self.obj_table.update_objectives(_objectives, 1)
 
+    def toggle_con_show_mode(self, _):
+        self.con_table.update_show_selected_only(self.check_only_con.isChecked())
+
+    def filter_con(self):
+        self.con_table.update_keyword(self.edit_con.text())
+
     def _fit_content(self, list):
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4
         height = max(28, min(height, 192))
@@ -545,7 +556,7 @@ class BadgerEnvBox(QWidget):
             stylesheet = f"""
                 #EnvBox {{
                     border-radius: 4px;
-                    border-color: {color_dict['normal']};
+                    border-color: {color_dict["normal"]};
                     border-width: 4px;
                 }}
             """
