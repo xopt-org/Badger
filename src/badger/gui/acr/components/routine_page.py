@@ -64,6 +64,10 @@ from badger.utils import (
 )
 
 LABEL_WIDTH = 96
+CONS_RELATION_DICT = {
+    ">": "GREATER_THAN",
+    "<": "LESS_THAN",
+}
 CONS_RELATION_DICT_INV = {
     "GREATER_THAN": ">",
     "LESS_THAN": "<",
@@ -1480,14 +1484,10 @@ class BadgerRoutinePage(QWidget):
 
         constraints = {}
         critical_constraints = []
-        for (
-            con_name,
-            relation,
-            threshold,
-            critical,
-            _,
-        ) in self.env_box.con_table.export_constraints():
-            constraints[con_name] = [relation, threshold]
+        for constraint in self.env_box.con_table.export_constraints():
+            con_name = next(iter(constraint))
+            relation, threshold, critical = constraint[con_name]
+            constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
             if critical:
                 critical_constraints.append(con_name)
 
