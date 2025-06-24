@@ -408,8 +408,7 @@ class ConstraintTable(QTableWidget):
             self.add_empty_row()
         elif row == self.rowCount() - 1:
             # If the name is empty, recover the last row
-            self.removeRow(row)
-            self.add_empty_row()
+            item.setText("Enter new constraint here...")
         elif not name:
             # If name is empty, delete the row and remove from internal lists
             visible_constraints = self.get_visible_constraints()
@@ -435,7 +434,7 @@ class ConstraintTable(QTableWidget):
                     f"Constraint {name} already exists!",
                 )
                 # Recover the original name
-                self.setItem(row, 1, QTableWidgetItem(original_name))
+                item.setText(original_name)
                 return
 
             # Update the internal constraints and status dictionaries
