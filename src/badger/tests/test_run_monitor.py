@@ -13,7 +13,13 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 class TestRunMonitor:
     @pytest.fixture(scope="session")
     def init_multiprocessing(self):
-        multiprocessing.set_start_method("fork", force=True)
+        # Use 'spawn' on Windows, 'fork' on Unix-like systems
+        method = (
+            "spawn"
+            if multiprocessing.get_start_method(allow_none=True) != "fork"
+            else "fork"
+        )
+        multiprocessing.set_start_method(method, force=True)
 
     @pytest.fixture
     def process_manager(self):

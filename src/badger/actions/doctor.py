@@ -75,8 +75,7 @@ def check_n_config_paths(config_filepath=None):
         # Let the users deal with the issues
         while True:
             _res = input(
-                f"\nFound {len(issue_list)} issue(s).\n"
-                "Fix the issue(s) now ([y]/n)? "
+                f"\nFound {len(issue_list)} issue(s).\nFix the issue(s) now ([y]/n)? "
             )
             if (not _res) or (_res == "y"):
                 break
