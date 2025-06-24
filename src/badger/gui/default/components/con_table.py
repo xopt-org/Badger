@@ -181,7 +181,6 @@ class ConstraintTable(QTableWidget):
 
         return wrapper
 
-    @block_signals
     def header_clicked(self, idx: int) -> None:
         """
         Toggle the selection of all objectives when the first header is clicked.
@@ -191,7 +190,22 @@ class ConstraintTable(QTableWidget):
         idx : int
             The index of the clicked header section. This method only acts if idx is 0.
         """
-        pass
+        if idx != 0:
+            return
+
+        all_checked = True
+        visible_names = []
+        for i in range(self.rowCount() - 1):  # Exclude the last empty row
+            checkbox = self.cellWidget(i, 0)
+            name_item = self.item(i, 1)
+            visible_names.append(name_item.text())
+            if not checkbox.isChecked():
+                all_checked = False
+
+        for name in visible_names:
+            self.status[name] = not all_checked
+
+        self.update_constraints()
 
     def insert_constraint_item(
         self,
