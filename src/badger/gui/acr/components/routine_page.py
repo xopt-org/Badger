@@ -462,13 +462,35 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(True)
 
         # set constraints
-        constraints = vocs.constraints
-        if len(constraints):
-            for name, val in constraints.items():
-                relation, thres = val
-                critical = name in critical_constraint_names
-                relation = ["GREATER_THAN", "LESS_THAN"].index(relation)
-                self.add_constraint(name, relation, thres, critical)
+        # Initialize the constraints table with env observables
+        try:
+            formulas = template_dict["constraint_formulas"]
+        except AttributeError:
+            formulas = {}
+        self.env_box.con_table.formulas = formulas  # update the formulas
+        constraints = []
+        status = {}
+        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in constraints_names_full:
+            cons = {name: ["<", 0.0, False]}
+            status[name] = False  # selected
+            constraints.append(cons)
+        for name, val in vocs.constraints.items():
+            relation, thres = val
+            critical = name in critical_constraint_names
+            relation = CONS_RELATION_DICT_INV[relation]
+
+            idx = constraints_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Constraint {name} not found in the routine's observables."
+                )
+            else:
+                constraints[idx] = {name: [relation, thres, critical]}
+            status[name] = True
+        self.env_box.con_table.constraints = constraints
+        self.env_box.con_table.status = status
+        self.env_box.check_only_con.setChecked(True)
 
         # set observables
         self.env_box.list_obs.clear()
@@ -508,6 +530,7 @@ class BadgerRoutinePage(QWidget):
             "vrange_hard_limit": self.var_hard_limit,
             "additional_variables": self.env_box.var_table.addtl_vars,
             "formulas": self.env_box.obj_table.formulas,
+            "constraint_formulas": self.env_box.con_table.formulas,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
             "vocs": vars(vocs),
@@ -729,9 +752,15 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(True)
 
         # Initialize the constraints table with env observables
+        try:
+            formulas = routine.constraint_formulas
+        except AttributeError:
+            formulas = {}
+        self.env_box.con_table.formulas = formulas  # update the formulas
         constraints = []
         status = {}
-        for name in self.configs["observations"]:
+        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in constraints_names_full:
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
             constraints.append(cons)
@@ -740,17 +769,17 @@ class BadgerRoutinePage(QWidget):
             critical = name in routine.critical_constraint_names
             relation = CONS_RELATION_DICT_INV[relation]
 
-            idx = self.configs["observations"].index(name)
+            idx = constraints_names_full.index(name)
             if idx == -1:
-                cons = {name: [relation, thres, critical]}
-                constraints.append(cons)
+                raise BadgerRoutineError(
+                    f"Constraint {name} not found in the routine's observables."
+                )
             else:
                 constraints[idx] = {name: [relation, thres, critical]}
             status[name] = True
-        self.env_box.con_table.update_constraints(
-            constraints,
-            status,
-        )
+        self.env_box.con_table.constraints = constraints
+        self.env_box.con_table.status = status
+        self.env_box.check_only_con.setChecked(True)
 
         observables = routine.vocs.observable_names
         if len(observables):
@@ -1629,6 +1658,7 @@ class BadgerRoutinePage(QWidget):
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
                 formulas=self.env_box.obj_table.formulas,
+                constraint_formulas=self.env_box.con_table.formulas,
             )
 
             # Check if any user warnings were caught
