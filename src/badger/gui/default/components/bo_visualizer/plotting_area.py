@@ -1,11 +1,19 @@
+from collections.abc import Callable
 from typing import Optional, cast
+from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
     BlockSignalsContext,
     MatplotlibFigureContext,
     clear_layout,
     requires_update,
 )
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from badger.routine import Routine
+from matplotlib.backends.backend_qtagg import (
+    FigureCanvasQTAgg as FigureCanvas,
+)
+from matplotlib.backends.backend_qt import (
+    NavigationToolbar2QT as NavigationToolbar,
+)
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
@@ -15,6 +23,9 @@ from xopt.generators.bayesian.visualize import (
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 import time
+from badger.gui.default.components.bo_visualizer.plot_event_handlers import (
+    MatplotlibInteractionHandler,
+)
 
 
 import logging
@@ -36,7 +47,10 @@ class PlottingArea(QWidget):
 
     def update_plot(
         self,
+        routine: Routine,
         generator: BayesianGenerator,
+        parameters: ConfigurableOptions,
+        update_extension: Callable[[Routine, bool], None],
         variable_names: list[str],
         reference_point: dict[str, float],
         show_acquisition: bool,
@@ -82,16 +96,18 @@ class PlottingArea(QWidget):
                     clear_layout(layout)
 
                     with MatplotlibFigureContext(fig, ax) as (fig, ax):
-                        # Set the layout engine to tight
-                        # fig.show()
-
                         # Create a new figure and canvas
                         canvas = FigureCanvas(fig)
+                        toolbar = NavigationToolbar(canvas, self)
+
+                        handler = MatplotlibInteractionHandler(
+                            canvas, parameters, routine, update_extension
+                        )
+                        handler.connect_events()
 
                         # Add the new canvas to the layout
                         layout.addWidget(canvas)
-
-                    # plt.close(fig)  # Close the figure to free memory
+                        layout.addWidget(toolbar)
             else:
                 raise Exception("Layout never updated")
         except Exception as e:

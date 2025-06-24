@@ -1,0 +1,233 @@
+from badger.routine import Routine
+from matplotlib.axes import Axes
+from matplotlib.backend_bases import MouseEvent, MouseButton
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+
+from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
+
+from typing import cast
+
+import logging
+
+from pyparsing import Callable
+
+logger = logging.getLogger(__name__)
+
+
+class MatplotlibInteractionHandler:
+    """
+    Handles matplotlib interaction events such as clicks, mouse movements, and scrolls.
+    This class is designed to be used with matplotlib figures and axes.
+    """
+
+    parameters: ConfigurableOptions
+    routine: Routine
+    callback: Callable[[Routine, bool], None]
+    moving: bool
+    start: dict[str, float]  # Starting coordinates for movement
+
+    def __init__(
+        self,
+        canvas: FigureCanvasQTAgg,
+        parameters: ConfigurableOptions,
+        routine: Routine,
+        callback: Callable[[Routine, bool], None],
+    ):
+        self.canvas = canvas
+        self.parameters = parameters
+        self.routine = routine
+        self.callback = callback
+        self.moving = False
+        self.start = {"x": 0, "y": 0}  # Starting coordinates for movement
+        self.step = 0
+
+    def connect_events(self):
+        self.canvas.mpl_connect(
+            "button_press_event",
+            lambda event: self.on_click(
+                event,  # type: ignore[call-arg]
+                self.parameters,
+                self.routine,
+                self.callback,
+            ),
+        )
+        self.canvas.mpl_connect(
+            "button_release_event",
+            lambda event: self.on_release(
+                event,  # type: ignore[call-arg]
+            ),
+        )
+        self.canvas.mpl_connect(
+            "motion_notify_event",
+            lambda event: self.on_motion(event),  # type: ignore[call-arg]
+        )
+
+        self.canvas.mpl_connect(
+            "scroll_event",
+            lambda event: self.on_scroll(event),  # type: ignore[call-arg]
+        )
+
+    def update_reference_points(
+        self,
+        parameters: ConfigurableOptions,
+        desired_coordinate: tuple[float, float],
+    ) -> None:
+        variable_1 = parameters["variable_1"]
+        variable_2 = parameters["variable_2"]
+
+        variable_1_name = parameters["variables"][variable_1]
+        variable_2_name = parameters["variables"][variable_2]
+
+        logger.debug(f"Updated reference points: {parameters['reference_points']}")
+
+        parameters["reference_points"][variable_1_name] = float(
+            round(desired_coordinate[0], 3)
+        )
+        parameters["reference_points"][variable_2_name] = float(
+            round(desired_coordinate[1], 3)
+        )
+
+        logger.debug(f"Updated reference points: {parameters['reference_points']}")
+
+    def on_click(
+        self,
+        event: MouseEvent,
+        parameters: ConfigurableOptions,
+        routine: Routine,
+        callback: Callable[[Routine, bool], None],
+    ) -> None:
+        logger.debug(f"Clicked at {event.xdata}, {event.ydata}, button: {event.button}")
+        if event.inaxes is None:
+            logger.debug("Click outside axes, ignoring")
+            return
+
+        if event.xdata is None or event.ydata is None:
+            logger.debug("Click coordinates are None, ignoring")
+            return
+
+        axis = cast(Axes, event.inaxes)
+        logger.debug(f"Click in axes: {axis.get_title()}")
+        clicked = False
+        if event.button == MouseButton.MIDDLE:
+            axis.set_title(f"Middle click at ({event.xdata:.2f}, {event.ydata:.2f})")
+            # Reset reference points back to the initial values
+            initial_reference_points = parameters["reference_points_range"]
+            parameters["reference_points"] = {
+                key: (
+                    initial_reference_points[key][0] + initial_reference_points[key][1]
+                )
+                / 2
+                for key in initial_reference_points
+            }
+            clicked = True
+        elif event.button == MouseButton.RIGHT:
+            axis.set_title(f"Right click at ({event.xdata:.2f}, {event.ydata:.2f})")
+
+            if event.xdata is None or event.ydata is None:
+                logger.debug("Click coordinates are None, ignoring")
+                return
+
+            coordinate: tuple[float, float] = (event.xdata, event.ydata)
+            self.update_reference_points(
+                parameters,
+                coordinate,
+            )
+            clicked = True
+        elif event.button == MouseButton.LEFT:
+            self.start["x"] = event.xdata
+            self.start["y"] = event.ydata
+            self.moving = True
+
+        if clicked:
+            callback(routine, True)
+
+    def on_motion(self, event: MouseEvent) -> None:
+        if event.inaxes is None:
+            logger.debug("Mouse moved outside axes, ignoring")
+            return
+
+        axis = cast(Axes, event.inaxes)
+
+        if not self.moving:
+            logger.debug("Mouse is not moving, ignoring motion event")
+            return
+
+        if event.xdata is None or event.ydata is None:
+            logger.debug("Mouse coordinates are None, ignoring")
+            return
+
+        current_x_range = axis.get_xlim()
+        current_y_range = axis.get_ylim()
+
+        x_range = current_x_range[1] - current_x_range[0]
+        y_range = current_y_range[1] - current_y_range[0]
+
+        movement_x = event.xdata - self.start["x"]
+        movement_y = event.ydata - self.start["y"]
+
+        new_x_range = (
+            current_x_range[0] - movement_x,
+            current_x_range[0] + x_range - movement_x,
+        )
+        new_y_range = (
+            current_y_range[0] - movement_y,
+            current_y_range[0] + y_range - movement_y,
+        )
+
+        axis.set_xlim(new_x_range)
+        axis.set_ylim(new_y_range)
+
+        event.canvas.draw_idle()
+
+    def on_release(self, event: MouseEvent) -> None:
+        logger.debug(
+            f"Mouse released at {event.xdata}, {event.ydata}, button: {event.button}"
+        )
+        if event.button == MouseButton.LEFT:
+            self.moving = False
+            logger.debug("Mouse left button released, stopping movement")
+        else:
+            logger.debug("Mouse button released, no action taken")
+
+    def on_scroll(self, event: MouseEvent) -> None:
+        logger.debug(f"Mouse scrolled step: {event.step}")
+        if event.inaxes is None:
+            logger.debug("Mouse moved outside axes, ignoring")
+            return
+
+        # Filter out excessive scroll events by ignoring if the step is too large
+        MAX_STEP = 3
+        if abs(event.step) > MAX_STEP:
+            logger.debug(f"Ignoring excessive scroll event with step: {event.step}")
+            return
+
+        axis = cast(Axes, event.inaxes)
+
+        current_x_range = axis.get_xlim()
+        current_y_range = axis.get_ylim()
+
+        x_range = current_x_range[1] - current_x_range[0]
+        y_range = current_y_range[1] - current_y_range[0]
+
+        SCALE_FACTOR = 0.1
+
+        if event.step < 0:
+            axis.set_xlim(
+                current_x_range[0] - x_range * SCALE_FACTOR,
+                current_x_range[1] + x_range * SCALE_FACTOR,
+            )
+            axis.set_ylim(
+                current_y_range[0] - y_range * SCALE_FACTOR,
+                current_y_range[1] + y_range * SCALE_FACTOR,
+            )
+        elif event.step > 0:
+            axis.set_xlim(
+                current_x_range[0] + x_range * SCALE_FACTOR,
+                current_x_range[1] - x_range * SCALE_FACTOR,
+            )
+            axis.set_ylim(
+                current_y_range[0] + y_range * SCALE_FACTOR,
+                current_y_range[1] - y_range * SCALE_FACTOR,
+            )
+
+        event.canvas.draw_idle()

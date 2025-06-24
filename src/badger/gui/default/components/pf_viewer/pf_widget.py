@@ -396,10 +396,10 @@ class ParetoFrontWidget(AnalysisWidget):
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
-                    canvas0 = FigureCanvas(fig)
+                    canvas = FigureCanvas(fig)
 
                     ax.set_title("Data Points")
-                    plot_tab_widget.addTab(canvas0, "Variable Space")
+                    plot_tab_widget.addTab(canvas, "Variable Space")
                 except ValueError:
                     logging.error("No data points available for Variable Space")
                     blank_canvas = FigureCanvas(fig)

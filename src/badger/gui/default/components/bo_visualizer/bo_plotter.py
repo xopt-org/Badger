@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QWidget,
@@ -40,6 +40,8 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
     "variable_1": 0,
     "variable_2": 1,
     "variables": [],
+    "reference_points": {},
+    "reference_points_range": {},
     "include_variable_2": True,
 }
 
@@ -62,7 +64,7 @@ class BOPlotWidget(AnalysisWidget):
         self.setMinimumSize(1250, 720)
 
     def create_ui(self) -> None:
-        self.ui_components = UIComponents(self.parameters, self.parameters["variables"])
+        self.ui_components = UIComponents(self.parameters)
         self.plotting_area = PlottingArea()
 
         main_layout = QHBoxLayout(self)
@@ -85,12 +87,23 @@ class BOPlotWidget(AnalysisWidget):
         variable_names = self.routine.vocs.variable_names
         self.parameters["variables"] = variable_names
 
+        vocs_variables = cast(
+            dict[str, tuple[float, float]],
+            self.routine.vocs.variables,  # type: ignore
+        )
+
+        self.ui_components.initialize_variables(self.parameters, vocs_variables)
+
         self.ui_components.update_variables(self.parameters)
 
+        vocs_variables = cast(
+            dict[str, tuple[float, float]],
+            self.routine.vocs.variables,  # type: ignore
+        )
         # Initialize UI Components
-        self.ui_components.initialize_ui_components(self.parameters)
-
-        self.on_axis_selection_changed()
+        self.ui_components.initialize_ui_components(
+            self.parameters,
+        )
 
     def setup_connections(self) -> None:
         # Disconnect existing connections
@@ -163,6 +176,12 @@ class BOPlotWidget(AnalysisWidget):
 
     def on_reference_points_changed(self) -> None:
         # Update the reference points in the plot
+
+        self.parameters["reference_points"] = self.get_reference_points(
+            self.ui_components.ref_inputs,
+            self.parameters["variables"],
+        )
+
         self.update_plot(requires_rebuild=True)
 
     def requires_reinitialization(self) -> bool:
@@ -170,6 +189,8 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Checking if BO Visualizer needs to be reinitialized")
 
         archive_name = create_archive_run_filename(self.routine)
+
+        logger.debug(f"Archive name: {archive_name}")
 
         if not self.initialized:
             logger.debug("Reset - Extension never initialized")
@@ -180,7 +201,7 @@ class BOPlotWidget(AnalysisWidget):
             self.initialized = True
             return True
 
-        if self.routine_identifier != self.routine.name:
+        if self.routine_identifier != archive_name:
             logger.debug("Reset - Routine name has changed")
             self.routine_identifier = archive_name
             return True
@@ -285,15 +306,15 @@ class BOPlotWidget(AnalysisWidget):
     def get_reference_points(
         self, ref_inputs: list[QTableWidgetItem], variable_names: list[str]
     ):
-        reference_point: dict[str, float] = {}
+        reference_points: dict[str, float] = {}
 
         # Create a mapping from variable names to ref_inputs
         ref_inputs_dict = dict(zip(self.parameters["variables"], ref_inputs))
         for var in self.parameters["variables"]:
             if var not in variable_names:
                 ref_value = float(ref_inputs_dict[var].text())
-                reference_point[var] = ref_value
-        return reference_point
+                reference_points[var] = ref_value
+        return reference_points
 
     def update_plot(
         self,
@@ -302,25 +323,14 @@ class BOPlotWidget(AnalysisWidget):
     ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
 
-        # # Ensure selected_variables is not empty
-        # if len(self.parameters["variables"]) == 0:
-        #     logger.error("No variables selected for plotting")
-        #     return
-
-        # # **Add validation for the number of variables**
-        # if len(self.parameters["variables"]) > 2:
-        #     logger.error("Too many variables selected for plotting")
-        #     return
-
-        # for var in self.parameters["variables"]:
-        #     if var == "":
-        #         logger.error("Empty variable selected for plotting")
-        #         return
-
-        self.selected_variables = [
+        selected_variables = [
             self.parameters["variables"][self.parameters["variable_1"]],
-            self.parameters["variables"][self.parameters["variable_2"]],
         ]
+
+        if self.ui_components.y_axis_checkbox.isChecked():
+            selected_variables.append(
+                self.parameters["variables"][self.parameters["variable_2"]]
+            )
 
         n_grid_value = self.ui_components.n_grid.value()
 
@@ -345,25 +355,30 @@ class BOPlotWidget(AnalysisWidget):
             self.ui_components.acq_func_checkbox.isChecked()
         )
 
+        self.ui_components.update_variables(self.parameters)
+
         # Disable signals for the reference table to prevent updating the plot multiple times
         if self.ui_components.reference_table is not None:
             with BlockSignalsContext(
                 self.ui_components.reference_table,
             ):
                 # Disable and gray out the reference points for selected variables
-                self.update_reference_point_table(self.parameters["variables"])
+                self.update_reference_point_table(selected_variables)
 
         # Get reference points for non-selected variables
         reference_point = self.get_reference_points(
-            self.ui_components.ref_inputs, self.selected_variables
+            self.ui_components.ref_inputs, selected_variables
         )
 
         logger.debug("Updating plot with selected variables and reference points")
 
         # Update the plot with the selected variables and reference points
         self.plotting_area.update_plot(
+            self.routine,
             self.generator,
-            self.selected_variables,
+            self.parameters,
+            self.update_extension,
+            selected_variables,
             reference_point,
             self.parameters["plot_options"]["show_acq_func"],
             self.parameters["plot_options"]["show_samples"],

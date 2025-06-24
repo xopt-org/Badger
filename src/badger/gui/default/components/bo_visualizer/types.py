@@ -15,4 +15,6 @@ class ConfigurableOptions(TypedDict):
     variable_1: int
     variable_2: int
     variables: list[str]
+    reference_points: dict[str, float]
+    reference_points_range: dict[str, tuple[float, float]]
     include_variable_2: bool
