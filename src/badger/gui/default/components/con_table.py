@@ -302,6 +302,10 @@ class ConstraintTable(QTableWidget):
                 "variable_mapping": formula_dict,
             }
 
+            # Only insert if the name matches the keyword
+            if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
+                return
+
             # Remove the last row if it exists
             if self.rowCount() > 0:
                 self.removeRow(self.rowCount() - 1)
@@ -328,14 +332,44 @@ class ConstraintTable(QTableWidget):
     def add_plain_constraint(self, name):
         self.add_formula_constraint((name, "", {}))
 
+    def get_visible_constraints(self) -> List[str]:
+        """
+        Get a list of visible constraint names based on the current keyword filter.
+
+        Returns
+        -------
+        List[str]
+            A list of visible constraint names.
+        """
+        visible_constraints = []
+        rx = QRegExp(self.keyword)
+
+        for constraint in self.constraints:
+            name = next(iter(constraint))
+            visible = rx.indexIn(name, 0) != -1
+            if not visible:
+                continue
+
+            selected = self.status.get(name, False)
+            if self.show_selected_only and not selected:
+                continue
+
+            visible_constraints.append(name)
+
+        return visible_constraints
+
     @block_signals
     def on_edit_table_item(self, item):
         row = item.row()
         column = item.column()
         name = item.text()
 
+        if column != 1:
+            item.setText("")
+            return
+
         # If add constraint in the last row
-        if row == self.rowCount() - 1 and column == 1 and name:
+        if row == self.rowCount() - 1 and name:
             # Check if the constraint already exists
             if name in self.constraint_names:
                 QMessageBox.warning(
@@ -356,6 +390,12 @@ class ConstraintTable(QTableWidget):
                 "variable_mapping": {},
             }
 
+            # Only insert if the name matches the keyword
+            if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
+                self.removeRow(row)
+                self.add_empty_row()
+                return
+
             self.insert_constraint_item(
                 row,
                 name,
@@ -364,9 +404,53 @@ class ConstraintTable(QTableWidget):
                 critical=False,  # Default criticality
                 selected=True,  # Default selection state
             )
-
             # Add a new editable row for the next constraint
             self.add_empty_row()
+        elif row == self.rowCount() - 1:
+            # If the name is empty, recover the last row
+            self.removeRow(row)
+            self.add_empty_row()
+        elif not name:
+            # If name is empty, delete the row and remove from internal lists
+            visible_constraints = self.get_visible_constraints()
+            original_name = visible_constraints[row]
+            self.removeRow(row)
+            constraint_index = next(
+                (i for i, con in enumerate(self.constraints) if original_name in con),
+                None,
+            )
+            if constraint_index is not None:
+                self.constraints.pop(constraint_index)
+            del self.status[original_name]
+            del self.formulas[original_name]
+        else:
+            # Renaming attempt
+            visible_constraints = self.get_visible_constraints()
+            original_name = visible_constraints[row]
+
+            if name in self.constraint_names:
+                QMessageBox.warning(
+                    self,
+                    "Constraint already exists!",
+                    f"Constraint {name} already exists!",
+                )
+                # Recover the original name
+                self.setItem(row, 1, QTableWidgetItem(original_name))
+                return
+
+            # Update the internal constraints and status dictionaries
+            constraint_index = next(
+                (i for i, con in enumerate(self.constraints) if original_name in con),
+                None,
+            )
+            if constraint_index is not None:
+                self.constraints[constraint_index] = {
+                    name: self.constraints[constraint_index][original_name]
+                }
+            self.status[name] = self.status.pop(original_name)
+            # Check if the new name is visible under the current filters
+            if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
+                self.removeRow(row)
 
     def add_empty_row(self):
         """
@@ -408,7 +492,8 @@ class ConstraintTable(QTableWidget):
         Update the internal status dictionary based on the checkbox states.
         """
         self.status[name] = selected
-        self.update_constraints()
+        if self.show_selected_only:
+            self.update_constraints()
 
     def update_relations(self):
         """
