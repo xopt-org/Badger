@@ -66,8 +66,8 @@ class ConstraintTable(QTableWidget):
         self.setStyleSheet("alternate-background-color: #262E38;")
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        self.setColumnWidth(0, 192)
-        self.setColumnWidth(1, 64)
+        self.setColumnWidth(0, 282)
+        self.setColumnWidth(1, 74)
         self.setColumnWidth(3, 64)
         self.setColumnWidth(4, 32)
 
@@ -79,11 +79,12 @@ class ConstraintTable(QTableWidget):
             ["Name", "Relation", "Threshold", "Critical", ""]
         )
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.horizontalHeader().setVisible(self.rowCount() > 0)
 
     def add_constraint(
-        self, options, name=None, relation=0, threshold=0, critical=False, decimals=4
+        self, options, name=None, relation=0, threshold=0, critical=False, decimals=8
     ) -> None:
         """
         Adds a constraint.
@@ -108,7 +109,6 @@ class ConstraintTable(QTableWidget):
         cb_rel = NoHoverFocusComboBox()
         cb_rel.setItemDelegate(QStyledItemDelegate())
         cb_rel.addItems(CONS_RELATION_DICT.keys())
-        cb_rel.setFixedWidth(64)
         cb_rel.setCurrentIndex(relation)
         self.setCellWidget(currentRow, 1, cb_rel)
 

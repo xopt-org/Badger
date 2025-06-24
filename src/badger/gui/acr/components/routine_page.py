@@ -46,6 +46,7 @@ from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import (
+    BadgerEnvNotFoundError,
     BadgerRoutineError,
     BadgerEnvVarError,
     BadgerEnvInstantiationError,
@@ -375,6 +376,8 @@ class BadgerRoutinePage(QWidget):
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
             self.env_box.edit.setPlainText(get_yaml_string(env_params))
+        else:
+            raise BadgerEnvNotFoundError(f"Template environment {env_name} not found in Badger environments")
 
         # Load the vrange options and hard limits
         self.ratio_var_ranges = vrange_limit_options
@@ -955,7 +958,7 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.4g}")
+                    item = QTableWidgetItem(f"{var_curr[name]:.8g}")
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
@@ -1019,7 +1022,7 @@ class BadgerRoutinePage(QWidget):
                 try:
                     point = random_points.pop(0)
                     for col, name in enumerate(vname_selected):
-                        item = QTableWidgetItem(f"{point[name]:.4g}")
+                        item = QTableWidgetItem(f"{point[name]:.8g}")
                         table.setItem(row, col, item)
                 except IndexError:  # No more points to add
                     break
