@@ -448,6 +448,7 @@ class ConstraintTable(QTableWidget):
                     name: self.constraints[constraint_index][original_name]
                 }
             self.status[name] = self.status.pop(original_name)
+            self.formulas[name] = self.formulas.pop(original_name)
             # Check if the new name is visible under the current filters
             if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
                 self.removeRow(row)
