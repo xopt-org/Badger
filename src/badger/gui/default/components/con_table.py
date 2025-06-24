@@ -54,7 +54,7 @@ class ConstraintTable(QTableWidget):
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 96)
-        self.setColumnWidth(3, 96)
+        self.setColumnWidth(3, 106)
         self.setColumnWidth(4, 64)
         self.setHorizontalHeaderLabels(
             ["", "Name", "Relation", "Threshold", "Critical"]
