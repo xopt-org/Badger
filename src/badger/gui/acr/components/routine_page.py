@@ -385,7 +385,9 @@ class BadgerRoutinePage(QWidget):
             self.env_box.cb.setCurrentIndex(i)
             self.env_box.edit.setPlainText(get_yaml_string(env_params))
         else:
-            raise BadgerEnvNotFoundError(f"Template environment {env_name} not found in Badger environments")
+            raise BadgerEnvNotFoundError(
+                f"Template environment {env_name} not found in Badger environments"
+            )
 
         # Load the vrange options and hard limits
         self.ratio_var_ranges = vrange_limit_options
