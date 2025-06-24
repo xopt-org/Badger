@@ -63,7 +63,7 @@ def process_formulas(func):
 
         # pop data used in formulas
         for name in formula_observables:
-            if name in observable_outputs:
+            if name in observable_outputs and name not in basic_observables:
                 # remove the variable from the output
                 # as it is not needed anymore
                 observable_outputs.pop(name)
