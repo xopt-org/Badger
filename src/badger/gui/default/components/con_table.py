@@ -613,6 +613,6 @@ class ConstraintTable(QTableWidget):
         """
         exported_constraints = []
         for constraint in self.constraints:
-            if self.selected.get(constraint["name"], False):
+            if self.status.get(next(iter(constraint)), False):
                 exported_constraints.append(constraint)
         return exported_constraints
