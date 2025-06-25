@@ -547,7 +547,7 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.4g}")
+                    item = QTableWidgetItem(f"{var_curr[name]:.6g}")
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
@@ -594,7 +594,7 @@ class BadgerRoutinePage(QWidget):
                 try:
                     point = random_points.pop(0)
                     for col, name in enumerate(vname_selected):
-                        item = QTableWidgetItem(f"{point[name]:.4g}")
+                        item = QTableWidgetItem(f"{point[name]:.6g}")
                         table.setItem(row, col, item)
                 except IndexError:  # No more points to add
                     break

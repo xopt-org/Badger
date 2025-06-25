@@ -261,7 +261,7 @@ class ConstraintTable(QTableWidget):
 
         # Threshold
         threshold_spinbox = QDoubleSpinBox()
-        threshold_spinbox.setDecimals(4)
+        threshold_spinbox.setDecimals(6)
         threshold_spinbox.setRange(-1e6, 1e6)
         threshold_spinbox.setValue(threshold)
         threshold_spinbox.valueChanged.connect(self.update_thresholds)

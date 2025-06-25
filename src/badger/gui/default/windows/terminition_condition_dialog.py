@@ -112,7 +112,7 @@ class BadgerTerminationConditionDialog(QDialog):
         sb_tol.setMinimum(0.0)
         sb_tol.setMaximum(1000)
         sb_tol.setValue(self.configs["ftol"])
-        sb_tol.setDecimals(4)
+        sb_tol.setDecimals(6)
         sb_tol.setSingleStep(0.001)
         hbox_tol.addWidget(lbl)
         hbox_tol.addWidget(sb_tol, 1)
