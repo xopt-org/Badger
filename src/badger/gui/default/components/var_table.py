@@ -504,7 +504,7 @@ class VariableTable(QTableWidget):
             flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
         return flags
 
-    def display_status(self, item: QTableWidgetItem|None):
+    def display_status(self, item: QTableWidgetItem | None):
         """
         Opens a message box displaying status info from the underlying interface about a variable.
         """
@@ -516,30 +516,31 @@ class VariableTable(QTableWidget):
             return
 
         mb = QDialog(self)
-        mb.setWindowTitle('Variable Status')
+        mb.setWindowTitle("Variable Status")
         layout = QGridLayout(mb)
         row = 0
         for k, v in status.items():
-            layout.addWidget(QLabel(text=f'{k}:', parent=mb), row, 0)
+            layout.addWidget(QLabel(text=f"{k}:", parent=mb), row, 0)
             layout.addWidget(QLabel(text=v, parent=mb), row, 1)
             row += 1
 
         # Add a close button
-        close = QPushButton('Close', mb)
+        close = QPushButton("Close", mb)
         close.pressed.connect(lambda: mb.close())
         layout.addWidget(close, row, 0, 1, 2)
 
-        layout.setRowStretch(row+1, 1)
+        layout.setRowStretch(row + 1, 1)
         mb.exec()
 
-    def copy_name(self, item: QTableWidgetItem|None):
-        if item is None: return
+    def copy_name(self, item: QTableWidgetItem | None):
+        if item is None:
+            return
         QGuiApplication.clipboard().setText(item.text())
 
     def display_conext_menu(self, pt: QPoint):
         menu = QMenu(self)
         item = self.itemAt(pt)
-        menu.addAction('&Copy').triggered.connect(lambda c: self.copy_name(item))
-        menu.addAction('&Status').triggered.connect(lambda c: self.display_status(item))
-        if item.column() == 1: # Only display for the 'Name' column
+        menu.addAction("&Copy").triggered.connect(lambda c: self.copy_name(item))
+        menu.addAction("&Status").triggered.connect(lambda c: self.display_status(item))
+        if item.column() == 1:  # Only display for the 'Name' column
             menu.exec(self.mapToGlobal(pt))
