@@ -93,3 +93,9 @@ class Interface(BaseModel, ABC):
 
     def set_value(self, channel_name: str, channel_value, **kwargs):
         return self.set_values({channel_name: channel_value}, **kwargs)
+
+    def get_status(self, channel: str) -> Dict[str, str]:
+        """
+        Optional; Returns information about the channel for display
+        """
+        return None
