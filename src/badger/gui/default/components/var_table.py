@@ -10,9 +10,13 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QWidget,
     QHBoxLayout,
+    QMenu,
+    QGridLayout,
+    QLabel,
+    QDialog,
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QSize
-from PyQt5.QtGui import QColor, QIcon
+from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
+from PyQt5.QtGui import QColor, QIcon, QGuiApplication
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
@@ -32,6 +36,7 @@ class VariableTable(QTableWidget):
         with resources.as_file(icon_ref) as icon_path:
             self.icon_settings = QIcon(str(icon_path))
 
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
@@ -75,6 +80,7 @@ class VariableTable(QTableWidget):
         self.configs = None  # needed to get bounds on the fly
         self.previous_values = {}  # to track changes in table
         self.config_logic()
+        self.customContextMenuRequested.connect(self.display_conext_menu)
 
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
@@ -497,3 +503,44 @@ class VariableTable(QTableWidget):
         if index.column() == 1:
             flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
         return flags
+
+    def display_status(self, item: QTableWidgetItem | None):
+        """
+        Opens a message box displaying status info from the underlying interface about a variable.
+        """
+        if not self.env:
+            self.env = instantiate_env(self.env_class, self.configs)
+
+        status = self.env.get_status(item.text())
+        if status is None:
+            return
+
+        mb = QDialog(self)
+        mb.setWindowTitle("Variable Status")
+        layout = QGridLayout(mb)
+        row = 0
+        for k, v in status.items():
+            layout.addWidget(QLabel(text=f"{k}:", parent=mb), row, 0)
+            layout.addWidget(QLabel(text=v, parent=mb), row, 1)
+            row += 1
+
+        # Add a close button
+        close = QPushButton("Close", mb)
+        close.pressed.connect(lambda: mb.close())
+        layout.addWidget(close, row, 0, 1, 2)
+
+        layout.setRowStretch(row + 1, 1)
+        mb.exec()
+
+    def copy_name(self, item: QTableWidgetItem | None):
+        if item is None:
+            return
+        QGuiApplication.clipboard().setText(item.text())
+
+    def display_conext_menu(self, pt: QPoint):
+        menu = QMenu(self)
+        item = self.itemAt(pt)
+        menu.addAction("&Copy").triggered.connect(lambda c: self.copy_name(item))
+        menu.addAction("&Status").triggered.connect(lambda c: self.display_status(item))
+        if item.column() == 1:  # Only display for the 'Name' column
+            menu.exec(self.mapToGlobal(pt))
