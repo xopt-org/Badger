@@ -58,8 +58,8 @@ class VariableTable(QTableWidget):
         # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         # header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.setColumnWidth(0, 20)
-        self.setColumnWidth(2, 106)
-        self.setColumnWidth(3, 106)
+        self.setColumnWidth(2, 96)
+        self.setColumnWidth(3, 96)
         self.setColumnWidth(4, 44)
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
 

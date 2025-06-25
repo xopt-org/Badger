@@ -9,7 +9,7 @@ class RobustSpinBox(QDoubleSpinBox):
             decimals = kwargs["decimals"]
             del kwargs["decimals"]
         except:
-            decimals = 8
+            decimals = 6
 
         try:
             lb = kwargs["lower_bound"]

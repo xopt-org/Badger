@@ -54,7 +54,7 @@ class ConstraintTable(QTableWidget):
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 96)
-        self.setColumnWidth(3, 106)
+        self.setColumnWidth(3, 96)
         self.setColumnWidth(4, 64)
         self.setHorizontalHeaderLabels(
             ["", "Name", "Relation", "Threshold", "Critical"]
@@ -261,7 +261,7 @@ class ConstraintTable(QTableWidget):
 
         # Threshold
         threshold_spinbox = QDoubleSpinBox()
-        threshold_spinbox.setDecimals(8)
+        threshold_spinbox.setDecimals(6)
         threshold_spinbox.setRange(-1e6, 1e6)
         threshold_spinbox.setValue(threshold)
         threshold_spinbox.valueChanged.connect(self.update_thresholds)
