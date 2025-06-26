@@ -32,6 +32,8 @@ class UIComponents:
         self.variable_checkboxes = {}
         self.ref_inputs: list[QTableWidgetItem] = []
         self.reference_table = None  # Will be initialized later
+        self.best_point_display = QLabel("")  # Will be initialized later
+        self.set_best_reference_point_button = QPushButton("Set Best Reference Point")
 
         # Initialize other UI components
         self.update_button = QPushButton("Update")
@@ -114,7 +116,9 @@ class UIComponents:
         # Initialize the parameters with the routine's variables
         configurable_options["reference_points_range"] = vocs_variables
         configurable_options["reference_points"] = {
-            var: round((vocs_variables[var][1] - vocs_variables[var][0]) / 2.0, 3)
+            var: float(
+                f"{((vocs_variables[var][1] - vocs_variables[var][0]) / 2.0):.3g}"
+            )
             for var in vocs_variables
         }
 
@@ -130,6 +134,8 @@ class UIComponents:
             horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(self.reference_table)
+        layout.addWidget(self.set_best_reference_point_button)
+        layout.addWidget(self.best_point_display)
         group_box.setLayout(layout)
         return group_box
 

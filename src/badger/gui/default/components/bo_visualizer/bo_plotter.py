@@ -168,8 +168,27 @@ class BOPlotWidget(AnalysisWidget):
                 )()
             )
 
+        self.ui_components.set_best_reference_point_button.clicked.connect(
+            lambda: signal_logger("Set best reference points clicked")(
+                lambda: self.on_set_best_reference_point_clicked()
+            )()
+        )
+
     def on_button_clicked(self) -> None:
         self.update_extension(self.routine, True)
+
+    def on_set_best_reference_point_clicked(self) -> None:
+        logger.debug("Setting best reference points")
+        try:
+            self.set_best_reference_points()
+        except Exception as e:
+            logger.error(f"Error getting best reference points: {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error getting best reference points: {e}",
+            )
+        self.update_plot(requires_rebuild=True)
 
     def on_plot_options_changed(self) -> None:
         self.update_plot(requires_rebuild=True)
@@ -311,7 +330,7 @@ class BOPlotWidget(AnalysisWidget):
         # Create a mapping from variable names to ref_inputs
         ref_inputs_dict = dict(zip(self.parameters["variables"], ref_inputs))
         for var in self.parameters["variables"]:
-            if var not in variable_names:
+            if var in variable_names:
                 ref_value = float(ref_inputs_dict[var].text())
                 reference_points[var] = ref_value
         return reference_points
@@ -366,8 +385,13 @@ class BOPlotWidget(AnalysisWidget):
                 self.update_reference_point_table(selected_variables)
 
         # Get reference points for non-selected variables
+
+        non_selected_variables = [
+            var for var in self.parameters["variables"] if var not in selected_variables
+        ]
+
         reference_point = self.get_reference_points(
-            self.ui_components.ref_inputs, selected_variables
+            self.ui_components.ref_inputs, non_selected_variables
         )
 
         logger.debug("Updating plot with selected variables and reference points")
@@ -414,3 +438,42 @@ class BOPlotWidget(AnalysisWidget):
                     f"Failed to train model: {e}",
                 )
                 raise Exception(f"Error training model: {e}")
+
+    def set_best_reference_points(
+        self,
+    ):
+        if self.generator.data is None:
+            logger.error(
+                "No data available in generator for selecting best reference points"
+            )
+            raise ValueError(
+                "No data available in generator for selecting best reference points"
+            )
+
+        index_arr, value_arr, input_params = self.routine.vocs.select_best(
+            self.generator.data
+        )
+
+        if not index_arr or not value_arr:
+            logger.error("No best reference points found")
+            raise ValueError("No best reference points found")
+
+        if len(index_arr) < 1 or len(value_arr) < 1:
+            logger.error("Index or value arrays are empty")
+            raise ValueError("Index or value arrays are empty")
+
+        index = index_arr[0]
+        value = value_arr[0]
+
+        logger.debug(f"Best reference points index: {index}, value: {value}")
+        logger.debug(f"Best reference points: {input_params}")
+
+        # Update the reference table with the best reference points
+        self.parameters["reference_points"] = cast(
+            dict[str, float],
+            {var: float(f"{input_params[var]:0.3g}") for var in input_params},
+        )
+
+        self.ui_components.best_point_display.setText(
+            f"Best Point index: {index}, Value: {value}\nInput Params: {input_params}"
+        )

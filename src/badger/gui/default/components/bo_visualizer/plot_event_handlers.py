@@ -1,6 +1,6 @@
 from badger.routine import Routine
 from matplotlib.axes import Axes
-from matplotlib.backend_bases import MouseEvent, MouseButton
+from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
@@ -9,6 +9,8 @@ from typing import cast
 
 import logging
 
+from matplotlib.collections import PathCollection
+from matplotlib.text import Annotation
 from pyparsing import Callable
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ class MatplotlibInteractionHandler:
         self.moving = False
         self.start = {"x": 0, "y": 0}  # Starting coordinates for movement
         self.step = 0
+        self.tooltips: list[Annotation] = []
 
     def connect_events(self):
         self.canvas.mpl_connect(
@@ -51,20 +54,25 @@ class MatplotlibInteractionHandler:
                 self.callback,
             ),
         )
-        self.canvas.mpl_connect(
-            "button_release_event",
-            lambda event: self.on_release(
-                event,  # type: ignore[call-arg]
-            ),
-        )
-        self.canvas.mpl_connect(
-            "motion_notify_event",
-            lambda event: self.on_motion(event),  # type: ignore[call-arg]
-        )
+        # self.canvas.mpl_connect(
+        #     "button_release_event",
+        #     lambda event: self.on_release(
+        #         event,  # type: ignore[call-arg]
+        #     ),
+        # )
+        # self.canvas.mpl_connect(
+        #     "motion_notify_event",
+        #     lambda event: self.on_motion(event),  # type: ignore[call-arg]
+        # )
 
         self.canvas.mpl_connect(
             "scroll_event",
             lambda event: self.on_scroll(event),  # type: ignore[call-arg]
+        )
+
+        self.canvas.mpl_connect(
+            "pick_event",
+            lambda event: self.on_pick(event),  # type: ignore[call-arg]
         )
 
     def update_reference_points(
@@ -81,10 +89,10 @@ class MatplotlibInteractionHandler:
         logger.debug(f"Updated reference points: {parameters['reference_points']}")
 
         parameters["reference_points"][variable_1_name] = float(
-            round(desired_coordinate[0], 3)
+            f"{desired_coordinate[0]:.3g}"
         )
         parameters["reference_points"][variable_2_name] = float(
-            round(desired_coordinate[1], 3)
+            f"{desired_coordinate[1]:.3g}"
         )
 
         logger.debug(f"Updated reference points: {parameters['reference_points']}")
@@ -109,41 +117,44 @@ class MatplotlibInteractionHandler:
         logger.debug(f"Click in axes: {axis.get_title()}")
         clicked = False
         if event.button == MouseButton.MIDDLE:
-            axis.set_title(f"Middle click at ({event.xdata:.2f}, {event.ydata:.2f})")
+            logger.debug("Middle click detected")
             # Reset reference points back to the initial values
-            initial_reference_points = parameters["reference_points_range"]
-            parameters["reference_points"] = {
-                key: (
-                    initial_reference_points[key][0] + initial_reference_points[key][1]
-                )
-                / 2
-                for key in initial_reference_points
-            }
+
+            if "reference_points_range" in parameters:
+                initial_reference_points = parameters["reference_points_range"]
+                parameters["reference_points"] = {
+                    key: (
+                        initial_reference_points[key][0]
+                        + initial_reference_points[key][1]
+                    )
+                    / 2
+                    for key in initial_reference_points
+                }
             clicked = True
         elif event.button == MouseButton.RIGHT:
-            axis.set_title(f"Right click at ({event.xdata:.2f}, {event.ydata:.2f})")
+            logger.debug("Right click detected")
 
             if event.xdata is None or event.ydata is None:
                 logger.debug("Click coordinates are None, ignoring")
                 return
 
-            coordinate: tuple[float, float] = (event.xdata, event.ydata)
-            self.update_reference_points(
-                parameters,
-                coordinate,
-            )
+            if "reference_points" in parameters:
+                coordinate: tuple[float, float] = (event.xdata, event.ydata)
+                self.update_reference_points(
+                    parameters,
+                    coordinate,
+                )
             clicked = True
-        elif event.button == MouseButton.LEFT:
-            self.start["x"] = event.xdata
-            self.start["y"] = event.ydata
-            self.moving = True
+        # elif event.button == MouseButton.LEFT:
+        #     self.start["x"] = event.xdata
+        #     self.start["y"] = event.ydata
+        #     self.moving = True
 
         if clicked:
             callback(routine, True)
 
     def on_motion(self, event: MouseEvent) -> None:
         if event.inaxes is None:
-            logger.debug("Mouse moved outside axes, ignoring")
             return
 
         axis = cast(Axes, event.inaxes)
@@ -231,3 +242,58 @@ class MatplotlibInteractionHandler:
             )
 
         event.canvas.draw_idle()
+
+    def on_pick(self, event: PickEvent) -> None:
+        logger.debug("on_pick event triggered")
+        plot = event.artist
+        mouseevent = event.mouseevent
+        if mouseevent.inaxes is None:
+            logger.debug("Mouse event outside axes, ignoring")
+            return
+
+        ax = mouseevent.inaxes
+
+        if isinstance(plot, PathCollection):
+            data = plot.get_offsets()
+
+            if len(event.ind) == 0:
+                logger.debug("No indices in pick event, ignoring")
+                return
+            index = cast(int, event.ind[0])
+
+            if index < 0 or index >= len(data):
+                logger.debug(f"Index {index} out of bounds for data length {len(data)}")
+                return
+
+            point = cast(tuple[float, float], data[index])
+            logger.debug(f"Picked point: {point} at index {index}")
+
+            # Create tooltip text
+            tooltip_text = f"({point[0]:.2g}, {point[1]:.2g})"
+
+            self.clear_tooltips()  # Clear existing tooltips before adding a new one
+
+            # Create and add the tooltip to the plot
+            tooltip = ax.annotate(
+                tooltip_text,
+                xy=point,
+                xytext=(20, 20),
+                textcoords="offset points",
+                bbox=dict(boxstyle="round", fc="w"),
+                arrowprops=dict(arrowstyle="->"),
+            )
+            self.tooltips.append(tooltip)
+
+            event.canvas.draw_idle()
+        return
+
+    def clear_tooltips(self):
+        """
+        Clear all tooltips from the plot.
+        This is useful to remove any existing tooltips before a new plot is drawn.
+        """
+        logger.debug("Clearing all tooltips")
+        for tooltip in self.tooltips:
+            tooltip.remove()
+        self.tooltips.clear()
+        self.canvas.draw_idle()

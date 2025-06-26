@@ -17,6 +17,9 @@ from PyQt5.QtWidgets import (
 )
 
 from PyQt5.QtCore import Qt
+from badger.gui.default.components.bo_visualizer.plot_event_handlers import (
+    MatplotlibInteractionHandler,
+)
 from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions
 from badger.routine import Routine
 
@@ -27,6 +30,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import MaxNLocator
+from matplotlib.backends.backend_qt import (
+    NavigationToolbar2QT as NavigationToolbar,
+)
 import pandas as pd
 from torch import Tensor
 
@@ -397,9 +403,23 @@ class ParetoFrontWidget(AnalysisWidget):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
                     canvas = FigureCanvas(fig)
+                    toolbar = NavigationToolbar(canvas, self)
+
+                    handler = MatplotlibInteractionHandler(
+                        canvas, self.parameters, self.routine, self.update_extension
+                    )
+                    handler.connect_events()
+
+                    widget = QWidget()
+
+                    layout = QVBoxLayout(widget)
+                    layout.addWidget(canvas)
+                    layout.addWidget(toolbar)
+
+                    widget.setLayout(layout)
 
                     ax.set_title("Data Points")
-                    plot_tab_widget.addTab(canvas, "Variable Space")
+                    plot_tab_widget.addTab(widget, "Variable Space")
                 except ValueError:
                     logging.error("No data points available for Variable Space")
                     blank_canvas = FigureCanvas(fig)
@@ -408,10 +428,24 @@ class ParetoFrontWidget(AnalysisWidget):
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
-                    canvas1 = FigureCanvas(fig)
+                    canvas = FigureCanvas(fig)
+                    toolbar = NavigationToolbar(canvas, self)
+
+                    handler = MatplotlibInteractionHandler(
+                        canvas, self.parameters, self.routine, self.update_extension
+                    )
+                    handler.connect_events()
+
+                    widget = QWidget()
+
+                    layout = QVBoxLayout(widget)
+                    layout.addWidget(canvas)
+                    layout.addWidget(toolbar)
+
+                    widget.setLayout(layout)
 
                     ax.set_title("Pareto Front")
-                    plot_tab_widget.addTab(canvas1, "Objective Space")
+                    plot_tab_widget.addTab(widget, "Objective Space")
                 except ValueError:
                     logging.error("No data points available for Objective Space")
                     blank_canvas = FigureCanvas(fig)
@@ -513,6 +547,8 @@ class ParetoFrontWidget(AnalysisWidget):
                     x,
                     y,
                     c=colors,
+                    picker=True,
+                    pickradius=5,
                 )
 
         pf_colors = [colors[i] for i in data_indices]
@@ -521,6 +557,8 @@ class ParetoFrontWidget(AnalysisWidget):
             data_points[:, x_var_index],
             data_points[:, y_var_index],
             c=pf_colors,
+            picker=True,
+            pickradius=5,
         )
 
         mappable = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
@@ -545,7 +583,13 @@ class ParetoFrontWidget(AnalysisWidget):
         x = data_points["iteration"].values
         y = data_points["hypervolume"].values
         # Create a scatter plot
-        ax.plot(x, y, color="black")
+        ax.plot(
+            x,
+            y,
+            color="black",
+            picker=True,
+            pickradius=5,
+        )
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         # Set the x and y axis labels
         ax.set_xlabel("Iterations")
