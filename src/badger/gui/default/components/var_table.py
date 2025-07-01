@@ -29,6 +29,8 @@ class VariableTable(QTableWidget):
     sig_pv_added = pyqtSignal()
     sig_var_config = pyqtSignal(str)
 
+    PLACEHOLDER_TEXT = "Enter new variable here...."
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -89,7 +91,7 @@ class VariableTable(QTableWidget):
 
     def setItem(self, row, column, item):
         text = item.text()
-        if text != "Enter new variable here....":
+        if text != self.PLACEHOLDER_TEXT:
             self.previous_values[(row, column)] = item.text()
         super().setItem(row, column, item)
 
@@ -173,7 +175,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             name = self.item(i, 1).text()
-            if name != "Enter new variable here....":  # TODO: fix...
+            if name != self.PLACEHOLDER_TEXT:  # TODO: fix...
                 self.selected[name] = _cb.isChecked()
 
         self.sig_sel_changed.emit()
@@ -312,7 +314,7 @@ class VariableTable(QTableWidget):
                 sb_upper.setEnabled(True)
 
         # Make extra editable row
-        item = QTableWidgetItem("Enter new variable here....")
+        item = QTableWidgetItem(self.PLACEHOLDER_TEXT)
         item.setFlags(item.flags() | Qt.ItemIsEditable)
         item.setForeground(QColor("gray"))
         self.setItem(n - 1, 1, item)
@@ -331,11 +333,7 @@ class VariableTable(QTableWidget):
         column = item.column()
         name = item.text()
 
-        if (
-            row != self.rowCount() - 1
-            and column == 1
-            and name != "Enter new variable here...."
-        ):
+        if row != self.rowCount() - 1 and column == 1 and name != self.PLACEHOLDER_TEXT:
             # check that the new text is not equal to the previous value at that cell
             prev_name = self.previous_values.get((row, column), "")
             if name == prev_name:
@@ -353,11 +351,7 @@ class VariableTable(QTableWidget):
                 self.update_variables(self.variables, 2)
             return
 
-        if (
-            row == self.rowCount() - 1
-            and column == 1
-            and name != "Enter new variable here...."
-        ):
+        if row == self.rowCount() - 1 and column == 1 and name != self.PLACEHOLDER_TEXT:
             self.try_insert_variable(name)
 
     def try_insert_variable(self, name):
@@ -511,15 +505,15 @@ class VariableTable(QTableWidget):
         if not self.env:
             self.env = instantiate_env(self.env_class, self.configs)
 
-        status = self.env.get_status(item.text())
-        if status is None:
+        status = self.env.get_status([item.text()])
+        if status is None or len(status["vars"]) < 1:
             return
 
         mb = QDialog(self)
         mb.setWindowTitle("Variable Status")
         layout = QGridLayout(mb)
         row = 0
-        for k, v in status.items():
+        for k, v in status["vars"][item.text()].items():
             layout.addWidget(QLabel(text=f"{k}:", parent=mb), row, 0)
             layout.addWidget(QLabel(text=v, parent=mb), row, 1)
             row += 1
@@ -540,7 +534,13 @@ class VariableTable(QTableWidget):
     def display_conext_menu(self, pt: QPoint):
         menu = QMenu(self)
         item = self.itemAt(pt)
-        menu.addAction("&Copy").triggered.connect(lambda c: self.copy_name(item))
+        if item is None or item.text() == self.PLACEHOLDER_TEXT or item.column() != 1:
+            return
+
         menu.addAction("&Status").triggered.connect(lambda c: self.display_status(item))
-        if item.column() == 1:  # Only display for the 'Name' column
-            menu.exec(self.mapToGlobal(pt))
+        menu.addAction("&Config").triggered.connect(
+            lambda c: self.handle_config_button(item.text())
+        )
+        menu.addSeparator()
+        menu.addAction("Cop&y").triggered.connect(lambda c: self.copy_name(item))
+        menu.exec(self.mapToGlobal(pt))

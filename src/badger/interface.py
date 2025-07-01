@@ -1,6 +1,6 @@
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, TypedDict
 
 from pydantic import BaseModel
 
@@ -38,6 +38,11 @@ def log(func):
             return func(*args, **kwargs)
 
     return func_log
+
+
+class InterfaceStatus(TypedDict):
+    interface: Dict[str, str]
+    vars: List[Dict[str, str]]
 
 
 class Interface(BaseModel, ABC):
@@ -94,8 +99,19 @@ class Interface(BaseModel, ABC):
     def set_value(self, channel_name: str, channel_value, **kwargs):
         return self.set_values({channel_name: channel_value}, **kwargs)
 
-    def get_status(self, channel: str) -> Dict[str, str]:
+    def get_status(self, channels: List[str]) -> InterfaceStatus:
         """
-        Optional; Returns information about the channel for display
+        Optional; Returns information about the channels and environment for display
+
+        Parameters
+        ----------
+        channels : list[str]
+            List of channels/variables to fetch information about
+
+        Returns
+        -------
+        InterfaceStatus
+            A typed dictionary containing base interface status information, and the
+            status information for the requested variables.
         """
         return None

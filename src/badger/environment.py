@@ -312,11 +312,11 @@ class Environment(BaseEnvironment):
         if self.interface:
             return self.interface.reset_interface()
 
-    def get_status(self, variable_name: str) -> Dict:
+    def get_status(self, variable_names: List[str]) -> Dict:
         if not self.interface:
             raise BadgerNoInterfaceError
 
-        return self.interface.get_status(variable_name)
+        return self.interface.get_status(variable_names)
 
     @property
     def variable_names(self):
