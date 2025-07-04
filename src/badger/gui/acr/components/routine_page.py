@@ -277,7 +277,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
-        # self.env_box.btn_add_con.clicked.connect(self.add_constraint)
         self.env_box.btn_add_sta.clicked.connect(self.add_state)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
@@ -465,7 +464,7 @@ class BadgerRoutinePage(QWidget):
         # Initialize the constraints table with env observables
         try:
             formulas = template_dict["constraint_formulas"]
-        except AttributeError:
+        except KeyError:
             formulas = {}
         constraints = []
         status = {}
@@ -494,7 +493,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_con.blockSignals(False)
         self.env_box.con_table.show_selected_only = True
 
-        self.env_box.con_table.update_constraints(constraints, status, formulas)
+        self.env_box.con_table.update_items(constraints, status, formulas)
 
         # set observables
         self.env_box.list_obs.clear()
@@ -785,9 +784,13 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_con.blockSignals(True)
         self.env_box.check_only_con.setChecked(True)
         self.env_box.check_only_con.blockSignals(False)
+        self.env_box.edit_con.blockSignals(True)
+        self.env_box.edit_con.setText("")
+        self.env_box.edit_con.blockSignals(False)
+        self.env_box.con_table.keyword = ""
         self.env_box.con_table.show_selected_only = True
 
-        self.env_box.con_table.update_constraints(constraints, status, formulas)
+        self.env_box.con_table.update_items(constraints, status, formulas)
 
         observables = routine.vocs.observable_names
         if len(observables):
@@ -986,7 +989,11 @@ class BadgerRoutinePage(QWidget):
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
             constraints.append(cons)
-        self.env_box.con_table.update_constraints(constraints, status, formulas={})
+        self.env_box.check_only_con.blockSignals(True)
+        self.env_box.check_only_con.setChecked(False)
+        self.env_box.check_only_con.blockSignals(False)
+        self.env_box.con_table.show_selected_only = False
+        self.env_box.con_table.update_items(constraints, status, formulas={})
 
         self.env_box.list_obs.clear()
         self.env_box.fit_content()
@@ -1484,19 +1491,6 @@ class BadgerRoutinePage(QWidget):
             configs,
         ).exec_()
 
-    def add_constraint(self, name=None, relation=0, threshold=0, critical=False):
-        if self.configs is None:
-            return
-
-        options = self.configs["observations"]
-        self.env_box.con_table.add_constraint(
-            options,
-            name,
-            relation,
-            threshold,
-            critical,
-        )
-
     def add_state(self, name=None):
         if self.configs is None:
             return
@@ -1521,7 +1515,7 @@ class BadgerRoutinePage(QWidget):
 
         constraints = {}
         critical_constraints = []
-        for constraint in self.env_box.con_table.export_constraints():
+        for constraint in self.env_box.con_table.export_data():
             con_name = next(iter(constraint))
             relation, threshold, critical = constraint[con_name]
             constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
