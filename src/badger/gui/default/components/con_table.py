@@ -33,6 +33,8 @@ class ConstraintTable(EditableTable):
         """
         super().__init__(*args, **kwargs)
 
+        self.setColumnCount(5)
+
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
         self.setColumnWidth(4, 64)
