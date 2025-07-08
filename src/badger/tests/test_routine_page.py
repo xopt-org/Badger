@@ -42,7 +42,9 @@ def test_routine_generation(qtbot):
     assert window.env_box.var_table.export_variables() == {"x0": [-1, 1]}
 
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-    assert window.env_box.obj_table.export_objectives() == {"f": "MINIMIZE"}
+    # Remember to post-process the exported data to match the expected format
+    # Exported data in this case: [{"f": ["MINIMIZE"]}]
+    assert window.env_box.obj_table.export_data()[0] == {"f": ["MINIMIZE"]}
 
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
 
