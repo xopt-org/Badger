@@ -512,19 +512,10 @@ class BadgerEnvBox(QWidget):
         self.var_table.update_variables(_variables, 1)
 
     def toggle_obj_show_mode(self, _):
-        self.obj_table.toggle_show_mode(self.check_only_obj.isChecked())
+        self.obj_table.update_show_selected_only(self.check_only_obj.isChecked())
 
     def filter_obj(self):
-        keyword = self.edit_obj.text()
-        rx = QRegExp(keyword)
-
-        _objectives = []
-        for obj in self.obj_table.all_objectives:
-            oname = next(iter(obj))
-            if rx.indexIn(oname, 0) != -1:
-                _objectives.append(obj)
-
-        self.obj_table.update_objectives(_objectives, 1)
+        self.obj_table.update_keyword(self.edit_obj.text())
 
     def toggle_con_show_mode(self, _):
         self.con_table.update_show_selected_only(self.check_only_con.isChecked())

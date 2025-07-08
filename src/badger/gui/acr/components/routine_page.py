@@ -443,22 +443,36 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
 
         # Initialize the objective table with env observables
+        try:
+            formulas = template_dict["formulas"]
+        except KeyError:
+            formulas = {}
         objectives = []
-        for name in self.configs["observations"]:
-            obj = {name: "MINIMIZE"}
+        status = {}
+        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in objectives_names_full:
+            obj = {name: ["MINIMIZE"]}
+            status[name] = False  # selected
             objectives.append(obj)
-        self.env_box.obj_table.update_objectives(objectives)
+        for name, val in vocs.objectives.items():
+            rule = val
 
-        for name, formula in formulas.items():
-            formula_tuple = (
-                name,
-                formula["formula"],
-                formula["variable_mapping"],
-            )
-            self.env_box.obj_table.add_formula_objective(formula_tuple)
-        self.env_box.obj_table.set_selected(vocs.objectives)
-        self.env_box.obj_table.set_rules(vocs.objectives)
+            idx = objectives_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Objective {name} not found in the routine's observables."
+                )
+            else:
+                objectives[idx] = {name: [rule]}
+            status[name] = True
+
+        # Show selected constraints only
+        self.env_box.check_only_obj.blockSignals(True)
         self.env_box.check_only_obj.setChecked(True)
+        self.env_box.check_only_obj.blockSignals(False)
+        self.env_box.obj_table.show_selected_only = True
+
+        self.env_box.obj_table.update_items(objectives, status, formulas)
 
         # set constraints
         # Initialize the constraints table with env observables
@@ -736,23 +750,36 @@ class BadgerRoutinePage(QWidget):
         except AttributeError:
             formulas = {}
 
-        # Initialize the objective table with env observables
         objectives = []
-        for name in self.configs["observations"]:
-            obj = {name: "MINIMIZE"}
+        status = {}
+        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in objectives_names_full:
+            obj = {name: ["MINIMIZE"]}
+            status[name] = False  # selected
             objectives.append(obj)
-        self.env_box.obj_table.update_objectives(objectives)
+        for name, val in routine.vocs.objectives.items():
+            rule = val
 
-        for name, formula in formulas.items():
-            formula_tuple = (
-                name,
-                formula["formula"],
-                formula["variable_mapping"],
-            )
-            self.env_box.obj_table.add_formula_objective(formula_tuple)
-        self.env_box.obj_table.set_selected(routine.vocs.objectives)
-        self.env_box.obj_table.set_rules(routine.vocs.objectives)
+            idx = objectives_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Objective {name} not found in the routine's observables."
+                )
+            else:
+                objectives[idx] = {name: [rule]}
+            status[name] = True
+
+        # Show selected objectives only
+        self.env_box.check_only_obj.blockSignals(True)
         self.env_box.check_only_obj.setChecked(True)
+        self.env_box.check_only_obj.blockSignals(False)
+        self.env_box.edit_obj.blockSignals(True)
+        self.env_box.edit_obj.setText("")
+        self.env_box.edit_obj.blockSignals(False)
+        self.env_box.obj_table.keyword = ""
+        self.env_box.obj_table.show_selected_only = True
+
+        self.env_box.obj_table.update_items(objectives, status, formulas)
 
         # Initialize the constraints table with env observables
         try:
@@ -915,11 +942,8 @@ class BadgerRoutinePage(QWidget):
             self.env_box.edit.setPlainText("")
             self.env_box.edit_var.clear()
             self.env_box.var_table.update_variables(None)
-            self.env_box.edit_obj.clear()
-            self.env_box.obj_table.update_objectives(None)
             self.configs = None
             self.env = None
-            # self.env_box.btn_add_con.setDisabled(True)
             self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
@@ -973,14 +997,17 @@ class BadgerRoutinePage(QWidget):
             self.add_var()
         )
 
-        _objs_env = configs["observations"]
-        objs_env = []
-        for name in _objs_env:
-            obj = {}
-            obj[name] = "MINIMIZE"  # default rule
-            objs_env.append(obj)
+        objectives = []
+        status = {}
+        for name in self.configs["observations"]:
+            cons = {name: ["MINIMIZE"]}
+            status[name] = False  # selected
+            objectives.append(cons)
+        self.env_box.check_only_obj.blockSignals(True)
         self.env_box.check_only_obj.setChecked(False)
-        self.env_box.obj_table.update_objectives(objs_env)
+        self.env_box.check_only_obj.blockSignals(False)
+        self.env_box.obj_table.show_selected_only = False
+        self.env_box.obj_table.update_items(objectives, status, formulas={})
 
         # Initialize the constraints table with env observables
         constraints = []
@@ -1511,7 +1538,12 @@ class BadgerRoutinePage(QWidget):
     def _compose_vocs(self) -> (VOCS, list[str]):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
-        objectives = self.env_box.obj_table.export_objectives()
+
+        objectives = {}
+        for objective in self.env_box.obj_table.export_data():
+            obj_name = next(iter(objective))
+            (rule,) = objective[obj_name]
+            objectives[obj_name] = rule
 
         constraints = {}
         critical_constraints = []
