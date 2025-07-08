@@ -40,7 +40,7 @@ class EditableTable(QTableWidget):
         self.setAcceptDrops(True)
 
         self.setRowCount(0)
-        self.setColumnCount(5)
+        self.setColumnCount(2)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
 
