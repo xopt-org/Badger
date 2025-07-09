@@ -78,19 +78,19 @@ class BadgerRoutineItem(QWidget):
         if environment in env_dict:
             self.color_dict = env_dict[environment]
             self.stylesheet_normal = f"""
-                background-color: {self.color_dict['normal']};
+                background-color: {self.color_dict["normal"]};
                 border-radius: 2px;
             """
             self.stylesheet_normal_hover = f"""
-                background-color: {self.color_dict['normal_hover']};
+                background-color: {self.color_dict["normal_hover"]};
                 border-radius: 2px;
             """
             self.stylesheet_activate = f"""
-                background-color: {self.color_dict['activate']};
+                background-color: {self.color_dict["activate"]};
                 border-radius: 2px;
             """
             self.stylesheet_activate_hover = f"""
-                background-color: {self.color_dict['activate_hover']};
+                background-color: {self.color_dict["activate_hover"]};
                 border-radius: 2px;
             """
         else:

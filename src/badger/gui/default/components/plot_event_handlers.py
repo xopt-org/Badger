@@ -43,7 +43,7 @@ class MatplotlibInteractionHandler:
         self.step = 0
         self.tooltips: list[Annotation] = []
 
-    def connect_events(self):
+    def connect_events(self) -> None:
         self.canvas.mpl_connect(
             "button_press_event",
             lambda event: self.on_click(
