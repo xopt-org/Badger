@@ -1,5 +1,4 @@
 from badger.routine import Routine
-from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
@@ -113,7 +112,7 @@ class MatplotlibInteractionHandler:
             logger.debug("Click coordinates are None, ignoring")
             return
 
-        axis = cast(Axes, event.inaxes)
+        axis = event.inaxes
         logger.debug(f"Click in axes: {axis.get_title()}")
         clicked = False
         if event.button == MouseButton.MIDDLE:
@@ -134,10 +133,6 @@ class MatplotlibInteractionHandler:
         elif event.button == MouseButton.RIGHT:
             logger.debug("Right click detected")
 
-            if event.xdata is None or event.ydata is None:
-                logger.debug("Click coordinates are None, ignoring")
-                return
-
             if "reference_points" in parameters:
                 coordinate: tuple[float, float] = (event.xdata, event.ydata)
                 self.update_reference_points(
@@ -157,7 +152,7 @@ class MatplotlibInteractionHandler:
         if event.inaxes is None:
             return
 
-        axis = cast(Axes, event.inaxes)
+        axis = event.inaxes
 
         if not self.moving:
             logger.debug("Mouse is not moving, ignoring motion event")
@@ -212,7 +207,7 @@ class MatplotlibInteractionHandler:
             logger.debug(f"Ignoring excessive scroll event with step: {event.step}")
             return
 
-        axis = cast(Axes, event.inaxes)
+        axis = event.inaxes
 
         current_x_range = axis.get_xlim()
         current_y_range = axis.get_ylim()
@@ -256,10 +251,12 @@ class MatplotlibInteractionHandler:
         if isinstance(plot, PathCollection):
             data = plot.get_offsets()
 
-            if len(event.ind) == 0:
+            indexes = cast(list[int], event.ind)
+
+            if len(indexes) == 0:
                 logger.debug("No indices in pick event, ignoring")
                 return
-            index = cast(int, event.ind[0])
+            index = indexes[0]
 
             if index < 0 or index >= len(data):
                 logger.debug(f"Index {index} out of bounds for data length {len(data)}")
