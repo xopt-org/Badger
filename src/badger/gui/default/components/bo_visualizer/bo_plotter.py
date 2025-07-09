@@ -188,10 +188,10 @@ class BOPlotWidget(AnalysisWidget):
                 "Error",
                 f"Error getting best reference points: {e}",
             )
-        self.update_plot(requires_rebuild=True)
+        self.update_plots(requires_rebuild=True)
 
     def on_plot_options_changed(self) -> None:
-        self.update_plot(requires_rebuild=True)
+        self.update_plots(requires_rebuild=True)
 
     def on_reference_points_changed(self) -> None:
         # Update the reference points in the plot
@@ -201,7 +201,7 @@ class BOPlotWidget(AnalysisWidget):
             self.parameters["variables"],
         )
 
-        self.update_plot(requires_rebuild=True)
+        self.update_plots(requires_rebuild=True)
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -290,7 +290,7 @@ class BOPlotWidget(AnalysisWidget):
                 ):
                     self.update_reference_point_table(self.selected_variables)
             # Only update plot if the selection has changed
-            self.update_plot()
+            self.update_plots()
 
     def update_reference_point_table(self, selected_variables: list[str]):
         """Disable and gray out reference points for selected variables."""
@@ -335,7 +335,7 @@ class BOPlotWidget(AnalysisWidget):
                 reference_points[var] = ref_value
         return reference_points
 
-    def update_plot(
+    def update_plots(
         self,
         requires_rebuild: bool = False,
         interval: int = 1000,

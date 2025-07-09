@@ -23,7 +23,7 @@ from xopt.generators.bayesian.visualize import (
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 import time
-from badger.gui.default.components.bo_visualizer.plot_event_handlers import (
+from badger.gui.default.components.plot_event_handlers import (
     MatplotlibInteractionHandler,
 )
 

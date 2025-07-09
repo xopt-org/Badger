@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 )
 
 from PyQt5.QtCore import Qt
-from badger.gui.default.components.bo_visualizer.plot_event_handlers import (
+from badger.gui.default.components.plot_event_handlers import (
     MatplotlibInteractionHandler,
 )
 from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions

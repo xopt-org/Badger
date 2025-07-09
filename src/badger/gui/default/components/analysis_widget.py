@@ -30,6 +30,14 @@ class AnalysisWidget(QDialog):
         super().__init__(parent=parent)
 
     @abstractmethod
+    def initialize_widget(self) -> None:
+        """
+        Initialize the widget.
+        This method should be implemented to set up the initial state of the widget.
+        """
+        pass
+
+    @abstractmethod
     def requires_reinitialization(self) -> bool:
         """
         Check if the widget requires reinitialization.
