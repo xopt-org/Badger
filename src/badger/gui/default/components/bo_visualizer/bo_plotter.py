@@ -65,6 +65,9 @@ class BOPlotWidget(AnalysisWidget):
         self.setSizePolicy(ExpandingPolicy, ExpandingPolicy)
         self.setMinimumSize(1250, 720)
 
+    def isValidRoutine(self, routine: Routine) -> None:
+        pass
+
     def create_ui(self) -> None:
         self.ui_components = UIComponents(self.parameters)
         self.plotting_area = PlottingArea()

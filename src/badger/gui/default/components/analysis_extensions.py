@@ -31,7 +31,7 @@ class AnalysisExtension(QDialog):
         self,
         extension_widget: AnalysisWidget,
         extension_name: str,
-        generator_type: type[Generator] = BayesianGenerator,
+        generator_type: type[Generator],
     ) -> None:
         logger.debug(f"Initializing {extension_name} Extension")
 
