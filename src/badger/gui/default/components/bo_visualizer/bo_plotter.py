@@ -11,7 +11,9 @@ from PyQt5.QtWidgets import QSizePolicy
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
     BlockSignalsContext,
+    HandledException,
     signal_logger,
+    to_precision_float,
 )
 from badger.routine import Routine
 from badger.utils import create_archive_run_filename
@@ -253,18 +255,16 @@ class BOPlotWidget(AnalysisWidget):
 
         x_var_index = self.ui_components.x_axis_combo.currentIndex()
         self.parameters["variable_1"] = x_var_index
-        # x_var_text = self.ui_components.x_axis_combo.currentText()
-        # if x_var_text != "":
-        #     selected_variables.append(x_var_text)
 
         include_var2 = self.ui_components.y_axis_checkbox.isChecked()
         self.parameters["include_variable_2"] = include_var2
-        if include_var2:
+        if not include_var2:
+            # Disable the y-axis combo box if variable 2 is not included
+            self.ui_components.y_axis_combo.setEnabled(False)
+        else:
+            self.ui_components.y_axis_combo.setEnabled(True)
             y_var_index = self.ui_components.y_axis_combo.currentIndex()
             self.parameters["variable_2"] = y_var_index
-            # y_var_text = self.ui_components.y_axis_combo.currentText()
-            # if y_var_text != "":
-            #     selected_variables.append(y_var_text)
 
         current_selected_options = (
             self.parameters["variable_1"],
@@ -282,7 +282,7 @@ class BOPlotWidget(AnalysisWidget):
         self.ui_components.y_axis_combo.setCurrentIndex(self.parameters["variable_2"])
 
         if previous_selected_options != current_selected_options:
-            print("Selected variables for plotting:", self.selected_variables)
+            logger.debug("Selected variables for plotting:", self.selected_variables)
             # Update the reference point table based on the selected variables
             if self.ui_components.reference_table is not None:
                 with BlockSignalsContext(
@@ -422,32 +422,24 @@ class BOPlotWidget(AnalysisWidget):
 
             try:
                 if self.routine.data is None:
-                    logger.error("No data available in routine for training model")
-                    QMessageBox.critical(
-                        self,
-                        "No data available",
-                        "No data available in routine for training model",
+                    raise HandledException(
+                        ValueError, "No data available in routine for training model"
                     )
-                    raise ValueError("No data available in routine for training model")
                 self.generator.train_model(self.routine.data)
+            except HandledException as he:
+                logger.error(str(he))
+                raise he
             except Exception as e:
-                logger.error(f"Failed to train model: {e}")
-                QMessageBox.critical(
-                    self,
-                    "Failed to train model",
-                    f"Failed to train model: {e}",
-                )
-                raise Exception(f"Error training model: {e}")
+                logger.error(str(e))
+                raise e
 
     def set_best_reference_points(
         self,
     ):
         if self.generator.data is None:
-            logger.error(
-                "No data available in generator for selecting best reference points"
-            )
-            raise ValueError(
-                "No data available in generator for selecting best reference points"
+            raise HandledException(
+                ValueError,
+                "No data available in generator for selecting best reference points",
             )
 
         index_arr, value_arr, input_params = self.routine.vocs.select_best(
@@ -455,12 +447,10 @@ class BOPlotWidget(AnalysisWidget):
         )
 
         if not index_arr or not value_arr:
-            logger.error("No best reference points found")
-            raise ValueError("No best reference points found")
+            raise HandledException(ValueError, "No best reference points found")
 
         if len(index_arr) < 1 or len(value_arr) < 1:
-            logger.error("Index or value arrays are empty")
-            raise ValueError("Index or value arrays are empty")
+            raise HandledException(ValueError, "Best reference points arrays are empty")
 
         index = index_arr[0]
         value = value_arr[0]
@@ -471,9 +461,9 @@ class BOPlotWidget(AnalysisWidget):
         # Update the reference table with the best reference points
         self.parameters["reference_points"] = cast(
             dict[str, float],
-            {var: float(f"{input_params[var]:0.3g}") for var in input_params},
+            {var: to_precision_float(input_params[var]) for var in input_params},
         )
-
+        self.ui_components.best_point_display.setAutoFillBackground(True)
         self.ui_components.best_point_display.setText(
-            f"Best Point index: {index}, Value: {value}\nInput Params: {input_params}"
+            f"Best Point Index: {index}\nValue: {to_precision_float(value)}"
         )

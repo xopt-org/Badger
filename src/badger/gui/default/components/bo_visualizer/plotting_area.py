@@ -3,6 +3,7 @@ from typing import Optional, cast
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
     BlockSignalsContext,
+    HandledException,
     MatplotlibFigureContext,
     clear_layout,
     requires_update,
@@ -16,7 +17,7 @@ from matplotlib.backends.backend_qt import (
 )
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
+from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from xopt.generators.bayesian.visualize import (
     visualize_generator_model,
 )
@@ -31,8 +32,6 @@ from badger.gui.default.components.plot_event_handlers import (
 import logging
 
 logger = logging.getLogger(__name__)
-
-# plt.switch_backend("Qt5Agg")
 
 
 class PlottingArea(QWidget):
@@ -109,14 +108,11 @@ class PlottingArea(QWidget):
                         layout.addWidget(canvas)
                         layout.addWidget(toolbar)
             else:
-                raise Exception("Layout never updated")
+                raise HandledException(ValueError, "Layout is None and is not updated")
+        except HandledException as he:
+            raise he
         except Exception as e:
             logger.error(f"Error updating plot: {e}")
-            QMessageBox.critical(
-                self,
-                "Plot Update Error",
-                f"An error occurred while updating the plot: {e}",
-            )
-            raise Exception(f"An error occurred while updating the plot: {e}")
+            raise e
         # Update the last updated time
         self.last_updated = time.time()

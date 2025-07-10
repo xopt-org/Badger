@@ -2,7 +2,8 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Optional
 
-from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt5.QtWidgets import QDialog
+from badger.gui.default.components.extension_utilities import HandledException
 from badger.routine import Routine
 from xopt import Generator
 
@@ -76,18 +77,14 @@ class AnalysisWidget(QDialog):
 
         # Check if the generator is a BayesianGenerator
         if not issubclass(self.routine.generator.__class__, generator_type):
-            QMessageBox.critical(
-                self,
-                "Invalid Generator",
+            raise HandledException(
+                TypeError,
                 f"Invalid generator type: {type(self.routine.generator)}, extension only supports {generator_type.__name__}",
-            )
-            raise TypeError(
-                f"Invalid generator type: {type(self.routine.generator)}, extension only supports {generator_type.__name__}"
             )
 
         if self.routine.generator.data is None:
             logger.error("No data available in generator")
-            raise ValueError("No data available in generator")
+            raise HandledException(ValueError, "No data available in generator")
 
         self.df_length = len(self.routine.generator.data)
         self.generator = self.routine.generator

@@ -14,7 +14,11 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
-from badger.gui.default.components.extension_utilities import BlockSignalsContext
+from badger.gui.default.components.extension_utilities import (
+    BlockSignalsContext,
+    HandledException,
+    to_precision_float,
+)
 
 import logging
 
@@ -116,8 +120,8 @@ class UIComponents:
         # Initialize the parameters with the routine's variables
         configurable_options["reference_points_range"] = vocs_variables
         configurable_options["reference_points"] = {
-            var: float(
-                f"{((vocs_variables[var][1] - vocs_variables[var][0]) / 2.0):.3g}"
+            var: to_precision_float(
+                (vocs_variables[var][1] - vocs_variables[var][0]) / 2.0
             )
             for var in vocs_variables
         }
@@ -148,7 +152,7 @@ class UIComponents:
 
         logger.debug("Populating reference table")
         if self.reference_table is None:
-            raise Exception("Reference Table is None")
+            raise HandledException(ValueError, "Reference Table is None")
 
         with BlockSignalsContext(self.reference_table):
             self.reference_table.setRowCount(len(variables))

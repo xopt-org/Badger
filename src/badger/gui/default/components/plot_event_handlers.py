@@ -3,6 +3,9 @@ from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
+from badger.gui.default.components.extension_utilities import (
+    to_precision_float,
+)
 
 from typing import cast
 
@@ -87,11 +90,11 @@ class MatplotlibInteractionHandler:
 
         logger.debug(f"Updated reference points: {parameters['reference_points']}")
 
-        parameters["reference_points"][variable_1_name] = float(
-            f"{desired_coordinate[0]:.3g}"
+        parameters["reference_points"][variable_1_name] = to_precision_float(
+            desired_coordinate[0]
         )
-        parameters["reference_points"][variable_2_name] = float(
-            f"{desired_coordinate[1]:.3g}"
+        parameters["reference_points"][variable_2_name] = to_precision_float(
+            desired_coordinate[1]
         )
 
         logger.debug(f"Updated reference points: {parameters['reference_points']}")
@@ -248,6 +251,16 @@ class MatplotlibInteractionHandler:
 
         ax = mouseevent.inaxes
 
+        click_location_x = mouseevent.x
+        click_location_y = mouseevent.y
+
+        figure_dimensions = event.canvas.get_width_height()
+
+        self.region = (
+            1 if (figure_dimensions[0] / 2 > click_location_x) else -1,
+            1 if (figure_dimensions[1] / 2 > click_location_y) else -1,
+        )
+
         if isinstance(plot, PathCollection):
             data = plot.get_offsets()
 
@@ -266,19 +279,34 @@ class MatplotlibInteractionHandler:
             logger.debug(f"Picked point: {point} at index {index}")
 
             # Create tooltip text
-            tooltip_text = f"({point[0]:.2g}, {point[1]:.2g})"
+            tooltip_text = (
+                f"({to_precision_float(point[0])}, {to_precision_float(point[1])})"
+            )
 
             self.clear_tooltips()  # Clear existing tooltips before adding a new one
 
             # Create and add the tooltip to the plot
+            text_offset = 20
+
             tooltip = ax.annotate(
                 tooltip_text,
                 xy=point,
-                xytext=(20, 20),
-                textcoords="offset points",
+                xytext=(0, 0),  # Initial position of the tooltip
+                textcoords="offset pixels",
                 bbox=dict(boxstyle="round", fc="w"),
                 arrowprops=dict(arrowstyle="->"),
             )
+
+            # Adjust tooltip position based on the region and the size of the text
+            text_size = tooltip.get_window_extent()
+            text_height = text_size.height
+            text_width = text_size.width
+
+            tooltip.xyann = (
+                (-text_width / 2) + self.region[0] * (text_width / 2 + text_offset),
+                (-text_height / 2) + self.region[1] * (text_height / 2 + text_offset),
+            )
+
             self.tooltips.append(tooltip)
 
             event.canvas.draw_idle()

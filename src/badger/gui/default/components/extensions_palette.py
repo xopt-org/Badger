@@ -15,6 +15,7 @@ from badger.gui.default.components.analysis_extensions import (
     ParetoFrontViewer,
     BOVisualizer,
 )
+from badger.gui.default.components.extension_utilities import HandledException
 
 
 class ExtensionsPalette(QMainWindow):
@@ -75,8 +76,8 @@ class ExtensionsPalette(QMainWindow):
         self.text_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.text_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.btn_data_viewer = QPushButton("ParetoFrontViewer")
-        self.btn_bo_visualizer = QPushButton("BOVisualizer")
+        self.btn_data_viewer = QPushButton("Pareto Front Viewer")
+        self.btn_bo_visualizer = QPushButton("Bayesian Optimizer Visualizer")
 
         layout.addWidget(self.btn_data_viewer)
         layout.addWidget(self.btn_bo_visualizer)
@@ -134,13 +135,12 @@ class ExtensionsPalette(QMainWindow):
         try:
             if self.run_monitor.routine is not None:
                 child_window.update_window(self.run_monitor.routine)
+
+            child_window.show()
+            self.update_palette()
+        except HandledException as e:
+            QMessageBox.critical(self, "Handled Exception Error", str(e))
         except Exception:
-            QMessageBox.warning(
-                self, "Extension is not applicable!", traceback.format_exc()
+            QMessageBox.critical(
+                self, "Unhandled Exception Error", traceback.format_exc()
             )
-            self.run_monitor.active_extensions.remove(child_window)
-            return
-
-        child_window.show()
-
-        self.update_palette()

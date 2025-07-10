@@ -13,7 +13,6 @@ from PyQt5.QtWidgets import (
     QLabel,
     QGroupBox,
     QTabWidget,
-    QMessageBox,
 )
 
 from PyQt5.QtCore import Qt
@@ -47,6 +46,7 @@ from badger.gui.default.components.analysis_widget import AnalysisWidget
 
 from badger.gui.default.components.extension_utilities import (
     BlockSignalsContext,
+    HandledException,
     MatplotlibFigureContext,
     signal_logger,
     requires_update,
@@ -92,14 +92,9 @@ class ParetoFrontWidget(AnalysisWidget):
 
     def isValidRoutine(self, routine: Routine) -> None:
         if len(routine.vocs.objective_names) < 2:
-            logger.error("Routine must have at least two objectives")
-            QMessageBox.critical(
-                self,
-                "Invalid Routine",
+            raise HandledException(
+                ValueError,
                 "The routine must have at least two objectives to visualize the Pareto front.",
-            )
-            raise ValueError(
-                "The routine must have at least two objectives to visualize the Pareto front."
             )
 
     def requires_reinitialization(self) -> bool:
@@ -355,8 +350,7 @@ class ParetoFrontWidget(AnalysisWidget):
                     x_combo.setCurrentIndex(self.parameters["objective_1"])
                     y_combo.setCurrentIndex(self.parameters["objective_2"])
         else:
-            logging.error("Invalid plot tab")
-            raise ValueError("Invalid plot tab")
+            raise HandledException(ValueError, "Invalid plot tab")
 
         # Update the plot
         self.update_pareto_front_plot()
@@ -378,8 +372,7 @@ class ParetoFrontWidget(AnalysisWidget):
                 "variable_2"
             ].currentIndex()
         else:
-            logging.error("Invalid plot tab")
-            raise ValueError("Invalid plot tab")
+            raise HandledException(ValueError, "Invalid plot tab")
 
         self.update_pareto_front_plot()
 
@@ -500,26 +493,32 @@ class ParetoFrontWidget(AnalysisWidget):
             y_var_name = self.generator.vocs.objective_names[y_axis]
             y_var_index = self.generator.vocs.objective_names.index(y_var_name)
         else:
-            logging.error("Invalid plot index")
-            raise ValueError("Invalid plot index")
+            raise HandledException(
+                ValueError,
+                "Invalid plot index for current tab when creating pareto plot",
+            )
 
         if self.pf_mask is None or self.pf_1 is None or self.pf_2 is None:
-            logging.error("No pareto front")
-            raise ValueError("No pareto front")
+            raise HandledException(
+                ValueError, "No Pareto front data available when creating pareto plot"
+            )
 
         raw_data = self.generator.data
 
         if raw_data is None or len(raw_data) == 0:
-            logging.error("No raw data available")
-            raise ValueError("No raw data available")
+            raise HandledException(
+                ValueError, "No raw data available when creating pareto plot"
+            )
 
         if current_tab == 0:
             data_points = self.pf_1
         elif current_tab == 1:
             data_points = self.pf_2
         else:
-            logging.error("Invalid plot index")
-            raise ValueError("Invalid plot index")
+            raise HandledException(
+                ValueError,
+                "Invalid plot index for current tab when creating pareto plot",
+            )
 
         data_indices: list[int] = [
             x for x in range(len(self.pf_mask)) if self.pf_mask[x]
@@ -578,7 +577,9 @@ class ParetoFrontWidget(AnalysisWidget):
     def create_hypervolume_plot(self, fig: Figure, ax: Axes):
         data_points = self.hypervolume_history
         if len(data_points) == 0:
-            raise ValueError("No data points available")
+            raise HandledException(
+                ValueError, "No data points available for Hypervolume"
+            )
         # Extract the x and y coordinates from the data points
         x = data_points["iteration"].values
         y = data_points["hypervolume"].values

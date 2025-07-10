@@ -1,6 +1,7 @@
 import time
 from functools import wraps
-from typing import Callable, Optional, Iterable, ParamSpec
+import traceback
+from typing import Any, Callable, Optional, Iterable, ParamSpec
 from types import TracebackType
 from PyQt5.QtWidgets import QWidget, QLayout, QTabWidget
 
@@ -37,7 +38,9 @@ def clear_layout(layout: QLayout) -> None:
 
         widget = child.widget()
         if widget is None:
-            raise ValueError("Child of layout is not a widget. Cannot clear layout.")
+            raise HandledException(
+                ValueError, "Child of layout is not a widget. Cannot clear layout."
+            )
 
         widget.deleteLater()
 
@@ -62,6 +65,39 @@ def requires_update(
             logger.debug("Skipping update")
             return False
     return True
+
+
+def to_precision_float(value: Any, precision: int = 4) -> float:
+    try:
+        return float(f"{value:.{precision}g}")
+    except Exception:
+        raise HandledException(
+            ValueError,
+            f"Value {value} cannot be converted to float with precision {precision}",
+        )
+
+
+class HandledException(Exception):
+    """
+    Custom exception class to handle exceptions in a way that can be caught and logged.
+    This is useful for handling exceptions in contexts where we want to log them without
+    interrupting the flow of the program.
+    """
+
+    def __init__(
+        self, exception_type: type[BaseException], message: str, *args: object
+    ) -> None:
+        super().__init__(message, *args)
+        self.message = message
+        self.exception_type = exception_type
+        self.traceback = traceback.format_exc()
+
+        logger.error(
+            f"HandledException raised: {self.exception_type.__name__}: {self.message}\n\n{self.traceback}"
+        )
+
+    def __str__(self) -> str:
+        return f"{self.exception_type.__name__}: {self.message}"
 
 
 class BlockSignalsContext:
