@@ -68,7 +68,7 @@ class TableWithCopy(QTableWidget):
 
 def format_value(v):
     try:
-        f = f"{v:.4g}"
+        f = f"{v:.6g}"
     except (ValueError, TypeError):
         f = str(v)
     return f

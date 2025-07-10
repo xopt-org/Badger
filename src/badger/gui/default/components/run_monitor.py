@@ -769,7 +769,7 @@ class BadgerOptMonitor(QWidget):
 
         curr_vars = get_current_vars(self.routine)
 
-        self.routine.environment._set_variables(
+        self.routine.environment.set_variables(
             dict(zip(self.vocs.variable_names, self.init_vars))
         )
 
@@ -854,7 +854,7 @@ class BadgerOptMonitor(QWidget):
         # there ought to be a better way to do this
         if self.routine.vrange_hard_limit:
             self.routine.environment.variables.update(self.routine.vrange_hard_limit)
-        self.routine.environment._set_variables(dict(zip(variable_names, solution)))
+        self.routine.environment.set_variables(dict(zip(variable_names, solution)))
         # center around the inspector
         x_range = self.plot_var.getViewBox().viewRange()[0]
         delta = (x_range[1] - x_range[0]) / 2

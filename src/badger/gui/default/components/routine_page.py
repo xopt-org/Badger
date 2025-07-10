@@ -537,7 +537,7 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -547,7 +547,7 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.4g}")
+                    item = QTableWidgetItem(f"{var_curr[name]:.6g}")
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
@@ -564,7 +564,7 @@ class BadgerRoutinePage(QWidget):
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         # get small region around current point to sample
         vocs, _ = self._compose_vocs()
@@ -594,7 +594,7 @@ class BadgerRoutinePage(QWidget):
                 try:
                     point = random_points.pop(0)
                     for col, name in enumerate(vname_selected):
-                        item = QTableWidgetItem(f"{point[name]:.4g}")
+                        item = QTableWidgetItem(f"{point[name]:.6g}")
                         table.setItem(row, col, item)
                 except IndexError:  # No more points to add
                     break
@@ -682,7 +682,7 @@ class BadgerRoutinePage(QWidget):
                 vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         option_idx = self.limit_option["limit_option_idx"]
         if option_idx:
@@ -760,7 +760,7 @@ class BadgerRoutinePage(QWidget):
             vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         for name in vname_selected:
             try:

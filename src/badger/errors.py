@@ -60,6 +60,10 @@ class BadgerEnvInstantiationError(Exception):
     pass
 
 
+class BadgerEnvNotFoundError(Exception):
+    pass
+
+
 class BadgerEnvVarError(Exception):
     pass
 

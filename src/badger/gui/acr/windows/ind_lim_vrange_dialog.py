@@ -158,7 +158,7 @@ will be clipped by the variable range."""
         sb_delta.setMinimum(0)
         sb_delta.setMaximum(1e4)
         sb_delta.setValue(self.configs.get("delta", 0.1))
-        sb_delta.setDecimals(4)
+        sb_delta.setDecimals(6)
         sb_delta.setSingleStep(0.01)
         hbox_delta.addWidget(lbl)
         hbox_delta.addWidget(sb_delta, 1)
