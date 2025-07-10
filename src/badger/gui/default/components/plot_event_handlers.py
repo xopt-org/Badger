@@ -2,8 +2,9 @@ from badger.routine import Routine
 from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
-from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
+from badger.gui.default.components.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
+    HandledException,
     to_precision_float,
 )
 
@@ -82,11 +83,26 @@ class MatplotlibInteractionHandler:
         parameters: ConfigurableOptions,
         desired_coordinate: tuple[float, float],
     ) -> None:
+        if (
+            "variable_1" not in parameters
+            or "variable_2" not in parameters
+            or "variables" not in parameters
+        ):
+            raise HandledException(
+                ValueError,
+                "Variables 'variable_1' or 'variable_2' or 'variables' are not found in parameters.",
+            )
         variable_1 = parameters["variable_1"]
         variable_2 = parameters["variable_2"]
 
         variable_1_name = parameters["variables"][variable_1]
         variable_2_name = parameters["variables"][variable_2]
+
+        if "reference_points" not in parameters:
+            raise ValueError(
+                "Reference points not found in parameters. "
+                "Please ensure 'reference_points' is initialized."
+            )
 
         logger.debug(f"Updated reference points: {parameters['reference_points']}")
 
@@ -278,15 +294,39 @@ class MatplotlibInteractionHandler:
             point = cast(tuple[float, float], data[index])
             logger.debug(f"Picked point: {point} at index {index}")
 
+            # Routine data
+            routine_data = self.routine.generator.data
+
+            if routine_data is None:
+                logger.error("No routine data available.")
+                return
+
+            x_column = ax.get_xlabel()
+            y_column = ax.get_ylabel()
+
+            if x_column not in routine_data or y_column not in routine_data:
+                logger.error(
+                    f"Columns {x_column} or {y_column} not found in routine data."
+                )
+
+            # Find the true index in the routine data
+            # This is done by finding the row in the routine data that is closest to the picked point
+            true_index = routine_data.loc[  # type: ignore
+                (routine_data[x_column] - point[0]).abs().idxmin()  # type: ignore
+                & (routine_data[y_column] - point[1]).abs().idxmin()
+            ].name
+
+            if true_index is None:
+                logger.error("True index not found in routine data.")
+                true_index = "Index not found"
+
             # Create tooltip text
-            tooltip_text = (
-                f"({to_precision_float(point[0])}, {to_precision_float(point[1])})"
-            )
+            tooltip_text = f"Index: {true_index}\n({to_precision_float(point[0])}, {to_precision_float(point[1])})"
 
             self.clear_tooltips()  # Clear existing tooltips before adding a new one
 
             # Create and add the tooltip to the plot
-            text_offset = 20
+            TOOLTIP_TEXT_OFFSET = 20
 
             tooltip = ax.annotate(
                 tooltip_text,
@@ -303,8 +343,10 @@ class MatplotlibInteractionHandler:
             text_width = text_size.width
 
             tooltip.xyann = (
-                (-text_width / 2) + self.region[0] * (text_width / 2 + text_offset),
-                (-text_height / 2) + self.region[1] * (text_height / 2 + text_offset),
+                (-text_width / 2)
+                + self.region[0] * (text_width / 2 + TOOLTIP_TEXT_OFFSET),
+                (-text_height / 2)
+                + self.region[1] * (text_height / 2 + TOOLTIP_TEXT_OFFSET),
             )
 
             self.tooltips.append(tooltip)
