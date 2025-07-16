@@ -499,9 +499,9 @@ class ParetoFrontWidget(AnalysisWidget):
             )
 
         if self.pf_mask is None or self.pf_1 is None or self.pf_2 is None:
-            raise HandledException(
-                ValueError, "No Pareto front data available when creating pareto plot"
-            )
+            logging.error("No pareto front data available")
+            # Return empty plot, does not raise an error
+            return fig, ax
 
         raw_data = self.generator.data
 

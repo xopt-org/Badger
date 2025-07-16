@@ -25,7 +25,12 @@ class AnalysisExtension(QDialog):
         super().__init__(parent=parent)
 
     def update_window(self, routine: Routine) -> None:
-        self.update_extension(routine)
+        try:
+            self.update_extension(routine)
+        except Exception as e:
+            # This will make sure that the extension window closes if an error occurs
+            self.close()
+            raise e
 
     def initialize_extension(
         self,

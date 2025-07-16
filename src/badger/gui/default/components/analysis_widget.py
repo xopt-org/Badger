@@ -83,8 +83,14 @@ class AnalysisWidget(QDialog):
             )
 
         if self.routine.generator.data is None:
-            logger.error("No data available in generator")
-            raise HandledException(ValueError, "No data available in generator")
+            logger.error(
+                "No data available in generator, will try to get data from routine"
+            )
+            if self.routine.data is None:
+                raise HandledException(
+                    ValueError, "No data available in generator or routine"
+                )
+            self.routine.generator.data = self.routine.data
 
         self.df_length = len(self.routine.generator.data)
         self.generator = self.routine.generator
