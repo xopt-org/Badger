@@ -97,6 +97,17 @@ class ParetoFrontWidget(AnalysisWidget):
                 "The routine must have at least two objectives to visualize the Pareto front.",
             )
 
+    def reset_widget(self) -> None:
+        """
+        Reset the widget to its initial state.
+        This method should be called when the routine is changed or when the widget needs to be reset.
+        """
+        logger.debug("Resetting ParetoFrontWidget")
+        self.hypervolume_history = pd.DataFrame()
+        self.pf_1 = None
+        self.pf_2 = None
+        self.pf_mask = None
+
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
         logger.debug("Checking if extension needs to be reinitialized")
@@ -107,27 +118,19 @@ class ParetoFrontWidget(AnalysisWidget):
             logger.debug("Reset - Extension never initialized")
             self.initialized = True
             self.routine_identifier = archive_name
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
+            self.reset_widget()
             self.setup_connections()
             return True
 
         if self.routine_identifier != archive_name:
             logger.debug("Reset - Routine name has changed")
             self.routine_identifier = archive_name
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.pf_mask = None
+            self.reset_widget()
             return True
 
         if self.routine.data is None:
             logger.debug("Reset - No data available")
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.pf_mask = None
+            self.reset_widget()
             return True
 
         previous_len = self.df_length
@@ -136,10 +139,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
         if previous_len > new_length:
             logger.debug("Reset - Data length is smaller")
-            self.hypervolume_history = pd.DataFrame()
-            self.pf_1 = None
-            self.pf_2 = None
-            self.pf_mask = None
+            self.reset_widget()
             self.df_length = float("inf")
             return True
 

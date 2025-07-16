@@ -5,7 +5,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDialog, QVBoxLayout
 from PyQt5.QtGui import QCloseEvent
 from badger.gui.default.components.analysis_widget import AnalysisWidget
-from badger.gui.default.components.bo_visualizer.bo_plotter import BOPlotWidget
+from badger.gui.default.components.bo_visualizer.bo_widget import BOPlotWidget
 from badger.gui.default.components.pf_viewer.pf_widget import ParetoFrontWidget
 from badger.routine import Routine
 

@@ -111,8 +111,6 @@ class BOPlotWidget(AnalysisWidget):
         )
 
     def setup_connections(self) -> None:
-        # Disconnect existing connections
-
         self.ui_components.update_button.clicked.connect(
             lambda: signal_logger("Update button clicked")(
                 lambda: self.on_button_clicked()
@@ -208,6 +206,14 @@ class BOPlotWidget(AnalysisWidget):
 
         self.update_plots(requires_rebuild=True)
 
+    def reset_widget(self) -> None:
+        """
+        Reset the components of the BOPlotWidget.
+        This method should be called when the routine is changed or when the widget needs to be reset.
+        """
+        logger.debug("Resetting components of BOPlotWidget")
+        self.ui_components.best_point_display.setText("")
+
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
         logger.debug("Checking if BO Visualizer needs to be reinitialized")
@@ -228,10 +234,12 @@ class BOPlotWidget(AnalysisWidget):
         if self.routine_identifier != archive_name:
             logger.debug("Reset - Routine name has changed")
             self.routine_identifier = archive_name
+            self.reset_widget()
             return True
 
         if self.routine.data is None:
             logger.debug("Reset - No data available")
+
             return True
 
         previous_len = self.df_length
@@ -466,7 +474,6 @@ class BOPlotWidget(AnalysisWidget):
             dict[str, float],
             {var: to_precision_float(input_params[var]) for var in input_params},
         )
-        self.ui_components.best_point_display.setAutoFillBackground(True)
         self.ui_components.best_point_display.setText(
             f"Best Point Index: {index}\nValue: {to_precision_float(value)}"
         )

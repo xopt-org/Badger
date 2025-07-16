@@ -77,7 +77,7 @@ class ExtensionsPalette(QMainWindow):
         self.text_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.btn_data_viewer = QPushButton("Pareto Front Viewer")
-        self.btn_bo_visualizer = QPushButton("Bayesian Optimizer Visualizer")
+        self.btn_bo_visualizer = QPushButton("Bayesian Optimization Visualizer")
 
         layout.addWidget(self.btn_data_viewer)
         layout.addWidget(self.btn_bo_visualizer)
