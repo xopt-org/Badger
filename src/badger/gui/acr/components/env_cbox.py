@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QStyledItemDelegate,
     QLabel,
-    QListWidget,
     QSizePolicy,
 )
 from PyQt5.QtGui import QIcon, QFont

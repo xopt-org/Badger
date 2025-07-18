@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget, QTabWidget
+from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
@@ -30,7 +30,6 @@ from badger.gui.default.components.data_table import (
 )
 from badger.gui.acr.components.env_cbox import BadgerEnvBox
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
-from badger.gui.default.components.state_item import state_item
 from badger.gui.default.windows.docs_window import BadgerDocsWindow
 from badger.gui.default.windows.env_docs_window import BadgerEnvDocsWindow
 from badger.gui.default.windows.edit_script_dialog import BadgerEditScriptDialog

@@ -1,7 +1,5 @@
 from typing import Any
 from PyQt5.QtWidgets import (
-    QComboBox,
-    QStyledItemDelegate,
     QMessageBox,
 )
 
