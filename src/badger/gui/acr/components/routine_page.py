@@ -872,6 +872,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.sta_table.keyword = ""
         self.env_box.sta_table.show_selected_only = True
 
+        self.env_box.sta_table.update_items(observables, status, formulas)
+
         # Config the metadata
         self.edit_save.setPlaceholderText(generate_slug(2))
         self.edit_save.setText(routine.name)
