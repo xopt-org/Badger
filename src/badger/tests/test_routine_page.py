@@ -184,11 +184,8 @@ def test_observables(qtbot):
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-    # Select observable
-    qtbot.mouseClick(window.env_box.btn_add_sta, Qt.MouseButton.LeftButton)
-    obs_item = window.env_box.list_obs.item(0)
-    obs_widget = window.env_box.list_obs.itemWidget(obs_item)
-    qtbot.keyClicks(obs_widget.cb_sta, "c")
+    # Select observable (first 20 vars, then f, then c)
+    window.env_box.sta_table.cellWidget(21, 0).setChecked(True)
 
     routine = window._compose_routine()
     assert routine.vocs.observables == ["c"]
