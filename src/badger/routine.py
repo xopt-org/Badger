@@ -38,6 +38,7 @@ class Routine(Xopt):
     additional_variables: Optional[List[str]] = Field([])
     formulas: Optional[dict[str, dict[str, Any]]] = Field({})
     constraint_formulas: Optional[dict[str, dict[str, Any]]] = Field({})
+    observable_formulas: Optional[dict[str, dict[str, Any]]] = Field({})
     # Other meta data
     badger_version: Optional[str] = Field(None)
     xopt_version: Optional[str] = Field(None)

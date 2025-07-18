@@ -277,7 +277,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
-        self.env_box.btn_add_sta.clicked.connect(self.add_state)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
         )
@@ -510,11 +509,34 @@ class BadgerRoutinePage(QWidget):
         self.env_box.con_table.update_items(constraints, status, formulas)
 
         # set observables
-        self.env_box.list_obs.clear()
-        observables = vocs.observable_names
-        if len(observables):
-            for name_sta in observables:
-                self.add_state(name_sta)
+        try:
+            formulas = template_dict["observable_formulas"]
+        except KeyError:
+            formulas = {}
+        observables = []
+        status = {}
+        observables_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in observables_names_full:
+            obs = {name: []}
+            status[name] = False  # selected
+            observables.append(obs)
+        for name in vocs.observables:
+            idx = observables_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Observable {name} not found in the routine's observables."
+                )
+            else:
+                observables[idx] = {name: []}
+            status[name] = True
+
+        # Show selected observables only
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(True)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.sta_table.show_selected_only = True
+
+        self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
         """
@@ -548,6 +570,7 @@ class BadgerRoutinePage(QWidget):
             "additional_variables": self.env_box.var_table.addtl_vars,
             "formulas": self.env_box.obj_table.formulas,
             "constraint_formulas": self.env_box.con_table.formulas,
+            "observable_formulas": self.env_box.sta_table.formulas,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
             "vocs": vars(vocs),
@@ -626,8 +649,6 @@ class BadgerRoutinePage(QWidget):
 
         self.generators = list_generators()
         self.envs = list_env()
-        # Clean up the constraints/observables list
-        self.env_box.list_obs.clear()
 
         if routine is None:
             # Reset the generator and env configs
@@ -819,10 +840,37 @@ class BadgerRoutinePage(QWidget):
 
         self.env_box.con_table.update_items(constraints, status, formulas)
 
-        observables = routine.vocs.observable_names
-        if len(observables):
-            for name_sta in observables:
-                self.add_state(name_sta)
+        # Initialize the observables table with env observables
+        try:
+            formulas = routine.observable_formulas
+        except AttributeError:
+            formulas = {}
+        observables = []
+        status = {}
+        observables_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in observables_names_full:
+            obs = {name: []}
+            status[name] = False  # selected
+            observables.append(obs)
+        for name in routine.vocs.observables:
+            idx = observables_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Observable {name} not found in the routine's observables."
+                )
+            else:
+                observables[idx] = {name: []}
+            status[name] = True
+
+        # Show selected observables only
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(True)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.edit_sta.blockSignals(True)
+        self.env_box.edit_sta.setText("")
+        self.env_box.edit_sta.blockSignals(False)
+        self.env_box.sta_table.keyword = ""
+        self.env_box.sta_table.show_selected_only = True
 
         # Config the metadata
         self.edit_save.setPlaceholderText(generate_slug(2))
@@ -944,7 +992,6 @@ class BadgerRoutinePage(QWidget):
             self.env_box.var_table.update_variables(None)
             self.configs = None
             self.env = None
-            self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
             self.env_box.btn_refresh.setDisabled(True)
@@ -960,7 +1007,6 @@ class BadgerRoutinePage(QWidget):
             self.env_box.edit_var.clear()
             self.env_box.edit_obj.clear()
             # self.env_box.btn_add_con.setDisabled(False)
-            self.env_box.btn_add_sta.setDisabled(False)
             self.env_box.btn_add_var.setDisabled(False)
             self.env_box.btn_lim_vrange.setDisabled(False)
             self.env_box.btn_refresh.setDisabled(False)
@@ -971,7 +1017,6 @@ class BadgerRoutinePage(QWidget):
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
             # self.env_box.btn_add_con.setDisabled(True)
-            self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
             self.routine = None
@@ -1022,7 +1067,19 @@ class BadgerRoutinePage(QWidget):
         self.env_box.con_table.show_selected_only = False
         self.env_box.con_table.update_items(constraints, status, formulas={})
 
-        self.env_box.list_obs.clear()
+        # Initialize the observable table with env variables and observables
+        observables = []
+        status = {}
+        for name in self.configs["observations"]:
+            obs = {name: []}
+            status[name] = False  # selected
+            observables.append(obs)
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(False)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.sta_table.show_selected_only = False
+        self.env_box.sta_table.update_items(observables, status, formulas={})
+
         self.env_box.fit_content()
         # self.routine = None
 
@@ -1518,23 +1575,6 @@ class BadgerRoutinePage(QWidget):
             configs,
         ).exec_()
 
-    def add_state(self, name=None):
-        if self.configs is None:
-            return
-
-        var_names = [next(iter(d)) for d in self.configs["variables"]]
-        options = self.configs["observations"] + var_names
-        item = QListWidgetItem(self.env_box.list_obs)
-        sta_item = state_item(
-            options,
-            lambda: self.env_box.list_obs.takeItem(self.env_box.list_obs.row(item)),
-            name,
-        )
-        item.setSizeHint(sta_item.sizeHint())
-        self.env_box.list_obs.addItem(item)
-        self.env_box.list_obs.setItemWidget(item, sta_item)
-        self.env_box.fit_content()
-
     def _compose_vocs(self) -> (VOCS, list[str]):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
@@ -1555,10 +1595,8 @@ class BadgerRoutinePage(QWidget):
                 critical_constraints.append(con_name)
 
         observables = []
-        for i in range(self.env_box.list_obs.count()):
-            item = self.env_box.list_obs.item(i)
-            item_widget = self.env_box.list_obs.itemWidget(item)
-            obs_name = item_widget.cb_sta.currentText()
+        for observable in self.env_box.sta_table.export_data():
+            obs_name = next(iter(observable))
             observables.append(obs_name)
 
         try:
@@ -1693,6 +1731,7 @@ class BadgerRoutinePage(QWidget):
                 additional_variables=self.env_box.var_table.addtl_vars,
                 formulas=self.env_box.obj_table.formulas,
                 constraint_formulas=self.env_box.con_table.formulas,
+                observable_formulas=self.env_box.sta_table.formulas,
             )
 
             # Check if any user warnings were caught
