@@ -509,7 +509,8 @@ class BadgerRoutinePage(QWidget):
 
         # set observables
         if self.vars_env:
-            var_names = [next(iter(var)) for var in self.vars_env]
+            # var_names = [next(iter(var)) for var in self.vars_env]
+            var_names = []  # do not show var names in observables until we have a fix to get_observables
         else:
             var_names = []
         try:
@@ -847,7 +848,8 @@ class BadgerRoutinePage(QWidget):
 
         # Initialize the observables table with env observables
         if self.vars_env:
-            var_names = [next(iter(var)) for var in self.vars_env]
+            # var_names = [next(iter(var)) for var in self.vars_env]
+            var_names = []  # do not show var names in observables until we have a fix to get_observables
         else:
             var_names = []
         try:
@@ -1084,7 +1086,8 @@ class BadgerRoutinePage(QWidget):
         observables = []
         status = {}
         if self.vars_env:
-            var_names = [next(iter(var)) for var in self.vars_env]
+            # var_names = [next(iter(var)) for var in self.vars_env]
+            var_names = []  # do not show var names in observables until we have a fix to get_observables
         else:
             var_names = []
         for name in var_names + self.configs["observations"]:
