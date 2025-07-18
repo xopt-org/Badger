@@ -509,13 +509,19 @@ class BadgerRoutinePage(QWidget):
         self.env_box.con_table.update_items(constraints, status, formulas)
 
         # set observables
+        if self.vars_env:
+            var_names = [next(iter(var)) for var in self.vars_env]
+        else:
+            var_names = []
         try:
             formulas = template_dict["observable_formulas"]
         except KeyError:
             formulas = {}
         observables = []
         status = {}
-        observables_names_full = self.configs["observations"] + list(formulas.keys())
+        observables_names_full = (
+            var_names + self.configs["observations"] + list(formulas.keys())
+        )
         for name in observables_names_full:
             obs = {name: []}
             status[name] = False  # selected
@@ -841,13 +847,19 @@ class BadgerRoutinePage(QWidget):
         self.env_box.con_table.update_items(constraints, status, formulas)
 
         # Initialize the observables table with env observables
+        if self.vars_env:
+            var_names = [next(iter(var)) for var in self.vars_env]
+        else:
+            var_names = []
         try:
             formulas = routine.observable_formulas
         except AttributeError:
             formulas = {}
         observables = []
         status = {}
-        observables_names_full = self.configs["observations"] + list(formulas.keys())
+        observables_names_full = (
+            var_names + self.configs["observations"] + list(formulas.keys())
+        )
         for name in observables_names_full:
             obs = {name: []}
             status[name] = False  # selected
@@ -1072,7 +1084,11 @@ class BadgerRoutinePage(QWidget):
         # Initialize the observable table with env variables and observables
         observables = []
         status = {}
-        for name in self.configs["observations"]:
+        if self.vars_env:
+            var_names = [next(iter(var)) for var in self.vars_env]
+        else:
+            var_names = []
+        for name in var_names + self.configs["observations"]:
             obs = {name: []}
             status[name] = False  # selected
             observables.append(obs)
