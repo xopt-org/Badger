@@ -185,7 +185,9 @@ def test_observables(qtbot):
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
     # Select observable (first 20 vars, then f, then c)
-    window.env_box.sta_table.cellWidget(21, 0).setChecked(True)
+    # TODO: add vars back once the routine issue is resolved
+    # window.env_box.sta_table.cellWidget(21, 0).setChecked(True)
+    window.env_box.sta_table.cellWidget(1, 0).setChecked(True)
 
     routine = window._compose_routine()
     assert routine.vocs.observables == ["c"]
