@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QStyledItemDelegate,
     QLabel,
-    QListWidget,
     QSizePolicy,
 )
 from PyQt5.QtGui import QIcon, QFont
@@ -22,6 +21,7 @@ from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
+from badger.gui.default.components.obs_table import ObservableTable
 from badger.gui.default.components.data_table import init_data_table
 from badger.settings import init_settings
 from badger.gui.default.utils import (
@@ -446,21 +446,25 @@ class BadgerEnvBox(QWidget):
         edit_sta_col = QWidget()
         vbox_sta_edit = QVBoxLayout(edit_sta_col)
         vbox_sta_edit.setContentsMargins(0, 0, 0, 0)
+
         action_sta = QWidget()
         hbox_action_sta = QHBoxLayout(action_sta)
         hbox_action_sta.setContentsMargins(0, 0, 0, 0)
         vbox_sta_edit.addWidget(action_sta)
-        self.btn_add_sta = btn_add_sta = QPushButton("Add")
-        btn_add_sta.setFixedSize(96, 24)
-        btn_add_sta.setDisabled(True)
-        hbox_action_sta.addWidget(btn_add_sta)
+        self.edit_sta = edit_sta = QLineEdit()
+        edit_sta.setPlaceholderText("Filter observables...")
+        edit_sta.setFixedWidth(192)
+        self.check_only_sta = check_only_sta = QCheckBox("Show Checked Only")
+        check_only_sta.setChecked(False)
+        hbox_action_sta.addWidget(edit_sta)
         hbox_action_sta.addStretch()
-        self.list_obs = QListWidget()
-        self.list_obs.setMinimumHeight(120)
-        self.list_obs.setViewportMargins(2, 2, 17, 2)
-        vbox_sta_edit.addWidget(self.list_obs)
-        # vbox_sta_edit.addStretch()
+        hbox_action_sta.addWidget(check_only_sta)
+
+        self.sta_table = ObservableTable()
+        self.sta_table.setMinimumHeight(120)
+        vbox_sta_edit.addWidget(self.sta_table)
         hbox_sta.addWidget(edit_sta_col)
+
         cbox_more.setContentLayout(vbox_more)
 
     def config_logic(self):
@@ -472,6 +476,8 @@ class BadgerEnvBox(QWidget):
         self.check_only_obj.stateChanged.connect(self.toggle_obj_show_mode)
         self.edit_con.textChanged.connect(self.filter_con)
         self.check_only_con.stateChanged.connect(self.toggle_con_show_mode)
+        self.edit_sta.textChanged.connect(self.filter_sta)
+        self.check_only_sta.stateChanged.connect(self.toggle_sta_show_mode)
         self.btn_params.toggled.connect(self.toggle_params)
         self.animation.finished.connect(self.animation_finished)
 
@@ -512,25 +518,22 @@ class BadgerEnvBox(QWidget):
         self.var_table.update_variables(_variables, 1)
 
     def toggle_obj_show_mode(self, _):
-        self.obj_table.toggle_show_mode(self.check_only_obj.isChecked())
+        self.obj_table.update_show_selected_only(self.check_only_obj.isChecked())
 
     def filter_obj(self):
-        keyword = self.edit_obj.text()
-        rx = QRegExp(keyword)
-
-        _objectives = []
-        for obj in self.obj_table.all_objectives:
-            oname = next(iter(obj))
-            if rx.indexIn(oname, 0) != -1:
-                _objectives.append(obj)
-
-        self.obj_table.update_objectives(_objectives, 1)
+        self.obj_table.update_keyword(self.edit_obj.text())
 
     def toggle_con_show_mode(self, _):
         self.con_table.update_show_selected_only(self.check_only_con.isChecked())
 
     def filter_con(self):
         self.con_table.update_keyword(self.edit_con.text())
+
+    def toggle_sta_show_mode(self, _):
+        self.sta_table.update_show_selected_only(self.check_only_sta.isChecked())
+
+    def filter_sta(self):
+        self.sta_table.update_keyword(self.edit_sta.text())
 
     def _fit_content(self, list):
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4

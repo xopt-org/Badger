@@ -29,7 +29,7 @@ def test_modify_routine_no_runs(qtbot):
     assert window.env_box.var_table.export_variables() == {"x0": [-1, 1]}
 
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-    assert window.env_box.obj_table.export_objectives() == {"f": "MINIMIZE"}
+    assert window.env_box.obj_table.export_data()[0] == {"f": ["MINIMIZE"]}
 
     window.save()
     id = list_routine()[0][0]
