@@ -40,7 +40,7 @@ def log(func):
     return func_log
 
 
-class InterfaceStatus(TypedDict):
+class InterfaceInfo(TypedDict):
     interface: Dict[str, str]
     vars: List[Dict[str, str]]
 
@@ -99,7 +99,7 @@ class Interface(BaseModel, ABC):
     def set_value(self, channel_name: str, channel_value, **kwargs):
         return self.set_values({channel_name: channel_value}, **kwargs)
 
-    def get_status(self, channels: List[str]) -> InterfaceStatus:
+    def get_info(self, channels: List[str]) -> InterfaceInfo:
         """
         Optional; Returns information about the channels and environment for display
 
@@ -110,7 +110,7 @@ class Interface(BaseModel, ABC):
 
         Returns
         -------
-        InterfaceStatus
+        InterfaceInfo
             A typed dictionary containing base interface status information, and the
             status information for the requested variables.
         """

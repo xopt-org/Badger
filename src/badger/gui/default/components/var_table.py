@@ -498,19 +498,19 @@ class VariableTable(QTableWidget):
             flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
         return flags
 
-    def display_status(self, item: QTableWidgetItem | None):
+    def display_info(self, item: QTableWidgetItem | None):
         """
         Opens a message box displaying status info from the underlying interface about a variable.
         """
         if not self.env:
             self.env = instantiate_env(self.env_class, self.configs)
 
-        status = self.env.get_status([item.text()])
+        status = self.env.get_info([item.text()])
         if status is None or len(status["vars"]) < 1:
             return
 
         mb = QDialog(self)
-        mb.setWindowTitle("Variable Status")
+        mb.setWindowTitle("Variable Info")
         layout = QGridLayout(mb)
         row = 0
         for k, v in status["vars"][item.text()].items():
@@ -537,7 +537,7 @@ class VariableTable(QTableWidget):
         if item is None or item.text() == self.PLACEHOLDER_TEXT or item.column() != 1:
             return
 
-        menu.addAction("&Status").triggered.connect(lambda c: self.display_status(item))
+        menu.addAction("&Info").triggered.connect(lambda c: self.display_info(item))
         menu.addAction("&Config").triggered.connect(
             lambda c: self.handle_config_button(item.text())
         )
