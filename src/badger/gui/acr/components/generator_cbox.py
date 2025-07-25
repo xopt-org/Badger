@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
 from badger.gui.default.components.collapsible_box import CollapsibleBox
+from badger.gui.default.components.pydantic_editor import BadgerPydanticEditor
 from badger.settings import init_settings
 from badger.gui.default.utils import (
     MouseWheelWidgetAdjustmentGuard,
@@ -79,9 +80,7 @@ class BadgerAlgoBox(QWidget):
         hbox_script.addWidget(btn_edit_script)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             script_bar.hide()
-        self.edit = edit = QPlainTextEdit()
-        # edit.setMaximumHeight(80)
-        edit.setMinimumHeight(480)
+        self.edit = edit = BadgerPydanticEditor()
         vbox_params_edit.addWidget(edit)
         hbox_params.addWidget(edit_params_col)
         vbox.addWidget(params)
@@ -128,5 +127,3 @@ class BadgerAlgoBox(QWidget):
         cbox_misc.setContentLayout(vbox_misc)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_misc.hide()
-
-        # vbox.addStretch()
