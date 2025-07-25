@@ -374,7 +374,9 @@ class BadgerRoutinePage(QWidget):
             filtered_config = filter_generator_config(
                 generator_name, template_dict["generator"]
             )
-            self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+            self.generator_box.edit.set_params_from_generator(
+                generator_name, filtered_config
+            )
 
         # set environment
         if env_name in self.envs:
@@ -561,7 +563,7 @@ class BadgerRoutinePage(QWidget):
 
         generator_config = self._filter_generator_params(
             generator_name=generator_name,
-            generator_config=load_config(self.generator_box.edit.toPlainText()),
+            generator_config=load_config(self.generator_box.edit.get_parameters()),
         )
 
         template_dict = {
@@ -705,11 +707,12 @@ class BadgerRoutinePage(QWidget):
             idx_generator = -1
 
         self.generator_box.cb.setCurrentIndex(idx_generator)
-        # self.generator_box.edit.setPlainText(routine.generator.yaml())
         filtered_config = filter_generator_config(
             name_generator, routine.generator.model_dump()
         )
-        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+        self.generator_box.edit.set_params_from_generator(
+            name_generator, filtered_config
+        )
         self.script = routine.script
 
         name_env = routine.environment.name
@@ -905,7 +908,7 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.check_use_script.setChecked(False)
 
         if i == -1:
-            self.generator_box.edit.setPlainText("")
+            self.generator_box.edit.clear()
             self.generator_box.cb_scaling.setCurrentIndex(-1)
             return
 
@@ -920,7 +923,7 @@ class BadgerRoutinePage(QWidget):
 
         # Patch to only show part of the config
         filtered_config = filter_generator_config(name, default_config)
-        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+        self.generator_box.edit.set_params_from_generator(name, filtered_config)
 
         # Update the docs
         self.window_docs.update_docs(name)
@@ -941,11 +944,11 @@ class BadgerRoutinePage(QWidget):
     def toggle_use_script(self):
         if self.generator_box.check_use_script.isChecked():
             self.generator_box.btn_edit_script.show()
-            self.generator_box.edit.setReadOnly(True)
+            self.generator_box.edit.setDisabled(True)
             self.refresh_params_generator()
         else:
             self.generator_box.btn_edit_script.hide()
-            self.generator_box.edit.setReadOnly(False)
+            self.generator_box.edit.setDisabled(False)
 
     def edit_script(self):
         generator = self.generator_box.cb.currentText()
@@ -993,7 +996,9 @@ class BadgerRoutinePage(QWidget):
                 vocs = None
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
-            self.generator_box.edit.setPlainText(get_yaml_string(params_generator))
+            self.generator_box.edit.set_params_from_generator(
+                self.routine.generator.name, params_generator
+            )
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))
 
@@ -1654,7 +1659,7 @@ class BadgerRoutinePage(QWidget):
         # Generator
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
-        generator_params = load_config(self.generator_box.edit.toPlainText())
+        generator_params = load_config(self.generator_box.edit.get_parameters())
         if generator_name in all_generator_names["bo"]:
             # Patch the BO generators to make sure use_low_noise_prior is False
             if "gp_constructor" not in generator_params:
