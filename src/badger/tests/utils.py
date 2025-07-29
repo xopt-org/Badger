@@ -177,7 +177,7 @@ def create_routine_constrained_ucb():
 
 def get_current_vars(routine):
     var_names = routine.vocs.variable_names
-    var_dict = routine.environment._get_variables(var_names)
+    var_dict = routine.environment.get_variables(var_names)
 
     return list(var_dict.values())
 

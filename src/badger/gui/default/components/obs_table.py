@@ -1,28 +1,26 @@
 from typing import Any
 from PyQt5.QtWidgets import (
-    QComboBox,
-    QStyledItemDelegate,
     QMessageBox,
 )
 
 from badger.gui.default.components.editable_table import EditableTable
 
 
-class ObjectiveTable(EditableTable):
+class ObservableTable(EditableTable):
     """
-    A custom QTableWidget for displaying and managing objectives with associated rules.
+    A custom QTableWidget for displaying and managing observables with associated rules.
 
     This table supports:
-      - Displaying objectives along with a rule (e.g., MINIMIZE or MAXIMIZE).
-      - Toggling objectives via checkboxes.
+      - Displaying observables.
+      - Toggling observables via checkboxes.
       - Batch updating and filtering based on the check status.
       - Internal drag and drop to reorder rows.
-      - External drag and drop of text to add new objectives.
+      - External drag and drop of text to add new observables.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Initialize the ObjectiveTable widget.
+        Initialize the ObservableTable widget.
 
         Parameters
         ----------
@@ -33,10 +31,9 @@ class ObjectiveTable(EditableTable):
         """
         super().__init__(*args, **kwargs)
 
-        self.setColumnCount(3)
+        self.setColumnCount(2)
 
-        self.setColumnWidth(2, 192)
-        self.setHorizontalHeaderLabels(["", "Name", "Rule"])
+        self.setHorizontalHeaderLabels(["", "Name"])
 
     def default_info(self) -> list:
         """
@@ -47,13 +44,13 @@ class ObjectiveTable(EditableTable):
         list
             A list containing default values for a new item.
         """
-        return ["MINIMIZE"]
+        return []
 
     def new_item_prompt(self):
         """
         The prompt text to enter a new item.
         """
-        return "Enter new objective here..."
+        return "Enter new observable here..."
 
     def heads_up(self, name: str) -> None:
         """
@@ -66,15 +63,9 @@ class ObjectiveTable(EditableTable):
         """
         QMessageBox.warning(
             self,
-            "Objective already exists!",
-            f"Objective {name} already exists!",
+            "Observable already exists!",
+            f"Observable {name} already exists!",
         )
 
     def create_cell_widgets(self, info: list):
-        # Rule
-        cb_rule = QComboBox()
-        cb_rule.setItemDelegate(QStyledItemDelegate())
-        cb_rule.addItems(["MINIMIZE", "MAXIMIZE"])
-        cb_rule.setCurrentIndex(0 if info[0] == "MINIMIZE" else 1)
-
-        return [cb_rule]
+        return []

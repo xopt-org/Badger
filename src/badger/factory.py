@@ -133,7 +133,7 @@ def load_plugin(root, pname, ptype):
             logger.warning(e)
             intf = None
         env = module.Environment(interface=intf, params=configs)
-        var_bounds = env._get_bounds(vars)
+        var_bounds = env.get_bounds(vars)
 
         vars_info = []
         for var in vars:

@@ -1,4 +1,5 @@
 from importlib import resources
+import traceback
 from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -13,12 +14,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt, QSize
 from PyQt5.QtGui import QColor, QIcon
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
-from badger.gui.default.windows.expandable_message_box import (
-    ExpandableMessageBox,
-)
 
 from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError
+from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 
 
 class VariableTable(QTableWidget):
@@ -371,7 +370,6 @@ class VariableTable(QTableWidget):
         if self.env_class is not None:
             try:
                 _, _bounds = self.get_bounds(name)
-                vrange = _bounds
             except BadgerInterfaceChannelError:
                 # Raised when PV does not exist after attempting to call value
                 # Revert table to previous state
@@ -382,17 +380,21 @@ class VariableTable(QTableWidget):
                     f"Variable {name} cannot be found through the interface!",
                 )
                 return
-            except Exception as e:
+            except Exception:
                 # Raised when PV exists but value/hard limits cannot be found
                 # Set to some default values
-                _bounds = vrange = [0, 0]
+                _bounds = [0, 0]
                 detailed_text = (
                     "Encountered issues when tried to fetch bounds for"
                     f" variable {name}. Please manually set the bounds."
                 )
-                dialog = ExpandableMessageBox(text=str(e), detailedText=detailed_text)
+                dialog = ExpandableMessageBox(
+                    text=detailed_text,
+                    detailedText=traceback.format_exc(),
+                )
                 dialog.setIcon(QMessageBox.Critical)
                 dialog.exec_()
+
         else:
             # TODO: handle this case? Right now I don't think it should happen
             raise Exception("Environment cannot be found for new variable bounds!")
@@ -409,17 +411,17 @@ class VariableTable(QTableWidget):
         _cb.stateChanged.connect(self.update_selected)
 
         sb_lower = RobustSpinBox(
-            default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+            default_value=_bounds[0], lower_bound=_bounds[0], upper_bound=_bounds[1]
         )
         sb_lower.valueChanged.connect(self.update_bounds)
         sb_upper = RobustSpinBox(
-            default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+            default_value=_bounds[1], lower_bound=_bounds[0], upper_bound=_bounds[1]
         )
         sb_upper.valueChanged.connect(self.update_bounds)
         self.setCellWidget(idx, 2, sb_lower)
         self.setCellWidget(idx, 3, sb_upper)
 
-        self.add_variable(name, vrange[0], vrange[1])
+        self.add_variable(name, _bounds[0], _bounds[1])
         self.addtl_vars.append(name)
 
         self.update_variables(self.variables, 2)
@@ -431,7 +433,7 @@ class VariableTable(QTableWidget):
         self.env = instantiate_env(self.env_class, self.configs)
 
         value = self.env.get_variable(name)
-        bound = self.env._get_bounds([name])[name]
+        bound = self.env.get_bounds([name])[name]
         return value, bound
 
     def add_variable(self, name, lb, ub):

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QListWidgetItem, QMessageBox, QWidget, QTabWidget
+from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
@@ -30,7 +30,6 @@ from badger.gui.default.components.data_table import (
 )
 from badger.gui.acr.components.env_cbox import BadgerEnvBox
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
-from badger.gui.default.components.state_item import state_item
 from badger.gui.default.windows.docs_window import BadgerDocsWindow
 from badger.gui.default.windows.env_docs_window import BadgerEnvDocsWindow
 from badger.gui.default.windows.edit_script_dialog import BadgerEditScriptDialog
@@ -46,6 +45,7 @@ from badger.gui.acr.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import (
+    BadgerEnvNotFoundError,
     BadgerRoutineError,
     BadgerEnvVarError,
     BadgerEnvInstantiationError,
@@ -64,6 +64,14 @@ from badger.utils import (
 )
 
 LABEL_WIDTH = 96
+CONS_RELATION_DICT = {
+    ">": "GREATER_THAN",
+    "<": "LESS_THAN",
+}
+CONS_RELATION_DICT_INV = {
+    "GREATER_THAN": ">",
+    "LESS_THAN": "<",
+}
 
 
 def format_validation_error(e: ValidationError) -> str:
@@ -269,8 +277,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
         self.env_box.btn_add_var.clicked.connect(self.add_var)
         self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
-        self.env_box.btn_add_con.clicked.connect(self.add_constraint)
-        self.env_box.btn_add_sta.clicked.connect(self.add_state)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
         )
@@ -375,6 +381,10 @@ class BadgerRoutinePage(QWidget):
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
             self.env_box.edit.setPlainText(get_yaml_string(env_params))
+        else:
+            raise BadgerEnvNotFoundError(
+                f"Template environment {env_name} not found in Badger environments"
+            )
 
         # Load the vrange options and hard limits
         self.ratio_var_ranges = vrange_limit_options
@@ -397,7 +407,7 @@ class BadgerRoutinePage(QWidget):
             env = self.create_env()
             for vname in additional_variables:
                 try:
-                    bounds = env._get_bounds([vname])[vname]
+                    bounds = env.get_bounds([vname])[vname]
                 except BadgerEnvVarError as e:
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
@@ -436,39 +446,108 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
 
         # Initialize the objective table with env observables
+        try:
+            formulas = template_dict["formulas"]
+        except KeyError:
+            formulas = {}
         objectives = []
-        for name in self.configs["observations"]:
-            obj = {name: "MINIMIZE"}
+        status = {}
+        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in objectives_names_full:
+            obj = {name: ["MINIMIZE"]}
+            status[name] = False  # selected
             objectives.append(obj)
-        self.env_box.obj_table.update_objectives(objectives)
+        for name, val in vocs.objectives.items():
+            rule = val
 
-        for name, formula in formulas.items():
-            formula_tuple = (
-                name,
-                formula["formula"],
-                formula["variable_mapping"],
-            )
-            self.env_box.obj_table.add_formula_objective(formula_tuple)
-        self.env_box.obj_table.set_selected(vocs.objectives)
-        self.env_box.obj_table.set_rules(vocs.objectives)
+            idx = objectives_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Objective {name} not found in the routine's observables."
+                )
+            else:
+                objectives[idx] = {name: [rule]}
+            status[name] = True
+
+        # Show selected constraints only
+        self.env_box.check_only_obj.blockSignals(True)
         self.env_box.check_only_obj.setChecked(True)
+        self.env_box.check_only_obj.blockSignals(False)
+        self.env_box.obj_table.show_selected_only = True
+
+        self.env_box.obj_table.update_items(objectives, status, formulas)
 
         # set constraints
-        self.env_box.con_table.clear_constraints()
-        constraints = vocs.constraints
-        if len(constraints):
-            for name, val in constraints.items():
-                relation, thres = val
-                critical = name in critical_constraint_names
-                relation = ["GREATER_THAN", "LESS_THAN"].index(relation)
-                self.add_constraint(name, relation, thres, critical)
+        # Initialize the constraints table with env observables
+        try:
+            formulas = template_dict["constraint_formulas"]
+        except KeyError:
+            formulas = {}
+        constraints = []
+        status = {}
+        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in constraints_names_full:
+            cons = {name: ["<", 0.0, False]}
+            status[name] = False  # selected
+            constraints.append(cons)
+        for name, val in vocs.constraints.items():
+            relation, thres = val
+            critical = name in critical_constraint_names
+            relation = CONS_RELATION_DICT_INV[relation]
+
+            idx = constraints_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Constraint {name} not found in the routine's observables."
+                )
+            else:
+                constraints[idx] = {name: [relation, thres, critical]}
+            status[name] = True
+
+        # Show selected constraints only
+        self.env_box.check_only_con.blockSignals(True)
+        self.env_box.check_only_con.setChecked(True)
+        self.env_box.check_only_con.blockSignals(False)
+        self.env_box.con_table.show_selected_only = True
+
+        self.env_box.con_table.update_items(constraints, status, formulas)
 
         # set observables
-        self.env_box.list_obs.clear()
-        observables = vocs.observable_names
-        if len(observables):
-            for name_sta in observables:
-                self.add_state(name_sta)
+        if self.vars_env:
+            # var_names = [next(iter(var)) for var in self.vars_env]
+            var_names = []  # do not show var names in observables until we have a fix to get_observables
+        else:
+            var_names = []
+        try:
+            formulas = template_dict["observable_formulas"]
+        except KeyError:
+            formulas = {}
+        observables = []
+        status = {}
+        observables_names_full = (
+            var_names + self.configs["observations"] + list(formulas.keys())
+        )
+        for name in observables_names_full:
+            obs = {name: []}
+            status[name] = False  # selected
+            observables.append(obs)
+        for name in vocs.observables:
+            idx = observables_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Observable {name} not found in the routine's observables."
+                )
+            else:
+                observables[idx] = {name: []}
+            status[name] = True
+
+        # Show selected observables only
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(True)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.sta_table.show_selected_only = True
+
+        self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
         """
@@ -501,6 +580,8 @@ class BadgerRoutinePage(QWidget):
             "vrange_hard_limit": self.var_hard_limit,
             "additional_variables": self.env_box.var_table.addtl_vars,
             "formulas": self.env_box.obj_table.formulas,
+            "constraint_formulas": self.env_box.con_table.formulas,
+            "observable_formulas": self.env_box.sta_table.formulas,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
             "vocs": vars(vocs),
@@ -579,9 +660,6 @@ class BadgerRoutinePage(QWidget):
 
         self.generators = list_generators()
         self.envs = list_env()
-        # Clean up the constraints/observables list
-        self.env_box.con_table.clear_constraints()
-        self.env_box.list_obs.clear()
 
         if routine is None:
             # Reset the generator and env configs
@@ -660,7 +738,7 @@ class BadgerRoutinePage(QWidget):
             env = self.create_env()
             for vname in routine.additional_variables:
                 try:
-                    bounds = env._get_bounds([vname])[vname]
+                    bounds = env.get_bounds([vname])[vname]
                 except BadgerEnvVarError as e:
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
@@ -704,36 +782,115 @@ class BadgerRoutinePage(QWidget):
         except AttributeError:
             formulas = {}
 
-        # Initialize the objective table with env observables
         objectives = []
-        for name in self.configs["observations"]:
-            obj = {name: "MINIMIZE"}
+        status = {}
+        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in objectives_names_full:
+            obj = {name: ["MINIMIZE"]}
+            status[name] = False  # selected
             objectives.append(obj)
-        self.env_box.obj_table.update_objectives(objectives)
+        for name, val in routine.vocs.objectives.items():
+            rule = val
 
-        for name, formula in formulas.items():
-            formula_tuple = (
-                name,
-                formula["formula"],
-                formula["variable_mapping"],
-            )
-            self.env_box.obj_table.add_formula_objective(formula_tuple)
-        self.env_box.obj_table.set_selected(routine.vocs.objectives)
-        self.env_box.obj_table.set_rules(routine.vocs.objectives)
+            idx = objectives_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Objective {name} not found in the routine's observables."
+                )
+            else:
+                objectives[idx] = {name: [rule]}
+            status[name] = True
+
+        # Show selected objectives only
+        self.env_box.check_only_obj.blockSignals(True)
         self.env_box.check_only_obj.setChecked(True)
+        self.env_box.check_only_obj.blockSignals(False)
+        self.env_box.edit_obj.blockSignals(True)
+        self.env_box.edit_obj.setText("")
+        self.env_box.edit_obj.blockSignals(False)
+        self.env_box.obj_table.keyword = ""
+        self.env_box.obj_table.show_selected_only = True
 
-        constraints = routine.vocs.constraints
-        if len(constraints):
-            for name, val in constraints.items():
-                relation, thres = val
-                critical = name in routine.critical_constraint_names
-                relation = ["GREATER_THAN", "LESS_THAN", "EQUAL_TO"].index(relation)
-                self.add_constraint(name, relation, thres, critical)
+        self.env_box.obj_table.update_items(objectives, status, formulas)
 
-        observables = routine.vocs.observable_names
-        if len(observables):
-            for name_sta in observables:
-                self.add_state(name_sta)
+        # Initialize the constraints table with env observables
+        try:
+            formulas = routine.constraint_formulas
+        except AttributeError:
+            formulas = {}
+        constraints = []
+        status = {}
+        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        for name in constraints_names_full:
+            cons = {name: ["<", 0.0, False]}
+            status[name] = False  # selected
+            constraints.append(cons)
+        for name, val in routine.vocs.constraints.items():
+            relation, thres = val
+            critical = name in routine.critical_constraint_names
+            relation = CONS_RELATION_DICT_INV[relation]
+
+            idx = constraints_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Constraint {name} not found in the routine's observables."
+                )
+            else:
+                constraints[idx] = {name: [relation, thres, critical]}
+            status[name] = True
+
+        # Show selected constraints only
+        self.env_box.check_only_con.blockSignals(True)
+        self.env_box.check_only_con.setChecked(True)
+        self.env_box.check_only_con.blockSignals(False)
+        self.env_box.edit_con.blockSignals(True)
+        self.env_box.edit_con.setText("")
+        self.env_box.edit_con.blockSignals(False)
+        self.env_box.con_table.keyword = ""
+        self.env_box.con_table.show_selected_only = True
+
+        self.env_box.con_table.update_items(constraints, status, formulas)
+
+        # Initialize the observables table with env observables
+        if self.vars_env:
+            # var_names = [next(iter(var)) for var in self.vars_env]
+            var_names = []  # do not show var names in observables until we have a fix to get_observables
+        else:
+            var_names = []
+        try:
+            formulas = routine.observable_formulas
+        except AttributeError:
+            formulas = {}
+        observables = []
+        status = {}
+        observables_names_full = (
+            var_names + self.configs["observations"] + list(formulas.keys())
+        )
+        for name in observables_names_full:
+            obs = {name: []}
+            status[name] = False  # selected
+            observables.append(obs)
+        for name in routine.vocs.observables:
+            idx = observables_names_full.index(name)
+            if idx == -1:
+                raise BadgerRoutineError(
+                    f"Observable {name} not found in the routine's observables."
+                )
+            else:
+                observables[idx] = {name: []}
+            status[name] = True
+
+        # Show selected observables only
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(True)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.edit_sta.blockSignals(True)
+        self.env_box.edit_sta.setText("")
+        self.env_box.edit_sta.blockSignals(False)
+        self.env_box.sta_table.keyword = ""
+        self.env_box.sta_table.show_selected_only = True
+
+        self.env_box.sta_table.update_items(observables, status, formulas)
 
         # Config the metadata
         self.edit_save.setPlaceholderText(generate_slug(2))
@@ -853,12 +1010,8 @@ class BadgerRoutinePage(QWidget):
             self.env_box.edit.setPlainText("")
             self.env_box.edit_var.clear()
             self.env_box.var_table.update_variables(None)
-            self.env_box.edit_obj.clear()
-            self.env_box.obj_table.update_objectives(None)
             self.configs = None
             self.env = None
-            self.env_box.btn_add_con.setDisabled(True)
-            self.env_box.btn_add_sta.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
             self.env_box.btn_refresh.setDisabled(True)
@@ -873,8 +1026,7 @@ class BadgerRoutinePage(QWidget):
             self.env = env
             self.env_box.edit_var.clear()
             self.env_box.edit_obj.clear()
-            self.env_box.btn_add_con.setDisabled(False)
-            self.env_box.btn_add_sta.setDisabled(False)
+            # self.env_box.btn_add_con.setDisabled(False)
             self.env_box.btn_add_var.setDisabled(False)
             self.env_box.btn_lim_vrange.setDisabled(False)
             self.env_box.btn_refresh.setDisabled(False)
@@ -884,8 +1036,7 @@ class BadgerRoutinePage(QWidget):
             self.configs = None
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
-            self.env_box.btn_add_con.setDisabled(True)
-            self.env_box.btn_add_sta.setDisabled(True)
+            # self.env_box.btn_add_con.setDisabled(True)
             self.env_box.btn_add_var.setDisabled(True)
             self.env_box.btn_lim_vrange.setDisabled(True)
             self.routine = None
@@ -911,17 +1062,49 @@ class BadgerRoutinePage(QWidget):
             self.add_var()
         )
 
-        _objs_env = configs["observations"]
-        objs_env = []
-        for name in _objs_env:
-            obj = {}
-            obj[name] = "MINIMIZE"  # default rule
-            objs_env.append(obj)
+        objectives = []
+        status = {}
+        for name in self.configs["observations"]:
+            cons = {name: ["MINIMIZE"]}
+            status[name] = False  # selected
+            objectives.append(cons)
+        self.env_box.check_only_obj.blockSignals(True)
         self.env_box.check_only_obj.setChecked(False)
-        self.env_box.obj_table.update_objectives(objs_env)
+        self.env_box.check_only_obj.blockSignals(False)
+        self.env_box.obj_table.show_selected_only = False
+        self.env_box.obj_table.update_items(objectives, status, formulas={})
 
-        self.env_box.con_table.clear_constraints()
-        self.env_box.list_obs.clear()
+        # Initialize the constraints table with env observables
+        constraints = []
+        status = {}
+        for name in self.configs["observations"]:
+            cons = {name: ["<", 0.0, False]}
+            status[name] = False  # selected
+            constraints.append(cons)
+        self.env_box.check_only_con.blockSignals(True)
+        self.env_box.check_only_con.setChecked(False)
+        self.env_box.check_only_con.blockSignals(False)
+        self.env_box.con_table.show_selected_only = False
+        self.env_box.con_table.update_items(constraints, status, formulas={})
+
+        # Initialize the observable table with env variables and observables
+        observables = []
+        status = {}
+        if self.vars_env:
+            # var_names = [next(iter(var)) for var in self.vars_env]
+            var_names = []  # do not show var names in observables until we have a fix to get_observables
+        else:
+            var_names = []
+        for name in var_names + self.configs["observations"]:
+            obs = {name: []}
+            status[name] = False  # selected
+            observables.append(obs)
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(False)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.sta_table.show_selected_only = False
+        self.env_box.sta_table.update_items(observables, status, formulas={})
+
         self.env_box.fit_content()
         # self.routine = None
 
@@ -945,7 +1128,15 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
-        var_curr = env._get_variables(vname_selected)
+
+        try:
+            # Get the current variables from the environment
+            var_curr = env.get_variables(vname_selected)
+        except Exception as e:
+            raise BadgerEnvVarError(
+                f"Failed to get current variable values : {e}\n"
+                "Please ensure the environment is properly configured."
+            )
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -955,7 +1146,7 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.4g}")
+                    item = QTableWidgetItem(f"{var_curr[name]:.6g}")
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
@@ -972,7 +1163,7 @@ class BadgerRoutinePage(QWidget):
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         # get small region around current point to sample
         try:
@@ -1019,7 +1210,7 @@ class BadgerRoutinePage(QWidget):
                 try:
                     point = random_points.pop(0)
                     for col, name in enumerate(vname_selected):
-                        item = QTableWidgetItem(f"{point[name]:.4g}")
+                        item = QTableWidgetItem(f"{point[name]:.6g}")
                         table.setItem(row, col, item)
                 except IndexError:  # No more points to add
                     break
@@ -1136,7 +1327,14 @@ class BadgerRoutinePage(QWidget):
             vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env._get_variables(vname_selected)
+        try:
+            # Get the current variables from the environment
+            var_curr = env.get_variables(vname_selected)
+        except Exception as e:
+            raise BadgerEnvVarError(
+                f"Failed to get current variable values : {e}\n"
+                "Please ensure the environment is properly configured."
+            )
 
         option_idx = self.limit_option["limit_option_idx"]
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
@@ -1193,7 +1391,7 @@ class BadgerRoutinePage(QWidget):
         option_idx = option["limit_option_idx"]
 
         env = self.create_env()
-        curr = env._get_variables([vname])[vname]
+        curr = env.get_variables([vname])[vname]
 
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
         if option_idx == 1:
@@ -1273,7 +1471,7 @@ class BadgerRoutinePage(QWidget):
                 vrange[name] = var[name]
 
         env = self.create_env()
-        var_curr = env._get_variables(vname_selected)
+        var_curr = env.get_variables(vname_selected)
 
         for name in vname_selected:
             try:
@@ -1370,14 +1568,14 @@ class BadgerRoutinePage(QWidget):
 
     def handle_var_config(self, vname):
         env = self.create_env()
-        curr = env._get_variables([vname])[vname]
+        curr = env.get_variables([vname])[vname]
 
         # Get the hard limit
         try:
             bounds = self.var_hard_limit[vname]
         except KeyError:
             try:
-                bounds = env._get_bounds([vname])[vname]
+                bounds = env.get_bounds([vname])[vname]
             except BadgerEnvVarError as e:
                 msg = str(e)
                 bounds = eval(msg.split(": ")[1])
@@ -1402,59 +1600,28 @@ class BadgerRoutinePage(QWidget):
             configs,
         ).exec_()
 
-    def add_constraint(self, name=None, relation=0, threshold=0, critical=False):
-        if self.configs is None:
-            return
-
-        options = self.configs["observations"]
-        self.env_box.con_table.add_constraint(
-            options,
-            name,
-            relation,
-            threshold,
-            critical,
-        )
-
-    def add_state(self, name=None):
-        if self.configs is None:
-            return
-
-        var_names = [next(iter(d)) for d in self.configs["variables"]]
-        options = self.configs["observations"] + var_names
-        item = QListWidgetItem(self.env_box.list_obs)
-        sta_item = state_item(
-            options,
-            lambda: self.env_box.list_obs.takeItem(self.env_box.list_obs.row(item)),
-            name,
-        )
-        item.setSizeHint(sta_item.sizeHint())
-        self.env_box.list_obs.addItem(item)
-        self.env_box.list_obs.setItemWidget(item, sta_item)
-        self.env_box.fit_content()
-
     def _compose_vocs(self) -> (VOCS, list[str]):
         # Compose the VOCS settings
         variables = self.env_box.var_table.export_variables()
-        objectives = self.env_box.obj_table.export_objectives()
+
+        objectives = {}
+        for objective in self.env_box.obj_table.export_data():
+            obj_name = next(iter(objective))
+            (rule,) = objective[obj_name]
+            objectives[obj_name] = rule
 
         constraints = {}
         critical_constraints = []
-        for (
-            con_name,
-            relation,
-            threshold,
-            critical,
-            _,
-        ) in self.env_box.con_table.export_constraints():
-            constraints[con_name] = [relation, threshold]
+        for constraint in self.env_box.con_table.export_data():
+            con_name = next(iter(constraint))
+            relation, threshold, critical = constraint[con_name]
+            constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
             if critical:
                 critical_constraints.append(con_name)
 
         observables = []
-        for i in range(self.env_box.list_obs.count()):
-            item = self.env_box.list_obs.item(i)
-            item_widget = self.env_box.list_obs.itemWidget(item)
-            obs_name = item_widget.cb_sta.currentText()
+        for observable in self.env_box.sta_table.export_data():
+            obs_name = next(iter(observable))
             observables.append(obs_name)
 
         try:
@@ -1588,6 +1755,8 @@ class BadgerRoutinePage(QWidget):
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
                 formulas=self.env_box.obj_table.formulas,
+                constraint_formulas=self.env_box.con_table.formulas,
+                observable_formulas=self.env_box.sta_table.formulas,
             )
 
             # Check if any user warnings were caught

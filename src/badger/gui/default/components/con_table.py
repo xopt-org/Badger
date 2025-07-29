@@ -1,42 +1,23 @@
-from importlib import resources
-from typing import Any, List, Tuple
-from PyQt5.QtCore import (
-    pyqtSlot,
-    Qt,
-)
-from PyQt5.QtGui import QIcon
+from typing import Any
 from PyQt5.QtWidgets import (
-    QAbstractSpinBox,
-    QDoubleSpinBox,
-    QTableWidget,
-    QHeaderView,
-    QAbstractItemView,
     QCheckBox,
-    QPushButton,
+    QComboBox,
     QStyledItemDelegate,
-    QWidget,
-    QHBoxLayout,
+    QDoubleSpinBox,
+    QMessageBox,
 )
 
-from badger.gui.default.utils import (
-    MouseWheelWidgetAdjustmentGuard,
-    NoHoverFocusComboBox,
-)
+from badger.gui.default.components.editable_table import EditableTable
 
 
-CONS_RELATION_DICT = {
-    ">": "GREATER_THAN",
-    "<": "LESS_THAN",
-}
-
-
-class ConstraintTable(QTableWidget):
+class ConstraintTable(EditableTable):
     """
     A custom QTableWidget for displaying and managing constraints.
 
     This table supports:
-      - Displaying constraint names, relations, and thresholds.
-      - Toggling constraint criticality via checkboxes.
+      - Displaying constraints with relation, threshold, and criticality.
+      - Toggling constraints via checkboxes.
+      - Batch updating and filtering based on the check status.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -52,120 +33,62 @@ class ConstraintTable(QTableWidget):
         """
         super().__init__(*args, **kwargs)
 
-        icon_ref = resources.files(__package__) / "../images/trash.png"
-        with resources.as_file(icon_ref) as icon_path:
-            self.icon_trash = QIcon(str(icon_path))
-
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.setShowGrid(False)
-
-        self.setRowCount(0)
         self.setColumnCount(5)
-        self.setAlternatingRowColors(True)
-        self.setStyleSheet("alternate-background-color: #262E38;")
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        self.setColumnWidth(0, 192)
-        self.setColumnWidth(1, 64)
-        self.setColumnWidth(3, 64)
-        self.setColumnWidth(4, 32)
-
-        self.verticalHeader().setVisible(False)
-        self.update_header_visibility()
-
-    def update_header_visibility(self):
+        self.setColumnWidth(2, 96)
+        self.setColumnWidth(3, 96)
+        self.setColumnWidth(4, 64)
         self.setHorizontalHeaderLabels(
-            ["Name", "Relation", "Threshold", "Critical", ""]
+            ["", "Name", "Relation", "Threshold", "Critical"]
         )
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.horizontalHeader().setVisible(self.rowCount() > 0)
 
-    def add_constraint(
-        self, options, name=None, relation=0, threshold=0, critical=False, decimals=4
-    ) -> None:
+    def default_info(self) -> list:
         """
-        Adds a constraint.
-        """
-        currentRow = self.rowCount()
-        self.setRowCount(self.rowCount() + 1)
-
-        check_crit = QCheckBox()
-        check_crit.setChecked(critical)
-        self.setCellWidget(currentRow, 3, check_crit)
-
-        cb_obs = NoHoverFocusComboBox()
-        cb_obs.setItemDelegate(QStyledItemDelegate())
-        cb_obs.addItems(options)
-        try:
-            idx = options.index(name)
-        except:
-            idx = 0
-        cb_obs.setCurrentIndex(idx)
-        self.setCellWidget(currentRow, 0, cb_obs)
-
-        cb_rel = NoHoverFocusComboBox()
-        cb_rel.setItemDelegate(QStyledItemDelegate())
-        cb_rel.addItems(CONS_RELATION_DICT.keys())
-        cb_rel.setFixedWidth(64)
-        cb_rel.setCurrentIndex(relation)
-        self.setCellWidget(currentRow, 1, cb_rel)
-
-        sb = QDoubleSpinBox()
-        sb.setDecimals(decimals)
-        sb.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        sb.installEventFilter(MouseWheelWidgetAdjustmentGuard(sb))
-        default_value = threshold
-        lb = default_value - 1e3
-        ub = default_value + 1e3
-        sb.setRange(lb, ub)
-        sb.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
-        sb.setValue(default_value)
-        self.setCellWidget(currentRow, 2, sb)
-
-        btn_del = QPushButton(self.icon_trash, None)
-        btn_del.setFixedSize(32, 24)
-        btn_del.clicked.connect(self.remove_constraint_clicked)
-        btn_del_container = QWidget()
-        btn_del_layout = QHBoxLayout(btn_del_container)
-        btn_del_layout.addWidget(btn_del)
-        btn_del_layout.setAlignment(Qt.AlignLeft)
-        btn_del_layout.setContentsMargins(2, 0, 0, 0)
-        self.setCellWidget(self.rowCount() - 1, 4, btn_del_container)
-
-        self.update_header_visibility()
-
-    @pyqtSlot()
-    def remove_constraint_clicked(self):
-        self.update_header_visibility()
-        button = self.sender()
-        if button:
-            row = self.indexAt(button.pos()).row()
-            self.removeRow(row)
-
-    def export_constraints(self) -> List[Tuple[str, int, float, bool, float]]:
-        """
-        Export the selected constraints.
+        Get the default information list for a new item.
 
         Returns
         -------
-        List[Tuple[str, int, float, bool, float]]
-            The list of constraints.
+        list
+            A list containing default values for a new item.
         """
-        constraints_exported: List[Tuple[str, int, float, bool, float]] = []
-        for i in range(self.rowCount()):
-            constraints_exported.append(
-                (
-                    self.cellWidget(i, 0).currentText(),
-                    CONS_RELATION_DICT[self.cellWidget(i, 1).currentText()],
-                    self.cellWidget(i, 2).value(),
-                    self.cellWidget(i, 3).isChecked(),
-                    self.cellWidget(i, 2).decimals(),
-                )
-            )
-        return constraints_exported
+        return ["<", 0.0, False]
 
-    def clear_constraints(self):
-        self.setRowCount(0)
-        self.update_header_visibility()
+    def new_item_prompt(self):
+        """
+        The prompt text to enter a new item.
+        """
+        return "Enter new constraint here..."
+
+    def heads_up(self, name: str) -> None:
+        """
+        Show a warning message if the item already exists in the table.
+
+        Parameters
+        ----------
+        name : str
+            The name of the item to check.
+        """
+        QMessageBox.warning(
+            self,
+            "Constraint already exists!",
+            f"Constraint {name} already exists!",
+        )
+
+    def create_cell_widgets(self, info: list):
+        # Relation
+        relation_combo = QComboBox()
+        relation_combo.setItemDelegate(QStyledItemDelegate())
+        relation_combo.addItems(["<", ">"])
+        relation_combo.setCurrentText(info[0])
+
+        # Threshold
+        threshold_spinbox = QDoubleSpinBox()
+        threshold_spinbox.setDecimals(6)
+        threshold_spinbox.setRange(-1e6, 1e6)
+        threshold_spinbox.setValue(info[1])
+
+        # Critical
+        critical_checkbox = QCheckBox()
+        critical_checkbox.setChecked(info[2])
+
+        return [relation_combo, threshold_spinbox, critical_checkbox]
