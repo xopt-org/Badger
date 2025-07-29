@@ -312,9 +312,9 @@ class Environment(BaseEnvironment):
         if self.interface:
             return self.interface.reset_interface()
 
-    def get_info(self, variable_names: List[str]) -> Dict:
+    def get_info(self, variable_names: List[str]) -> Dict | None:
         if not self.interface:
-            raise BadgerNoInterfaceError
+            return None
 
         return self.interface.get_info(variable_names)
 
