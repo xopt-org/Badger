@@ -141,7 +141,7 @@ def curr_ts_to_str(format="lcls-log"):
     return ts_to_str(datetime.now(), format)
 
 
-def create_archive_run_filename(routine, format: str = "lcls-fname"):
+def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")

@@ -3,7 +3,6 @@ import time
 import traceback
 
 import pandas as pd
-import torch  # noqa: F401. For converting dtype str to torch object.
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
 
 from badger.errors import BadgerRunTerminated

@@ -12,12 +12,13 @@ from PyQt5.QtWidgets import (
     QHeaderView,
 )
 from PyQt5.QtCore import Qt
-from typing import Optional, cast
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
-
-
-from xopt import VOCS
+from badger.gui.default.components.extension_utilities import (
+    BlockSignalsContext,
+    HandledException,
+    to_precision_float,
+)
 
 import logging
 
@@ -26,15 +27,17 @@ logger = logging.getLogger(__name__)
 
 
 class UIComponents:
+    variables: list[str] = []
+
     def __init__(
         self,
         default_parameters: ConfigurableOptions,
-        vocs: Optional[VOCS] = None,
     ):
-        self.vocs = vocs
         self.variable_checkboxes = {}
         self.ref_inputs: list[QTableWidgetItem] = []
         self.reference_table = None  # Will be initialized later
+        self.best_point_display = QLabel("")  # Will be initialized later
+        self.set_best_reference_point_button = QPushButton("Set Best Reference Point")
 
         # Initialize other UI components
         self.update_button = QPushButton("Update")
@@ -63,8 +66,6 @@ class UIComponents:
         self.show_feasibility_checkbox.setChecked(show_feasibility)
         self.n_grid.setRange(n_grid_range[0], n_grid_range[1])
         self.n_grid.setValue(n_grid)
-
-        self.ref_inputs = []
 
         # Initialize layouts
         self.variable_checkboxes_layout = None
@@ -101,8 +102,29 @@ class UIComponents:
 
         return layout
 
-    def initialize_ui_components(self, configurable_options: ConfigurableOptions):
-        self.populate_reference_table()
+    def initialize_ui_components(
+        self,
+        configurable_options: ConfigurableOptions,
+    ):
+        self.populate_reference_table(
+            configurable_options["variables"],
+            configurable_options["reference_points"],
+        )
+
+    def initialize_variables(
+        self,
+        configurable_options: ConfigurableOptions,
+        vocs_variables: dict[str, tuple[float, float]],
+    ):
+        """Initialize the variable checkboxes with the provided variable names."""
+        # Initialize the parameters with the routine's variables
+        configurable_options["reference_points_range"] = vocs_variables
+        configurable_options["reference_points"] = {
+            var: to_precision_float(
+                (vocs_variables[var][1] - vocs_variables[var][0]) / 2.0
+            )
+            for var in vocs_variables
+        }
 
     def create_reference_inputs(self):
         group_box = QGroupBox("Reference Points")
@@ -116,43 +138,40 @@ class UIComponents:
             horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(self.reference_table)
+        layout.addWidget(self.set_best_reference_point_button)
+        layout.addWidget(self.best_point_display)
         group_box.setLayout(layout)
         return group_box
 
-    def populate_reference_table(self):
+    def populate_reference_table(
+        self,
+        variables: list[str],
+        reference_points: dict[str, float],
+    ):
         """Populate the reference table based on the current vocs variable names."""
 
         logger.debug("Populating reference table")
         if self.reference_table is None:
-            raise Exception("Reference Table is None")
+            raise HandledException(ValueError, "Reference Table is None")
 
-        if self.vocs is None:
-            raise Exception("Vocs is None")
+        with BlockSignalsContext(self.reference_table):
+            self.reference_table.setRowCount(len(variables))
+            self.ref_inputs = []
 
-        self.reference_table.blockSignals(True)
+            for i, var_name in enumerate(variables):
+                variable_item = QTableWidgetItem(var_name)
+                itemIsEditable = Qt.ItemFlag.ItemIsEditable
 
-        self.reference_table.setRowCount(len(self.vocs.variable_names))
-        self.ref_inputs = []
+                variable_item.setFlags(
+                    variable_item.flags() & ~Qt.ItemFlags(itemIsEditable)
+                )
+                self.reference_table.setItem(i, 0, variable_item)
 
-        for i, var_name in enumerate(self.vocs.variable_names):
-            variable_item = QTableWidgetItem(var_name)
-            itemIsEditable = Qt.ItemFlag.ItemIsEditable
+                value = reference_points[var_name]
 
-            variable_item.setFlags(
-                variable_item.flags() & ~Qt.ItemFlags(itemIsEditable)
-            )
-            self.reference_table.setItem(i, 0, variable_item)
-
-            # Set default reference point to the midpoint of variable bounds
-            default_value = cast(
-                float,
-                (self.vocs.variables[var_name][0] + self.vocs.variables[var_name][1])
-                / 2,
-            )
-            reference_point_item = QTableWidgetItem(str(default_value))
-            self.ref_inputs.append(reference_point_item)
-            self.reference_table.setItem(i, 1, reference_point_item)
-        self.reference_table.blockSignals(False)
+                reference_point_item = QTableWidgetItem(str(value))
+                self.ref_inputs.append(reference_point_item)
+                self.reference_table.setItem(i, 1, reference_point_item)
 
     def create_options_section(self):
         group_box = QGroupBox("Plot Options")
@@ -182,48 +201,22 @@ class UIComponents:
 
         return layout
 
-    def update_variables(self, configurable_options: ConfigurableOptions):
-        if self.vocs is None:
-            raise Exception("Vocs is None")
-
-        x_axis_items = [
-            self.x_axis_combo.itemText(i) for i in range(self.x_axis_combo.count())
-        ]
-
-        y_axis_items = [
-            self.y_axis_combo.itemText(i) for i in range(self.y_axis_combo.count())
-        ]
-
-        combined_set = set(x_axis_items + y_axis_items)
-
-        if self.vocs.variable_names != list(combined_set):
-            logger.debug(
-                f"Populating axis combos with variable names: {self.vocs.variable_names}"
-            )
-
-            self.x_axis_combo.blockSignals(True)
-            self.y_axis_combo.blockSignals(True)
-
+    def update_variables(
+        self,
+        configurable_options: ConfigurableOptions,
+    ):
+        with BlockSignalsContext([self.x_axis_combo, self.y_axis_combo]):
             self.x_axis_combo.clear()
             self.y_axis_combo.clear()
 
-            self.x_axis_combo.addItems(self.vocs.variable_names)
-            self.y_axis_combo.addItems(self.vocs.variable_names)
+            for variable_name in configurable_options["variables"]:
+                self.x_axis_combo.addItem(variable_name)
+                self.y_axis_combo.addItem(variable_name)
 
             self.x_axis_combo.setCurrentIndex(configurable_options["variable_1"])
             self.y_axis_combo.setCurrentIndex(configurable_options["variable_2"])
 
-            self.x_axis_combo.blockSignals(False)
-            self.y_axis_combo.blockSignals(False)
-
-            self.populate_reference_table()
-
-    def update_vocs(
-        self,
-        vocs: Optional[VOCS],
-    ):
-        if vocs is None:
-            raise Exception("Vocs in None")
-
-        self.vocs = vocs
-        logger.debug(f"vocs: {vocs}")
+        self.populate_reference_table(
+            configurable_options["variables"],
+            configurable_options["reference_points"],
+        )
