@@ -340,7 +340,7 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self):
+    def prepare_run(self, data=None):
         try:
             routine = self.routine_editor.routine_page._compose_routine()
         except Exception as e:
@@ -354,6 +354,9 @@ class BadgerHomePage(QWidget):
         run_filename = save_tmp_run(routine)
         self.run_monitor.routine_filename = run_filename
 
+        if data is not None:
+            self.current_routine.data = data  # this will populate the plots
+
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
@@ -366,7 +369,14 @@ class BadgerHomePage(QWidget):
         self.run_monitor.start_until()
     
     def start_with_data(self):
-        self.prepare_run()
+        routine_data = self.current_routine.data
+        routine_generator = self.current_routine.generator
+        self.prepare_run(data=routine_data)
+        self.run_monitor.init_plots(
+            self.current_routine
+        )  
+        self.current_routine.data = routine_data
+        self.current_routine.generator.data = routine_generator.data
         self.run_monitor.start_with_data()
 
     def new_run(self):

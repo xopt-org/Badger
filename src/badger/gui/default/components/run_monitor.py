@@ -32,6 +32,7 @@ from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
+from badger.gui.default.windows.run_with_data_dialog import BadgerRunWithDataDialog
 
 from badger.gui.default.components.extensions_palette import ExtensionsPalette
 from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
@@ -89,6 +90,13 @@ class BadgerOptMonitor(QWidget):
         self.eval_count = 0
         # Termination condition for the run
         self.termination_condition = None
+        # Initialize data options to False
+        self.data_options = {
+            "run_data": False,
+            "init_points": False,
+            "generator_data": False,
+            "generator_params": False,
+        }
 
         self.extensions_palette = ExtensionsPalette(self)
         self.active_extensions = []
@@ -456,12 +464,15 @@ class BadgerOptMonitor(QWidget):
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        self.routine_runner.run(use_data=use_data)
+        self.routine_runner.run(data_options=self.data_options)
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 
     def save_termination_condition(self, tc):
         self.termination_condition = tc
+
+    def save_data_options(self, data_opts):
+        self.data_options = data_opts
 
     def enable_auto_range(self):
         # Enable autorange
@@ -960,7 +971,16 @@ class BadgerOptMonitor(QWidget):
             self.tc_dialog = None
 
     def start_with_data(self):
-        self.start(use_data=True)
+        dlg = BadgerRunWithDataDialog(
+            parent=self,
+            run_opt=self.start,
+            save_config=self.save_data_options,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)

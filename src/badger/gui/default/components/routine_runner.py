@@ -90,7 +90,7 @@ class BadgerRoutineSubprocess:
         """
         self.termination_condition = termination_condition
 
-    def run(self, use_data: bool = False) -> None:
+    def run(self, data_options: dict) -> None:
         """
         This method starts up the routine.
         The method grabs a subprocess from self.process_manager queue.
@@ -111,7 +111,7 @@ class BadgerRoutineSubprocess:
         except TypeError:
             pass
 
-        if not use_data:
+        if not data_options["run_data"]:
             self.routine.data = None  # reset data
         # Recalculate the bounds and initial points if asked
         if (
@@ -159,6 +159,9 @@ class BadgerRoutineSubprocess:
                 "termination_condition": self.termination_condition,
                 "start_time": self.start_time,
                 "testing": self.testing,
+                "data_options": data_options,
+                "data": self.routine.data,
+                "generator": self.routine.generator,
             }
 
             self.data_and_error_queue.put(arg_dict)
@@ -167,7 +170,7 @@ class BadgerRoutineSubprocess:
             self.setup_timer()
             # self.signals.finished.emit(self.routine.states)
 
-            if not use_data:
+            if not data_options["run_data"]:
                 self.routine.data = None  # reset data
             # Recalculate the bounds and initial points if asked
             if (

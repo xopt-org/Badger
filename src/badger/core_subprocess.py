@@ -105,6 +105,19 @@ def run_routine_subprocess(
         # TODO: might need to consider the case where routine.data is None?
         if routine.data is not None:
             routine.data = routine.data.iloc[0:0]  # reset the data
+
+        # set routine and generator data based on data options
+        data_options = args["data_options"]
+        if data_options["run_data"]:
+            print("Setting routine data")
+            routine.data = args["data"]
+        if data_options["generator_data"]:
+            print("Setting generator data")
+            routine.generator.data = args["generator"].data
+        if data_options["generator_params"]:
+            print("Setting generator parameters")
+            print(args["generator"])
+
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
