@@ -26,8 +26,11 @@ def archive_run(routine, states=None):
 
     data = routine.sorted_data
     data_dict = data.to_dict("list")
-    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
-    suffix = ts_float_to_str(ts_float, "lcls-fname")
+    if hasattr(routine, "creation_ts"):
+        suffix = routine.creation_ts
+    else: # compatibility with old routines
+        ts_float = data_dict["timestamp"][0] # time of the first evaluated point
+        suffix = ts_float_to_str(ts_float, "lcls-fname")
     tokens = suffix.split("-")
     first_level = tokens[0]
     second_level = f"{tokens[0]}-{tokens[1]}"
