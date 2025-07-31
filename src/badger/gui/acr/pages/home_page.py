@@ -38,6 +38,7 @@ from badger.settings import init_settings
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.utils import ModalOverlay
+from badger.errors import BadgerRoutineError
 
 import logging
 
@@ -369,15 +370,22 @@ class BadgerHomePage(QWidget):
         self.run_monitor.start_until()
     
     def start_with_data(self):
-        routine_data = self.current_routine.data
-        routine_generator = self.current_routine.generator
-        self.prepare_run(data=routine_data)
-        self.run_monitor.init_plots(
-            self.current_routine
-        )  
-        self.current_routine.data = routine_data
-        self.current_routine.generator.data = routine_generator.data
-        self.run_monitor.start_with_data()
+        try:
+            # store data from the current routine
+            routine_data = self.current_routine.data
+            # store generator data from the current routine
+            routine_generator = self.current_routine.generator
+            self.prepare_run(data=routine_data) # this clears data in the routine/generator
+            self.run_monitor.init_plots(
+                self.current_routine
+            )  
+            # Add routine and generator data back to the routine
+            self.current_routine.data = routine_data
+            self.current_routine.generator.data = routine_generator.data
+            self.run_monitor.start_with_data()
+        except AttributeError:
+             raise BadgerRoutineError("Unable to run with data: No data in routine!")
+
 
     def new_run(self):
         self.cover_page()
