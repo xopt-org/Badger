@@ -90,12 +90,13 @@ class BadgerOptMonitor(QWidget):
         self.eval_count = 0
         # Termination condition for the run
         self.termination_condition = None
-        # Initialize data options to False
+        # Initialize data options. This will be passed to the routine runner
+        # to determine whether to load data into the routine.
+        # Default preserves current behaviour of starting run from scratch
         self.data_options = {
             "run_data": False,
-            "init_points": False,
+            "init_points": True,
             "generator_data": False,
-            "generator_params": False,
         }
 
         self.extensions_palette = ExtensionsPalette(self)
