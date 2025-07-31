@@ -4,17 +4,10 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QVBoxLayout,
-    QSpinBox,
-    QDoubleSpinBox,
     QCheckBox,
-    QRadioButton,
 )
 from PyQt5.QtWidgets import (
     QGroupBox,
-    QLabel,
-    QComboBox,
-    QStyledItemDelegate,
-    QStackedWidget,
 )
 
 
@@ -57,22 +50,6 @@ class BadgerRunWithDataDialog(QDialog):
 
         action_vbox = QVBoxLayout(action_bar)
         action_vbox.setContentsMargins(0, 0, 0, 0)
-        
-        lbl = QLabel("Select desired behavior preset: ")
-        self.preset_cb = QComboBox()
-        self.preset_cb.addItems([
-            "Continue previous run",
-            "Use model from previous run for new optimization",
-            "Continue selected run with parameter updates",
-            "Use displayed parameters for new optimization",
-        ])
-        self.preset_cb.setCurrentIndex(-1)
-        self.preset_cb.activated.connect(self._select_options)
-            
-        action_vbox.addWidget(lbl)
-        action_vbox.addWidget(self.preset_cb, 1)
-
-        
 
         # Config group
         group_config = QGroupBox("Data and Run Options")
@@ -85,48 +62,30 @@ class BadgerRunWithDataDialog(QDialog):
         data_vbox = QVBoxLayout(data_opts_config)
         data_vbox.setContentsMargins(0, 0, 0, 0)
 
-        self.run_data_checkbox = run_data_checkbox = QCheckBox("Load data from displayed run")
-        run_data_checkbox.setToolTip("This will add the data from the currently displayed run \n to the new optimization") 
-        run_data_checkbox.clicked.connect(lambda: self.preset_cb.setCurrentIndex(-1)) 
-        self.init_points_checkbox = init_points_checkbox = QCheckBox("Resample initial points")
-        init_points_checkbox.setToolTip("Sample points from the Initial Points Table before \n continuing optimization. Leave this unchecked to avoid sampling \n initial points, for example to continue the previous routine directly")
-        init_points_checkbox.clicked.connect(lambda: self.preset_cb.setCurrentIndex(-1)) 
-        # run_from_current = QCheckBox("Run from current variable values")
-        # run_from_current.setToolTip("Leaving this unchecked will load the currently displayed variable ranges into the new routine")
+        self.run_data_checkbox = QCheckBox("Load data from displayed run")
+        self.run_data_checkbox.setToolTip(
+            "This will add the data from the currently displayed run \n to the new optimization"
+        )
+        self.init_points_checkbox = QCheckBox(
+            "Resample initial points"
+        )
+        self.init_points_checkbox.setToolTip(
+            "Sample points from the Initial Points Table before \n continuing optimization. Leave this unchecked to avoid sampling \n initial points, for example to continue the previous routine directly"
+        )
 
         # Layout for data options widget
-
-
-
-
-        data_vbox.addWidget(run_data_checkbox)
-        data_vbox.addWidget(init_points_checkbox)
-        # data_vbox.addWidget(run_from_current)
-
-
+        data_vbox.addWidget(self.run_data_checkbox)
+        data_vbox.addWidget(self.init_points_checkbox)
 
         generator_group = QGroupBox("Generator Options")
-
         vbox_generator = QVBoxLayout(generator_group)
-
-        # self.no_generator = QRadioButton("None -- use parameters from GUI to create new generator")
-        # self.generator_data = QRadioButton("Load Xopt Generator Data from displayed run")
-        # self.generator_full = QRadioButton("Load Full Xopt Generator from displayed run")
-        
-        # self.no_generator.clicked.connect(lambda: self.preset_cb.setCurrentIndex(-1)) 
-
-        self.load_generator_data_checkbox = load_generator_data_checkbox = QCheckBox("Load Xopt Generator Data from displayed run")
-        load_generator_data_checkbox.setToolTip("Load data from displayed run generator into new Xopt Generator")
-        load_generator_data_checkbox.clicked.connect(lambda: self.preset_cb.setCurrentIndex(-1)) 
-        self.load_generator_checkbox = load_generator_checkbox = QCheckBox("Load Xopt Generator Params")
-        load_generator_checkbox.clicked.connect(lambda: self.preset_cb.setCurrentIndex(-1)) 
-
-        # vbox_generator.addWidget(self.no_generator)
-        # vbox_generator.addWidget(self.generator_data)
-        # vbox_generator.addWidget(self.generator_full)
+        self.load_generator_data_checkbox = load_generator_data_checkbox = QCheckBox(
+            "Load Xopt Generator Data from displayed run"
+        )
+        load_generator_data_checkbox.setToolTip(
+            "Load data from displayed run generator into new Xopt Generator"
+        )
         vbox_generator.addWidget(load_generator_data_checkbox)
-        vbox_generator.addWidget(load_generator_checkbox)
-
 
         # Group
         vbox_config.addWidget(data_opts_config)
@@ -149,56 +108,29 @@ class BadgerRunWithDataDialog(QDialog):
         vbox.addWidget(group_config, 1)
         vbox.addWidget(generator_group)
         vbox.addWidget(button_set)
-        
-        self.preset_cb.setCurrentIndex(0)
-        self._select_options()
-    
-    def _select_options(self):
-        index = self.preset_cb.currentIndex()
-        if index == 0: # continue prev run
-            self.run_data_checkbox.setChecked(True)
-            self.init_points_checkbox.setChecked(False)
-            self.load_generator_data_checkbox.setChecked(True)
-            self.load_generator_checkbox.setChecked(True)
-        elif index == 1: # use generator for new optimization
-            self.run_data_checkbox.setChecked(False)
-            self.init_points_checkbox.setChecked(True)
-            self.load_generator_data_checkbox.setChecked(True)
-            self.load_generator_checkbox.setChecked(True)
-        elif index == 2: # Continue selected with new params
-            self.run_data_checkbox.setChecked(True)
-            self.init_points_checkbox.setChecked(False)
-            self.load_generator_data_checkbox.setChecked(True)
-            self.load_generator_checkbox.setChecked(False)
-        elif index == 3: # Use settings for new run
-            self.run_data_checkbox.setChecked(False)
-            self.init_points_checkbox.setChecked(True)
-            self.load_generator_data_checkbox.setChecked(False)
-            self.load_generator_checkbox.setChecked(False)
+
+        # Default options
+        self.run_data_checkbox.setChecked(True)
+        self.init_points_checkbox.setChecked(False)
+        self.load_generator_data_checkbox.setChecked(True)
 
     def config_logic(self):
-        # self.cb.currentIndexChanged.connect(self.terminition_condition_changed)
         self.btn_cancel.clicked.connect(self.close)
         self.btn_run.clicked.connect(self.run)
-        # self.sb_max_eval.valueChanged.connect(self.max_eval_changed)
-        # self.sb_max_time.valueChanged.connect(self.max_time_changed)
-        # self.sb_tol.valueChanged.connect(self.ftol_changed)
 
-        
     def save_options(self):
         self.configs["run_data"] = self.run_data_checkbox.isChecked()
         self.configs["init_points"] = self.init_points_checkbox.isChecked()
         self.configs["generator_data"] = self.load_generator_data_checkbox.isChecked()
-        self.configs["generator_params"] = self.load_generator_checkbox.isChecked()
 
     def run(self):
         self.save_options()
         self.save_config(self.configs)
         print("dialog run")
         self.run_opt(
-            use_termination_condition = False,
-            use_data = True,
-            )
+            use_termination_condition=False,
+            use_data=True,
+        )
         self.close()
 
     def closeEvent(self, event):
