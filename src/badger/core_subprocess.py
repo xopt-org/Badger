@@ -174,13 +174,14 @@ def run_routine_subprocess(
     # timeout logic will be handled in the specific environment
     try:
         # initial sampling
-        for _, ele in initial_points.iterrows():
-            result = routine.evaluate_data(ele.to_dict())
-            solution = convert_to_solution(result, routine)
-            opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate:
-                time.sleep(0.1)  # give it some break tp catch up
-                evaluate_queue[0].send((routine.data, routine.generator))
+        if data_options["init_points"]:
+            for _, ele in initial_points.iterrows():
+                result = routine.evaluate_data(ele.to_dict())
+                solution = convert_to_solution(result, routine)
+                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                if evaluate:
+                    time.sleep(0.1)  # give it some break tp catch up
+                    evaluate_queue[0].send((routine.data, routine.generator))
 
         # optimization loop
         while True:

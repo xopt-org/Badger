@@ -148,22 +148,12 @@ class BadgerRoutineSubprocess:
             self.evaluate_queue = process_with_args["evaluate_queue"]
             self.wait_event = process_with_args["wait_event"]
 
-            # Initial point sampling:
-            #   data_options["init_points"] is a flag to indicate whether to
-            #   use the initial points from the routine.
-            #   If data_options["init_points"] is False, 
-            #   use current variable values as the initial point
-            if data_options["init_points"] is False:
-                init_points = self._use_current_as_init()
-            else:
-                init_points = self.routine.initial_points
-
             arg_dict = {
                 "routine_id": self.routine.id,
                 "routine_filename": self.routine_filename,
                 "routine_name": self.routine.name,
                 "variable_ranges": self.routine.vocs.variables,
-                "initial_points": init_points,
+                "initial_points": self.routine.initial_points,
                 "evaluate": True,
                 "archive": self.save,
                 "termination_condition": self.termination_condition,
@@ -215,23 +205,6 @@ class BadgerRoutineSubprocess:
             e._details = traceback_info
             self.signals.finished.emit()
             self.signals.error.emit(e)
-
-    def _use_current_as_init(self) -> pd.DataFrame:
-        """
-        Returns the current variable values as a DataFrame of initial points 
-        """
-        init_point_actions = [{"type": "add_curr"}]
-        init_points = calculate_initial_points(
-            init_point_actions,
-            self.routine.vocs,
-            self.routine.environment,
-        )
-        try:
-            init_points = pd.DataFrame(init_points)
-        except IndexError:
-            init_points = pd.DataFrame(init_points, index=[0])
-
-        return init_points
 
     def setup_timer(self) -> None:
         """
