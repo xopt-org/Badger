@@ -455,11 +455,43 @@ class BadgerOptMonitor(QWidget):
             self.sig_stop.disconnect()
             self.routine_runner = None
 
-    def start(self, use_termination_condition=False, use_data=False):
+    # start
+    def start(
+        self, use_termination_condition=False, use_data=False, data_options: dict = None
+    ):
+        """
+        Start the routine runner with the specified options.
+
+        Parameters
+        ----------
+        use_termination_condition : bool, optional
+            Whether to use a termination condition for the run. Default is False.
+        use_data : bool, optional
+            Whether to load data for the run. Default is False, which will reset any previously specified data options.
+        data_options : dict, optional
+            A dictionary containing data options such as 'run_data', 'init_points', and 'generator_data'.
+            Default is None, which will reset to the default data options.
+        
+        Notes
+        -----
+        To run with data, this function can either be called with 'use_data=True' after externally calling self.save_data_options(data_options),
+        or by passing a dictionary to 'data_options' with the desired options. This allows flexibility in choosing initial sampling
+        and generator data loading, with or without the 'use_data' flag.
+
+        Returns
+        -------
+        None
+
+        """
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
         if not use_data:
             self.routine.data = None  # reset data if any
+            self.reset_data_opts()  # reset options to default (No loaded data, sample initial points)
+            # Using flag and dictionary is a bit redundant but more flexible
+        if data_options is not None:
+            self.save_data_options(data_options)
+            # Do this after checking use_data, allowing override of default options if a dictionary is provided
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
@@ -473,7 +505,11 @@ class BadgerOptMonitor(QWidget):
         self.termination_condition = tc
 
     def save_data_options(self, data_opts):
-        self.data_options = data_opts
+        for key in data_opts:
+            if key in self.data_options:
+                self.data_options[key] = data_opts[key]
+            else:
+                logger.warning(f"Unknown data option: {key}. Ignoring")
 
     def enable_auto_range(self):
         # Enable autorange
@@ -982,6 +1018,13 @@ class BadgerOptMonitor(QWidget):
             dlg.exec()
         finally:
             self.tc_dialog = None
+
+    def reset_data_opts(self):
+        self.data_options = {
+            "run_data": False,
+            "init_points": True,
+            "generator_data": False,
+        }
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)

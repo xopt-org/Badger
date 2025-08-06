@@ -363,13 +363,15 @@ class BadgerHomePage(QWidget):
 
     def start_run(self):
         self.prepare_run()
-        self.run_monitor.start()
+        # print(f"generator data: {self.current_routine.generator.data}")
+        use_generator_data = self.current_routine.generator.data is not None
+        self.run_monitor.start(data_options={"generator_data": use_generator_data})
 
     def start_run_until(self):
         self.prepare_run()
         self.run_monitor.start_until()
     
-    def start_with_data(self):
+    def start_with_data(self, open_dialog=True, data_options: dict = None):
         try:
             # store data from the current routine
             routine_data = self.current_routine.data
@@ -382,10 +384,16 @@ class BadgerHomePage(QWidget):
             # Add routine and generator data back to the routine
             self.current_routine.data = routine_data
             self.current_routine.generator.data = routine_generator.data
-            self.run_monitor.start_with_data()
+            if open_dialog:
+                self.run_monitor.start_with_data()
+            else:
+                self.run_monitor.start(use_data=True, data_options=data_options)
         except AttributeError:
-             raise BadgerRoutineError("Unable to run with data: No data in routine!")
-
+            raise BadgerRoutineError("Unable to run with data: No data in routine!")
+        # except KeyError as e:
+        #    raise BadgerRoutineError(
+        #        f"Unable to run with data: {e} not found in routine!"
+        #    )
 
     def new_run(self):
         self.cover_page()

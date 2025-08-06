@@ -1690,6 +1690,37 @@ class BadgerRoutinePage(QWidget):
         if not vocs.objectives:
             raise BadgerRoutineError("no objectives selected")
 
+        # add data from loaded data table
+        if self.generator_box.data_table.columnCount() > 0:
+            data = get_table_content_as_dict(self.generator_box.data_table)
+            # Add data to generator_params["data"]
+            skipped_keys = []
+            if "data" not in generator_params:
+                generator_params["data"] = {}
+            for key, val in data.items():
+                if key in vocs.variable_names or key in vocs.output_names:
+                    if key in generator_params["data"]:
+                        generator_params["data"][key].extend(val)
+                    else:
+                        generator_params["data"][key] = val
+                else:
+                    skipped_keys.append(key)
+                    # print(f"{key} from loaded generator data not in selected VOCS, will not be used in routine")
+                    # else notify user that key/data will not be used.
+                if len(skipped_keys):
+                    dialog = QMessageBox(
+                        text=str(
+                            "The following variables/objectives from loaded generator data were not in selected VOCS:\n"
+                            + f"{skipped_keys}\n"
+                            + "The data for these variables will not be used in the routine!\n"
+                            + "(Click OK to continue)"
+                        ),
+                        parent=self,
+                    )
+                    dialog.setIcon(QMessageBox.Information)
+                    dialog.setWindowTitle("Loaded variables not found in VOCS")
+                    dialog.exec_()
+
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
             get_table_content_as_dict(self.env_box.init_table)
