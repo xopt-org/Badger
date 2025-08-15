@@ -134,7 +134,10 @@ class MatplotlibInteractionHandler:
         axis = event.inaxes
         logger.debug(f"Click in axes: {axis.get_title()}")
         clicked = False
-        if event.button == MouseButton.MIDDLE:
+        if event.button == MouseButton.LEFT:
+            # self.clear_tooltips()
+            logger.debug("Left click detected")
+        elif event.button == MouseButton.MIDDLE:
             logger.debug("Middle click detected")
             # Reset reference points back to the initial values
 
@@ -267,10 +270,10 @@ class MatplotlibInteractionHandler:
 
         ax = mouseevent.inaxes
 
-        click_location_x = mouseevent.x
-        click_location_y = mouseevent.y
+        click_location_x = mouseevent.x - ax.bbox.x0
+        click_location_y = mouseevent.y - ax.bbox.y0
 
-        figure_dimensions = event.canvas.get_width_height()
+        figure_dimensions = ax.bbox.width, ax.bbox.height
 
         self.region = (
             1 if (figure_dimensions[0] / 2 > click_location_x) else -1,
@@ -308,6 +311,14 @@ class MatplotlibInteractionHandler:
                 logger.error(
                     f"Columns {x_column} or {y_column} not found in routine data."
                 )
+
+            if x_column == "":
+                logger.error("X column is empty")
+                return
+
+            if y_column == "":
+                logger.error("Y column is empty")
+                return
 
             # Find the true index in the routine data
             # This is done by finding the row in the routine data that is closest to the picked point
