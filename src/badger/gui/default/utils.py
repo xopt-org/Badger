@@ -1,6 +1,6 @@
 from importlib import resources
 from typing import Any
-from PyQt5.QtWidgets import QWidget, QAbstractSpinBox, QPushButton, QComboBox
+from PyQt5.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt, QObject, QEvent, QSize
 from PyQt5.QtGui import QIcon
@@ -17,8 +17,8 @@ class MouseWheelWidgetAdjustmentGuard(QObject):
         super().__init__(parent)
 
     def eventFilter(self, o: QObject, e: QEvent) -> bool:
-        widget: QWidget = o
-        if e.type() == QEvent.Wheel and not widget.hasFocus():
+        # Ignore mouse wheel events for widget
+        if e.type() == QEvent.Wheel:
             e.ignore()
             return True
         return super().eventFilter(o, e)
