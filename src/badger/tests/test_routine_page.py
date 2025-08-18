@@ -145,7 +145,7 @@ def test_ui_update(qtbot):
     idx = window.generators.index(routine.generator.name)
     window.select_generator(idx)
 
-    assert window.generator_box.edit.toPlainText() == "{}\n"
+    assert window.generator_box.edit.get_parameters() == "{}"
 
 
 def test_constraints(qtbot):
