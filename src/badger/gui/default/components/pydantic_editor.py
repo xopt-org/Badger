@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from xopt.generators import get_generator
-
+from xopt.generators.bayesian.turbo import TurboController
 
 # Removes sub-parameters from the main editor view by default
 USE_CONFIGURE_BUTTONS = False
@@ -107,11 +107,16 @@ class BadgerResolvedType:
     def resolve_qt(cls, annotation, default=None, recursive=False):
         resolved_type = BadgerResolvedType.resolve(annotation)
         if issubclass(resolved_type.main, BaseModel):
-            if recursive:
+            if issubclass(resolved_type.main, TurboController):
+                widget = QComboBox()
+                widget.addItem("optimize")
+                widget.addItem("safety")
+            elif recursive:
                 return None  # None means add children to the tree
-            widget = BadgerPydanticConfigureButton(
-                resolved_type.main, BadgerPydanticConfigureDialog
-            )
+            else:
+                widget = BadgerPydanticConfigureButton(
+                    resolved_type.main, BadgerPydanticConfigureDialog
+                )
         elif resolved_type.main == NoneType:
             widget = QLabel()
             widget.setText("null")
