@@ -6,11 +6,18 @@ from PyQt5.QtWidgets import (
     QPlainTextEdit,
 )
 from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
+from PyQt5.QtCore import Qt
 from badger.gui.default.components.collapsible_box import CollapsibleBox
 from badger.settings import init_settings
 from badger.gui.default.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
+)
+from badger.gui.default.components.data_table import (
+    data_table,
+)
+from badger.gui.default.windows.load_data_from_run_dialog import (
+    BadgerLoadDataFromRunDialog,
 )
 from badger.utils import strtobool
 
@@ -81,7 +88,7 @@ class BadgerAlgoBox(QWidget):
             script_bar.hide()
         self.edit = edit = QPlainTextEdit()
         # edit.setMaximumHeight(80)
-        edit.setMinimumHeight(480)
+        edit.setMinimumHeight(200)
         vbox_params_edit.addWidget(edit)
         hbox_params.addWidget(edit_params_col)
         vbox.addWidget(params)
@@ -125,8 +132,68 @@ class BadgerAlgoBox(QWidget):
         hbox_params_s.addWidget(edit_scaling)
         vbox_misc.addWidget(params_s)
 
+        # Add table for loading data into generator
+        # widget for layout
+        load_data = QWidget()
+        vbox_load_data = QVBoxLayout(load_data)
+        vbox_load_data.setContentsMargins(0, 0, 0, 0)
+        vbox_load_data.setAlignment(Qt.AlignLeft)
+
+        # Add label, buttons for loading data and clear table
+        load_data_options = QWidget()
+        hbox_load_data_options = QHBoxLayout(load_data_options)
+        hbox_load_data_options.setContentsMargins(0, 0, 0, 0)
+        lbl = QLabel("Data (Optional)")
+        lbl.setFixedWidth(LABEL_WIDTH + 2)
+        hbox_load_data_options.addWidget(lbl)
+        
+        self.btn_load_data = QPushButton("Load Data")
+        self.btn_load_data.clicked.connect(self.load_data)
+        self.btn_load_data.setFixedSize(96, 24)
+        self.btn_reset_table = QPushButton("Clear Table")
+        self.btn_reset_table.clicked.connect(self.reset_table)
+        self.btn_reset_table.setFixedSize(96, 24)
+        hbox_load_data_options.addWidget(self.btn_load_data)
+        hbox_load_data_options.addWidget(self.btn_reset_table)
+        hbox_load_data_options.setAlignment(Qt.AlignLeft)
+        vbox_load_data.addWidget(load_data_options)
+
+        # Data Table
+        data_table_widget = QWidget()
+        hbox_data_table = QHBoxLayout(data_table_widget)
+        hbox_data_table.setContentsMargins(0, 0, 0, 0)
+        lbl = QLabel("")
+        lbl.setFixedWidth(LABEL_WIDTH - 5)
+        hbox_data_table.addWidget(lbl)
+        self.data_table = data_table()
+        self.data_table.set_uneditable()
+        self.data_table.setMinimumHeight(200)
+        hbox_data_table.addWidget(self.data_table)
+        vbox_load_data.addWidget(data_table_widget)
+
+        vbox.addWidget(load_data)
+
         cbox_misc.setContentLayout(vbox_misc)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_misc.hide()
 
         # vbox.addStretch()
+
+    def load_data(self):
+        """
+        Opens a dialog window for loading data into generator.
+        """
+        dlg = BadgerLoadDataFromRunDialog(
+            parent=self,
+            data_table=self.data_table,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
+    
+    def reset_table(self):
+        self.data_table.clear()
+        self.data_table.setRowCount(0)
+        self.data_table.setColumnCount(0)

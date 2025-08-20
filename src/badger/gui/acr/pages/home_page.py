@@ -38,6 +38,7 @@ from badger.settings import init_settings
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.utils import ModalOverlay
+from badger.errors import BadgerRoutineError
 
 import logging
 
@@ -217,6 +218,7 @@ class BadgerHomePage(QWidget):
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
+        self.run_action_bar.sig_start_with_data.connect(self.start_with_data)
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -339,7 +341,7 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self):
+    def prepare_run(self, data=None):
         try:
             routine = self.routine_editor.routine_page._compose_routine()
         except Exception as e:
@@ -353,16 +355,49 @@ class BadgerHomePage(QWidget):
         run_filename = save_tmp_run(routine)
         self.run_monitor.routine_filename = run_filename
 
+        if data is not None:
+            self.current_routine.data = data  # this will populate the plots
+
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
     def start_run(self):
         self.prepare_run()
-        self.run_monitor.start()
+        use_generator_data_flag = self.current_routine.generator.data is not None # check if data has been loaded by user
+        data_options = {
+            "run_data": False,
+            "init_points": True,
+            "generator_data": use_generator_data_flag, # boolean value, true if data has been added to table in generator tab
+        }
+        self.run_monitor.start(data_options=data_options)
 
     def start_run_until(self):
         self.prepare_run()
         self.run_monitor.start_until()
+    
+    def start_with_data(self, open_dialog=True, data_options: dict = None):
+        try:
+            # store data from the current routine
+            routine_data = self.current_routine.data
+            # store generator data from the current routine
+            routine_generator = self.current_routine.generator
+            self.prepare_run(data=routine_data) # this clears data in the routine/generator
+            self.run_monitor.init_plots(
+                self.current_routine
+            )  
+            # Add routine and generator data back to the routine
+            self.current_routine.data = routine_data
+            self.current_routine.generator.data = routine_generator.data
+            if open_dialog:
+                self.run_monitor.start_with_data()
+            else:
+                self.run_monitor.start(data_options=data_options)
+        except AttributeError:
+            raise BadgerRoutineError("Unable to run with data: No data in routine!")
+        # except KeyError as e:
+        #    raise BadgerRoutineError(
+        #        f"Unable to run with data: {e} not found in routine!"
+        #    )
 
     def new_run(self):
         self.cover_page()

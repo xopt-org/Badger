@@ -23,6 +23,7 @@ from badger.environment import BaseEnvironment, instantiate_env
 
 class Routine(Xopt):
     id: Optional[str] = Field(None)
+    creation_ts: Optional[str] = Field(None)  # Timestamp of routine creation
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[BaseEnvironment]

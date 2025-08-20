@@ -111,6 +111,14 @@ def run_routine_subprocess(
         # TODO: might need to consider the case where routine.data is None?
         if routine.data is not None:
             routine.data = routine.data.iloc[0:0]  # reset the data
+
+        # set routine and generator data based on data options
+        data_options = args["data_options"]
+        if data_options["run_data"]:
+            routine.data = args["data"]
+        if data_options["generator_data"]:
+            routine.generator.data = args["generator"].data
+
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
@@ -166,13 +174,14 @@ def run_routine_subprocess(
     # timeout logic will be handled in the specific environment
     try:
         # initial sampling
-        for _, ele in initial_points.iterrows():
-            result = routine.evaluate_data(ele.to_dict())
-            solution = convert_to_solution(result, routine)
-            opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate:
-                time.sleep(0.1)  # give it some break tp catch up
-                evaluate_queue[0].send((routine.data, routine.generator))
+        if data_options["init_points"]:
+            for _, ele in initial_points.iterrows():
+                result = routine.evaluate_data(ele.to_dict())
+                solution = convert_to_solution(result, routine)
+                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                if evaluate:
+                    time.sleep(0.1)  # give it some break tp catch up
+                    evaluate_queue[0].send((routine.data, routine.generator))
 
         # optimization loop
         while True:
