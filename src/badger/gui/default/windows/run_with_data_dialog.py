@@ -29,12 +29,11 @@ QPushButton
 
 
 class BadgerRunWithDataDialog(QDialog):
-    def __init__(self, parent, run_opt, save_config):
+    def __init__(self, parent, run_opt):
         super().__init__(parent)
 
         self.run_opt = run_opt
-        self.save_config = save_config
-        self.configs = {}
+        self.data_options = {}
 
         self.init_ui()
         self.config_logic()
@@ -119,22 +118,18 @@ class BadgerRunWithDataDialog(QDialog):
         self.btn_run.clicked.connect(self.run)
 
     def save_options(self):
-        self.configs["run_data"] = self.run_data_checkbox.isChecked()
-        self.configs["init_points"] = self.init_points_checkbox.isChecked()
-        self.configs["generator_data"] = self.load_generator_data_checkbox.isChecked()
+        self.data_options["run_data"] = self.run_data_checkbox.isChecked()
+        self.data_options["init_points"] = self.init_points_checkbox.isChecked()
+        self.data_options["generator_data"] = self.load_generator_data_checkbox.isChecked()
 
     def run(self):
         self.save_options()
-        self.save_config(self.configs)
-        print("dialog run")
         self.run_opt(
             use_termination_condition=False,
-            use_data=True,
+            data_options=self.data_options,
         )
         self.close()
 
     def closeEvent(self, event):
         self.save_options()
-        self.save_config(self.configs)
-
         event.accept()

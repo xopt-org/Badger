@@ -363,9 +363,13 @@ class BadgerHomePage(QWidget):
 
     def start_run(self):
         self.prepare_run()
-        # print(f"generator data: {self.current_routine.generator.data}")
-        use_generator_data = self.current_routine.generator.data is not None
-        self.run_monitor.start(data_options={"generator_data": use_generator_data})
+        use_generator_data_flag = self.current_routine.generator.data is not None # check if data has been loaded by user
+        data_options = {
+            "run_data": False,
+            "init_points": True,
+            "generator_data": use_generator_data_flag, # boolean value, true if data has been added to table in generator tab
+        }
+        self.run_monitor.start(data_options=data_options)
 
     def start_run_until(self):
         self.prepare_run()
@@ -387,7 +391,7 @@ class BadgerHomePage(QWidget):
             if open_dialog:
                 self.run_monitor.start_with_data()
             else:
-                self.run_monitor.start(use_data=True, data_options=data_options)
+                self.run_monitor.start(data_options=data_options)
         except AttributeError:
             raise BadgerRoutineError("Unable to run with data: No data in routine!")
         # except KeyError as e:
