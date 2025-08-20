@@ -77,6 +77,7 @@ class PlottingArea(QWidget):
                 tuple[Figure, Axes],
                 visualize_generator_model(
                     generator,
+                    interactive=True,
                     variable_names=variable_names,
                     reference_point=reference_point,
                     show_acquisition=show_acquisition,
