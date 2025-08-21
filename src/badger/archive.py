@@ -28,8 +28,8 @@ def archive_run(routine, states=None):
     data_dict = data.to_dict("list")
     if hasattr(routine, "creation_ts"):
         suffix = routine.creation_ts
-    else: # compatibility with old routines
-        ts_float = data_dict["timestamp"][0] # time of the first evaluated point
+    else:  # compatibility with old routines
+        ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
         suffix = ts_float_to_str(ts_float, "lcls-fname")
     tokens = suffix.split("-")
     first_level = tokens[0]

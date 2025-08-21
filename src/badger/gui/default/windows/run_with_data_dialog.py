@@ -65,9 +65,7 @@ class BadgerRunWithDataDialog(QDialog):
         self.run_data_checkbox.setToolTip(
             "This will add the data from the currently displayed run \n to the new optimization"
         )
-        self.init_points_checkbox = QCheckBox(
-            "Resample initial points"
-        )
+        self.init_points_checkbox = QCheckBox("Resample initial points")
         self.init_points_checkbox.setToolTip(
             "Sample points from the Initial Points Table before \n continuing optimization. Leave this unchecked to avoid sampling \n initial points, for example to continue the previous routine directly"
         )
@@ -120,7 +118,9 @@ class BadgerRunWithDataDialog(QDialog):
     def save_options(self):
         self.data_options["run_data"] = self.run_data_checkbox.isChecked()
         self.data_options["init_points"] = self.init_points_checkbox.isChecked()
-        self.data_options["generator_data"] = self.load_generator_data_checkbox.isChecked()
+        self.data_options["generator_data"] = (
+            self.load_generator_data_checkbox.isChecked()
+        )
 
     def run(self):
         self.save_options()

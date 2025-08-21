@@ -44,6 +44,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
     Dialog for loading generator data in Badger. Provides a UI for selecting a run,
     previewing its data, and loading the data into the application.
     """
+
     def __init__(self, parent, data_table=None):
         """
         Initialize the dialog.
@@ -51,7 +52,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         Args:
             parent (QWidget): The parent widget.
             data_table (QTableWidget, optional): The data table to update with loaded run data.
-        
+
         Attributes:
             data_table (QTableWidget): The data table to update with loaded run data.
             selected_routine (Optional[Routine]): The currently selected routine.
@@ -193,7 +194,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
 
     def init_plots(self):
         """
-        Initialize the plots for data preview. These are static plots styled to 
+        Initialize the plots for data preview. These are static plots styled to
         match the plots on the main GUI from BadgerOptMonitor
         Note: it might be helpful to have some sort of BadgerPlot class
             to be used within the BadgerOptMonitor, which could

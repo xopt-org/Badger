@@ -363,28 +363,30 @@ class BadgerHomePage(QWidget):
 
     def start_run(self):
         self.prepare_run()
-        use_generator_data_flag = self.current_routine.generator.data is not None # check if data has been loaded by user
+        use_generator_data_flag = (
+            self.current_routine.generator.data is not None
+        )  # check if data has been loaded by user
         data_options = {
             "run_data": False,
             "init_points": True,
-            "generator_data": use_generator_data_flag, # boolean value, true if data has been added to table in generator tab
+            "generator_data": use_generator_data_flag,  # boolean value, true if data has been added to table in generator tab
         }
         self.run_monitor.start(data_options=data_options)
 
     def start_run_until(self):
         self.prepare_run()
         self.run_monitor.start_until()
-    
+
     def start_with_data(self, open_dialog=True, data_options: dict = None):
         try:
             # store data from the current routine
             routine_data = self.current_routine.data
             # store generator data from the current routine
             routine_generator = self.current_routine.generator
-            self.prepare_run(data=routine_data) # this clears data in the routine/generator
-            self.run_monitor.init_plots(
-                self.current_routine
-            )  
+            self.prepare_run(
+                data=routine_data
+            )  # this clears data in the routine/generator
+            self.run_monitor.init_plots(self.current_routine)
             # Add routine and generator data back to the routine
             self.current_routine.data = routine_data
             self.current_routine.generator.data = routine_generator.data
