@@ -388,6 +388,7 @@ class ParetoFrontWidget(AnalysisWidget):
         self.update_pareto_front()
 
         plot_tab_widget = self.ui["components"]["plot"]["pareto"]
+        variables = self.parameters["variables"]
 
         with BlockSignalsContext(plot_tab_widget):
             clear_tabs(plot_tab_widget)
@@ -398,8 +399,14 @@ class ParetoFrontWidget(AnalysisWidget):
                     canvas = FigureCanvas(fig)
                     toolbar = NavigationToolbar(canvas, self)
 
+                    variables = self.parameters["variables"]
+
                     handler = MatplotlibInteractionHandler(
-                        canvas, self.parameters, self.routine, self.update_extension
+                        canvas,
+                        self.parameters,
+                        self.routine,
+                        variables,
+                        self.update_extension,
                     )
                     handler.connect_events()
 
@@ -424,8 +431,14 @@ class ParetoFrontWidget(AnalysisWidget):
                     canvas = FigureCanvas(fig)
                     toolbar = NavigationToolbar(canvas, self)
 
+                    variables = self.parameters["objectives"]
+
                     handler = MatplotlibInteractionHandler(
-                        canvas, self.parameters, self.routine, self.update_extension
+                        canvas,
+                        self.parameters,
+                        self.routine,
+                        variables,
+                        self.update_extension,
                     )
                     handler.connect_events()
 

@@ -71,11 +71,8 @@ class AnalysisWidget(QDialog):
         pass
 
     def update_routine(self, routine: Routine, generator_type: type[Generator]) -> None:
-        logger.debug("Updating routine in Pareto Front Viewer")
-
         self.routine = routine
 
-        # Check if the generator is a BayesianGenerator
         if not issubclass(self.routine.generator.__class__, generator_type):
             raise HandledException(
                 TypeError,
