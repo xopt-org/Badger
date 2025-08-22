@@ -38,8 +38,8 @@ class RobustSpinBox(QDoubleSpinBox):
         super().__init__(*args, **kwargs)
 
         self.setDecimals(decimals)
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.installEventFilter(MouseWheelWidgetAdjustmentGuard(self))
         self.setRange(lb, ub)
-        self.setStepType(QAbstractSpinBox.AdaptiveDecimalStepType)
+        self.setStepType(QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
         self.setValue(default_value)
