@@ -36,10 +36,12 @@ class MatplotlibInteractionHandler:
         canvas: FigureCanvasQTAgg,
         parameters: ConfigurableOptions,
         routine: Routine,
+        variables: list[str],
         callback: Callable[[Routine, bool], None],
     ):
         self.canvas = canvas
         self.parameters = parameters
+        self.variables = variables
         self.routine = routine
         self.callback = callback
         self.moving = False
@@ -322,17 +324,25 @@ class MatplotlibInteractionHandler:
 
             # Find the true index in the routine data
             # This is done by finding the row in the routine data that is closest to the picked point
-            true_index = routine_data.loc[  # type: ignore
+            searched_row = routine_data.loc[  # type: ignore
                 (routine_data[x_column] - point[0]).abs().idxmin()  # type: ignore
                 & (routine_data[y_column] - point[1]).abs().idxmin()
-            ].name
+            ]
+
+            true_index = searched_row.name
 
             if true_index is None:
                 logger.error("True index not found in routine data.")
                 true_index = "Index not found"
 
+            variable_key_value = {var: searched_row[var] for var in self.variables}
+
+            variable_text = "\n".join(
+                f"{k}: {to_precision_float(v)}" for k, v in variable_key_value.items()
+            )
+
             # Create tooltip text
-            tooltip_text = f"Index: {true_index}\n({to_precision_float(point[0])}, {to_precision_float(point[1])})"
+            tooltip_text = f"Index: {true_index}\n{variable_text}"
 
             self.clear_tooltips()  # Clear existing tooltips before adding a new one
 
