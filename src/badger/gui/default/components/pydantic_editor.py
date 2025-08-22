@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from types import NoneType
-from typing import Optional, Any, get_origin, Union, get_args, Self
+from typing import Optional, Any, get_origin, Union, get_args
 
 import yaml
 from PyQt5.QtCore import Qt
@@ -32,12 +32,14 @@ USE_CONFIGURE_BUTTONS = False
 
 @dataclass
 class BadgerResolvedType:
-    main: Any = None
+    main: type[Any] | None = None
     nullable: bool = False
-    subtype: Optional[Self | list[Self]] = None
+    subtype: Optional["BadgerResolvedType | list[BadgerResolvedType]"] = None
 
     @classmethod
-    def find_primary(cls, annotations: list[Any]) -> Optional[Self]:
+    def find_primary(
+        cls, annotations: list[Any] | tuple[Any, ...]
+    ) -> Optional["BadgerResolvedType"]:
         if len(annotations) == 0:
             return None
 
@@ -45,10 +47,12 @@ class BadgerResolvedType:
             BadgerResolvedType.resolve(annotation) for annotation in annotations
         ]
         for r in resolved:
+            if r.main is None:
+                continue
             if issubclass(r.main, BaseModel):
                 return r
 
-        priority = [dict, list, str, float, int, bool]
+        priority: list[type] = [dict, list, str, float, int, bool]
         for p in priority:
             for r in resolved:
                 if p == r.main:
@@ -57,33 +61,47 @@ class BadgerResolvedType:
         return resolved[0]
 
     @classmethod
-    def resolve(cls, annotation) -> Self:
-        origin = get_origin(annotation)
+    def resolve(
+        cls, annotation: type[Any] | Union[Any, None] | None
+    ) -> "BadgerResolvedType":
+        origin: type[Any] | Union[Any, None] | None = get_origin(annotation)
         args = get_args(annotation)
         nullable = False
 
         if origin is None:
             origin = annotation
+
         if len(args) == 0:
             return BadgerResolvedType(main=annotation)
 
         if origin == Union:
-            if len(args) == 1:
-                origin = args[0]
-                args = []
-            elif NoneType in args:
+            if NoneType in args:
                 origin = Optional
                 args = [arg for arg in args if arg != NoneType]
+            else:
+                if len(args) == 1:
+                    origin = args[0]
+                    args = []
+                    nullable = True
 
-            if len(args) > 1:
-                return BadgerResolvedType.find_primary(args)
+                    if origin is not None:
+                        resolved = BadgerResolvedType.resolve(origin)
+                        resolved.nullable = True
+                        return resolved
+                elif len(args) > 1:
+                    primary = BadgerResolvedType.find_primary(args)
+                    return BadgerResolvedType(
+                        main=origin,
+                        nullable=nullable,
+                        subtype=primary,
+                    )
 
         if origin == Optional:
             origin = args[0]
             args = []
             nullable = True
 
-            if get_origin(origin) is not None:
+            if origin is not None:
                 resolved = BadgerResolvedType.resolve(origin)
                 resolved.nullable = True
                 return resolved
@@ -104,9 +122,19 @@ class BadgerResolvedType:
         )
 
     @classmethod
-    def resolve_qt(cls, annotation, default=None, recursive=False):
+    def resolve_qt(
+        cls,
+        annotation: type[Any] | Union[Any, None] | None,
+        default: float | int | bool | None = None,
+        recursive: bool = False,
+    ):
         resolved_type = BadgerResolvedType.resolve(annotation)
-        if issubclass(resolved_type.main, BaseModel):
+        widget = QLabel()
+
+        if resolved_type.main is None:
+            widget = QLineEdit()
+            widget.setText("null")
+        elif issubclass(resolved_type.main, BaseModel):
             if issubclass(resolved_type.main, TurboController):
                 widget = QComboBox()
                 widget.addItem("optimize")
@@ -121,33 +149,66 @@ class BadgerResolvedType:
             widget = QLabel()
             widget.setText("null")
         elif resolved_type.main is dict:
-            widget = BadgerListEditor(
-                resolved_type.subtype[0].main, resolved_type.subtype[1].main
-            )
+            if resolved_type.subtype is None:
+                widget = QLabel()
+                widget.setText("null")
+            elif isinstance(resolved_type.subtype, list):
+                primary = resolved_type.subtype[0].main
+                secondary = resolved_type.subtype[1].main
+                if primary is not None:
+                    widget = BadgerListEditor(primary, secondary)
+                else:
+                    widget = QLabel()
+                    widget.setText("null")
+            else:
+                primary = resolved_type.subtype
+                if primary.main is not None:
+                    widget = BadgerListEditor(primary.main)
+                else:
+                    widget = QLabel()
+                    widget.setText("null")
         elif resolved_type.main is list:
-            widget = BadgerListEditor(resolved_type.subtype.main)
+            if resolved_type.subtype is None:
+                widget = QLabel()
+                widget.setText("null")
+            elif isinstance(resolved_type.subtype, list):
+                primary = resolved_type.subtype[0].main
+                secondary = resolved_type.subtype[1].main
+                if primary is not None:
+                    widget = BadgerListEditor(primary, secondary)
+                else:
+                    widget = QLabel()
+                    widget.setText("null")
+            else:
+                primary = resolved_type.subtype
+                if primary.main is not None:
+                    widget = BadgerListEditor(primary.main)
+                else:
+                    widget = QLabel()
+                    widget.setText("null")
         elif resolved_type.main is float:
             widget = QDoubleSpinBox()
             widget.setRange(float("-inf"), float("inf"))
-            widget.setValue(default if default is not None else 0.0)
+            widget.setValue(float(default) if default is not None else 0.0)
         elif resolved_type.main is int:
             widget = QSpinBox()
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
-            widget.setValue(default if default is not None else 0)
+            widget.setValue(int(default) if default is not None else 0)
         elif resolved_type.main is bool:
             widget = QCheckBox()
-            widget.setChecked(default if default is not None else False)
+            widget.setChecked(bool(default) if default is not None else False)
         else:
             widget = QLineEdit()
-            if resolved_type.main == NoneType or default is None:
+            if default is None:
                 widget.setText("null")
             else:
                 widget.setText(str(default))
+
         widget.setProperty("badger_nullable", resolved_type.nullable)
         return widget
 
 
-def _qt_widget_to_yaml_value(widget):
+def _qt_widget_to_yaml_value(widget: Any) -> str | None:
     if isinstance(widget, QTreeWidget):
         return None
     elif isinstance(widget, BadgerPydanticConfigureButton):
@@ -179,18 +240,26 @@ def _qt_widget_to_yaml_value(widget):
     return "null"
 
 
-def _qt_widgets_to_yaml_recurse(table: QTreeWidget, item: QTreeWidgetItem):
-    out = "{"
+def _qt_widgets_to_yaml_recurse(
+    table: QTreeWidget, item: QTreeWidgetItem | None
+) -> str:
+    out: str = "{"
+    if item is None:
+        return out + "}"
     for i in range(item.childCount()):
-        out += '"' + item.child(i).text(0) + '":'
-        widget = table.itemWidget(item.child(i), 1)
+        tree_item = item.child(i)
+        if tree_item is None:
+            continue
+        out += f'"{tree_item.text(0)}":'
+        widget = table.itemWidget(tree_item, 1)
         if widget is None:
-            if item.child(i).childCount() > 0:
-                out += _qt_widgets_to_yaml_recurse(table, item.child(i))
+            if tree_item.childCount() > 0:
+                out += _qt_widgets_to_yaml_recurse(table, tree_item)
             else:
                 out += "null"
         else:
-            out += _qt_widget_to_yaml_value(widget)
+            value = _qt_widget_to_yaml_value(widget)
+            out += value if value is not None else "null"
         if i < item.childCount() - 1:
             out += ","
     out += "}"
@@ -198,7 +267,12 @@ def _qt_widgets_to_yaml_recurse(table: QTreeWidget, item: QTreeWidgetItem):
 
 
 class BadgerListItem(QWidget):
-    def __init__(self, widget_type, widget_type2, parent=None):
+    def __init__(
+        self,
+        widget_type: type[Any],
+        widget_type2: type[Any] | None = None,
+        parent: QWidget | None = None,
+    ):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -211,7 +285,7 @@ class BadgerListItem(QWidget):
         remove_button = QPushButton("Remove")
         remove_button.setFixedWidth(85)
         remove_button.clicked.connect(self.remove)
-        layout.addWidget(remove_button, Qt.AlignRight)
+        layout.addWidget(remove_button, Qt.AlignmentFlag.AlignRight)
 
     def remove(self):
         self.setParent(None)
@@ -219,7 +293,12 @@ class BadgerListItem(QWidget):
 
 
 class BadgerListEditor(QWidget):
-    def __init__(self, widget_type, widget_type2=None, parent=None):
+    def __init__(
+        self,
+        widget_type: type[Any],
+        widget_type2: type[Any] | None = None,
+        parent: QWidget | None = None,
+    ):
         super().__init__(parent)
         self.widget_type = widget_type
         self.widget_type2 = widget_type2
@@ -232,7 +311,7 @@ class BadgerListEditor(QWidget):
         scroll.setWidgetResizable(True)
         self.list_container = QWidget()
         self.list_layout = QVBoxLayout(self.list_container)
-        self.list_layout.setAlignment(Qt.AlignTop)
+        self.list_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(self.list_container)
         layout.addWidget(scroll)
 
@@ -245,7 +324,7 @@ class BadgerListEditor(QWidget):
         self.list_layout.addWidget(BadgerListItem(self.widget_type, self.widget_type2))
 
     def get_parameters(self):
-        child_values = [
+        child_values: list[str | None] = [
             _qt_widget_to_yaml_value(child.parameter_value)
             for child in self.list_container.children()
             if isinstance(child, BadgerListItem)
@@ -254,7 +333,8 @@ class BadgerListEditor(QWidget):
             return "null"
 
         if self.widget_type2 is None:
-            return "[" + ",".join(child_values) + "]"
+            values = [value for value in child_values if value is not None]
+            return "[" + ",".join(values) + "]"
         else:
             child_values2 = [
                 _qt_widget_to_yaml_value(child.parameter_value2)
@@ -271,7 +351,7 @@ class BadgerListEditor(QWidget):
 
 
 class BadgerPydanticConfigureDialog(QDialog):
-    def __init__(self, model_type, parent=None):
+    def __init__(self, model_type: type[Any], parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle("Badger - " + model_type.__name__)
         self.setMinimumSize(450, 450)
@@ -280,7 +360,7 @@ class BadgerPydanticConfigureDialog(QDialog):
         self.editor.set_params_from_class(model_type)
         layout.addWidget(self.editor)
         self.buttons = QDialogButtonBox(self)
-        self.buttons.setStandardButtons(QDialogButtonBox.Ok)
+        self.buttons.setStandardButtons(QDialogButtonBox.StandardButton.Ok)
         self.buttons.accepted.connect(self.hide)
         layout.addWidget(self.buttons)
 
@@ -289,7 +369,12 @@ class BadgerPydanticConfigureDialog(QDialog):
 
 
 class BadgerPydanticConfigureButton(QWidget):
-    def __init__(self, model_type, dialog_type, parent=None):
+    def __init__(
+        self,
+        model_type: type[Any],
+        dialog_type: type[BadgerPydanticConfigureDialog],
+        parent: QWidget | None = None,
+    ):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 4, 0, 4)
@@ -304,11 +389,15 @@ class BadgerPydanticConfigureButton(QWidget):
         self.dialog.show()
 
     def get_parameters(self):
-        return self.dialog.get_parameters()
+        return self.dialog.editor.get_parameters()
 
 
 class BadgerPydanticEditor(QTreeWidget):
-    def __init__(self, parent=None, recursive=(not USE_CONFIGURE_BUTTONS)):
+    def __init__(
+        self,
+        parent: QTreeWidget | None = None,
+        recursive: bool = (not USE_CONFIGURE_BUTTONS),
+    ):
         QTreeWidget.__init__(self, parent)
         self.setColumnCount(2)
         self.setColumnWidth(0, 200)
@@ -336,16 +425,19 @@ class BadgerPydanticEditor(QTreeWidget):
             if widget is None:
                 resolved = BadgerResolvedType.resolve(field_info.annotation)
                 if self.recursive:
-                    self._set_params_recurse(child, resolved.main.model_fields)
+                    if resolved.main is not None:
+                        self._set_params_recurse(child, resolved.main.model_fields)
+                    else:
+                        raise ValueError("Unable to resolve model fields")
                 continue
             self.setItemWidget(child, 1, widget)
 
-    def set_params_from_class(self, pydantic_class):
+    def set_params_from_class(self, pydantic_class: type[Any]):
         self.clear()
         self.model_class = pydantic_class
         self._set_params_recurse(None, self.model_class.model_fields)
 
-    def set_params_from_generator(self, generator_name, defaults: dict[str, Any]):
+    def set_params_from_generator(self, generator_name: str, defaults: dict[str, Any]):
         self.clear()
         self.model_class = get_generator(generator_name)
         # print(defaults)
