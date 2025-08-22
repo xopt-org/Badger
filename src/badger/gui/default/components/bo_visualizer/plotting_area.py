@@ -100,8 +100,10 @@ class PlottingArea(QWidget):
                         canvas = FigureCanvas(fig)
                         toolbar = NavigationToolbar(canvas, self)
 
+                        variables = parameters["variables"]
+
                         handler = MatplotlibInteractionHandler(
-                            canvas, parameters, routine, update_extension
+                            canvas, parameters, routine, variables, update_extension
                         )
                         handler.connect_events()
 
