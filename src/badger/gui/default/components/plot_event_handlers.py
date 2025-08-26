@@ -14,6 +14,7 @@ import logging
 
 from matplotlib.collections import PathCollection
 from matplotlib.text import Annotation
+import pandas as pd
 from pyparsing import Callable
 
 logger = logging.getLogger(__name__)
@@ -36,10 +37,12 @@ class MatplotlibInteractionHandler:
         canvas: FigureCanvasQTAgg,
         parameters: ConfigurableOptions,
         routine: Routine,
+        variables: list[str],
         callback: Callable[[Routine, bool], None],
     ):
         self.canvas = canvas
         self.parameters = parameters
+        self.variables = variables
         self.routine = routine
         self.callback = callback
         self.moving = False
@@ -134,7 +137,10 @@ class MatplotlibInteractionHandler:
         axis = event.inaxes
         logger.debug(f"Click in axes: {axis.get_title()}")
         clicked = False
-        if event.button == MouseButton.MIDDLE:
+        if event.button == MouseButton.LEFT:
+            # self.clear_tooltips()
+            logger.debug("Left click detected")
+        elif event.button == MouseButton.MIDDLE:
             logger.debug("Middle click detected")
             # Reset reference points back to the initial values
 
@@ -267,10 +273,10 @@ class MatplotlibInteractionHandler:
 
         ax = mouseevent.inaxes
 
-        click_location_x = mouseevent.x
-        click_location_y = mouseevent.y
+        click_location_x = mouseevent.x - ax.bbox.x0
+        click_location_y = mouseevent.y - ax.bbox.y0
 
-        figure_dimensions = event.canvas.get_width_height()
+        figure_dimensions = ax.bbox.width, ax.bbox.height
 
         self.region = (
             1 if (figure_dimensions[0] / 2 > click_location_x) else -1,
@@ -304,24 +310,38 @@ class MatplotlibInteractionHandler:
             x_column = ax.get_xlabel()
             y_column = ax.get_ylabel()
 
-            if x_column not in routine_data or y_column not in routine_data:
-                logger.error(
-                    f"Columns {x_column} or {y_column} not found in routine data."
-                )
+            searched_row = pd.Series(dtype=float)
 
-            # Find the true index in the routine data
-            # This is done by finding the row in the routine data that is closest to the picked point
-            true_index = routine_data.loc[  # type: ignore
-                (routine_data[x_column] - point[0]).abs().idxmin()  # type: ignore
-                & (routine_data[y_column] - point[1]).abs().idxmin()
-            ].name
+            if x_column and y_column:
+                # Find the true index in the routine data
+                # This is done by finding the row in the routine data that is closest to the picked point
+                searched_row = routine_data.loc[  # type: ignore
+                    (routine_data[x_column] - point[0]).abs().idxmin()  # type: ignore
+                    & (routine_data[y_column] - point[1]).abs().idxmin()
+                ]
+            elif x_column:
+                searched_row = routine_data.loc[
+                    (routine_data[x_column] - point[0]).abs().idxmin()
+                ]
+            elif y_column:
+                searched_row = routine_data.loc[
+                    (routine_data[y_column] - point[1]).abs().idxmin()
+                ]
+
+            true_index = searched_row.name
 
             if true_index is None:
                 logger.error("True index not found in routine data.")
                 true_index = "Index not found"
 
+            variable_key_value = {var: searched_row[var] for var in self.variables}
+
+            variable_text = "\n".join(
+                f"{k}: {to_precision_float(v)}" for k, v in variable_key_value.items()
+            )
+
             # Create tooltip text
-            tooltip_text = f"Index: {true_index}\n({to_precision_float(point[0])}, {to_precision_float(point[1])})"
+            tooltip_text = f"Index: {true_index}\n{variable_text}"
 
             self.clear_tooltips()  # Clear existing tooltips before adding a new one
 

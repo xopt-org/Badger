@@ -77,6 +77,7 @@ class PlottingArea(QWidget):
                 tuple[Figure, Axes],
                 visualize_generator_model(
                     generator,
+                    interactive=True,
                     variable_names=variable_names,
                     reference_point=reference_point,
                     show_acquisition=show_acquisition,
@@ -99,8 +100,10 @@ class PlottingArea(QWidget):
                         canvas = FigureCanvas(fig)
                         toolbar = NavigationToolbar(canvas, self)
 
+                        variables = parameters["variables"]
+
                         handler = MatplotlibInteractionHandler(
-                            canvas, parameters, routine, update_extension
+                            canvas, parameters, routine, variables, update_extension
                         )
                         handler.connect_events()
 
