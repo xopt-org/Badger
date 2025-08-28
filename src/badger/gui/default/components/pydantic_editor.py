@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from types import NoneType
-from typing import Optional, Any, get_origin, Union, get_args
+from typing import Optional, Any, cast, get_origin, Union, get_args
 
 import yaml
 from PyQt5.QtCore import Qt
@@ -24,7 +24,12 @@ from PyQt5.QtWidgets import (
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from xopt.generators import get_generator
+from xopt.generators.bayesian.expected_improvement import ExpectedImprovementGenerator
 from xopt.generators.bayesian.turbo import TurboController
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Removes sub-parameters from the main editor view by default
 USE_CONFIGURE_BUTTONS = False
@@ -445,7 +450,29 @@ class BadgerPydanticEditor(QTreeWidget):
             None,
             {k: v for k, v in self.model_class.model_fields.items() if k in defaults},
         )
-        # print(self.get_parameters())
+        # Update parameters with defaults from generator class
+        if issubclass(self.model_class, ExpectedImprovementGenerator):
+            turbo_controller_options = (
+                self.model_class.get_compatible_turbo_controllers()
+            )
+            if turbo_controller_options:
+                logger.debug(
+                    f"Using turbo controller options: {turbo_controller_options}"
+                )
+                turbo_controller_items = self.findItems(
+                    "turbo_controller",
+                    Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive,
+                )
+                if turbo_controller_items:
+                    turbo_controller_item = turbo_controller_items[0]
+                    widget = self.itemWidget(turbo_controller_item, 1)
+                    if widget and isinstance(widget, QComboBox):
+                        widget = cast(QComboBox, widget)
+                        widget.clear()
+                        option_names = [
+                            option.__name__ for option in turbo_controller_options
+                        ]
+                        widget.addItems(option_names)
 
     def get_parameters(self):
         # print(_qt_widgets_to_yaml_recurse(self, self.invisibleRootItem()))
