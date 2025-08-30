@@ -158,7 +158,7 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     for algo in algos:
         if algo in all_generator_names["bo"]:
             qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
-            params = editor.routine_page.generator_box.edit.toPlainText()
+            params = editor.routine_page.generator_box.edit.get_parameters()
             params_dict = yaml.safe_load(params)
 
             if "gp_constructor" in params_dict:
@@ -192,7 +192,7 @@ def test_default_turbo_in_bo(qtbot):
     for algo in algos:
         if algo in all_generator_names["bo"]:
             qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
-            params = editor.routine_page.generator_box.edit.toPlainText()
+            params = editor.routine_page.generator_box.edit.get_parameters()
             params_dict = yaml.safe_load(params)
 
             assert params_dict["turbo_controller"] == "optimize"
