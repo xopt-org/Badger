@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from types import NoneType
-from typing import Optional, Any, cast, get_origin, Union, get_args
+from typing import Optional, Any, get_origin, Union, get_args
 
+from pydantic_core import PydanticUndefined
 import yaml
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -19,6 +20,7 @@ from PyQt5.QtWidgets import (
     QDialogButtonBox,
     QScrollArea,
     QHBoxLayout,
+    QStackedWidget,
     QComboBox,
 )
 from pydantic import BaseModel
@@ -141,9 +143,9 @@ class BadgerResolvedType:
             widget.setText("null")
         elif issubclass(resolved_type.main, BaseModel):
             if issubclass(resolved_type.main, TurboController):
-                widget = QComboBox()
-                widget.addItem("optimize")
-                widget.addItem("safety")
+                widget = BadgerPydanticEditor()
+                # widget.addItem("optimize")
+                # widget.addItem("safety")
             elif recursive:
                 return None  # None means add children to the tree
             else:
@@ -459,20 +461,47 @@ class BadgerPydanticEditor(QTreeWidget):
                 logger.debug(
                     f"Using turbo controller options: {turbo_controller_options}"
                 )
+
                 turbo_controller_items = self.findItems(
-                    "turbo_controller",
-                    Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive,
+                    "turbo_controller", Qt.MatchFlag.MatchExactly
                 )
                 if turbo_controller_items:
                     turbo_controller_item = turbo_controller_items[0]
                     widget = self.itemWidget(turbo_controller_item, 1)
                     if widget and isinstance(widget, QComboBox):
-                        widget = cast(QComboBox, widget)
-                        widget.clear()
                         option_names = [
                             option.__name__ for option in turbo_controller_options
                         ]
-                        widget.addItems(option_names)
+
+                        simple_widget = QComboBox()
+                        simple_widget.addItems(option_names)
+
+                        # Create detailed widget from default pydantic params
+                        detailed_widget = BadgerResolvedType.resolve_qt(
+                            annotation=turbo_controller_options[0],
+                            recursive=True,
+                        )
+
+                        toggle_widget = ToggleDetailWidget(
+                            simple_widget, detailed_widget
+                        )
+                        self.setItemWidget(turbo_controller_item, 1, toggle_widget)
+
+                    # defaults = self.get_defaults_from_type(SafetyTurboController)
+
+                    # logger.debug(f"Using turbo controller defaults: {defaults}")
+
+    @staticmethod
+    def get_defaults_from_type(pydantic_class: type[Any]):
+        if not issubclass(pydantic_class, BaseModel):
+            raise ValueError("Provided class is not a Pydantic model")
+        defaults: dict[str, Any] = {}
+        for field_name, field_info in pydantic_class.model_fields.items():
+            if field_info.default is not PydanticUndefined:
+                defaults[field_name] = field_info.default
+            elif field_info.default_factory is not None:
+                defaults[field_name] = field_info.default_factory()
+        return defaults
 
     def get_parameters(self):
         # print(_qt_widgets_to_yaml_recurse(self, self.invisibleRootItem()))
@@ -482,3 +511,43 @@ class BadgerPydanticEditor(QTreeWidget):
         if self.model_class is None:
             return True
         return self.model_class.model_validate(yaml.safe_load(self.get_parameters()))
+
+
+class ToggleDetailWidget(QWidget):
+    def __init__(
+        self,
+        simple_widget: QWidget,
+        detailed_widget: QWidget,
+        parent: QWidget | None = None,
+    ):
+        super().__init__(parent)
+        self.is_detailed = False
+
+        self.stack = QStackedWidget()
+        self.simple_widget = simple_widget
+        self.detailed_widget = detailed_widget
+
+        self.stack.addWidget(simple_widget)
+        self.stack.addWidget(detailed_widget)
+        self.stack.setCurrentIndex(0)
+
+        self.button = QPushButton("Show More")
+        self.button.clicked.connect(self.swapLayout)
+
+        self.initLayout()
+
+    def initLayout(self):
+        layout = QHBoxLayout()
+        layout.addWidget(self.stack)
+        layout.addWidget(self.button)
+        self.setLayout(layout)
+
+    def swapLayout(self):
+        if self.is_detailed:
+            self.stack.setCurrentIndex(0)
+            self.button.setText("Show More")
+            self.is_detailed = False
+        else:
+            self.stack.setCurrentIndex(1)
+            self.button.setText("Show Less")
+            self.is_detailed = True
