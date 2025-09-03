@@ -58,7 +58,7 @@ class PlottingArea(QWidget):
         show_feasibility: bool,
         n_grid: int,
         requires_rebuild: bool = False,
-        interval: int = 100,  # Interval in milliseconds
+        interval: int = 500,  # Interval in milliseconds
     ):
         logger.debug("Updating plot in PlottingArea")
 

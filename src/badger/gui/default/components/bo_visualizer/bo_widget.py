@@ -71,12 +71,7 @@ class BOPlotWidget(AnalysisWidget):
     def create_ui(self) -> None:
         self.ui_components = UIComponents(self.parameters)
 
-        number_of_variables = len(self.parameters["variables"])
-        if number_of_variables < 2:
-            logger.warning("Less than 2 variables selected")
-            self.ui_components.y_axis_checkbox.setChecked(False)
-            self.ui_components.y_axis_combo.setEnabled(False)
-            self.parameters["include_variable_2"] = False
+        self.ui_components.restrict_selection_variables(self.parameters)
 
         self.plotting_area = PlottingArea()
 
@@ -359,7 +354,7 @@ class BOPlotWidget(AnalysisWidget):
     def update_plots(
         self,
         requires_rebuild: bool = False,
-        interval: int = 100,
+        interval: int = 500,
     ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
 
