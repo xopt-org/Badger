@@ -70,6 +70,14 @@ class BOPlotWidget(AnalysisWidget):
 
     def create_ui(self) -> None:
         self.ui_components = UIComponents(self.parameters)
+
+        number_of_variables = len(self.parameters["variables"])
+        if number_of_variables < 2:
+            logger.warning("Less than 2 variables selected")
+            self.ui_components.y_axis_checkbox.setChecked(False)
+            self.ui_components.y_axis_combo.setEnabled(False)
+            self.parameters["include_variable_2"] = False
+
         self.plotting_area = PlottingArea()
 
         main_layout = QHBoxLayout(self)
@@ -109,6 +117,8 @@ class BOPlotWidget(AnalysisWidget):
         self.ui_components.initialize_ui_components(
             self.parameters,
         )
+
+        self.ui_components.restrict_selection_variables(self.parameters)
 
     def setup_connections(self) -> None:
         self.ui_components.update_button.clicked.connect(
@@ -293,7 +303,7 @@ class BOPlotWidget(AnalysisWidget):
         self.ui_components.y_axis_combo.setCurrentIndex(self.parameters["variable_2"])
 
         if previous_selected_options != current_selected_options:
-            logger.debug("Selected variables for plotting:", self.selected_variables)
+            logger.debug(f"Selected variables for plotting: {self.selected_variables}")
             # Update the reference point table based on the selected variables
             if self.ui_components.reference_table is not None:
                 with BlockSignalsContext(
@@ -349,18 +359,20 @@ class BOPlotWidget(AnalysisWidget):
     def update_plots(
         self,
         requires_rebuild: bool = False,
-        interval: int = 1000,
+        interval: int = 100,
     ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
 
+        variable_1 = self.parameters["variables"][self.parameters["variable_1"]]
+
         selected_variables = [
-            self.parameters["variables"][self.parameters["variable_1"]],
+            variable_1,
         ]
 
         if self.ui_components.y_axis_checkbox.isChecked():
-            selected_variables.append(
-                self.parameters["variables"][self.parameters["variable_2"]]
-            )
+            variable_2 = self.parameters["variables"][self.parameters["variable_2"]]
+
+            selected_variables.append(variable_2)
 
         n_grid_value = self.ui_components.n_grid.value()
 
