@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from types import NoneType
 from typing import Optional, Any, get_origin, Union, get_args
+from inspect import isclass
 
 from pydantic_core import PydanticUndefined
 import yaml
@@ -26,7 +27,7 @@ from PyQt5.QtWidgets import (
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from xopt.generators import get_generator
-from xopt.generators.bayesian.expected_improvement import ExpectedImprovementGenerator
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
 
 import logging
@@ -55,6 +56,8 @@ class BadgerResolvedType:
         ]
         for r in resolved:
             if r.main is None:
+                continue
+            if not isclass(r.main):
                 continue
             if issubclass(r.main, BaseModel):
                 return r
@@ -143,9 +146,8 @@ class BadgerResolvedType:
             widget.setText("null")
         elif issubclass(resolved_type.main, BaseModel):
             if issubclass(resolved_type.main, TurboController):
-                widget = BadgerPydanticEditor()
-                # widget.addItem("optimize")
-                # widget.addItem("safety")
+                # Return empty QComboBox for later replacement
+                widget = QComboBox()
             elif recursive:
                 return None  # None means add children to the tree
             else:
@@ -418,6 +420,7 @@ class BadgerPydanticEditor(QTreeWidget):
     ):
         for field_name, field_info in fields.items():
             child = QTreeWidgetItem([field_name, ""])
+
             if parent is None:
                 self.addTopLevelItem(child)
             else:
@@ -438,11 +441,62 @@ class BadgerPydanticEditor(QTreeWidget):
                         raise ValueError("Unable to resolve model fields")
                 continue
             self.setItemWidget(child, 1, widget)
+            self.resizeColumnToContents(0)
 
     def set_params_from_class(self, pydantic_class: type[Any]):
         self.clear()
         self.model_class = pydantic_class
         self._set_params_recurse(None, self.model_class.model_fields)
+
+    def create_turbo_controller_widget(self, model_class: type[BayesianGenerator]):
+        turbo_controller_options = model_class.get_compatible_turbo_controllers()
+        if not turbo_controller_options:
+            raise ValueError("No compatible turbo controllers found")
+
+        if len(turbo_controller_options) == 0:
+            raise ValueError("No compatible turbo controllers found")
+
+        logger.debug(f"Using turbo controller options: {turbo_controller_options}")
+
+        turbo_controller_items = self.findItems(
+            "turbo_controller", Qt.MatchFlag.MatchExactly
+        )
+
+        if len(turbo_controller_items) == 0:
+            raise ValueError("No compatible turbo controller item found in tree")
+
+        # Get first turbo controller item
+        turbo_controller_item = turbo_controller_items[0]
+
+        widget = self.itemWidget(turbo_controller_item, 1)
+
+        if widget is None:
+            widget = QWidget()
+            self.setItemWidget(turbo_controller_item, 1, widget)
+
+        option_names = [option.__name__ for option in turbo_controller_options]
+
+        simple_widget = QComboBox()
+        simple_widget.addItems(option_names)
+
+        # Create detailed widget from default pydantic params
+        detailed_widget = BadgerPydanticEditor()
+
+        detailed_widget.set_params_from_class(turbo_controller_options[0])
+
+        # simple_widget.currentIndexChanged.connect(
+        #     lambda: self.create_detailed_widget_signal()
+        # )
+
+        toggle_widget = ToggleDetailWidget(simple_widget, detailed_widget)
+        self.setItemWidget(turbo_controller_item, 1, toggle_widget)
+
+    @staticmethod
+    def create_detailed_widget_signal(
+        index: int, detailed_widget: "BadgerPydanticEditor"
+    ):
+        # Logic to create detailed widget signal
+        pass
 
     def set_params_from_generator(self, generator_name: str, defaults: dict[str, Any]):
         self.clear()
@@ -453,43 +507,8 @@ class BadgerPydanticEditor(QTreeWidget):
             {k: v for k, v in self.model_class.model_fields.items() if k in defaults},
         )
         # Update parameters with defaults from generator class
-        if issubclass(self.model_class, ExpectedImprovementGenerator):
-            turbo_controller_options = (
-                self.model_class.get_compatible_turbo_controllers()
-            )
-            if turbo_controller_options:
-                logger.debug(
-                    f"Using turbo controller options: {turbo_controller_options}"
-                )
-
-                turbo_controller_items = self.findItems(
-                    "turbo_controller", Qt.MatchFlag.MatchExactly
-                )
-                if turbo_controller_items:
-                    turbo_controller_item = turbo_controller_items[0]
-                    widget = self.itemWidget(turbo_controller_item, 1)
-                    if widget and isinstance(widget, QComboBox):
-                        option_names = [
-                            option.__name__ for option in turbo_controller_options
-                        ]
-
-                        simple_widget = QComboBox()
-                        simple_widget.addItems(option_names)
-
-                        # Create detailed widget from default pydantic params
-                        detailed_widget = BadgerResolvedType.resolve_qt(
-                            annotation=turbo_controller_options[0],
-                            recursive=True,
-                        )
-
-                        toggle_widget = ToggleDetailWidget(
-                            simple_widget, detailed_widget
-                        )
-                        self.setItemWidget(turbo_controller_item, 1, toggle_widget)
-
-                    # defaults = self.get_defaults_from_type(SafetyTurboController)
-
-                    # logger.debug(f"Using turbo controller defaults: {defaults}")
+        if self.model_class.model_fields.get("turbo_controller") is not None:
+            self.create_turbo_controller_widget(self.model_class)
 
     @staticmethod
     def get_defaults_from_type(pydantic_class: type[Any]):
@@ -529,18 +548,19 @@ class ToggleDetailWidget(QWidget):
 
         self.stack.addWidget(simple_widget)
         self.stack.addWidget(detailed_widget)
-        self.stack.setCurrentIndex(0)
 
         self.button = QPushButton("Show More")
-        self.button.clicked.connect(self.swapLayout)
+        self.button.clicked.connect(lambda: self.swapLayout())
 
         self.initLayout()
 
     def initLayout(self):
-        layout = QHBoxLayout()
+        layout = QVBoxLayout()
         layout.addWidget(self.stack)
         layout.addWidget(self.button)
         self.setLayout(layout)
+
+        self.stack.setCurrentIndex(0)
 
     def swapLayout(self):
         if self.is_detailed:
@@ -551,3 +571,10 @@ class ToggleDetailWidget(QWidget):
             self.stack.setCurrentIndex(1)
             self.button.setText("Show Less")
             self.is_detailed = True
+
+        # self.refreshSize()
+
+    def refreshSize(self):
+        active_widget = self.stack.currentWidget()
+        if active_widget:
+            self.resize(active_widget.maximumSize())
