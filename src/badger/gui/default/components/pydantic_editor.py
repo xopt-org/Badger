@@ -429,7 +429,6 @@ class BadgerListEditor(QWidget):
         widget_type2: type[Any] | None = None,
         parent: QWidget | None = None,
     ):
-
         super().__init__(parent)
         self.widget_type = widget_type
         self.widget_type2 = widget_type2
@@ -492,7 +491,6 @@ class BadgerPydanticEditor(QTreeWidget):
         self,
         parent: QTreeWidget | None = None,
     ):
-
         QTreeWidget.__init__(self, parent)
         self.setColumnCount(2)
         self.setColumnWidth(0, 200)
