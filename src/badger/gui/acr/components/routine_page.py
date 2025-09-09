@@ -1,3 +1,4 @@
+from typing import Any
 import warnings
 import traceback
 import copy
@@ -56,7 +57,6 @@ from badger.routine import Routine
 from badger.settings import init_settings
 from datetime import datetime
 from badger.utils import (
-    get_yaml_string,
     load_config,
     strtobool,
     get_badger_version,
@@ -324,7 +324,7 @@ class BadgerRoutinePage(QWidget):
             print(f"Error loading template: {e}")
             return
 
-    def set_options_from_template(self, template_dict: dict):
+    def set_options_from_template(self, template_dict: dict[str, Any]):
         """
         Fills in routine_page GUI with relevant info from template_dict
         dictionary
@@ -346,7 +346,7 @@ class BadgerRoutinePage(QWidget):
                 "initial_point_actions"
             ]  # should be type: add_curr
             critical_constraint_names = template_dict["critical_constraint_names"]
-            env_params = template_dict["environment"]["params"]
+            env_params: dict[str, Any] = template_dict["environment"]["params"]
         except KeyError as e:
             QMessageBox.warning(self, "Error", f"Missing key in template: {e}")
             return
@@ -382,7 +382,7 @@ class BadgerRoutinePage(QWidget):
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
-            self.env_box.edit.setPlainText(get_yaml_string(env_params))
+            self.env_box.edit.set_params_from_dict(env_params)
         else:
             raise BadgerEnvNotFoundError(
                 f"Template environment {env_name} not found in Badger environments"
@@ -576,7 +576,7 @@ class BadgerRoutinePage(QWidget):
             | generator_config,
             "environment": {
                 "name": self.env_box.cb.currentText(),
-                "params": load_config(self.env_box.edit.toPlainText()),
+                "params": load_config(self.env_box.edit.get_parameters()),
             },
             "vrange_limit_options": self.ratio_var_ranges,
             "vrange_hard_limit": self.var_hard_limit,
@@ -720,7 +720,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.cb.setCurrentIndex(idx_env)
         env_params = routine.environment.model_dump()
         del env_params["interface"]
-        self.env_box.edit.setPlainText(get_yaml_string(env_params))
+        self.env_box.edit.set_params_from_dict(env_params)
 
         # Config the vocs panel
         variables = routine.vocs.variable_names
@@ -960,7 +960,7 @@ class BadgerRoutinePage(QWidget):
         self.refresh_params_generator()
 
     def create_env(self):
-        env_params = load_config(self.env_box.edit.toPlainText())
+        env_params = load_config(self.env_box.edit.get_parameters())
         try:
             intf_name = self.configs["interface"][0]
         except KeyError:
@@ -1002,7 +1002,7 @@ class BadgerRoutinePage(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))
 
-    def select_env(self, i):
+    def select_env(self, i: int):
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1012,7 +1012,7 @@ class BadgerRoutinePage(QWidget):
             self.archive_search.close()
 
         if i == -1:
-            self.env_box.edit.setPlainText("")
+            self.env_box.edit.clear()
             self.env_box.edit_var.clear()
             self.env_box.var_table.update_variables(None)
             self.configs = None
@@ -1024,7 +1024,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.update_stylesheets()
             return
 
-        name = self.envs[i]
+        name: str = self.envs[i]
         try:
             env, configs = get_env(name)
             self.configs = configs
@@ -1047,7 +1047,7 @@ class BadgerRoutinePage(QWidget):
             self.routine = None
             return QMessageBox.critical(self, "Error!", traceback.format_exc())
 
-        self.env_box.edit.setPlainText(get_yaml_string(configs["params"]))
+        self.env_box.edit.set_params_from_dict(configs["params"])
 
         # Get and save vars to combine with additional vars added on the fly
         vars_env = self.vars_env = configs["variables"]
@@ -1285,7 +1285,7 @@ class BadgerRoutinePage(QWidget):
 
     def add_var(self):
         # TODO: Use a cached env
-        env_params = load_config(self.env_box.edit.toPlainText())
+        env_params = load_config(self.env_box.edit.get_parameters())
         try:
             intf_name = self.configs["interface"][0]
         except KeyError:
@@ -1685,7 +1685,7 @@ class BadgerRoutinePage(QWidget):
                         turbo_config["center_x"] = None
 
         # Environment
-        env_params = load_config(self.env_box.edit.toPlainText())
+        env_params = load_config(self.env_box.edit.get_parameters())
 
         # VOCS
         vocs, critical_constraints = self._compose_vocs()

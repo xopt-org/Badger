@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QWidget,
-    QPlainTextEdit,
     QLineEdit,
 )
 from PyQt5.QtWidgets import (
@@ -18,6 +17,7 @@ from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QRegExp, QPropertyAnimation
 
 from badger.gui.default.components.collapsible_box import CollapsibleBox
+from badger.gui.default.components.pydantic_editor import BadgerPydanticEditor
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
@@ -177,7 +177,7 @@ class BadgerEnvBox(QWidget):
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
-        self.edit = edit = QPlainTextEdit()
+        self.edit = edit = BadgerPydanticEditor()
         # edit.setMinimumHeight(480)
         if ENV_PARAMS_BTN:
             vbox.addWidget(edit)
@@ -481,7 +481,7 @@ class BadgerEnvBox(QWidget):
         self.btn_params.toggled.connect(self.toggle_params)
         self.animation.finished.connect(self.animation_finished)
 
-    def toggle_params(self, checked):
+    def toggle_params(self, checked: bool):
         if not checked:
             self.animation.setStartValue(self.edit.sizeHint().height())
             self.animation.setEndValue(0)

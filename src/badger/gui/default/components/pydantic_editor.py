@@ -6,6 +6,7 @@ from typing import (
     Any,
     Sequence,
     TypeVar,
+    cast,
     get_origin,
     Union,
     get_args,
@@ -31,7 +32,7 @@ from PyQt5.QtWidgets import (
     QStackedWidget,
     QComboBox,
 )
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from xopt.generator import Generator
 from xopt.generators import get_generator
@@ -531,6 +532,21 @@ class BadgerPydanticEditor(QTreeWidget):
         self.clear()
         self.model_class = pydantic_class
         self._set_params_recurse(None, self.model_class.model_fields, None, False)
+        self.validate()
+
+    def set_params_from_dict(self, params: dict[str, Any]):
+        self.clear()
+        field_definitions: dict[str, tuple[type, FieldInfo]] = {
+            k: (type(v), Field()) for k, v in params.items()
+        }  # type: ignore
+        if field_definitions == {}:
+            logger.warning("No fields found in params dictionary")
+            return
+        self.model_class = cast(
+            type[BaseModel],
+            create_model("DynamicModel", **field_definitions),  # type: ignore
+        )
+        self._set_params_recurse(None, self.model_class.model_fields, params, False)
         self.validate()
 
     def create_turbo_controller_widget(self, model_class: type[BayesianGenerator]):
