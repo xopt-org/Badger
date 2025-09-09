@@ -1,6 +1,15 @@
 from dataclasses import dataclass
 from types import NoneType
-from typing import Optional, Any, get_origin, Union, get_args
+from typing import (
+    Callable,
+    Optional,
+    Any,
+    Sequence,
+    TypeVar,
+    get_origin,
+    Union,
+    get_args,
+)
 from inspect import isclass
 
 from pydantic_core import PydanticUndefined
@@ -37,26 +46,14 @@ logger = logging.getLogger(__name__)
 # Removes sub-parameters from the main editor view by default
 USE_CONFIGURE_BUTTONS = False
 
+T = TypeVar("T")
 
-def convert_to_float(value: Any) -> float:
+
+def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
     try:
-        return float(value)
+        return type(value)
     except ValueError:
-        raise ValueError(f"Cannot convert {value} to float")
-
-
-def convert_to_int(value: Any) -> int:
-    try:
-        return int(value)
-    except ValueError:
-        raise ValueError(f"Cannot convert {value} to int")
-
-
-def convert_to_bool(value: Any) -> bool:
-    try:
-        return bool(value)
-    except ValueError:
-        raise ValueError(f"Cannot convert {value} to bool")
+        raise ValueError(f"Cannot convert {value} to {type}")
 
 
 def _set_value_for_basic_widget(
@@ -66,11 +63,11 @@ def _set_value_for_basic_widget(
     if isinstance(widget, QLabel) or isinstance(widget, QLineEdit):
         widget.setText("null" if value is None else str(value))
     elif isinstance(widget, QDoubleSpinBox):
-        widget.setValue(convert_to_float(value))
+        widget.setValue(convert_to_type(value, float))
     elif isinstance(widget, QSpinBox):
-        widget.setValue(convert_to_int(value))
+        widget.setValue(convert_to_type(value, int))
     elif isinstance(widget, QCheckBox):
-        widget.setChecked(bool(value))
+        widget.setChecked(convert_to_type(value, bool))
 
 
 @dataclass
@@ -184,63 +181,9 @@ class BadgerResolvedType:
                 # Return empty QComboBox for later replacement
                 widget = QComboBox()
 
-                # types = [
-                #     OptimizeTurboController,
-                #     SafetyTurboController,
-                #     EntropyTurboController,
-                # ]
-                # widget = QComboBox()
-                # for i in range(len(types)):
-                #     widget.addItem(
-                #         types[i].model_fields["name"].default, types[i].model_fields
-                #     )
-                # if editor_info is not None:
-
-                #     def callback(i):
-                #         editor_info[0].repopulate_child(
-                #             editor_info[1],
-                #             {
-                #                 key: value
-                #                 for key, value in widget.itemData(i).items()
-                #                 if key != "name" and key != "vocs"
-                #             },
-                #             {
-                #                 key: value
-                #                 for key, value in widget.itemData(i).items()
-                #                 if key == "name"
-                #             },
-                #         )
-
-                #     widget.currentIndexChanged.connect(callback)
-                #     callback(0)
             elif issubclass(resolved_type.main, NumericalOptimizer):
-                # hack: replace this?
+                # Return empty QComboBox for later replacement
                 widget = QComboBox()
-                # types = [LBFGSOptimizer, GridOptimizer]
-                # # widget = QComboBox()
-                # for i in range(len(types)):
-                #     widget.addItem(
-                #         types[i].model_fields["name"].default, types[i].model_fields
-                #     )
-                # if editor_info is not None:
-
-                #     def callback(i):
-                #         editor_info[0].repopulate_child(
-                #             editor_info[1],
-                #             {
-                #                 key: value
-                #                 for key, value in widget.itemData(i).items()
-                #                 if key != "name"
-                #             },
-                #             {
-                #                 key: value
-                #                 for key, value in widget.itemData(i).items()
-                #                 if key == "name"
-                #             },
-                #         )
-
-                #     widget.currentIndexChanged.connect(callback)
-                #     callback(0)
             else:
                 return None
 
@@ -294,7 +237,7 @@ class BadgerResolvedType:
         elif resolved_type.main is float:
             widget = QDoubleSpinBox()
             widget.setRange(float("-inf"), float("inf"))
-            value = convert_to_float(default) if default is not None else 0.0
+            value = convert_to_type(default, float) if default is not None else 0.0
             widget.setValue(value)
 
             if editor_info is not None:
@@ -302,14 +245,14 @@ class BadgerResolvedType:
         elif resolved_type.main is int:
             widget = QSpinBox()
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
-            value = convert_to_int(default) if default is not None else 0
+            value = convert_to_type(default, int) if default is not None else 0
             widget.setValue(value)
 
             if editor_info is not None:
                 widget.valueChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is bool:
             widget = QCheckBox()
-            value = convert_to_bool(default) if default is not None else False
+            value = convert_to_type(default, bool) if default is not None else False
             widget.setChecked(value)
 
             if editor_info is not None:
@@ -519,7 +462,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 default=(
                     field_info.default
                     if defaults is None
-                    or not isinstance(defaults, dict)
+                    # or not isinstance(defaults, dict)
                     or defaults[field_name] is None
                     or field_name not in defaults
                     else defaults[field_name]
@@ -531,11 +474,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 self._set_params_recurse(
                     child,
                     resolved.main.model_fields,
-                    (
-                        None
-                        if defaults is None or not isinstance(defaults, dict)
-                        else defaults[field_name]
-                    ),
+                    (None if defaults is None else defaults[field_name]),
                     hidden,
                 )
             else:
@@ -544,13 +483,49 @@ class BadgerPydanticEditor(QTreeWidget):
             child.setHidden(hidden)
 
     def repopulate_child(
-        self, child: QTreeWidgetItem, model_fields, model_fields_hidden
+        self,
+        child: QTreeWidgetItem,
+        model_fields: dict[str, FieldInfo],
+        model_fields_hidden: dict[str, FieldInfo],
     ) -> None:
         for cc in child.takeChildren():
             del cc
         self._set_params_recurse(child, model_fields, None, False)
         self._set_params_recurse(child, model_fields_hidden, None, True)
         child.setExpanded(True)
+
+    def handle_repopulate(
+        self,
+        widget: QComboBox,
+        tree_widget_item: QTreeWidgetItem,
+        types: Sequence[type[BaseModel]],
+    ):
+        for i in range(len(types)):
+            widget.addItem(types[i].model_fields["name"].default, types[i].model_fields)
+
+        widget.currentIndexChanged.connect(
+            lambda: self.on_repopulate_changed(widget, tree_widget_item)
+        )
+        widget.currentIndexChanged.emit(0)
+
+    def on_repopulate_changed(
+        self,
+        widget: QComboBox,
+        tree_widget_item: QTreeWidgetItem,
+    ):
+        self.repopulate_child(
+            tree_widget_item,
+            {
+                key: value
+                for key, value in widget.itemData(widget.currentIndex()).items()
+                if key != "name" and key != "vocs"
+            },
+            {
+                key: value
+                for key, value in widget.itemData(widget.currentIndex()).items()
+                if key == "name"
+            },
+        )
 
     def set_params_from_class(self, pydantic_class: type[Any]):
         self.clear()
@@ -584,22 +559,9 @@ class BadgerPydanticEditor(QTreeWidget):
             widget = QWidget()
             self.setItemWidget(turbo_controller_item, 1, widget)
 
-        option_names = [option.__name__ for option in turbo_controller_options]
+        # option_names = [option.__name__ for option in turbo_controller_options]
 
-        simple_widget = QComboBox()
-        simple_widget.addItems(option_names)
-
-        # Create detailed widget from default pydantic params
-        # detailed_widget = BadgerPydanticEditor()
-
-        # detailed_widget.set_params_from_class(turbo_controller_options[0])
-
-        # simple_widget.currentIndexChanged.connect(
-        #     lambda: self.create_detailed_widget_signal()
-        # )
-
-        # toggle_widget = ToggleDetailWidget(simple_widget, detailed_widget)
-        self.setItemWidget(turbo_controller_item, 1, simple_widget)
+        self.handle_repopulate(widget, turbo_controller_item, turbo_controller_options)
 
     @staticmethod
     def create_detailed_widget_signal(
@@ -646,17 +608,10 @@ class BadgerPydanticEditor(QTreeWidget):
         if widget is None:
             widget = QWidget()
             self.setItemWidget(numerical_optimizer_item, 1, widget)
-        option_names = [option.__name__ for option in numerical_optimizer_options]
-        simple_widget = QComboBox()
-        simple_widget.addItems(option_names)
-        # Create detailed widget from default pydantic params
-        # detailed_widget = BadgerPydanticEditor()
-        # detailed_widget.set_params_from_class(numerical_optimizer_options[0])
-        # simple_widget.currentIndexChanged.connect(
-        #     lambda: self.create_detailed_widget_signal()
-        # )
-        # toggle_widget = ToggleDetailWidget(simple_widget, detailed_widget)
-        self.setItemWidget(numerical_optimizer_item, 1, simple_widget)
+
+        self.handle_repopulate(
+            widget, numerical_optimizer_item, numerical_optimizer_options
+        )
 
     @staticmethod
     def get_defaults_from_type(pydantic_class: type[Any]):
@@ -667,13 +622,13 @@ class BadgerPydanticEditor(QTreeWidget):
             if field_info.default is not PydanticUndefined:
                 defaults[field_name] = field_info.default
             elif field_info.default_factory is not None:
-                defaults[field_name] = field_info.default_factory()
+                defaults[field_name] = field_info.default_factory()  # type: ignore
         return defaults
 
     def get_parameters(self) -> str:
         return _qt_widgets_to_yaml_recurse(self, self.invisibleRootItem())
 
-    def find_widget_at_path(self, path: tuple[int | str]) -> QWidget | None:
+    def find_widget_at_path(self, path: tuple[int | str, ...]) -> QWidget | None:
         if len(path) == 0:
             return None
 
@@ -684,6 +639,8 @@ class BadgerPydanticEditor(QTreeWidget):
         for level, target_name in enumerate(path):
             found_item: QTreeWidgetItem | None = None
             for item in current_items:
+                if item is None:
+                    continue
                 if item.text(0) == target_name:
                     found_item = item
                     break
@@ -747,9 +704,11 @@ class BadgerPydanticEditor(QTreeWidget):
                 else:
                     error_widget = self
                 if error_widget:
-                    error_widget.setStyleSheet(
-                        f"{error_widget.metaObject().className()} {{ border: 2px dashed red; }}"
-                    )
+                    meta_object = error_widget.metaObject()
+                    if meta_object is not None:
+                        error_widget.setStyleSheet(
+                            f"{meta_object.className()} {{ border: 2px dashed red; }}"
+                        )
 
             return False
 
