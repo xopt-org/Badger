@@ -43,8 +43,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Removes sub-parameters from the main editor view by default
-USE_CONFIGURE_BUTTONS = False
 
 T = TypeVar("T")
 
