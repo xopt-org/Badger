@@ -1,4 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QLayout
 
 
 stylesheet_toolbutton = """
@@ -103,7 +104,7 @@ class CollapsibleBox(QtWidgets.QWidget):
         if isinstance(p, ScrollArea):
             p.resized.emit()
 
-    def setContentLayout(self, layout):
+    def setContentLayout(self, layout: QLayout):
         lay = self.content_area.layout()
         del lay
         self.content_area.setLayout(layout)

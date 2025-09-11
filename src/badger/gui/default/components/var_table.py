@@ -190,7 +190,7 @@ class VariableTable(QTableWidget):
 
         self.update_variables(self.variables, 3)
 
-    def toggle_show_mode(self, checked_only):
+    def toggle_show_mode(self, checked_only: bool):
         self.checked_only = checked_only
         if checked_only:
             self.show_checked_only()
