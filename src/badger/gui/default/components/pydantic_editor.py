@@ -29,7 +29,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QScrollArea,
     QHBoxLayout,
-    QStackedWidget,
     QComboBox,
 )
 from pydantic import BaseModel, Field, ValidationError, create_model
@@ -226,7 +225,22 @@ class BadgerResolvedType:
             if editor_info is not None:
                 widget.listChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is list:
-            widget = BadgerListEditor(resolved_type.subtype.main)
+            if resolved_type.subtype is None:
+                raise ValueError("List type must have a subtype")
+            if isinstance(resolved_type.subtype, list):
+                primary_type = resolved_type.subtype[0]
+                secondary_type = (
+                    resolved_type.subtype[1] if len(resolved_type.subtype) > 1 else None
+                )
+
+            else:
+                primary_type = resolved_type.subtype
+                secondary_type = None
+            if primary_type.main is None:
+                raise ValueError("List subtype must be a basic type")
+            widget = BadgerListEditor(
+                primary_type.main, secondary_type.main if secondary_type else None
+            )
 
             if default is not None and isinstance(default, list):
                 for v in default:
@@ -472,6 +486,11 @@ class BadgerPydanticEditor(QTreeWidget):
             )
             if widget is None:
                 resolved = BadgerResolvedType.resolve(field_info.annotation)
+                if resolved.main is None or not issubclass(resolved.main, BaseModel):
+                    raise ValueError(
+                        f"Could not resolve type for field {field_name} with annotation {field_info.annotation}"
+                    )
+
                 self._set_params_recurse(
                     child,
                     resolved.main.model_fields,
@@ -564,7 +583,10 @@ class BadgerPydanticEditor(QTreeWidget):
         )
 
         if len(turbo_controller_items) == 0:
-            raise ValueError("No compatible turbo controller item found in tree")
+            logger.warning(
+                "Generator has turbo controller set but no compatible turbo controller item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
+            )
+            return
 
         # Get first turbo controller item
         turbo_controller_item = turbo_controller_items[0]
@@ -617,7 +639,10 @@ class BadgerPydanticEditor(QTreeWidget):
             "numerical_optimizer", Qt.MatchFlag.MatchExactly
         )
         if len(numerical_optimizer_items) == 0:
-            raise ValueError("No compatible numerical optimizer item found in tree")
+            logger.warning(
+                "Generator has numerical optimizer set but no compatible numerical optimizer item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
+            )
+            return
         # Get first numerical optimizer item
         numerical_optimizer_item = numerical_optimizer_items[0]
         widget = self.itemWidget(numerical_optimizer_item, 1)
@@ -727,51 +752,3 @@ class BadgerPydanticEditor(QTreeWidget):
                         )
 
             return False
-
-
-class ToggleDetailWidget(QWidget):
-    def __init__(
-        self,
-        simple_widget: QWidget,
-        detailed_widget: QWidget,
-        parent: QWidget | None = None,
-    ):
-        super().__init__(parent)
-        self.is_detailed = False
-
-        self.stack = QStackedWidget()
-        self.simple_widget = simple_widget
-        self.detailed_widget = detailed_widget
-
-        self.stack.addWidget(simple_widget)
-        self.stack.addWidget(detailed_widget)
-
-        self.button = QPushButton("Show More")
-        self.button.clicked.connect(lambda: self.swapLayout())
-
-        self.initLayout()
-
-    def initLayout(self):
-        layout = QVBoxLayout()
-        layout.addWidget(self.stack)
-        layout.addWidget(self.button)
-        self.setLayout(layout)
-
-        self.stack.setCurrentIndex(0)
-
-    def swapLayout(self):
-        if self.is_detailed:
-            self.stack.setCurrentIndex(0)
-            self.button.setText("Show More")
-            self.is_detailed = False
-        else:
-            self.stack.setCurrentIndex(1)
-            self.button.setText("Show Less")
-            self.is_detailed = True
-
-        # self.refreshSize()
-
-    def refreshSize(self):
-        active_widget = self.stack.currentWidget()
-        if active_widget:
-            self.resize(active_widget.maximumSize())
