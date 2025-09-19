@@ -1,5 +1,7 @@
 # Main Interface Layout
 
+![Layout](pics/layout.png)
+
 ## Bottom Region
 
 ### Status Bar
