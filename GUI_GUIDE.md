@@ -20,12 +20,8 @@
 ### Right Top Section - Left: Routine Configuration
 
 #### Routine Editor
-- **File**: `src/badger/gui/acr/components/routine_editor.py`
-- **Description**: Legacy code, can be removed
-
-#### Routine Page (Sub-component)
 - **File**: `src/badger/gui/acr/components/routine_page.py`
-- **Screenshot**: ![Routine Page Tabs](images/routine_page.png)
+- **Screenshot**: ![Routine Editor](images/routine_page.png)
 - **Description**: Comprehensive optimization configuration interface with multiple tabs (metadata, env + vocs, algorithm) containing all optimization settings.
 
 #### Environment + Variables/Objectives/Constraints/Observables Tab Details
