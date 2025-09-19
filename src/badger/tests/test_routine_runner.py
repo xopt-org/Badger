@@ -127,14 +127,12 @@ class TestRoutineRunner:
         # Create and save a routine
         editor = window.home_page.routine_editor
         # Turn off relative to current
-        editor.routine_page.env_box.relative_to_curr.setChecked(False)
+        editor.env_box.relative_to_curr.setChecked(False)
         # Config env and vocs
-        qtbot.keyClicks(editor.routine_page.env_box.cb, "test")
-        editor.routine_page.env_box.var_table.cellWidget(0, 0).setChecked(True)
-        editor.routine_page.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-        qtbot.mouseClick(
-            editor.routine_page.env_box.btn_add_curr, Qt.MouseButton.LeftButton
-        )
+        qtbot.keyClicks(editor.env_box.cb, "test")
+        editor.env_box.var_table.cellWidget(0, 0).setChecked(True)
+        editor.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+        qtbot.mouseClick(editor.env_box.btn_add_curr, Qt.MouseButton.LeftButton)
 
         # Run the routine
         monitor = window.home_page.run_monitor

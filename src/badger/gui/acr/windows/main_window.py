@@ -96,10 +96,10 @@ class BadgerMainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         if (
-            hasattr(self.home_page.routine_editor.routine_page, "archive_search")
-            and self.home_page.routine_editor.routine_page.archive_search.isVisible()
+            hasattr(self.home_page.routine_editor, "archive_search")
+            and self.home_page.routine_editor.archive_search.isVisible()
         ):
-            self.home_page.routine_editor.routine_page.archive_search.close()
+            self.home_page.routine_editor.archive_search.close()
 
         monitor = self.home_page.run_monitor
         if not monitor.running:
