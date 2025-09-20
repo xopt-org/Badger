@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Optional
+from typing import Any, Optional
 
 from PyQt5.QtWidgets import QDialog
 from badger.gui.default.components.extension_utilities import HandledException
@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 class AnalysisWidget(QDialog):
     routine: Routine
-    generator = None
-    parameters = None
+    generator: Generator
+    parameters: dict[str, Any] = {}
     df_length: float = float("inf")
     initialized: bool = False
     routine_identifier: str = ""
@@ -26,9 +26,12 @@ class AnalysisWidget(QDialog):
 
     def __init__(
         self,
+        routine: Routine,
         parent: Optional[QDialog] = None,
     ):
         super().__init__(parent=parent)
+        self.routine = routine
+        self.generator = routine.generator
 
     @abstractmethod
     def initialize_widget(self) -> None:
@@ -36,7 +39,7 @@ class AnalysisWidget(QDialog):
         Initialize the widget.
         This method should be implemented to set up the initial state of the widget.
         """
-        pass
+        raise NotImplementedError("initialize_widget method not implemented")
 
     @abstractmethod
     def requires_reinitialization(self) -> bool:
@@ -44,7 +47,7 @@ class AnalysisWidget(QDialog):
         Check if the widget requires reinitialization.
         This is used to determine if the widget needs to be reset or updated.
         """
-        pass
+        raise NotImplementedError("requires_reinitialization method not implemented")
 
     @abstractmethod
     def update_plots(self, requires_rebuild: bool, interval: int) -> None:
@@ -52,7 +55,7 @@ class AnalysisWidget(QDialog):
         Update the plots in the widget.
         This method should be implemented to update the visualizations based on the current data.
         """
-        pass
+        raise NotImplementedError("update_plots method not implemented")
 
     @abstractmethod
     def setup_connections(self) -> None:
@@ -60,7 +63,7 @@ class AnalysisWidget(QDialog):
         Set up the connections for the widget.
         This method should be implemented to connect signals and slots for the widget.
         """
-        pass
+        raise NotImplementedError("setup_connections method not implemented")
 
     @abstractmethod
     def isValidRoutine(self, routine: Routine) -> None:
@@ -68,7 +71,7 @@ class AnalysisWidget(QDialog):
         Check if the routine is valid for this widget.
         This method should be implemented to validate the routine before updating the widget.
         """
-        pass
+        raise NotImplementedError("isValidRoutine method not implemented")
 
     def update_routine(self, routine: Routine, generator_type: type[Generator]) -> None:
         self.routine = routine

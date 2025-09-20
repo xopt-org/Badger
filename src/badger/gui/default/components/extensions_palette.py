@@ -110,14 +110,16 @@ class ExtensionsPalette(QMainWindow):
         Open the ParetoFrontViewer extension.
 
         """
-        self.add_child_window_to_monitor(ParetoFrontViewer())
+        self.add_child_window_to_monitor(
+            ParetoFrontViewer(routine=self.run_monitor.routine)
+        )
 
     def add_bo_visualizer(self):
         """
         Open the BOVisualizer extension.
 
         """
-        self.add_child_window_to_monitor(BOVisualizer())
+        self.add_child_window_to_monitor(BOVisualizer(routine=self.run_monitor.routine))
 
     def add_child_window_to_monitor(self, child_window: AnalysisExtension):
         """
