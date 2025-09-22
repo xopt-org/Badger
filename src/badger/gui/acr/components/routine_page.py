@@ -23,6 +23,7 @@ from xopt.utils import get_local_region
 from pydantic import ValidationError
 
 from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.data_panel import BadgerDataPanel
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
@@ -253,6 +254,10 @@ class BadgerRoutinePage(QWidget):
         # Algo box
         self.generator_box = BadgerAlgoBox(None, self.generators)
         tabs.addTab(self.generator_box, "Algorithm")
+
+        # Data panel
+        self.data_panel = BadgerDataPanel(self)
+        tabs.addTab(self.data_panel, "Data")
 
         tabs.setCurrentIndex(1)  # Show the env box by default
 
@@ -751,7 +756,7 @@ class BadgerRoutinePage(QWidget):
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
 
-        self.env_box.var_table.update_variables(all_variables)
+        self.env_box.var_table.update_variables(variables=all_variables, filtered=2)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.addtl_vars = routine.additional_variables
 
@@ -1691,10 +1696,17 @@ class BadgerRoutinePage(QWidget):
             raise BadgerRoutineError("no objectives selected")
 
         # add data from loaded data table
-        if self.generator_box.data_table.columnCount() > 0:
-            data = get_table_content_as_dict(self.generator_box.data_table)
+        if self.data_panel.use_data and self.data_panel.has_data:
+            data = self.data_panel.get_data_as_dict(info=False)
+
+            # Raise error if loaded data keys do not match selected vocs
+            if set(list(data.keys())) != set(vocs.variable_names + vocs.output_names):
+                raise BadgerRoutineError(
+                    "The following keys loaded into generator data do not match selected VOCS:\n"
+                    + f"{set(list(data.keys())) ^ set(vocs.variable_names + vocs.output_names)}"
+                )
+
             # Add data to generator_params["data"]
-            skipped_keys = []
             if "data" not in generator_params:
                 generator_params["data"] = {}
             for key, val in data.items():
@@ -1703,23 +1715,24 @@ class BadgerRoutinePage(QWidget):
                         generator_params["data"][key].extend(val)
                     else:
                         generator_params["data"][key] = val
-                else:
-                    skipped_keys.append(key)
-                    # print(f"{key} from loaded generator data not in selected VOCS, will not be used in routine")
-                    # else notify user that key/data will not be used.
-                if len(skipped_keys):
-                    dialog = QMessageBox(
-                        text=str(
-                            "The following variables/objectives from loaded generator data were not in selected VOCS:\n"
-                            + f"{skipped_keys}\n"
-                            + "The data for these variables will not be used in the routine!\n"
-                            + "(Click OK to continue)"
-                        ),
-                        parent=self,
-                    )
-                    dialog.setIcon(QMessageBox.Information)
-                    dialog.setWindowTitle("Loaded variables not found in VOCS")
-                    dialog.exec_()
+        
+            dialog = QMessageBox(
+                text=str(
+                    "Data loaded into routine for the following objectives, variables:\n\n"
+                    + f"{list(generator_params['data'].keys())}\n\n"
+                    + "Click OK to continue!"
+                ),
+                parent=self,
+            )
+            dialog.setIcon(QMessageBox.Information)
+            dialog.setWindowTitle("Data added to routine")
+            dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            result = dialog.exec_()
+
+            if result == QMessageBox.Cancel:
+                raise BadgerRoutineError("Routine initialization cancelled by user.")
+
+            generator_params["data"] = pd.DataFrame.from_dict(generator_params["data"])
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
@@ -1803,6 +1816,7 @@ class BadgerRoutinePage(QWidget):
                 else:
                     print(f"Caught warning: {warning.message}")
 
+            self.data_panel.set_routine(routine)
             return routine
 
     def review(self):
