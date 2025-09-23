@@ -369,44 +369,40 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine)
 
     def start_run(self):
-        self.prepare_run()
-        use_generator_data_flag = (
-            self.current_routine.generator.data is not None
-        )  # check if data has been loaded by user
         data_options = {
-            "run_data": False,
-            "init_points": True,
-            "generator_data": use_generator_data_flag,  # boolean value, true if data has been added to table in generator tab
+            "run_data": self.data_panel.use_data,
+            "init_points": self.data_panel.init_points,
+            "generator_data": self.data_panel.use_data,
         }
+
+        if not self.data_panel.has_data:
+            # Check if has_data, otherwise don't try to add empty df
+            self.data_panel.run_data_checkbox.setChecked(False)
+
+        if data_options["run_data"] and self.data_panel.has_data:
+            # If data checkbox selected and there is data to load
+            data_to_load = self.data_panel.get_data()
+            self.prepare_run(
+                data=data_to_load
+            )  # this clears data in the routine/generator
+            self.run_monitor.init_plots(self.current_routine)
+
+            # Add routine and generator data back to the routine
+            self.current_routine.data = data_to_load
+            if self.current_routine.generator.data is None:
+                self.current_routine.generator.data = data_to_load
+
+        else:
+            self.prepare_run()
+
+        if not self.data_panel.use_data:
+            self.data_panel.reset_data_table()
+
         self.run_monitor.start(data_options=data_options)
 
     def start_run_until(self):
         self.prepare_run()
         self.run_monitor.start_until()
-
-    def start_with_data(self, open_dialog=True, data_options: dict = None):
-        try:
-            # store data from the current routine
-            routine_data = self.current_routine.data
-            # store generator data from the current routine
-            routine_generator = self.current_routine.generator
-            self.prepare_run(
-                data=routine_data
-            )  # this clears data in the routine/generator
-            self.run_monitor.init_plots(self.current_routine)
-            # Add routine and generator data back to the routine
-            self.current_routine.data = routine_data
-            self.current_routine.generator.data = routine_generator.data
-            if open_dialog:
-                self.run_monitor.start_with_data()
-            else:
-                self.run_monitor.start(data_options=data_options)
-        except AttributeError:
-            raise BadgerRoutineError("Unable to run with data: No data in routine!")
-        # except KeyError as e:
-        #    raise BadgerRoutineError(
-        #        f"Unable to run with data: {e} not found in routine!"
-        #    )
 
     def new_run(self):
         self.cover_page()
