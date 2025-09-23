@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QTableWidget,
+    QFileDialog,
 )
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
@@ -17,10 +18,9 @@ from badger.archive import (
     get_runs,
     load_run,
 )
-from badger.gui.default.components.data_table import (
-    update_table,
-)
 from badger.gui.acr.components.history_navigator import HistoryNavigator
+from badger.settings import init_settings
+from badger.errors import BadgerRoutineError
 
 stylesheet_run = """
 QPushButton:hover:pressed
@@ -45,7 +45,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
     previewing its data, and loading the data into the application.
     """
 
-    def __init__(self, parent, data_table=None):
+    def __init__(self, parent, data_table=None, on_set=None):
         """
         Initialize the dialog.
 
@@ -61,7 +61,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
 
         self.data_table = data_table
         self.selected_routine = None
-        # self.on_set = on_set # function from parent to call when loading data -> check for var compatibility
+        self.on_set = on_set  # function from parent to call when loading data
 
         self.init_ui()
         self.config_logic()
@@ -70,6 +70,9 @@ class BadgerLoadDataFromRunDialog(QDialog):
         """
         Initialize the user interface.
         """
+        config_singleton = init_settings()
+        self.BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
+
         self.setWindowTitle("Load Data from Run")
         self.setMinimumWidth(400)
 
@@ -119,10 +122,13 @@ class BadgerLoadDataFromRunDialog(QDialog):
         button_set = QWidget()
         hbox_set = QHBoxLayout(button_set)
         hbox_set.setContentsMargins(0, 0, 0, 0)
+        self.btn_from_file = QPushButton("Open File")
         self.btn_cancel = QPushButton("Cancel")
         self.btn_load = QPushButton("Load")
+        self.btn_from_file.setFixedSize(96, 24)
         self.btn_cancel.setFixedSize(96, 24)
         self.btn_load.setFixedSize(96, 24)
+        hbox_set.addWidget(self.btn_from_file)
         hbox_set.addStretch()
         hbox_set.addWidget(self.btn_cancel)
         hbox_set.addWidget(self.btn_load)
@@ -131,12 +137,17 @@ class BadgerLoadDataFromRunDialog(QDialog):
         vbox.addWidget(content_widget)
         vbox.addWidget(button_set)
 
-    def preview_run(self):
+    def preview_run(self, routine=None):
         """
         Add data to plot to preview the selected run.
         """
         # load data from selected run
-        self.selected_routine = routine = self.load_data()
+        if routine:
+            self.selected_routine = routine
+        else:
+            self.selected_routine = routine = self.load_data(
+                get_base_run_filename(self.history_browser.currentText())
+            )
 
         if routine is None:
             return
@@ -162,26 +173,42 @@ class BadgerLoadDataFromRunDialog(QDialog):
     def config_logic(self):
         self.btn_cancel.clicked.connect(self.cancel_changes)
         self.btn_load.clicked.connect(self.select_run)
+        self.btn_from_file.clicked.connect(self.load_from_file)
 
     def select_run(self):
         """
         Update the data table with variable and objective data from the selected routine
         """
-        update_table(
-            self.data_table,
-            self.selected_routine.generator.data,
-            self.selected_routine.vocs,
-        )
+        self.on_set(self.selected_routine)
         self.close()
 
-    def load_data(self):
+    def load_from_file(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load Data from File",
+            "~",
+            "YAML Files (*.yaml *.yml);;All Files (*)",
+            options=options,
+        )
+
+        if not file_path:
+            return
+
+        try:
+            routine = load_run(file_path)
+            self.preview_run(routine)
+        except Exception as e:
+            raise BadgerRoutineError(f"{e}")
+
+    def load_data(self, run_filename: str):
         """
         Load data from the selected run.
 
         Returns:
             Optional[Routine]: The loaded routine or None if loading fails.
         """
-        run_filename = get_base_run_filename(self.history_browser.currentText())
         if not run_filename:
             return
         try:
@@ -276,10 +303,6 @@ class BadgerLoadDataFromRunDialog(QDialog):
                 curves[name].setData(data[name].to_numpy(dtype=np.double))
 
     def cancel_changes(self):
-        self.close()
-
-    def run(self):
-        print("dialog run")
         self.close()
 
     def closeEvent(self, event):
