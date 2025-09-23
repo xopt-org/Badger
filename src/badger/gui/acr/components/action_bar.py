@@ -160,13 +160,8 @@ class BadgerActionBar(QWidget):
         run_action.setIcon(self.icon_play)
         self.run_until_action = run_until_action = QAction("Run until", self)
         run_until_action.setIcon(self.icon_play)
-        self.run_with_data_action = run_with_data_action = QAction(
-            "Run with data", self
-        )
-        run_with_data_action.setIcon(self.icon_play)
         menu.addAction(run_action)
         menu.addAction(run_until_action)
-        menu.addAction(run_with_data_action)
 
         # Set the menu as the run button's dropdown menu
         self.btn_stop.setMenu(menu)
@@ -209,7 +204,6 @@ class BadgerActionBar(QWidget):
         self.btn_ctrl.clicked.connect(self.ctrl_routine)
         self.run_action.triggered.connect(self.set_run_action)
         self.run_until_action.triggered.connect(self.set_run_until_action)
-        self.run_with_data_action.triggered.connect(self.set_run_with_data_action)
         self.btn_open_extensions_palette.clicked.connect(self.open_extensions_palette)
 
     def lock(self):
@@ -246,8 +240,6 @@ class BadgerActionBar(QWidget):
         self.run_action.setIcon(self.icon_play)
         self.run_until_action.setText("Run until")
         self.run_until_action.setIcon(self.icon_play)
-        self.run_with_data_action.setText("Run with data")
-        self.run_with_data_action.setIcon(self.icon_play)
         # self.btn_stop.setToolTip('')
         self.btn_stop.setDisabled(False)
 
@@ -275,8 +267,6 @@ class BadgerActionBar(QWidget):
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText("Stop")
         self.run_until_action.setIcon(self.icon_stop)
-        self.run_with_data_action.setText("Stop")
-        self.run_with_data_action.setIcon(self.icon_stop)
         self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
 
@@ -297,16 +287,6 @@ class BadgerActionBar(QWidget):
 
         if self.run_until_action.text() == "Run until":
             self.sig_start_until.emit()
-        else:
-            self.btn_stop.setDisabled(True)
-            self.sig_stop.emit()
-
-    def set_run_with_data_action(self):
-        if self.btn_stop.defaultAction() is not self.run_with_data_action:
-            self.btn_stop.setDefaultAction(self.run_with_data_action)
-
-        if self.run_with_data_action.text() == "Run with data":
-            self.sig_start_with_data.emit()
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
