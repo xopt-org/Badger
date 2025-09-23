@@ -50,7 +50,7 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 
 class BOPlotWidget(AnalysisWidget):
     generator: BayesianGenerator  # type: ignore
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS  # type: ignore
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()  # type: ignore
 
     def __init__(
         self,
@@ -68,7 +68,22 @@ class BOPlotWidget(AnalysisWidget):
         self.setMinimumSize(1250, 720)
 
     def isValidRoutine(self, routine: Routine) -> None:
-        pass
+        variables = routine.vocs.variable_names
+        if len(variables) < 1:
+            raise HandledException(
+                ValueError,
+                "BO Visualizer requires at least one variable in the VOCS",
+            )
+        if len(routine.vocs.objective_names) < 1:
+            raise HandledException(
+                ValueError,
+                "BO Visualizer requires at least one objective in the VOCS",
+            )
+        if not isinstance(routine.generator, BayesianGenerator):
+            raise HandledException(
+                ValueError,
+                "BO Visualizer requires a BayesianGenerator",
+            )
 
     def create_ui(self) -> None:
         self.ui_components = UIComponents(self.parameters)
@@ -96,6 +111,10 @@ class BOPlotWidget(AnalysisWidget):
 
         variable_names = self.routine.vocs.variable_names
         self.parameters["variables"] = variable_names
+
+        if len(variable_names) < 2:
+            self.parameters["include_variable_2"] = False
+            self.parameters["variable_2"] = -1
 
         vocs_variables = cast(
             dict[str, tuple[float, float]],
@@ -220,6 +239,7 @@ class BOPlotWidget(AnalysisWidget):
         """
         logger.debug("Resetting components of BOPlotWidget")
         self.ui_components.best_point_display.setText("")
+        self.parameters = DEFAULT_PARAMETERS.copy()  # type: ignore
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -327,9 +347,10 @@ class BOPlotWidget(AnalysisWidget):
             self.ui_components.x_axis_combo.setCurrentIndex(
                 self.parameters["variable_1"]
             )
-            self.ui_components.y_axis_combo.setCurrentIndex(
-                self.parameters["variable_2"]
-            )
+            if self.parameters["variable_2"] >= 0:
+                self.ui_components.y_axis_combo.setCurrentIndex(
+                    self.parameters["variable_2"]
+                )
 
         if previous_selected_options != current_selected_options:
             logger.debug(f"Selected variables for plotting: {self.selected_variables}")
@@ -393,7 +414,10 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Updating plot in BOPlotWidget")
 
         variable_1_index = self.parameters["variable_1"]
-        if variable_1_index > len(self.parameters["variables"]):
+        if (
+            variable_1_index > len(self.parameters["variables"]) - 1
+            or variable_1_index < 0
+        ):
             logger.error("Variable 1 index out of range")
             logger.debug(f"variable_1_index: {variable_1_index}")
             logger.debug(f"len(variables): {len(self.parameters['variables'])}")
@@ -409,7 +433,10 @@ class BOPlotWidget(AnalysisWidget):
 
         if self.ui_components.y_axis_checkbox.isChecked():
             variable_2_index = self.parameters["variable_2"]
-            if variable_2_index > len(self.parameters["variables"]):
+            if (
+                variable_2_index > len(self.parameters["variables"]) - 1
+                or variable_2_index < 0
+            ):
                 logger.error("Variable 2 index out of range")
                 logger.debug(f"variable_2_index: {variable_2_index}")
                 logger.debug(f"len(variables): {len(self.parameters['variables'])}")
