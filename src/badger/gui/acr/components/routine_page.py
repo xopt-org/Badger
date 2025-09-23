@@ -1645,7 +1645,7 @@ class BadgerRoutinePage(QWidget):
         ).exec_()
 
     def _compose_vocs(self) -> (VOCS, list[str]):
-        # Compose the VOCS settings
+        logger.info("Composing VOCS settings.")
         variables = self.env_box.var_table.export_variables()
 
         objectives = {}
@@ -1676,14 +1676,18 @@ class BadgerRoutinePage(QWidget):
                 constants={},
                 observables=observables,
             )
+            logger.info("VOCS composed successfully.")
         except ValidationError as e:
+            logger.error(f"VOCS validation failed: {format_validation_error(e)}")
             raise BadgerRoutineError(
                 f"\n\nVOCS validation failed: {format_validation_error(e)}"
             ) from e
 
+        logger.info(f"VOCS: variables={list(variables.keys())}, objectives={list(objectives.keys())}, constraints={list(constraints.keys())}, observables={observables}, critical_constraints={critical_constraints}")
         return vocs, critical_constraints
 
     def _compose_routine(self) -> Routine:
+        logger.info("Composing routine from GUI state.")
         # Compose the routine
         # Metadata
         name = self.edit_save.text() or self.edit_save.placeholderText()
@@ -1691,14 +1695,17 @@ class BadgerRoutinePage(QWidget):
 
         # General sanity checks
         if self.generator_box.cb.currentIndex() == -1:
+            logger.error("No generator selected.")
             raise BadgerRoutineError("no generator selected")
         if self.env_box.cb.currentIndex() == -1:
+            logger.error("No environment selected.")
             raise BadgerRoutineError("no environment selected")
 
         # Generator
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.toPlainText())
+        logger.debug(f"Generator selected: {generator_name}, params: {generator_params}")
         if generator_name in all_generator_names["bo"]:
             # Patch the BO generators to make sure use_low_noise_prior is False
             if "gp_constructor" not in generator_params:
@@ -1725,12 +1732,16 @@ class BadgerRoutinePage(QWidget):
 
         # Environment
         env_params = load_config(self.env_box.edit.toPlainText())
+        logger.debug(f"Environment selected: {env_name}, params: {env_params}")
 
         # VOCS
         vocs, critical_constraints = self._compose_vocs()
+        logger.debug(f"VOCS composed: variables={list(vocs.variables.keys())}, objectives={list(vocs.objectives.keys())}, constraints={list(vocs.constraints.keys())}")
         if not vocs.variables:
+            logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
         if not vocs.objectives:
+            logger.error("No objectives selected.")
             raise BadgerRoutineError("no objectives selected")
 
         # Initial points
@@ -1740,11 +1751,13 @@ class BadgerRoutinePage(QWidget):
         init_points_df = init_points_df.replace("", pd.NA)
         init_points_df = init_points_df.dropna(subset=init_points_df.columns, how="all")
         if init_points_df.empty:
+            logger.error("No initial points provided.")
             raise BadgerRoutineError(
                 "No initial points provided. Please add at least one initial point"
             )
         contains_na = init_points_df.isna().any().any()
         if contains_na:
+            logger.error("Initial points are not valid, missing values detected.")
             raise BadgerRoutineError(
                 "Initial points are not valid, please fill in the missing values"
             )
@@ -1752,6 +1765,7 @@ class BadgerRoutinePage(QWidget):
         # Script that generates generator params
         if self.generator_box.check_use_script.isChecked():
             script = self.script
+            logger.debug("Using custom script for generator params.")
         else:
             script = None
 
@@ -1760,10 +1774,12 @@ class BadgerRoutinePage(QWidget):
             relative_to_current = True
             vrange_limit_options = self.ratio_var_ranges
             initial_point_actions = self.init_table_actions
+            logger.debug("Routine is set to use relative to current variable ranges.")
         else:
             relative_to_current = False
             vrange_limit_options = None
             initial_point_actions = None
+            logger.debug("Routine is set to use manual variable ranges.")
 
         # Save hard limits no matter relative to current or not
         vrange_hard_limit = self.var_hard_limit
@@ -1772,7 +1788,9 @@ class BadgerRoutinePage(QWidget):
             generator = get_generator_dynamic(generator_name)(
                 vocs=vocs, **generator_params
             )
+            logger.info(f"Generator instance created: {generator_name}")
         except ValidationError as e:
+            logger.error(f"Algorithm validation failed: {format_validation_error(e)}")
             raise BadgerRoutineError(
                 f"\n\nAlgorithm validation failed: {format_validation_error(e)}"
             ) from e
@@ -1806,14 +1824,16 @@ class BadgerRoutinePage(QWidget):
             # Check if any user warnings were caught
             for warning in caught_warnings:
                 if issubclass(warning.category, UserWarning):
+                    logger.warning(f"UserWarning caught: {warning.message}")
                     QMessageBox.warning(
                         self,
                         "Warning!",
                         f"Warning: {warning.message}",
                     )
                 else:
-                    print(f"Caught warning: {warning.message}")
+                    logger.warning(f"Caught warning: {warning.message}")
 
+            logger.info(f"Routine composed successfully: {routine.name}")
             return routine
 
     def review(self):
