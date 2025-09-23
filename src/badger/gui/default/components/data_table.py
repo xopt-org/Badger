@@ -88,7 +88,7 @@ def update_table(table, data=None, vocs=None, info=False):
         columns = data.columns
     else:
         columns = vocs.output_names + vocs.variable_names
-    
+
     _data = data[columns]
 
     m, n = _data.shape

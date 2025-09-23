@@ -1715,7 +1715,7 @@ class BadgerRoutinePage(QWidget):
                         generator_params["data"][key].extend(val)
                     else:
                         generator_params["data"][key] = val
-        
+
             dialog = QMessageBox(
                 text=str(
                     "Data loaded into routine for the following objectives, variables:\n\n"
