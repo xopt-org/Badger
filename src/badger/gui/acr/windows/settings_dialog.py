@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 # from PyQt5.QtCore import QRegExp
 # from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import (
@@ -26,6 +29,7 @@ class BadgerSettingsDialog(QDialog):
     }
 
     def __init__(self, parent):
+        logger.info("Initializing BadgerSettingsDialog.")
         super().__init__(parent)
 
         self.config_singleton = init_settings()
@@ -37,6 +41,7 @@ class BadgerSettingsDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
+        logger.info("Initializing settings dialog UI.")
         self.setWindowTitle("Badger settings")
         self.setMinimumWidth(480)
 
@@ -147,11 +152,13 @@ class BadgerSettingsDialog(QDialog):
         vbox.addWidget(self.btns)
 
     def config_logic(self):
+        logger.info("Configuring logic for settings dialog.")
         # self.cb_theme.currentIndexChanged.connect(self.select_theme)
         self.btns.accepted.connect(self.apply_settings)
         self.btns.rejected.connect(self.restore_settings)
 
     def set_theme(self, theme):
+        logger.info(f"Setting theme: {theme}")
         app = QApplication.instance()
         if theme == "dark":
             app.setStyleSheet(load_stylesheet(palette=DarkPalette))
@@ -161,12 +168,14 @@ class BadgerSettingsDialog(QDialog):
             app.setStyleSheet("")
 
     def select_theme(self, i):
+        logger.info(f"Theme selected: {self.theme_list[i]}")
         theme = self.theme_list[i]
         self.set_theme(theme)
         # Update the internal settings
         self.config_singleton.write_value("BADGER_THEME", theme)
 
     def apply_settings(self):
+        logger.info("Applying settings.")
         self.accept()
         self.config_singleton.write_value(
             "BADGER_PLUGIN_ROOT", self.plugin_root_path.text()
@@ -194,6 +203,7 @@ class BadgerSettingsDialog(QDialog):
         # )
 
     def restore_settings(self):
+        logger.info("Restoring previous settings.")
         # Reset theme if needed
         theme_curr = self.config_singleton.read_value("BADGER_THEME")
         theme_prev = self.settings["BADGER_THEME"]["value"]

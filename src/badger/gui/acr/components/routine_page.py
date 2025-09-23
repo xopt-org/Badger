@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 import warnings
 import traceback
 import copy
@@ -90,6 +93,7 @@ class BadgerRoutinePage(QWidget):
     sig_save_template = pyqtSignal(str)  # template path
 
     def __init__(self):
+        logger.info("Initializing BadgerRoutinePage.")
         super().__init__()
 
         self.generators = list_generators()
@@ -134,6 +138,7 @@ class BadgerRoutinePage(QWidget):
         self.lim_apply_to_vars = 2
 
     def init_ui(self):
+        logger.info("Initializing UI for BadgerRoutinePage.")
         config_singleton = init_settings()
 
         # Set up the layout
@@ -264,6 +269,7 @@ class BadgerRoutinePage(QWidget):
             self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
     def config_logic(self):
+        logger.info("Configuring logic for BadgerRoutinePage.")
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
         self.save_template_button.clicked.connect(self.save_template_yaml)
@@ -292,6 +298,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
 
     def load_template_yaml(self) -> None:
+        logger.info("Loading template YAML.")
         """
         Load data from template .yaml into template_dict dictionary.
         This function expects to be called via an action from
@@ -325,6 +332,9 @@ class BadgerRoutinePage(QWidget):
             return
 
     def set_options_from_template(self, template_dict: dict):
+        logger.info(
+            f"Setting options from template: {template_dict.get('name', 'unknown')}"
+        )
         """
         Fills in routine_page GUI with relevant info from template_dict
         dictionary
@@ -550,6 +560,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
+        logger.info("Generating template dictionary from GUI state.")
         """
         Generate a template dictionary from the current state of the GUI
         """
@@ -622,6 +633,7 @@ class BadgerRoutinePage(QWidget):
         return generator_config
 
     def save_template_yaml(self):
+        logger.info("Saving routine as template YAML.")
         """
         Save the current routine as a template .yaml file
         """
@@ -652,10 +664,13 @@ class BadgerRoutinePage(QWidget):
                     f"Current routine options saved to template: {os.path.basename(template_path)}"
                 )
         except (FileNotFoundError, yaml.YAMLError) as e:
-            print(f"Error saving template: {e}")
+            logging.error(f"Error saving template: {e}")
             return
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):
+        logger.info(
+            f"Refreshing UI for routine: {getattr(routine, 'name', None)} (silent={silent})"
+        )
         self.routine = routine  # save routine for future reference
 
         self.generators = list_generators()
@@ -900,6 +915,9 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.check_use_script.setChecked(not not self.script)
 
     def select_generator(self, i):
+        logger.info(
+            f"Generator selected: {self.generator_box.cb.itemText(i)} (index={i})"
+        )
         # Reset the script
         self.script = ""
         self.generator_box.check_use_script.setChecked(False)
@@ -948,15 +966,18 @@ class BadgerRoutinePage(QWidget):
             self.generator_box.edit.setReadOnly(False)
 
     def edit_script(self):
+        logger.info("Editing script for routine.")
         generator = self.generator_box.cb.currentText()
         dlg = BadgerEditScriptDialog(self, generator, self.script, self.script_updated)
         dlg.exec()
 
     def script_updated(self, text):
+        logger.info("Script updated.")
         self.script = text
         self.refresh_params_generator()
 
     def create_env(self):
+        logger.info("Creating environment instance.")
         env_params = load_config(self.env_box.edit.toPlainText())
         try:
             intf_name = self.configs["interface"][0]
@@ -998,6 +1019,7 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     def select_env(self, i):
+        logger.info(f"Environment selected: {self.env_box.cb.itemText(i)} (index={i})")
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1125,6 +1147,7 @@ class BadgerRoutinePage(QWidget):
         return header_list
 
     def fill_curr_in_init_table(self, record=False):
+        logger.info(f"Filling current values in init table (record={record})")
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
@@ -1157,6 +1180,9 @@ class BadgerRoutinePage(QWidget):
         self.add_rand_config = add_rand_config
 
     def add_rand_in_init_table(self, add_rand_config=None, record=True):
+        logger.info(
+            f"Adding random points in init table (config={add_rand_config}, record={record})"
+        )
         if add_rand_config is None:
             add_rand_config = self.add_rand_config
 
@@ -1237,6 +1263,7 @@ class BadgerRoutinePage(QWidget):
             self.rc_dialog = None
 
     def clear_init_table(self, reset_actions=True):
+        logger.info(f"Clearing init table (reset_actions={reset_actions})")
         table = self.env_box.init_table
         for row in range(table.rowCount()):
             for col in range(table.columnCount()):
@@ -1248,6 +1275,7 @@ class BadgerRoutinePage(QWidget):
             self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
+        logger.info("Adding row to init table.")
         table = self.env_box.init_table
         row_position = table.rowCount()
         table.insertRow(row_position)
@@ -1442,6 +1470,7 @@ class BadgerRoutinePage(QWidget):
         return 0
 
     def update_init_table(self, force=False):
+        logger.info(f"Updating init table (force={force})")
         selected = self.env_box.var_table.selected
         variable_names = [v for v in selected if selected[v]]
         update_init_data_table(self.env_box.init_table, variable_names)

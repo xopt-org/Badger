@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(__name__)
 import os
 from importlib import metadata
 from typing import Dict
@@ -12,6 +15,7 @@ from badger.gui.acr.pages.home_page import BadgerHomePage
 
 class BadgerMainWindow(QMainWindow):
     def __init__(self) -> None:
+        logger.info("Initializing BadgerMainWindow.")
         super().__init__()
         self.thread_list = []
         self.process_manager = ProcessManager()
@@ -21,6 +25,7 @@ class BadgerMainWindow(QMainWindow):
         self.config_logic()
 
     def addSubprocess(self) -> None:
+        logger.info("Adding subprocess to queue.")
         """
         Adds a subprocess to the subprocess queue.
         This method builds the subprocess on a QThread so as to not disrupt the main process.
@@ -40,6 +45,7 @@ class BadgerMainWindow(QMainWindow):
         self.thread.start()
 
     def cleanupThread(self) -> None:
+        logger.info("Cleaning up finished thread.")
         """
         Method to remove threads no longer active from the thread list.
 
@@ -51,6 +57,7 @@ class BadgerMainWindow(QMainWindow):
             self.thread_list.remove(thread)
 
     def storeSubprocess(self, process_with_args: Dict) -> None:
+        logger.info(f"Storing prepared subprocess: {process_with_args}")
         """
         Store the prepared subprocess for later use.
 
@@ -60,6 +67,7 @@ class BadgerMainWindow(QMainWindow):
         self.process_manager.add_to_queue(process_with_args)
 
     def init_ui(self) -> None:
+        logger.info("Initializing UI.")
         version = metadata.version("badger-opt")
         version_xopt = metadata.version("xopt")
         self.setWindowTitle(f"Badger v{version} (Xopt v{version_xopt})")
@@ -85,6 +93,7 @@ class BadgerMainWindow(QMainWindow):
         self.setCentralWidget(self.stacks)
 
     def center(self) -> None:
+        logger.info("Centering main window.")
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
 
@@ -92,9 +101,11 @@ class BadgerMainWindow(QMainWindow):
         self.move(qr.topLeft())
 
     def config_logic(self) -> None:
+        logger.info("Configuring logic.")
         pass
 
     def closeEvent(self, event) -> None:
+        logger.info("Main window close event triggered.")
         if (
             hasattr(self.home_page.routine_editor.routine_page, "archive_search")
             and self.home_page.routine_editor.routine_page.archive_search.isVisible()
