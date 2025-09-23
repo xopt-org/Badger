@@ -1408,6 +1408,7 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
 
     def set_ind_vrange(self, vname, config):
+        logger.info(f"Setting individual variable range for {vname} with config: {config}")
         hard_bounds = [config["lower_bound"], config["upper_bound"]]
         option = {
             "limit_option_idx": config["limit_option_idx"],
@@ -1440,6 +1441,7 @@ class BadgerRoutinePage(QWidget):
             ]
             bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
 
+        logger.info(f"Setting bounds for {vname}: {bounds} (hard bounds: {hard_bounds})")
         # Set the bounds in the table
         self.env_box.var_table.refresh_variable(vname, bounds, hard_bounds)
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
@@ -1451,9 +1453,11 @@ class BadgerRoutinePage(QWidget):
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
 
     def save_limit_option(self, limit_option):
+        logger.info(f"Saving limit option: {limit_option}")
         self.limit_option = limit_option
 
     def add_var_to_list(self, name, lb, ub):
+        logger.info(f"Adding variable to list: {name}, lb={lb}, ub={ub}")
         # Check if already in the list
         ok = False
         try:
@@ -1461,6 +1465,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             ok = True
         if not ok:
+            logger.warning(f"Variable {name} already exists!")
             QMessageBox.warning(
                 self, "Variable already exists!", f"Variable {name} already exists!"
             )
@@ -1480,6 +1485,7 @@ class BadgerRoutinePage(QWidget):
 
         # Auto populate the initial table based on recorded actions
         if not self.init_table_actions:
+            logger.info("No init_table_actions recorded, using default actions.")
             self.init_table_actions = [
                 {"type": "add_curr"},
                 {"type": "add_rand", "config": self.add_rand_config},
@@ -1488,6 +1494,7 @@ class BadgerRoutinePage(QWidget):
         self._fill_init_table()
 
     def calc_auto_bounds(self):
+        logger.info("Calculating auto bounds for selected variables.")
         vname_selected = []
         vrange = {}
 
@@ -1517,12 +1524,14 @@ class BadgerRoutinePage(QWidget):
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
+                logger.info(f"Auto bounds for {name} (full range): {bounds}")
             elif option_idx == 2:
                 delta = limit_option["delta"]
                 hard_bounds = vrange[name]
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
+                logger.info(f"Auto bounds for {name} (delta): {bounds}")
             else:
                 ratio = limit_option["ratio_curr"]
                 hard_bounds = vrange[name]
@@ -1533,16 +1542,16 @@ class BadgerRoutinePage(QWidget):
                 ]
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
+                logger.info(f"Auto bounds for {name} (current ratio): {bounds}")
 
         return vrange
-
     def toggle_relative_to_curr(self, checked, refresh=True):
+        logger.info(f"Toggling relative_to_curr: checked={checked}, refresh={refresh}")
         if checked:
             try:
                 _ = self._compose_vocs()
             except Exception:
-                # Switch to manual mode to allow the user fixing the vocs issue
-                # Schedule the checkbox to be clicked after the event loop finishes
+                logger.warning("Variable range is not valid, switching to manual mode.")
                 QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
                 QMessageBox.warning(
                     self,
@@ -1554,21 +1563,23 @@ class BadgerRoutinePage(QWidget):
             self.env_box.switch_var_panel_style(True)
 
             if refresh and self.env_box.var_table.selected:
+                logger.info("Refreshing auto bounds and initial table.")
                 bounds = self.calc_auto_bounds()
                 self.env_box.var_table.set_bounds(bounds)
                 self.clear_init_table(reset_actions=False)
-                # Auto populate the initial table
                 self.try_populate_init_table()
 
             self.env_box.var_table.lock_bounds()
             self.env_box.init_table.set_uneditable()
         else:
+            logger.info("Switching to manual variable range mode.")
             self.env_box.switch_var_panel_style(False)
 
             self.env_box.var_table.unlock_bounds()
             self.env_box.init_table.set_editable()
 
     def refresh_variables(self):
+        logger.info("Refreshing variables and bounds.")
         variables = self.env_box.var_table.export_variables()
         bounds = self.calc_auto_bounds()
 
@@ -1578,13 +1589,16 @@ class BadgerRoutinePage(QWidget):
                 no_need_to_update = False
                 break
         if no_need_to_update:
+            logger.info("No need to update variable bounds.")
             return
 
+        logger.info("Updating variable bounds and initial table.")
         self.env_box.var_table.set_bounds(bounds)
         self.clear_init_table(reset_actions=False)
         self.try_populate_init_table()
 
     def try_populate_init_table(self):
+        logger.info("Trying to auto-populate initial table.")
         if (
             self.env_box.relative_to_curr.isChecked()
             and self.env_box.var_table.selected
@@ -1592,6 +1606,7 @@ class BadgerRoutinePage(QWidget):
             self.update_init_table()
 
     def handle_pv_added(self):
+        logger.info("Handling PV added event.")
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange()
 
