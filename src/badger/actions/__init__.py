@@ -1,12 +1,9 @@
 from importlib import metadata
 from badger.actions.doctor import check_n_config_paths
 from badger.utils import yprint
-from badger.log import set_log_level
 
 
 def show_info(args):
-    # Change log level for all existed loggers
-    set_log_level(args.log)
     config_path = None
 
     if args.config_filepath:

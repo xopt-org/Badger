@@ -7,6 +7,9 @@ from badger.utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 from badger.errors import BadgerLoadConfigError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Setting(BaseModel):
@@ -46,6 +49,10 @@ class BadgerConfig(BaseModel):
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
         Setting for the archive root directory.
+    BADGER_LOGGING_LEVEL : Setting
+        Setting for the logging level.
+    BADGER_LOGFILE_PATH : Setting
+        Setting for the location of logfile.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
@@ -76,6 +83,18 @@ class BadgerConfig(BaseModel):
         display_name="archive root",
         description="This setting (BADGER_ARCHIVE_ROOT) tells Badger where to archive the historical optimization runs",
         value=None,
+        is_path=True,
+    )
+    BADGER_LOGGING_LEVEL: Setting = Setting(
+        display_name="logging level",
+        description="Logging level for the Badger logger",
+        value="WARNING",
+        is_path=False,
+    )
+    BADGER_LOGFILE_PATH: Setting = Setting(
+        display_name="logfile path",
+        description="Path for the Badger logfile",
+        value="badger.log",
         is_path=True,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
@@ -368,6 +387,7 @@ class ConfigSingleton:
             sub_dict = sub_dict.setdefault(key, {})
         sub_dict[keys[-1]] = value
 
+        logger.info(f"writing to config file, setting: {key} = {value}")
         self.update_and_save_config(updates)
 
     def reset_settings(self) -> None:
