@@ -369,15 +369,15 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine)
 
     def start_run(self):
+        if not self.data_panel.has_data:
+            # Check if has_data, otherwise don't try to add empty df
+            self.data_panel.run_data_checkbox.setChecked(False)
+
         data_options = {
             "run_data": self.data_panel.use_data,
             "init_points": self.data_panel.init_points,
             "generator_data": self.data_panel.use_data,
         }
-
-        if not self.data_panel.has_data:
-            # Check if has_data, otherwise don't try to add empty df
-            self.data_panel.run_data_checkbox.setChecked(False)
 
         if data_options["run_data"] and self.data_panel.has_data:
             # If data checkbox selected and there is data to load
