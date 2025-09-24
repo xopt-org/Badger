@@ -108,8 +108,9 @@ class BadgerDataPanel(QWidget):
         generator_group = QGroupBox("Data Options")
         vbox_generator = QVBoxLayout(generator_group)
         self.run_data_checkbox = QCheckBox("Load displayed data into routine")
-        self.run_data_checkbox.stateChanged.connect(self.add_data_to_routine)
+        self.run_data_checkbox.stateChanged.connect(self.indicate_add_data_to_routine)
         self.init_points_checkbox = QCheckBox("Skip initial point sampling")
+        self.init_points_checkbox.setEnabled(False)
 
         vbox_generator.addWidget(self.run_data_checkbox)
         vbox_generator.addWidget(self.init_points_checkbox)
@@ -141,11 +142,18 @@ class BadgerDataPanel(QWidget):
     def set_routine(self, routine):
         self.selected_routine = routine
 
-    def add_data_to_routine(self):
+    def indicate_add_data_to_routine(self):
+        """
+        This function indicates visually whether the displayed data will be loaded into the routine,
+        by placing a green border around the data table.
+        """
         if self.run_data_checkbox.isChecked():
             self.data_table_widget.setStyleSheet(stylesheet_data)
+            self.init_points_checkbox.setEnabled(True)
         else:
             self.data_table_widget.setStyleSheet(stylesheet_no_data)
+            self.init_points_checkbox.setChecked(False)
+            self.init_points_checkbox.setEnabled(False)
 
     @property
     def use_data(self) -> bool:
