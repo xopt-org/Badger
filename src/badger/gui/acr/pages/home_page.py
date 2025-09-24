@@ -146,6 +146,9 @@ class BadgerHomePage(QWidget):
         self.routine_editor = routine_editor = BadgerRoutineEditor()
         vbox_routine_view.addWidget(routine_editor)
 
+        self.data_panel = self.routine_editor.routine_page.data_panel
+        self.run_table_2 = self.routine_editor.routine_page.data_panel.data_table
+
         # Add action bar
         self.run_action_bar = run_action_bar = BadgerActionBar()
 
@@ -190,6 +193,9 @@ class BadgerHomePage(QWidget):
 
         self.run_table.cellClicked.connect(self.solution_selected)
         self.run_table.itemSelectionChanged.connect(self.table_selection_changed)
+
+        self.run_table_2.cellClicked.connect(self.solution_selected)
+        self.run_table_2.itemSelectionChanged.connect(self.table_selection_changed)
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
@@ -255,6 +261,7 @@ class BadgerHomePage(QWidget):
 
         if i == -1:
             update_table(self.run_table)
+            update_table(self.run_table_2)
             try:
                 self.current_routine.data = None  # reset the data
             except AttributeError:  # current routine is None
@@ -297,6 +304,7 @@ class BadgerHomePage(QWidget):
 
         self.current_routine = routine  # update the current routine
         update_table(self.run_table, routine.sorted_data, routine.vocs)
+        self.data_panel.load_data(routine)
         self.run_monitor.init_plots(routine, run_filename)
         self.routine_editor.set_routine(routine, silent=True)
         self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")
@@ -305,12 +313,14 @@ class BadgerHomePage(QWidget):
 
     def inspect_solution(self, idx):
         self.run_table.selectRow(idx)
+        self.run_table_2.selectRow(idx)
 
     def solution_selected(self, r, c):
         self.run_monitor.jump_to_solution(r)
 
     def table_selection_changed(self):
         indices = self.run_table.selectedIndexes()
+        indices = self.run_table_2.selectedIndexes()
         if len(indices) == 1:  # let other method handles it
             return
 
@@ -359,6 +369,7 @@ class BadgerHomePage(QWidget):
     def start_run(self):
         self.prepare_run()
         self.run_monitor.start()
+        self.data_panel.reset_data_table()
 
     def start_run_until(self):
         self.prepare_run()
@@ -388,6 +399,7 @@ class BadgerHomePage(QWidget):
         cons = list(solution[vocs.constraint_names].to_numpy()[0])
         stas = list(solution[vocs.observable_names].to_numpy()[0])
         add_row(self.run_table, objs + cons + vars + stas)
+        self.data_panel.add_live_data(solution)
 
     def delete_run(self):
         run_name = get_base_run_filename(self.history_browser.currentText())
