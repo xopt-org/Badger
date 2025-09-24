@@ -161,8 +161,7 @@ class BadgerDataPanel(QWidget):
 
     @property
     def init_points(self) -> bool:
-        # Apologies for double negative
-        # init_points_checkbox should be called skip_init_points_checkbox
+        # Apologies for double negative, should probably be called skip_init_points_checkbox
         return not self.init_points_checkbox.isChecked()
 
     @property
@@ -298,7 +297,12 @@ class BadgerDataPanel(QWidget):
             )
 
     def load_data(self, routine):
-        """Load data from routine and update table"""
+        """
+        Load data from routine and update table
+
+        Arguments:
+            routine (Xopt Routine):
+        """
         self.set_routine(routine)
         data = routine.data
 
