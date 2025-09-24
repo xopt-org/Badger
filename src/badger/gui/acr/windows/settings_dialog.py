@@ -95,6 +95,13 @@ class BadgerSettingsDialog(QDialog):
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
 
+        self.logging_level = logging_level = QLabel("Logging level")
+        self.logging_level_setting = logging_level_setting = QLineEdit(
+            self.config_singleton.read_value("BADGER_LOGGING_LEVEL")
+        )
+        grid.addWidget(logging_level, 5, 0)
+        grid.addWidget(logging_level_setting, 5, 1)
+
         # Auto refresh
         # self.auto_refresh = auto_refresh = QLabel("Auto Refresh")
         # self.enable_auto_refresh = enable_auto_refresh = QCheckBox()
@@ -188,6 +195,9 @@ class BadgerSettingsDialog(QDialog):
         )
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
+        )
+        self.config_singleton.write_value(
+            "BADGER_LOGGING_LEVEL", self.logging_level_setting.text()
         )
         # self.config_singleton.write_value(
         #     "AUTO_REFRESH", self.enable_auto_refresh.isChecked()

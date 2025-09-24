@@ -399,7 +399,6 @@ class BadgerHomePage(QWidget):
         self.status_bar.set_summary(info)
 
     def progress(self, solution: DataFrame):
-        logger.info("Progressing solution.")
         vocs = self.current_routine.vocs
         vars = list(solution[vocs.variable_names].to_numpy()[0])
         objs = list(solution[vocs.objective_names].to_numpy()[0])
