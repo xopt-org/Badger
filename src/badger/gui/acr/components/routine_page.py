@@ -61,6 +61,7 @@ from badger.utils import (
     strtobool,
     get_badger_version,
     get_xopt_version,
+    ts_float_to_str,
 )
 
 LABEL_WIDTH = 96
@@ -1738,6 +1739,7 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
+                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
                 # Xopt part
                 vocs=vocs,
                 generator=generator,
