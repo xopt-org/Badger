@@ -23,6 +23,7 @@ from xopt.utils import get_local_region
 from pydantic import ValidationError
 
 from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.data_panel import BadgerDataPanel
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
@@ -253,6 +254,10 @@ class BadgerRoutinePage(QWidget):
         # Algo box
         self.generator_box = BadgerAlgoBox(None, self.generators)
         tabs.addTab(self.generator_box, "Algorithm")
+
+        # Data panel
+        self.data_panel = BadgerDataPanel(self)
+        tabs.addTab(self.data_panel, "Data")
 
         tabs.setCurrentIndex(1)  # Show the env box by default
 
@@ -1771,7 +1776,8 @@ class BadgerRoutinePage(QWidget):
                     )
                 else:
                     print(f"Caught warning: {warning.message}")
-
+            
+            self.data_panel.set_routine(routine)
             return routine
 
     def review(self):

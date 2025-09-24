@@ -230,19 +230,19 @@ class BadgerDataPanel(QWidget):
         data = data[reordered_cols]
         all_data = pd.concat([self.table_data, data], ignore_index=True)
 
-        self.update_table(self.data_table, all_data, vocs, info=self.info)
+        self.update_table(self.data_table, all_data, vocs)
 
-    def update_table(self, table, data=None, vocs=None, info: bool = False) -> None:
+    def update_table(self, table, data=None, vocs=None) -> None:
         """Call data_table's update_table method but make sure table_data stays updated"""
         self.table_data = data
-        update_table(table, data, vocs, info)
+        update_table(table, data, vocs)
 
     def get_data(self):
         return self.table_data
 
-    def get_data_as_dict(self, info=False) -> dict:
+    def get_data_as_dict(self) -> dict:
         data = get_table_content_as_dict(self.data_table)
-        if not info:
+        if not self.info:
             data = self.filter_metadata(data)
 
         return data
@@ -295,7 +295,7 @@ class BadgerDataPanel(QWidget):
             # All keys match, add selected routine data to table
             combined_data = pd.concat([self.table_data, data], ignore_index=True)
             self.update_table(
-                self.data_table, combined_data, routine.vocs, info=self.info
+                self.data_table, combined_data, routine.vocs
             )
 
     def load_data(self, routine):
@@ -312,7 +312,6 @@ class BadgerDataPanel(QWidget):
             self.data_table,
             data,
             routine.vocs,
-            info=self.info,
         )
 
     def reset_data_table(self):
