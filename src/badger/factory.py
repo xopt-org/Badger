@@ -167,8 +167,11 @@ def load_docs(root, pname, ptype):
     docstring = None
 
     try:
-        with open(os.path.join(proot, pname, "readme.md"), "r") as f:
-            readme = f.read()
+        try:
+            with open(os.path.join(proot, pname, "readme.md"), "r") as f:
+                readme = f.read()
+        except:
+            readme = f"# {pname}\nNo readme found.\n"
 
         module = importlib.import_module(f"{ptype}s.{pname}")
         docstring = module.Environment.__doc__
