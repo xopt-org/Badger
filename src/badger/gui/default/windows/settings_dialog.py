@@ -1,7 +1,7 @@
-from PyQt5.QtCore import QRegExp
-from PyQt5.QtGui import QRegExpValidator
+# from PyQt5.QtCore import QRegExp
+# from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import (
-    QComboBox,
+    # QComboBox,
     QGridLayout,
     QVBoxLayout,
     QWidget,
@@ -12,12 +12,9 @@ from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QApplication,
-    QStyledItemDelegate,
-    QCheckBox,
 )
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
 from badger.settings import init_settings
-from badger.utils import strtobool
 
 
 class BadgerSettingsDialog(QDialog):
@@ -41,25 +38,25 @@ class BadgerSettingsDialog(QDialog):
 
     def init_ui(self):
         self.setWindowTitle("Badger settings")
-        self.setMinimumWidth(640)
+        self.setMinimumWidth(480)
 
         vbox = QVBoxLayout(self)
 
-        validator = QRegExpValidator(QRegExp(r"^[0-9]\d*(\.\d+)?$"))
+        # validator = QRegExpValidator(QRegExp(r"^[0-9]\d*(\.\d+)?$"))
 
         widget_settings = QWidget(self)
         grid = QGridLayout(widget_settings)
         grid.setContentsMargins(0, 0, 0, 0)
 
         # Theme selector
-        theme = self.settings["BADGER_THEME"]["value"]
-        self.lbl_theme = lbl_theme = QLabel("Theme")
-        self.cb_theme = cb_theme = QComboBox()
-        cb_theme.setItemDelegate(QStyledItemDelegate())
-        cb_theme.addItems(self.theme_list)
-        cb_theme.setCurrentIndex(self.theme_idx_dict[theme])
-        grid.addWidget(lbl_theme, 0, 0)
-        grid.addWidget(cb_theme, 0, 1)
+        # theme = self.settings["BADGER_THEME"]["value"]
+        # self.lbl_theme = lbl_theme = QLabel("Theme")
+        # self.cb_theme = cb_theme = QComboBox()
+        # cb_theme.setItemDelegate(QStyledItemDelegate())
+        # cb_theme.addItems(self.theme_list)
+        # cb_theme.setCurrentIndex(self.theme_idx_dict[theme])
+        # grid.addWidget(lbl_theme, 0, 0)
+        # grid.addWidget(cb_theme, 0, 1)
 
         # Plugin Root
         self.plugin_root = plugin_root = QLabel("Plugin Root")
@@ -69,13 +66,13 @@ class BadgerSettingsDialog(QDialog):
         grid.addWidget(plugin_root, 1, 0)
         grid.addWidget(plugin_root_path, 1, 1)
 
-        # DB Root
-        self.db_root = db_root = QLabel("Database Root")
-        self.db_root_path = db_root_path = QLineEdit(
-            self.config_singleton.read_value("BADGER_DB_ROOT")
+        # Template Root
+        self.template_root = template_root = QLabel("Template Root")
+        self.template_root_path = template_root_path = QLineEdit(
+            self.config_singleton.read_value("BADGER_TEMPLATE_ROOT")
         )
-        grid.addWidget(db_root, 2, 0)
-        grid.addWidget(db_root_path, 2, 1)
+        grid.addWidget(template_root, 2, 0)
+        grid.addWidget(template_root_path, 2, 1)
 
         # Logbook Root
         self.logbook_root = logbook_root = QLabel("Logbook Root")
@@ -92,6 +89,15 @@ class BadgerSettingsDialog(QDialog):
         )
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
+
+        # Auto refresh
+        # self.auto_refresh = auto_refresh = QLabel("Auto Refresh")
+        # self.enable_auto_refresh = enable_auto_refresh = QCheckBox()
+        # enable_auto_refresh.setChecked(
+        #     strtobool(self.config_singleton.read_value("AUTO_REFRESH"))
+        # )
+        # grid.addWidget(auto_refresh, 5, 0)
+        # grid.addWidget(enable_auto_refresh, 5, 1)
 
         # Check Variable Interval
         # self.var_int = var_int = QLabel('Check Variable Interval')
@@ -114,22 +120,22 @@ class BadgerSettingsDialog(QDialog):
         # grid.addWidget(plugin_url_name, 7, 1)
 
         # Badger data dump period
-        self.dump_period = dump_period = QLabel("Data dump period")
-        self.dump_period_val = dump_period_val = QLineEdit(
-            str(self.config_singleton.read_value("BADGER_DATA_DUMP_PERIOD"))
-        )
-        self.dump_period_val.setValidator(validator)
-        grid.addWidget(dump_period, 8, 0)
-        grid.addWidget(dump_period_val, 8, 1)
+        # self.dump_period = dump_period = QLabel("Data dump period")
+        # self.dump_period_val = dump_period_val = QLineEdit(
+        #     str(self.config_singleton.read_value("BADGER_DATA_DUMP_PERIOD"))
+        # )
+        # self.dump_period_val.setValidator(validator)
+        # grid.addWidget(dump_period, 8, 0)
+        # grid.addWidget(dump_period_val, 8, 1)
 
         # Advanced settings
-        self.adv_features = adv_features = QLabel("Enable Advanced Features")
-        self.enable_adv_features = enable_adv_features = QCheckBox()
-        enable_adv_features.setChecked(
-            strtobool(self.config_singleton.read_value("BADGER_ENABLE_ADVANCED"))
-        )
-        grid.addWidget(adv_features, 9, 0)
-        grid.addWidget(enable_adv_features, 9, 1)
+        # self.adv_features = adv_features = QLabel("Enable Advanced Features")
+        # self.enable_adv_features = enable_adv_features = QCheckBox()
+        # enable_adv_features.setChecked(
+        #     strtobool(self.config_singleton.read_value("BADGER_ENABLE_ADVANCED"))
+        # )
+        # grid.addWidget(adv_features, 9, 0)
+        # grid.addWidget(enable_adv_features, 9, 1)
 
         grid.setColumnStretch(1, 1)
 
@@ -141,7 +147,7 @@ class BadgerSettingsDialog(QDialog):
         vbox.addWidget(self.btns)
 
     def config_logic(self):
-        self.cb_theme.currentIndexChanged.connect(self.select_theme)
+        # self.cb_theme.currentIndexChanged.connect(self.select_theme)
         self.btns.accepted.connect(self.apply_settings)
         self.btns.rejected.connect(self.restore_settings)
 
@@ -165,22 +171,27 @@ class BadgerSettingsDialog(QDialog):
         self.config_singleton.write_value(
             "BADGER_PLUGIN_ROOT", self.plugin_root_path.text()
         )
-        self.config_singleton.write_value("BADGER_DB_ROOT", self.db_root_path.text())
+        self.config_singleton.write_value(
+            "BADGER_TEMPLATE_ROOT", self.template_root_path.text()
+        )
         self.config_singleton.write_value(
             "BADGER_LOGBOOK_ROOT", self.logbook_root_path.text()
         )
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
         )
+        # self.config_singleton.write_value(
+        #     "AUTO_REFRESH", self.enable_auto_refresh.isChecked()
+        # )
         # write_value('BADGER_CHECK_VAR_INTERVAL', self.var_int_val.text())
         # write_value('BADGER_CHECK_VAR_TIMEOUT', self.var_time_val.text())
         # write_value('BADGER_PLUGINS_URL', self.plugin_url_name.text())
-        self.config_singleton.write_value(
-            "BADGER_DATA_DUMP_PERIOD", float(self.dump_period_val.text())
-        )
-        self.config_singleton.write_value(
-            "BADGER_ENABLE_ADVANCED", self.enable_adv_features.isChecked()
-        )
+        # self.config_singleton.write_value(
+        #     "BADGER_DATA_DUMP_PERIOD", float(self.dump_period_val.text())
+        # )
+        # self.config_singleton.write_value(
+        #     "BADGER_ENABLE_ADVANCED", self.enable_adv_features.isChecked()
+        # )
 
     def restore_settings(self):
         # Reset theme if needed
