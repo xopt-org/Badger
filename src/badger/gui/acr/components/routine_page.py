@@ -22,7 +22,7 @@ from xopt.generators import (
 from xopt.utils import get_local_region
 from pydantic import ValidationError
 
-from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
+from badger.gui.default.components.generator_cbox import BadgerAlgoBox
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
