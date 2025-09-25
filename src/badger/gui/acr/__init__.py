@@ -8,7 +8,7 @@ from PyQt5 import QtCore
 from qdarkstyle import load_stylesheet, LightPalette, DarkPalette
 
 from badger.settings import init_settings
-from badger.gui.acr.windows.main_window import BadgerMainWindow
+from badger.gui.default.windows.main_window import BadgerMainWindow
 
 import traceback
 from badger.errors import BadgerError

@@ -323,7 +323,7 @@ class TestRunMonitor:
 
     def test_reset_environment(self, qtbot, init_multiprocessing):
         from badger.archive import save_tmp_run
-        from badger.gui.acr.windows.main_window import BadgerMainWindow
+        from badger.gui.default.windows.main_window import BadgerMainWindow
         from badger.tests.utils import (
             create_routine,
             get_current_vars,

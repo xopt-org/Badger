@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWi
 
 from badger.gui.default.components.create_process import CreateProcess
 from badger.gui.default.components.process_manager import ProcessManager
-from badger.gui.default.pages.home_page import BadgerHomePage
+from badger.gui.acr.pages.home_page import BadgerHomePage
 
 
 class BadgerMainWindow(QMainWindow):
@@ -66,7 +66,7 @@ class BadgerMainWindow(QMainWindow):
         if os.getenv("DEMO"):
             self.resize(1280, 720)
         else:
-            self.resize(1080, 720)
+            self.resize(1720, 960)
         self.center()
 
         # Add menu bar
@@ -95,6 +95,12 @@ class BadgerMainWindow(QMainWindow):
         pass
 
     def closeEvent(self, event) -> None:
+        if (
+            hasattr(self.home_page.routine_editor.routine_page, "archive_search")
+            and self.home_page.routine_editor.routine_page.archive_search.isVisible()
+        ):
+            self.home_page.routine_editor.routine_page.archive_search.close()
+
         monitor = self.home_page.run_monitor
         if not monitor.running:
             self.process_manager.close_proccesses()
