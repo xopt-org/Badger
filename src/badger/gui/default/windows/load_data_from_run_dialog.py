@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QLabel,
-    QTableWidget,
     QFileDialog,
 )
 import pyqtgraph as pg

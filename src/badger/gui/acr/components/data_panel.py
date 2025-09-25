@@ -294,9 +294,7 @@ class BadgerDataPanel(QWidget):
         else:
             # All keys match, add selected routine data to table
             combined_data = pd.concat([self.table_data, data], ignore_index=True)
-            self.update_table(
-                self.data_table, combined_data, routine.vocs
-            )
+            self.update_table(self.data_table, combined_data, routine.vocs)
 
     def load_data(self, routine):
         """

@@ -1776,7 +1776,7 @@ class BadgerRoutinePage(QWidget):
                     )
                 else:
                     print(f"Caught warning: {warning.message}")
-            
+
             self.data_panel.set_routine(routine)
             return routine
 
