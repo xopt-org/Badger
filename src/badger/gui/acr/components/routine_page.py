@@ -28,7 +28,7 @@ from badger.gui.default.components.data_table import (
     set_init_data_table,
     update_init_data_table,
 )
-from badger.gui.acr.components.env_cbox import BadgerEnvBox
+from badger.gui.default.components.env_cbox import BadgerEnvBox
 from badger.gui.default.components.filter_cbox import BadgerFilterBox
 from badger.gui.default.windows.docs_window import BadgerDocsWindow
 from badger.gui.default.windows.env_docs_window import BadgerEnvDocsWindow
