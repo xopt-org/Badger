@@ -34,7 +34,7 @@ from badger.gui.default.windows.docs_window import BadgerDocsWindow
 from badger.gui.default.windows.env_docs_window import BadgerEnvDocsWindow
 from badger.gui.default.windows.edit_script_dialog import BadgerEditScriptDialog
 from badger.gui.default.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
-from badger.gui.acr.windows.ind_lim_vrange_dialog import (
+from badger.gui.default.windows.ind_lim_vrange_dialog import (
     BadgerIndividualLimitVariableRangeDialog,
 )
 from badger.gui.default.windows.review_dialog import BadgerReviewDialog
