@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
 from PyQt5.QtWidgets import QTextEdit, QStackedWidget
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QFont
-from badger.gui.acr.components.routine_page import BadgerRoutinePage
+from badger.gui.default.components.routine_page import BadgerRoutinePage
 
 from badger.routine import Routine
 
