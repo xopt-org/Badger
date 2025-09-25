@@ -30,7 +30,7 @@ from badger.gui.default.components.data_table import (
 from badger.gui.default.components.history_navigator import HistoryNavigator
 from badger.gui.default.components.routine_editor import BadgerRoutineEditor
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
-from badger.gui.acr.components.status_bar import BadgerStatusBar
+from badger.gui.default.components.status_bar import BadgerStatusBar
 from badger.gui.default.components.action_bar import BadgerActionBar
 from badger.utils import get_header
 from badger.settings import init_settings
