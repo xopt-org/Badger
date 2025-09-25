@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWi
 
 from badger.gui.default.components.create_process import CreateProcess
 from badger.gui.default.components.process_manager import ProcessManager
-from badger.gui.acr.pages.home_page import BadgerHomePage
+from badger.gui.default.pages.home_page import BadgerHomePage
 
 
 class BadgerMainWindow(QMainWindow):

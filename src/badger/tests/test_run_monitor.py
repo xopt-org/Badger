@@ -52,7 +52,7 @@ class TestRunMonitor:
     @pytest.fixture
     def home_page(self, process_manager):
         from badger.archive import save_tmp_run
-        from badger.gui.acr.pages.home_page import BadgerHomePage
+        from badger.gui.default.pages.home_page import BadgerHomePage
         from badger.tests.utils import create_routine
 
         routine = create_routine()
@@ -70,7 +70,7 @@ class TestRunMonitor:
     @pytest.fixture
     def home_page_critical(self, process_manager):
         from badger.archive import save_tmp_run
-        from badger.gui.acr.pages.home_page import BadgerHomePage
+        from badger.gui.default.pages.home_page import BadgerHomePage
         from badger.tests.utils import create_routine_critical
 
         routine = create_routine_critical()
