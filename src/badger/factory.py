@@ -10,6 +10,7 @@ import sys
 import os
 import importlib
 import yaml
+import textwrap
 from xopt.generators import generators, get_generator_defaults
 
 import logging
@@ -162,12 +163,21 @@ def load_docs(root, pname, ptype):
 
     proot = os.path.join(root, f"{ptype}s")
 
-    # Load the readme
+    # Load the readme and the docs
     readme = None
+    docstring = None
+
     try:
-        with open(os.path.join(proot, pname, "README.md"), "r") as f:
+        module = importlib.import_module(f"{ptype}s.{pname}")
+        docstring = module.Environment.__doc__
+        docstring = textwrap.dedent(docstring)
+
+        with open(os.path.join(proot, pname, "readme.md"), "r") as f:
             readme = f.read()
-        return readme
+
+        # Format as Markdown code block
+        help_md = f"```text\n{readme}\n# Environment Documentation\n{docstring}\n```"
+        return help_md
     except:
         raise BadgerInvalidDocsError(
             f"Error loading docs for {ptype} {pname}: docs not found"
