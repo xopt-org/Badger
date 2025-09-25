@@ -41,7 +41,7 @@ from badger.gui.default.windows.review_dialog import BadgerReviewDialog
 from badger.gui.default.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.default.utils import filter_generator_config
-from badger.gui.acr.components.archive_search import ArchiveSearchWidget
+from badger.gui.default.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import (
