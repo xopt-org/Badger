@@ -361,6 +361,7 @@ class BadgerHomePage(QWidget):
 
         # Add data to routine before saving tmp file
         if data is not None:
+            self.routine_editor.routine_page.validate_loaded_data_keys(routine.vocs)
             routine.data = data
 
         self.current_routine = routine

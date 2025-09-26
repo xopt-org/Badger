@@ -1695,10 +1695,6 @@ class BadgerRoutinePage(QWidget):
         if not vocs.objectives:
             raise BadgerRoutineError("no objectives selected")
 
-        # Make sure loaded data matches
-        if self.data_panel.use_data:
-            self.validate_loaded_data_keys(vocs)
-
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
             get_table_content_as_dict(self.env_box.init_table)
