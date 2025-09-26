@@ -349,12 +349,16 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self):
+    def prepare_run(self, data=None):
         try:
             routine = self.routine_editor.routine_page._compose_routine()
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
+
+        # Add data to routine before saving tmp file
+        if data is not None:
+            routine.data = data
 
         self.current_routine = routine
 
@@ -367,9 +371,34 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine)
 
     def start_run(self):
-        self.prepare_run()
-        self.run_monitor.start()
-        self.data_panel.reset_data_table()
+        # Set data options based on checkbox states from data_panel
+        data_options = {
+            "run_data": self.data_panel.use_data,
+            "init_points": self.data_panel.init_points,
+        }
+        # A different option could be to store these as bool fields here in
+        # BadgerHomePage, eg. self.use_data and self.init_points, and connect
+        # the checkboxes in data_panel to signals to set those fields.
+
+        if data_options["run_data"]:
+            data_to_load = self.data_panel.get_data()  # Get data from data_panel
+            self.prepare_run(
+                data=data_to_load
+            )  # Pass data to prepare run, to be loaded into plots
+            self.run_monitor.init_plots(self.current_routine)
+
+            # Add routine and generator data back to the routine
+            self.current_routine.data = data_to_load
+            if self.current_routine.generator.data is None:
+                self.current_routine.generator.data = data_to_load
+
+        else:
+            self.prepare_run()
+
+        if not self.data_panel.use_data:
+            self.data_panel.reset_data_table()
+
+        self.run_monitor.start(data_options=data_options)
 
     def start_run_until(self):
         self.prepare_run()
