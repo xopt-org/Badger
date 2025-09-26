@@ -37,6 +37,9 @@ from badger.settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.default.windows.terminition_condition_dialog import (
+    BadgerTerminationConditionDialog,
+)
 from badger.gui.default.utils import ModalOverlay
 
 import logging
@@ -370,7 +373,17 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self):
+    def start_run(self, use_termination_condition: bool = False):
+        """
+        Prepares and starts optimization run with provided options. 
+        - Termination Condition is provided when called via BadgerTerminationConditionDialog
+        - Data Options are collected from BadgerDataPanel
+
+        Args:
+            use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog. 
+
+        """
+
         # Set data options based on checkbox states from data_panel
         data_options = {
             "run_data": self.data_panel.use_data,
@@ -398,11 +411,25 @@ class BadgerHomePage(QWidget):
         if not self.data_panel.use_data:
             self.data_panel.reset_data_table()
 
-        self.run_monitor.start(data_options=data_options)
+        self.run_monitor.start(
+            use_termination_condition=use_termination_condition,
+            data_options=data_options,
+        )
 
     def start_run_until(self):
         self.prepare_run()
-        self.run_monitor.start_until()
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            self.start_run,
+            self.run_monitor.save_termination_condition,
+            self.run_monitor.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
+        # self.run_monitor.start_until()
 
     def new_run(self):
         self.cover_page()

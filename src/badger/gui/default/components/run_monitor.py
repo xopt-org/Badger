@@ -30,9 +30,6 @@ from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
 from badger.routine import Routine
 from badger.tests.utils import get_current_vars
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.default.windows.terminition_condition_dialog import (
-    BadgerTerminationConditionDialog,
-)
 
 from badger.gui.default.components.extensions_palette import ExtensionsPalette
 from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
@@ -946,19 +943,6 @@ class BadgerOptMonitor(QWidget):
     def stop(self):
         self.sig_stop.emit()
         self.sig_stop_run.emit()
-
-    def start_until(self):
-        dlg = BadgerTerminationConditionDialog(
-            self,
-            self.start,
-            self.save_termination_condition,
-            self.termination_condition,
-        )
-        self.tc_dialog = dlg
-        try:
-            dlg.exec()
-        finally:
-            self.tc_dialog = None
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)
