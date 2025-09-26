@@ -168,7 +168,7 @@ def load_docs(root, pname, ptype):
 
     try:
         try:
-            with open(os.path.join(proot, pname, "readme.md"), "r") as f:
+            with open(os.path.join(proot, pname, "README.md"), "r") as f:
                 readme = f.read()
         except:
             readme = f"# {pname}\nNo readme found.\n"
