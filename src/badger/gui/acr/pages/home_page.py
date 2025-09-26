@@ -418,7 +418,6 @@ class BadgerHomePage(QWidget):
         )
 
     def start_run_until(self):
-        self.prepare_run()
         dlg = BadgerTerminationConditionDialog(
             self,
             self.start_run,
