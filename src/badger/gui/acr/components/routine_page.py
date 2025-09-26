@@ -1818,7 +1818,6 @@ class BadgerRoutinePage(QWidget):
         result = dialog.exec_()
 
         if result == QMessageBox.Cancel:
-            # There might be a more graceful way to do this?
             raise BadgerRoutineError("Routine initialization cancelled by user.")
 
     def review(self):
