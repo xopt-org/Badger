@@ -159,7 +159,15 @@ class BadgerDataPanel(QWidget):
 
     @property
     def use_data(self) -> bool:
-        return self.run_data_checkbox.isChecked()
+        """
+        True if run_data_checkbox is checked, and there is data to load.
+        Otherwise False.
+        """
+        if self.has_data and self.run_data_checkbox.isChecked():
+            return True
+        else:
+            self.run_data_checkbox.setChecked(False)
+            return False
 
     @property
     def init_points(self) -> bool:
