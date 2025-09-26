@@ -376,12 +376,12 @@ class BadgerHomePage(QWidget):
 
     def start_run(self, use_termination_condition: bool = False):
         """
-        Prepares and starts optimization run with provided options. 
+        Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
         - Data Options are collected from BadgerDataPanel
 
         Args:
-            use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog. 
+            use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog.
 
         """
 
