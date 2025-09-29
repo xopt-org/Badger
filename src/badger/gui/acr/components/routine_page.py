@@ -1,3 +1,4 @@
+from typing import Any
 import warnings
 import traceback
 import copy
@@ -56,7 +57,6 @@ from badger.routine import Routine
 from badger.settings import init_settings
 from datetime import datetime
 from badger.utils import (
-    get_yaml_string,
     load_config,
     strtobool,
     get_badger_version,
@@ -324,7 +324,7 @@ class BadgerRoutinePage(QWidget):
             print(f"Error loading template: {e}")
             return
 
-    def set_options_from_template(self, template_dict: dict):
+    def set_options_from_template(self, template_dict: dict[str, Any]):
         """
         Fills in routine_page GUI with relevant info from template_dict
         dictionary
@@ -346,7 +346,7 @@ class BadgerRoutinePage(QWidget):
                 "initial_point_actions"
             ]  # should be type: add_curr
             critical_constraint_names = template_dict["critical_constraint_names"]
-            env_params = template_dict["environment"]["params"]
+            env_params: dict[str, Any] = template_dict["environment"]["params"]
         except KeyError as e:
             QMessageBox.warning(self, "Error", f"Missing key in template: {e}")
             return
@@ -374,13 +374,15 @@ class BadgerRoutinePage(QWidget):
             filtered_config = filter_generator_config(
                 generator_name, template_dict["generator"]
             )
-            self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+            self.generator_box.edit.set_params_from_generator(
+                generator_name, filtered_config
+            )
 
         # set environment
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
-            self.env_box.edit.setPlainText(get_yaml_string(env_params))
+            self.env_box.edit.set_params_from_dict(env_params)
         else:
             raise BadgerEnvNotFoundError(
                 f"Template environment {env_name} not found in Badger environments"
@@ -561,7 +563,7 @@ class BadgerRoutinePage(QWidget):
 
         generator_config = self._filter_generator_params(
             generator_name=generator_name,
-            generator_config=load_config(self.generator_box.edit.toPlainText()),
+            generator_config=load_config(self.generator_box.edit.get_parameters()),
         )
 
         template_dict = {
@@ -574,7 +576,7 @@ class BadgerRoutinePage(QWidget):
             | generator_config,
             "environment": {
                 "name": self.env_box.cb.currentText(),
-                "params": load_config(self.env_box.edit.toPlainText()),
+                "params": load_config(self.env_box.edit.get_parameters()),
             },
             "vrange_limit_options": self.ratio_var_ranges,
             "vrange_hard_limit": self.var_hard_limit,
@@ -705,11 +707,12 @@ class BadgerRoutinePage(QWidget):
             idx_generator = -1
 
         self.generator_box.cb.setCurrentIndex(idx_generator)
-        # self.generator_box.edit.setPlainText(routine.generator.yaml())
         filtered_config = filter_generator_config(
             name_generator, routine.generator.model_dump()
         )
-        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+        self.generator_box.edit.set_params_from_generator(
+            name_generator, filtered_config
+        )
         self.script = routine.script
 
         name_env = routine.environment.name
@@ -717,7 +720,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.cb.setCurrentIndex(idx_env)
         env_params = routine.environment.model_dump()
         del env_params["interface"]
-        self.env_box.edit.setPlainText(get_yaml_string(env_params))
+        self.env_box.edit.set_params_from_dict(env_params)
 
         # Config the vocs panel
         variables = routine.vocs.variable_names
@@ -905,7 +908,7 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.check_use_script.setChecked(False)
 
         if i == -1:
-            self.generator_box.edit.setPlainText("")
+            self.generator_box.edit.clear()
             self.generator_box.cb_scaling.setCurrentIndex(-1)
             return
 
@@ -920,7 +923,7 @@ class BadgerRoutinePage(QWidget):
 
         # Patch to only show part of the config
         filtered_config = filter_generator_config(name, default_config)
-        self.generator_box.edit.setPlainText(get_yaml_string(filtered_config))
+        self.generator_box.edit.set_params_from_generator(name, filtered_config)
 
         # Update the docs
         self.window_docs.update_docs(name)
@@ -941,11 +944,11 @@ class BadgerRoutinePage(QWidget):
     def toggle_use_script(self):
         if self.generator_box.check_use_script.isChecked():
             self.generator_box.btn_edit_script.show()
-            self.generator_box.edit.setReadOnly(True)
+            self.generator_box.edit.setDisabled(True)
             self.refresh_params_generator()
         else:
             self.generator_box.btn_edit_script.hide()
-            self.generator_box.edit.setReadOnly(False)
+            self.generator_box.edit.setDisabled(False)
 
     def edit_script(self):
         generator = self.generator_box.cb.currentText()
@@ -957,7 +960,7 @@ class BadgerRoutinePage(QWidget):
         self.refresh_params_generator()
 
     def create_env(self):
-        env_params = load_config(self.env_box.edit.toPlainText())
+        env_params = load_config(self.env_box.edit.get_parameters())
         try:
             intf_name = self.configs["interface"][0]
         except KeyError:
@@ -993,11 +996,13 @@ class BadgerRoutinePage(QWidget):
                 vocs = None
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
-            self.generator_box.edit.setPlainText(get_yaml_string(params_generator))
+            self.generator_box.edit.set_params_from_generator(
+                self.routine.generator.name, params_generator
+            )
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))
 
-    def select_env(self, i):
+    def select_env(self, i: int):
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1007,7 +1012,7 @@ class BadgerRoutinePage(QWidget):
             self.archive_search.close()
 
         if i == -1:
-            self.env_box.edit.setPlainText("")
+            self.env_box.edit.clear()
             self.env_box.edit_var.clear()
             self.env_box.var_table.update_variables(None)
             self.configs = None
@@ -1019,7 +1024,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.update_stylesheets()
             return
 
-        name = self.envs[i]
+        name: str = self.envs[i]
         try:
             env, configs = get_env(name)
             self.configs = configs
@@ -1042,7 +1047,7 @@ class BadgerRoutinePage(QWidget):
             self.routine = None
             return QMessageBox.critical(self, "Error!", traceback.format_exc())
 
-        self.env_box.edit.setPlainText(get_yaml_string(configs["params"]))
+        self.env_box.edit.set_params_from_dict(configs["params"])
 
         # Get and save vars to combine with additional vars added on the fly
         vars_env = self.vars_env = configs["variables"]
@@ -1280,7 +1285,7 @@ class BadgerRoutinePage(QWidget):
 
     def add_var(self):
         # TODO: Use a cached env
-        env_params = load_config(self.env_box.edit.toPlainText())
+        env_params = load_config(self.env_box.edit.get_parameters())
         try:
             intf_name = self.configs["interface"][0]
         except KeyError:
@@ -1654,7 +1659,7 @@ class BadgerRoutinePage(QWidget):
         # Generator
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
-        generator_params = load_config(self.generator_box.edit.toPlainText())
+        generator_params = load_config(self.generator_box.edit.get_parameters())
         if generator_name in all_generator_names["bo"]:
             # Patch the BO generators to make sure use_low_noise_prior is False
             if "gp_constructor" not in generator_params:
@@ -1680,7 +1685,7 @@ class BadgerRoutinePage(QWidget):
                         turbo_config["center_x"] = None
 
         # Environment
-        env_params = load_config(self.env_box.edit.toPlainText())
+        env_params = load_config(self.env_box.edit.get_parameters())
 
         # VOCS
         vocs, critical_constraints = self._compose_vocs()
