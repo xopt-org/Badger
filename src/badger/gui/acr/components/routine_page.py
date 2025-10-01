@@ -375,7 +375,7 @@ class BadgerRoutinePage(QWidget):
                 generator_name, template_dict["generator"]
             )
             self.generator_box.edit.set_params_from_generator(
-                generator_name, filtered_config
+                generator_name, filtered_config, vocs
             )
 
         # set environment
@@ -711,7 +711,7 @@ class BadgerRoutinePage(QWidget):
             name_generator, routine.generator.model_dump()
         )
         self.generator_box.edit.set_params_from_generator(
-            name_generator, filtered_config
+            name_generator, filtered_config, routine.vocs
         )
         self.script = routine.script
 
@@ -997,7 +997,7 @@ class BadgerRoutinePage(QWidget):
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
             self.generator_box.edit.set_params_from_generator(
-                self.routine.generator.name, params_generator
+                self.routine.generator.name, params_generator, vocs
             )
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))

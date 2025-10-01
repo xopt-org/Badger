@@ -41,6 +41,8 @@ from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 import logging
 
+from xopt.vocs import VOCS
+
 logger = logging.getLogger(__name__)
 
 
@@ -167,7 +169,7 @@ class BadgerResolvedType:
         annotation: type[Any] | Union[Any, None] | None,
         default: float | int | bool | dict[str, Any] | list[Any] | None = None,
         editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem] | None = None,
-    ):
+    ) -> QWidget | None:
         resolved_type = BadgerResolvedType.resolve(annotation)
         widget = QLabel()
 
@@ -176,12 +178,15 @@ class BadgerResolvedType:
             widget.setText("null")
         elif issubclass(resolved_type.main, BaseModel):
             if issubclass(resolved_type.main, TurboController):
-                # Return empty QComboBox for later replacement
                 widget = QComboBox()
+                for controller in TurboController.__subclasses__():
+                    widget.addItem(controller.model_fields["name"].default, controller)
 
             elif issubclass(resolved_type.main, NumericalOptimizer):
-                # Return empty QComboBox for later replacement
                 widget = QComboBox()
+                for optimizer in NumericalOptimizer.__subclasses__():
+                    widget.addItem(optimizer.model_fields["name"].default, optimizer)
+
             else:
                 return None
 
@@ -194,8 +199,8 @@ class BadgerResolvedType:
                 if (index := widget.findText(default["name"])) >= 0:
                     widget.setCurrentIndex(index)
 
-            if editor_info is not None:
-                widget.currentIndexChanged.connect(lambda: handle_changed(editor_info))
+            # if editor_info is not None:
+            #     widget.currentIndexChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main == NoneType:
             widget = QLabel()
             widget.setText("null")
@@ -443,6 +448,9 @@ class BadgerListEditor(QWidget):
 
 
 class BadgerPydanticEditor(QTreeWidget):
+    vocs: VOCS | None = None
+    model_class: type[BaseModel] | None = None
+
     def __init__(
         self,
         parent: QTreeWidget | None = None,
@@ -476,8 +484,8 @@ class BadgerPydanticEditor(QTreeWidget):
                     field_info.default
                     if defaults is None
                     # or not isinstance(defaults, dict)
-                    or defaults[field_name] is None
                     or field_name not in defaults
+                    or defaults[field_name] is None
                     else defaults[field_name]
                 ),
                 editor_info=(self, child),
@@ -500,50 +508,58 @@ class BadgerPydanticEditor(QTreeWidget):
 
             child.setHidden(hidden)
 
-    def repopulate_child(
-        self,
-        child: QTreeWidgetItem,
-        model_fields: dict[str, FieldInfo],
-        model_fields_hidden: dict[str, FieldInfo],
-    ) -> None:
-        for cc in child.takeChildren():
-            del cc
-        self._set_params_recurse(child, model_fields, None, False)
-        self._set_params_recurse(child, model_fields_hidden, None, True)
-        child.setExpanded(True)
-
     def handle_repopulate(
         self,
         widget: QComboBox,
         tree_widget_item: QTreeWidgetItem,
         types: Sequence[type[BaseModel]],
+        defaults: dict[str, Any],
     ):
         for i in range(len(types)):
             widget.addItem(types[i].model_fields["name"].default, types[i].model_fields)
 
-        widget.currentIndexChanged.connect(
-            lambda: self.on_repopulate_changed(widget, tree_widget_item)
-        )
-        widget.currentIndexChanged.emit(0)
+        # widget.currentIndexChanged.connect(
+        #     lambda: self.on_repopulate_changed(widget, tree_widget_item, defaults)
+        # )
+        # widget.currentIndexChanged.emit(0)
 
     def on_repopulate_changed(
         self,
         widget: QComboBox,
         tree_widget_item: QTreeWidgetItem,
+        defaults: dict[str, Any],
     ):
+        model_fields = {
+            key: value
+            for key, value in widget.itemData(widget.currentIndex()).items()
+            if key in defaults
+        }
+
+        hidden_model_fields = {
+            key: value
+            for key, value in widget.itemData(widget.currentIndex()).items()
+            if key == "name"
+        }
+
         self.repopulate_child(
             tree_widget_item,
-            {
-                key: value
-                for key, value in widget.itemData(widget.currentIndex()).items()
-                if key != "name" and key != "vocs"
-            },
-            {
-                key: value
-                for key, value in widget.itemData(widget.currentIndex()).items()
-                if key == "name"
-            },
+            model_fields,
+            hidden_model_fields,
+            defaults,
         )
+
+    def repopulate_child(
+        self,
+        child: QTreeWidgetItem,
+        model_fields: dict[str, FieldInfo],
+        model_fields_hidden: dict[str, FieldInfo],
+        defaults: dict[str, Any],
+    ) -> None:
+        for cc in child.takeChildren():
+            del cc
+        self._set_params_recurse(child, model_fields, defaults, False)
+        # self._set_params_recurse(child, model_fields_hidden, defaults, True)
+        child.setExpanded(True)
 
     def set_params_from_class(self, pydantic_class: type[Any]):
         self.clear()
@@ -566,47 +582,12 @@ class BadgerPydanticEditor(QTreeWidget):
         self._set_params_recurse(None, self.model_class.model_fields, params, False)
         self.validate()
 
-    def create_turbo_controller_widget(self, model_class: type[BayesianGenerator]):
-        turbo_controller_options = model_class.get_compatible_turbo_controllers()
-        if not turbo_controller_options:
-            raise ValueError("No compatible turbo controllers found")
-
-        if len(turbo_controller_options) == 0:
-            raise ValueError("No compatible turbo controllers found")
-
-        logger.debug(f"Using turbo controller options: {turbo_controller_options}")
-
-        turbo_controller_items = self.findItems(
-            "turbo_controller", Qt.MatchFlag.MatchExactly
-        )
-
-        if len(turbo_controller_items) == 0:
-            logger.warning(
-                "Generator has turbo controller set but no compatible turbo controller item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
-            )
-            return
-
-        # Get first turbo controller item
-        turbo_controller_item = turbo_controller_items[0]
-
-        widget = self.itemWidget(turbo_controller_item, 1)
-
-        if widget is None:
-            widget = QWidget()
-            self.setItemWidget(turbo_controller_item, 1, widget)
-
-        # option_names = [option.__name__ for option in turbo_controller_options]
-
-        self.handle_repopulate(widget, turbo_controller_item, turbo_controller_options)
-
-    @staticmethod
-    def create_detailed_widget_signal(
-        index: int, detailed_widget: "BadgerPydanticEditor"
+    def set_params_from_generator(
+        self, generator_name: str, defaults: dict[str, Any], vocs: VOCS | None = None
     ):
-        # Logic to create detailed widget signal
-        pass
-
-    def set_params_from_generator(self, generator_name: str, defaults: dict[str, Any]):
+        logger.debug(f"vocs: {vocs}")
+        logger.debug(f"defaults: {defaults}")
+        self.vocs = vocs
         self.clear()
         self.model_class = get_generator(generator_name)
         self._set_params_recurse(
@@ -618,39 +599,210 @@ class BadgerPydanticEditor(QTreeWidget):
         # Update parameters with defaults from generator class
         if issubclass(self.model_class, BayesianGenerator):
             if self.model_class.model_fields.get("turbo_controller") is not None:
-                self.create_turbo_controller_widget(self.model_class)
+                # self.initialize_turbo_controller_field(defaults)
+                pass
 
             if self.model_class.model_fields.get("numerical_optimizer") is not None:
-                self.create_numerical_optimizer_widget(self.model_class)
-        self.validate()
+                self.initialize_numerical_optimizer_field(defaults)
 
-    def create_numerical_optimizer_widget(self, model_class: type[BayesianGenerator]):
-        numerical_optimizer_options = model_class.get_compatible_numerical_optimizers()
-        if not numerical_optimizer_options:
-            raise ValueError("No compatible numerical optimizers found")
-        if len(numerical_optimizer_options) == 0:
-            raise ValueError("No compatible numerical optimizers found")
-        logger.debug(
-            f"Using numerical optimizer options: {numerical_optimizer_options}"
-        )
+        # self.validate()
+
+    def initialize_numerical_optimizer_field(self, defaults: dict[str, Any]):
         numerical_optimizer_items = self.findItems(
             "numerical_optimizer", Qt.MatchFlag.MatchExactly
         )
+
         if len(numerical_optimizer_items) == 0:
-            logger.warning(
+            raise ValueError(
                 "Generator has numerical optimizer set but no compatible numerical optimizer item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
             )
-            return
-        # Get first numerical optimizer item
-        numerical_optimizer_item = numerical_optimizer_items[0]
-        widget = self.itemWidget(numerical_optimizer_item, 1)
-        if widget is None:
-            widget = QWidget()
-            self.setItemWidget(numerical_optimizer_item, 1, widget)
 
-        self.handle_repopulate(
-            widget, numerical_optimizer_item, numerical_optimizer_options
+        numerical_optimizer_item = numerical_optimizer_items[0]
+
+        num_optimizer_dict = defaults.get("numerical_optimizer", None)
+
+        if num_optimizer_dict is None:
+            raise ValueError(
+                "Generator has numerical optimizer set but no compatible numerical optimizer exists."
+            )
+
+        name = num_optimizer_dict.get("name", None)
+        if name is None:
+            raise ValueError(
+                "Generator has numerical optimizer set but no name exists in the numerical optimizer defaults."
+            )
+
+        self.update_params_from_generator_class(
+            numerical_optimizer_item,
+            name,
+            "numerical_optimizer",
+            num_optimizer_dict,
         )
+
+        widget = self.itemWidget(numerical_optimizer_item, 1)
+        if widget is not None:
+            if isinstance(widget, QComboBox):
+                widget = cast(QComboBox, widget)
+
+                widget.currentIndexChanged.connect(
+                    lambda: self.on_radio_changed(
+                        widget,
+                        numerical_optimizer_item,
+                        "numerical_optimizer",
+                        num_optimizer_dict,
+                    )
+                )
+
+    def initialize_turbo_controller_field(self, defaults: dict[str, Any]):
+        turbo_controller_items = self.findItems(
+            "turbo_controller", Qt.MatchFlag.MatchExactly
+        )
+
+        if len(turbo_controller_items) == 0:
+            logger.warning(
+                "Generator has turbo controller set but no compatible turbo controller item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
+            )
+            return
+
+        turbo_controller_item = turbo_controller_items[0]
+
+        turbo_controller_dict = defaults.get("turbo_controller", None)
+
+        if turbo_controller_dict is None:
+            logger.warning(
+                "Generator has turbo controller set but no compatible turbo controller exists."
+            )
+            return
+
+        widget = self.itemWidget(turbo_controller_item, 1)
+        if widget is not None:
+            if isinstance(widget, QComboBox):
+                widget = cast(QComboBox, widget)
+
+                widget.currentIndexChanged.connect(
+                    lambda: self.on_radio_changed(
+                        widget,
+                        turbo_controller_item,
+                        "turbo_controller",
+                        turbo_controller_dict,
+                    )
+                )
+
+        name = turbo_controller_dict.get("name", None)
+        if name is None:
+            logger.warning(
+                "Generator has turbo controller set but no name exists in the turbo controller defaults."
+            )
+            return
+
+        self.update_params_from_generator_class(
+            turbo_controller_item,
+            name,
+            "turbo_controller",
+            turbo_controller_dict,
+        )
+
+    def get_compatible_class(self, name: str, field_name: str) -> type[BaseModel]:
+        if self.model_class is None:
+            raise ValueError("Model class is not set.")
+
+        compatible_classes: Sequence[type[BaseModel]] = []
+
+        if field_name == "numerical_optimizer":
+            if not issubclass(self.model_class, BayesianGenerator):
+                raise ValueError("Generator does not support numerical optimizers.")
+            compatible_classes = self.model_class.get_compatible_numerical_optimizers()
+        elif field_name == "turbo_controller":
+            if not issubclass(self.model_class, BayesianGenerator):
+                raise ValueError("Generator does not support turbo controllers.")
+            compatible_classes = self.model_class.get_compatible_turbo_controllers()
+        else:
+            raise ValueError(f"Field name {field_name} is not recognized.")
+
+        numerical_optimizer_class: type[BaseModel] | None = None
+
+        for opt in compatible_classes:
+            if opt.model_fields["name"].default == name:
+                numerical_optimizer_class = opt
+                break
+
+        if numerical_optimizer_class is None:
+            raise ValueError(
+                f"Generator has numerical optimizer set but no compatible numerical optimizer with name {name} exists."
+            )
+
+        return numerical_optimizer_class
+
+    def on_radio_changed(
+        self,
+        widget: QComboBox,
+        tree_widget_item: QTreeWidgetItem,
+        field_name: str,
+        defaults: dict[str, Any],
+    ):
+        # Clear out existing children
+        for cc in tree_widget_item.takeChildren():
+            del cc
+
+        name = widget.currentText()
+        if name == "null":
+            return
+
+        self.update_params_from_generator_class(
+            tree_widget_item,
+            name,
+            field_name,
+            defaults,
+        )
+
+    def update_params_from_generator_class(
+        self,
+        tree_widget_item: QTreeWidgetItem,
+        name: str,
+        field_name: str,
+        defaults: dict[str, Any],
+    ):
+        try:
+            pydantic_class = self.get_compatible_class(name, field_name)
+        except ValueError:
+            # self.remove_style(tree_widget_item)
+            return
+
+        filtered_class_fields, removed_class_fields = self.filter_class_fields(
+            pydantic_class
+        )
+
+        self._set_params_recurse(
+            tree_widget_item,
+            filtered_class_fields,
+            defaults,
+            False,
+        )
+        self._set_params_recurse(
+            tree_widget_item,
+            removed_class_fields,
+            defaults,
+            True,
+        )
+
+    def filter_class_fields(
+        self, pydantic_class: type[BaseModel]
+    ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
+        fields_to_remove = ["name"]
+
+        filtered_class_fields = {
+            k: v
+            for k, v in pydantic_class.model_fields.items()
+            if k not in fields_to_remove
+        }
+
+        removed_class_fields = {
+            k: v
+            for k, v in pydantic_class.model_fields.items()
+            if k in fields_to_remove
+        }
+
+        return filtered_class_fields, removed_class_fields
 
     @staticmethod
     def get_defaults_from_type(pydantic_class: type[Any]):
@@ -719,8 +871,16 @@ class BadgerPydanticEditor(QTreeWidget):
 
             # hack to pass validation for certain generators
             if issubclass(self.model_class, Generator) and "vocs" not in parameters:
+                if self.vocs is None:
+                    vocs = {}
+                else:
+                    vocs = str(self.vocs.model_dump())
+
                 parameters = (
-                    parameters[:-1] + "," * (len(parameters) > 2) + '"vocs":{}}'
+                    parameters[:-1]
+                    + "," * (len(parameters) > 2)
+                    + f'"vocs":{vocs}'
+                    + "}"
                 )
 
             self.model_class.model_validate(yaml.safe_load(parameters))
