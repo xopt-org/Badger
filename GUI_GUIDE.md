@@ -1,6 +1,8 @@
 # Main Interface Layout
 
-![Layout](images/layout.png)
+- **File**: `src/badger/gui/acr/pages/home_page.py`
+- **Screenshot**: ![Layout](images/layout.png)
+- **Description**: Main Badger GUI window. Conains the sub-objects below.
 
 ## Status Bar
 - **File**: `src/badger/gui/default/components/status_bar.py`
