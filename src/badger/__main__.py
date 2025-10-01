@@ -1,8 +1,7 @@
 import argparse
-
-from badger.log import config_log
-
-config_log()
+import datetime
+import logging
+import pathlib
 from badger.actions import show_info  # noqa: E402
 from badger.actions.doctor import self_check  # noqa: E402
 from badger.actions.routine import show_routine  # noqa: E402
@@ -31,6 +30,14 @@ def main():
         nargs="?",
         help="change the log level",
     )
+    parser.add_argument(
+        "-lf",
+        "--log_filepath",
+        type=pathlib.Path,
+        default=str(datetime.date.today())+".log",
+        help="Path to the log file",
+    )
+
     parser.add_argument(
         "-cf",
         "--config_filepath",
@@ -133,6 +140,15 @@ def main():
     parser_config.set_defaults(func=config_settings)
 
     args = parser.parse_args()
+
+    logging.basicConfig(
+    format='%(levelname)s:%(message)s',
+    level=args.log,
+    handlers=[
+        logging.FileHandler(args.log_filepath, mode='a'),
+        logging.StreamHandler()
+        ]
+    )
     args.func(args)
 
 
