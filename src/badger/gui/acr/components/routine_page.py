@@ -23,6 +23,7 @@ from xopt.utils import get_local_region
 from pydantic import ValidationError
 
 from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.data_panel import BadgerDataPanel
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
@@ -61,6 +62,7 @@ from badger.utils import (
     strtobool,
     get_badger_version,
     get_xopt_version,
+    ts_float_to_str,
 )
 
 LABEL_WIDTH = 96
@@ -252,6 +254,10 @@ class BadgerRoutinePage(QWidget):
         # Algo box
         self.generator_box = BadgerAlgoBox(None, self.generators)
         tabs.addTab(self.generator_box, "Algorithm")
+
+        # Data panel
+        self.data_panel = BadgerDataPanel(self)
+        tabs.addTab(self.data_panel, "Data")
 
         tabs.setCurrentIndex(1)  # Show the env box by default
 
@@ -1741,6 +1747,7 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
+                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
                 # Xopt part
                 vocs=vocs,
                 generator=generator,
@@ -1773,7 +1780,44 @@ class BadgerRoutinePage(QWidget):
                 else:
                     print(f"Caught warning: {warning.message}")
 
+            self.data_panel.set_routine(routine)
             return routine
+
+    def validate_loaded_data_keys(self, vocs):
+        """
+        Makes sure that the keys of data to be loaded from data_panel match the
+        variable and objective names in vocs. If they do not, raises an error.
+        If the set of data keys from self.data_panel matches provided VOCS variables
+        and objectives, opens a dialog to inform user that data has been added.
+
+        Args:
+            vocs: VOCS
+        """
+        data_keys = self.data_panel.get_data_as_dict().keys()
+
+        # Raise error if loaded data keys do not match selected vocs
+        if set(list(data_keys)) != set(vocs.variable_names + vocs.output_names):
+            raise BadgerRoutineError(
+                "The following keys loaded into generator data do not match selected VOCS:\n"
+                + f"{set(list(data_keys)) ^ set(vocs.variable_names + vocs.output_names)}"
+            )
+
+        # Notify user that data has been added to the routine
+        dialog = QMessageBox(
+            text=str(
+                "Data loaded into routine for the following objectives, variables:\n\n"
+                + f"{list(data_keys)}\n\n"
+                + "Click OK to continue!"
+            ),
+            parent=self,
+        )
+        dialog.setIcon(QMessageBox.Information)
+        dialog.setWindowTitle("Data added to routine")
+        dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        result = dialog.exec_()
+
+        if result == QMessageBox.Cancel:
+            raise BadgerRoutineError("Routine initialization cancelled by user.")
 
     def review(self):
         try:

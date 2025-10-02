@@ -30,9 +30,6 @@ from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
 from badger.routine import Routine
 from badger.tests.utils import get_current_vars
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.default.windows.terminition_condition_dialog import (
-    BadgerTerminationConditionDialog,
-)
 
 from badger.gui.default.components.extensions_palette import ExtensionsPalette
 from badger.gui.default.components.routine_runner import BadgerRoutineSubprocess
@@ -447,16 +444,17 @@ class BadgerOptMonitor(QWidget):
             self.sig_stop.disconnect()
             self.routine_runner = None
 
-    def start(self, use_termination_condition=False):
+    def start(self, data_options: dict, use_termination_condition: bool = False):
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
-        self.routine.data = None  # reset data if any
+        if data_options["run_data"] is False:
+            self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        self.routine_runner.run()
+        self.routine_runner.run(data_options=data_options)
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 
@@ -945,19 +943,6 @@ class BadgerOptMonitor(QWidget):
     def stop(self):
         self.sig_stop.emit()
         self.sig_stop_run.emit()
-
-    def start_until(self):
-        dlg = BadgerTerminationConditionDialog(
-            self,
-            self.start,
-            self.save_termination_condition,
-            self.termination_condition,
-        )
-        self.tc_dialog = dlg
-        try:
-            dlg.exec()
-        finally:
-            self.tc_dialog = None
 
     def register_post_run_action(self, action):
         self.post_run_actions.append(action)

@@ -108,9 +108,11 @@ def run_routine_subprocess(
         if routine.vrange_hard_limit:
             routine.environment.variables.update(routine.vrange_hard_limit)
 
-        # TODO: might need to consider the case where routine.data is None?
-        if routine.data is not None:
-            routine.data = routine.data.iloc[0:0]  # reset the data
+        # Reset data if run_data option is False
+        if not args["data_options"]["run_data"]:
+            if routine.data is not None:
+                routine.data = routine.data.iloc[0:0]  # reset the data
+
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
@@ -166,13 +168,14 @@ def run_routine_subprocess(
     # timeout logic will be handled in the specific environment
     try:
         # initial sampling
-        for _, ele in initial_points.iterrows():
-            result = routine.evaluate_data(ele.to_dict())
-            solution = convert_to_solution(result, routine)
-            opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate:
-                time.sleep(0.1)  # give it some break tp catch up
-                evaluate_queue[0].send((routine.data, routine.generator))
+        if args["data_options"]["init_points"]:
+            for _, ele in initial_points.iterrows():
+                result = routine.evaluate_data(ele.to_dict())
+                solution = convert_to_solution(result, routine)
+                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                if evaluate:
+                    time.sleep(0.1)  # give it some break tp catch up
+                    evaluate_queue[0].send((routine.data, routine.generator))
 
         # optimization loop
         while True:

@@ -37,6 +37,9 @@ from badger.settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.default.windows.terminition_condition_dialog import (
+    BadgerTerminationConditionDialog,
+)
 from badger.gui.default.utils import ModalOverlay
 
 import logging
@@ -146,6 +149,9 @@ class BadgerHomePage(QWidget):
         self.routine_editor = routine_editor = BadgerRoutinePage()
         vbox_routine_view.addWidget(routine_editor)
 
+        self.data_panel = self.routine_editor.routine_page.data_panel
+        self.run_table_2 = self.routine_editor.routine_page.data_panel.data_table
+
         # Add action bar
         self.run_action_bar = run_action_bar = BadgerActionBar()
 
@@ -190,6 +196,9 @@ class BadgerHomePage(QWidget):
 
         self.run_table.cellClicked.connect(self.solution_selected)
         self.run_table.itemSelectionChanged.connect(self.table_selection_changed)
+
+        self.run_table_2.cellClicked.connect(self.solution_selected)
+        self.run_table_2.itemSelectionChanged.connect(self.table_selection_changed)
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
@@ -255,6 +264,7 @@ class BadgerHomePage(QWidget):
 
         if i == -1:
             update_table(self.run_table)
+            update_table(self.run_table_2)
             try:
                 self.current_routine.data = None  # reset the data
             except AttributeError:  # current routine is None
@@ -297,6 +307,7 @@ class BadgerHomePage(QWidget):
 
         self.current_routine = routine  # update the current routine
         update_table(self.run_table, routine.sorted_data, routine.vocs)
+        self.data_panel.load_data(routine)
         self.run_monitor.init_plots(routine, run_filename)
         self.routine_editor.set_routine(routine, silent=True)
         self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")
@@ -305,12 +316,14 @@ class BadgerHomePage(QWidget):
 
     def inspect_solution(self, idx):
         self.run_table.selectRow(idx)
+        self.run_table_2.selectRow(idx)
 
     def solution_selected(self, r, c):
         self.run_monitor.jump_to_solution(r)
 
     def table_selection_changed(self):
         indices = self.run_table.selectedIndexes()
+        indices = self.run_table_2.selectedIndexes()
         if len(indices) == 1:  # let other method handles it
             return
 
@@ -339,12 +352,17 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self):
+    def prepare_run(self, data=None):
         try:
             routine = self.routine_editor._compose_routine()
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
+
+        # Add data to routine before saving tmp file
+        if data is not None:
+            self.routine_editor.routine_page.validate_loaded_data_keys(routine.vocs)
+            routine.data = data
 
         self.current_routine = routine
 
@@ -356,13 +374,62 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self):
-        self.prepare_run()
-        self.run_monitor.start()
+    def start_run(self, use_termination_condition: bool = False):
+        """
+        Prepares and starts optimization run with provided options.
+        - Termination Condition is provided when called via BadgerTerminationConditionDialog
+        - Data Options are collected from BadgerDataPanel
+
+        Args:
+            use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog.
+
+        """
+
+        # Set data options based on checkbox states from data_panel
+        data_options = {
+            "run_data": self.data_panel.use_data,
+            "init_points": self.data_panel.init_points,
+        }
+        # A different option could be to store these as bool fields here in
+        # BadgerHomePage, eg. self.use_data and self.init_points, and connect
+        # the checkboxes in data_panel to signals to set those fields.
+
+        if data_options["run_data"]:
+            data_to_load = self.data_panel.get_data()  # Get data from data_panel
+            self.prepare_run(
+                data=data_to_load
+            )  # Pass data to prepare run, to be loaded into plots
+            self.run_monitor.init_plots(self.current_routine)
+
+            # Add routine and generator data back to the routine
+            self.current_routine.data = data_to_load
+            if self.current_routine.generator.data is None:
+                self.current_routine.generator.data = data_to_load
+
+        else:
+            self.prepare_run()
+
+        if not self.data_panel.use_data:
+            self.data_panel.reset_data_table()
+
+        self.run_monitor.start(
+            use_termination_condition=use_termination_condition,
+            data_options=data_options,
+        )
 
     def start_run_until(self):
-        self.prepare_run()
-        self.run_monitor.start_until()
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            self.start_run,
+            self.run_monitor.save_termination_condition,
+            self.run_monitor.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
+        # self.run_monitor.start_until()
 
     def new_run(self):
         self.cover_page()
@@ -388,6 +455,7 @@ class BadgerHomePage(QWidget):
         cons = list(solution[vocs.constraint_names].to_numpy()[0])
         stas = list(solution[vocs.observable_names].to_numpy()[0])
         add_row(self.run_table, objs + cons + vars + stas)
+        self.data_panel.add_live_data(solution)
 
     def delete_run(self):
         run_name = get_base_run_filename(self.history_browser.currentText())
