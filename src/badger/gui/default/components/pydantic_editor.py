@@ -179,13 +179,8 @@ class BadgerResolvedType:
         elif issubclass(resolved_type.main, BaseModel):
             if issubclass(resolved_type.main, TurboController):
                 widget = QComboBox()
-                for controller in TurboController.__subclasses__():
-                    widget.addItem(controller.model_fields["name"].default, controller)
-
             elif issubclass(resolved_type.main, NumericalOptimizer):
                 widget = QComboBox()
-                for optimizer in NumericalOptimizer.__subclasses__():
-                    widget.addItem(optimizer.model_fields["name"].default, optimizer)
 
             else:
                 return None
@@ -483,7 +478,6 @@ class BadgerPydanticEditor(QTreeWidget):
                 default=(
                     field_info.default
                     if defaults is None
-                    # or not isinstance(defaults, dict)
                     or field_name not in defaults
                     or defaults[field_name] is None
                     else defaults[field_name]
@@ -496,11 +490,16 @@ class BadgerPydanticEditor(QTreeWidget):
                     raise ValueError(
                         f"Could not resolve type for field {field_name} with annotation {field_info.annotation}"
                     )
-
                 self._set_params_recurse(
                     child,
                     resolved.main.model_fields,
-                    (None if defaults is None else defaults[field_name]),
+                    (
+                        None
+                        if defaults is None
+                        or field_name not in defaults
+                        or defaults[field_name] is None
+                        else defaults[field_name]
+                    ),
                     hidden,
                 )
             else:
@@ -508,58 +507,18 @@ class BadgerPydanticEditor(QTreeWidget):
 
             child.setHidden(hidden)
 
-    def handle_repopulate(
+    def initialize_combo_widget(
         self,
         widget: QComboBox,
-        tree_widget_item: QTreeWidgetItem,
-        types: Sequence[type[BaseModel]],
-        defaults: dict[str, Any],
+        selections: Sequence[type[BaseModel] | None],
     ):
-        for i in range(len(types)):
-            widget.addItem(types[i].model_fields["name"].default, types[i].model_fields)
-
-        # widget.currentIndexChanged.connect(
-        #     lambda: self.on_repopulate_changed(widget, tree_widget_item, defaults)
-        # )
-        # widget.currentIndexChanged.emit(0)
-
-    def on_repopulate_changed(
-        self,
-        widget: QComboBox,
-        tree_widget_item: QTreeWidgetItem,
-        defaults: dict[str, Any],
-    ):
-        model_fields = {
-            key: value
-            for key, value in widget.itemData(widget.currentIndex()).items()
-            if key in defaults
-        }
-
-        hidden_model_fields = {
-            key: value
-            for key, value in widget.itemData(widget.currentIndex()).items()
-            if key == "name"
-        }
-
-        self.repopulate_child(
-            tree_widget_item,
-            model_fields,
-            hidden_model_fields,
-            defaults,
-        )
-
-    def repopulate_child(
-        self,
-        child: QTreeWidgetItem,
-        model_fields: dict[str, FieldInfo],
-        model_fields_hidden: dict[str, FieldInfo],
-        defaults: dict[str, Any],
-    ) -> None:
-        for cc in child.takeChildren():
-            del cc
-        self._set_params_recurse(child, model_fields, defaults, False)
-        # self._set_params_recurse(child, model_fields_hidden, defaults, True)
-        child.setExpanded(True)
+        # Clear out existing children
+        widget.clear()
+        for selection in selections:
+            if selection is None:
+                widget.addItem("null", selection)
+            else:
+                widget.addItem(selection.model_fields["name"].default, selection)
 
     def set_params_from_class(self, pydantic_class: type[Any]):
         self.clear()
@@ -599,114 +558,72 @@ class BadgerPydanticEditor(QTreeWidget):
         # Update parameters with defaults from generator class
         if issubclass(self.model_class, BayesianGenerator):
             if self.model_class.model_fields.get("turbo_controller") is not None:
-                # self.initialize_turbo_controller_field(defaults)
-                pass
+                self.initialize_special_field(defaults, "turbo_controller")
 
             if self.model_class.model_fields.get("numerical_optimizer") is not None:
-                self.initialize_numerical_optimizer_field(defaults)
+                self.initialize_special_field(defaults, "numerical_optimizer")
 
-        # self.validate()
+        self.validate()
 
-    def initialize_numerical_optimizer_field(self, defaults: dict[str, Any]):
-        numerical_optimizer_items = self.findItems(
-            "numerical_optimizer", Qt.MatchFlag.MatchExactly
-        )
+    def initialize_special_field(self, defaults: dict[str, Any], field: str):
+        widget_items = self.findItems(field, Qt.MatchFlag.MatchExactly)
 
-        if len(numerical_optimizer_items) == 0:
-            raise ValueError(
-                "Generator has numerical optimizer set but no compatible numerical optimizer item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
+        if len(widget_items) == 0:
+            logger.warning(
+                f"Generator has {field} set but no compatible {field} item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
+            )
+            return
+
+        special_item = widget_items[0]
+
+        # Initialize combo box for special item
+        widget = self.itemWidget(special_item, 1)
+        if widget is None or not isinstance(widget, QComboBox):
+            raise ValueError(f"{field} does not have a combo box widget.")
+        widget = cast(QComboBox, widget)
+
+        selections = self.get_all_compatible_classes(field)
+
+        self.initialize_combo_widget(widget, selections)
+
+        special_item_dict: dict[str, Any] | None = defaults.get(field, {})
+
+        if special_item_dict is None:
+            logger.warning(
+                f"Generator has {field} set but no compatible {field} exists."
+            )
+            special_item_dict = {}
+
+        name = special_item_dict.get("name", "")
+        if name == "":
+            logger.warning(
+                f"Generator has {field} set but no name exists in the {field} defaults."
             )
 
-        numerical_optimizer_item = numerical_optimizer_items[0]
-
-        num_optimizer_dict = defaults.get("numerical_optimizer", None)
-
-        if num_optimizer_dict is None:
-            raise ValueError(
-                "Generator has numerical optimizer set but no compatible numerical optimizer exists."
-            )
-
-        name = num_optimizer_dict.get("name", None)
-        if name is None:
-            raise ValueError(
-                "Generator has numerical optimizer set but no name exists in the numerical optimizer defaults."
-            )
+        # Update combo box selection with name
+        if (index := widget.findText(name) if name else widget.findText("null")) >= 0:
+            widget.setCurrentIndex(index)
 
         self.update_params_from_generator_class(
-            numerical_optimizer_item,
+            special_item,
             name,
-            "numerical_optimizer",
-            num_optimizer_dict,
+            field,
+            special_item_dict,
         )
 
-        widget = self.itemWidget(numerical_optimizer_item, 1)
-        if widget is not None:
-            if isinstance(widget, QComboBox):
-                widget = cast(QComboBox, widget)
-
-                widget.currentIndexChanged.connect(
-                    lambda: self.on_radio_changed(
-                        widget,
-                        numerical_optimizer_item,
-                        "numerical_optimizer",
-                        num_optimizer_dict,
-                    )
-                )
-
-    def initialize_turbo_controller_field(self, defaults: dict[str, Any]):
-        turbo_controller_items = self.findItems(
-            "turbo_controller", Qt.MatchFlag.MatchExactly
+        widget.currentIndexChanged.connect(
+            lambda: self.on_radio_changed(
+                special_item,
+                field,
+                special_item_dict,
+            )
         )
 
-        if len(turbo_controller_items) == 0:
-            logger.warning(
-                "Generator has turbo controller set but no compatible turbo controller item exists in tree. Item has likely been filtered out from not being included in defaults when setting parameters."
-            )
-            return
-
-        turbo_controller_item = turbo_controller_items[0]
-
-        turbo_controller_dict = defaults.get("turbo_controller", None)
-
-        if turbo_controller_dict is None:
-            logger.warning(
-                "Generator has turbo controller set but no compatible turbo controller exists."
-            )
-            return
-
-        widget = self.itemWidget(turbo_controller_item, 1)
-        if widget is not None:
-            if isinstance(widget, QComboBox):
-                widget = cast(QComboBox, widget)
-
-                widget.currentIndexChanged.connect(
-                    lambda: self.on_radio_changed(
-                        widget,
-                        turbo_controller_item,
-                        "turbo_controller",
-                        turbo_controller_dict,
-                    )
-                )
-
-        name = turbo_controller_dict.get("name", None)
-        if name is None:
-            logger.warning(
-                "Generator has turbo controller set but no name exists in the turbo controller defaults."
-            )
-            return
-
-        self.update_params_from_generator_class(
-            turbo_controller_item,
-            name,
-            "turbo_controller",
-            turbo_controller_dict,
-        )
-
-    def get_compatible_class(self, name: str, field_name: str) -> type[BaseModel]:
+    def get_all_compatible_classes(self, field_name: str):
         if self.model_class is None:
             raise ValueError("Model class is not set.")
 
-        compatible_classes: Sequence[type[BaseModel]] = []
+        compatible_classes: Sequence[type[BaseModel] | None] = []
 
         if field_name == "numerical_optimizer":
             if not issubclass(self.model_class, BayesianGenerator):
@@ -719,23 +636,31 @@ class BadgerPydanticEditor(QTreeWidget):
         else:
             raise ValueError(f"Field name {field_name} is not recognized.")
 
-        numerical_optimizer_class: type[BaseModel] | None = None
+        return compatible_classes
+
+    def get_compatible_class(self, name: str, field_name: str) -> type[BaseModel]:
+        compatible_classes = self.get_all_compatible_classes(field_name)
+
+        selected_class: type[BaseModel] | None = None
 
         for opt in compatible_classes:
-            if opt.model_fields["name"].default == name:
-                numerical_optimizer_class = opt
-                break
+            if opt is None:
+                if name == "null":
+                    break
+            else:
+                if opt.model_fields["name"].default == name:
+                    selected_class = opt
+                    break
 
-        if numerical_optimizer_class is None:
+        if selected_class is None:
             raise ValueError(
                 f"Generator has numerical optimizer set but no compatible numerical optimizer with name {name} exists."
             )
 
-        return numerical_optimizer_class
+        return selected_class
 
     def on_radio_changed(
         self,
-        widget: QComboBox,
         tree_widget_item: QTreeWidgetItem,
         field_name: str,
         defaults: dict[str, Any],
@@ -743,6 +668,13 @@ class BadgerPydanticEditor(QTreeWidget):
         # Clear out existing children
         for cc in tree_widget_item.takeChildren():
             del cc
+
+        widget = self.itemWidget(tree_widget_item, 1)
+        if widget is None or not isinstance(widget, QComboBox):
+            raise ValueError(
+                "Numerical optimizer item does not have a combo box widget."
+            )
+        widget = cast(QComboBox, widget)
 
         name = widget.currentText()
         if name == "null":
@@ -765,7 +697,9 @@ class BadgerPydanticEditor(QTreeWidget):
         try:
             pydantic_class = self.get_compatible_class(name, field_name)
         except ValueError:
-            # self.remove_style(tree_widget_item)
+            logger.warning(
+                f"Could not find compatible class for {name} in field {field_name}"
+            )
             return
 
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
@@ -785,10 +719,12 @@ class BadgerPydanticEditor(QTreeWidget):
             True,
         )
 
+        self.expandItem(tree_widget_item)
+
     def filter_class_fields(
         self, pydantic_class: type[BaseModel]
     ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
-        fields_to_remove = ["name"]
+        fields_to_remove = ["name", "vocs"]
 
         filtered_class_fields = {
             k: v
