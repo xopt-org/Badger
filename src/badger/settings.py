@@ -46,6 +46,8 @@ class BadgerConfig(BaseModel):
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
         Setting for the archive root directory.
+    BADGER_LOGGING_LEVEL : Setting
+        Setting for the logging level.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
@@ -77,6 +79,12 @@ class BadgerConfig(BaseModel):
         description="This setting (BADGER_ARCHIVE_ROOT) tells Badger where to archive the historical optimization runs",
         value=None,
         is_path=True,
+    )
+    BADGER_LOGGING_LEVEL: Setting = Setting(
+        display_name="logging level",
+        description="Logging level for the Badger logger",
+        value="INFO",
+        is_path=False,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
         display_name="data dump period",
