@@ -12,6 +12,16 @@ def test_routine_page_init(qtbot):
     qtbot.addWidget(window)
 
 
+def test_set_routine(qtbot):
+    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.tests.utils import create_routine
+
+    window = BadgerRoutinePage()
+
+    routine = create_routine()
+    window.set_routine(routine)
+
+
 def test_routine_generation(qtbot):
     from badger.errors import BadgerRoutineError
     from badger.utils import get_badger_version, get_xopt_version

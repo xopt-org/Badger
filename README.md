@@ -4,12 +4,12 @@
     <br />
     <br />
     <a href="https://xopt-org.github.io/Badger">
-      <img src="pics/badger.png" alt="Badger" height=128>
+      <img src="images/badger.png" alt="Badger" height=128>
     </a>
   </h1>
 </div>
 
-![Badger main GUI](pics/main.png)
+![Badger main GUI](images/main.png)
 
 <div align="center">
 
