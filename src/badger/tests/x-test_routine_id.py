@@ -16,7 +16,7 @@ def test_routines_same_name():
 
 
 def test_modify_routine_no_runs(qtbot):
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.db import list_routine, remove_routine, load_routine
 
     window = BadgerRoutinePage()
@@ -48,7 +48,7 @@ def test_modify_routine_no_runs(qtbot):
 
 # TODO: write test for modifying name of routine with runs
 def test_modify_routine_name(qtbot):
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.db import list_routine, remove_routine, load_routine, save_run
 
     window = BadgerRoutinePage()
@@ -88,7 +88,7 @@ def test_modify_routine_name(qtbot):
 
 # TODO: write test for modifying algorithm of routine with runs
 def test_modify_routine_algorithm(qtbot):
-    from badger.gui.default.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.db import list_routine, remove_routine, load_routine, save_run
 
     window = BadgerRoutinePage()
