@@ -70,6 +70,6 @@ ignore = ["E722"] # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
 addopts = "--cov=badger/"
-log_cli_level = "info"
-log_level = "debug"
+log_cli_level = "warning"
+log_level = "warning"
 testpaths = ["src/badger/tests"]

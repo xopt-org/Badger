@@ -7,6 +7,8 @@ from badger.utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 from badger.errors import BadgerLoadConfigError
+import logging
+import multiprocessing as mp
 
 
 class Setting(BaseModel):
@@ -46,6 +48,10 @@ class BadgerConfig(BaseModel):
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
         Setting for the archive root directory.
+    BADGER_LOGFILE_PATH : Setting
+        Setting for the logging level.
+    BADGER_LOGGING_FILE : Setting
+        Setting for the location of logfile.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
@@ -76,6 +82,18 @@ class BadgerConfig(BaseModel):
         display_name="archive root",
         description="This setting (BADGER_ARCHIVE_ROOT) tells Badger where to archive the historical optimization runs",
         value=None,
+        is_path=True,
+    )
+    BADGER_LOGGING_LEVEL: Setting = Setting(
+        display_name="logging level",
+        description="Logging level for the Badger logger",
+        value="WARNING",
+        is_path=False,
+    )
+    BADGER_LOGFILE_PATH: Setting = Setting(
+        display_name="logfile path",
+        description="Path for the Badger logfile",
+        value="badger.log",
         is_path=True,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
@@ -113,6 +131,24 @@ class ConfigSingleton:
             cls._instance.user_flag = user_flag
             cls._instance._config = cls.load_or_create_config(config_path)
             cls._instance.config_path = config_path
+            cls._initialized = True  # NEW
+        elif config_path is not None and config_path != cls._instance.config_path:
+            # IMPORTANT: If subprocess passes a different config_path,
+            # we should respect it (for multiprocessing scenarios)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"ConfigSingleton already exists with path '{cls._instance.config_path}', "
+                f"but new path '{config_path}' was provided. "
+                f"In subprocess context, this is expected behavior."
+            )
+            # In subprocess, we actually want to reinitialize with the correct path
+            # Check if we're in a subprocess
+            if mp.current_process().name != 'MainProcess':
+                logger.info(f"Subprocess detected, reinitializing config with path: {config_path}")
+                cls._instance.user_flag = user_flag
+                cls._instance._config = cls.load_or_create_config(config_path)
+                cls._instance.config_path = config_path
         return cls._instance
 
     @classmethod
@@ -360,6 +396,7 @@ class ConfigSingleton:
         value: Any
             The value that is being saved.
         """
+        print("!!!! writing value !!!")
         keys = key.split(".")
         updates = {}
         sub_dict = updates

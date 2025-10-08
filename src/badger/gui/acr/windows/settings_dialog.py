@@ -1,7 +1,12 @@
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
 # from PyQt5.QtCore import QRegExp
 # from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import (
-    # QComboBox,
+    QComboBox,
     QGridLayout,
     QVBoxLayout,
     QWidget,
@@ -15,6 +20,7 @@ from PyQt5.QtWidgets import (
 )
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
 from badger.settings import init_settings
+from badger.log import set_log_level, get_logging_manager
 
 
 class BadgerSettingsDialog(QDialog):
@@ -26,6 +32,7 @@ class BadgerSettingsDialog(QDialog):
     }
 
     def __init__(self, parent):
+        logger.info("Initializing BadgerSettingsDialog.")
         super().__init__(parent)
 
         self.config_singleton = init_settings()
@@ -37,6 +44,7 @@ class BadgerSettingsDialog(QDialog):
         self.config_logic()
 
     def init_ui(self):
+        logger.info("Initializing settings dialog UI.")
         self.setWindowTitle("Badger settings")
         self.setMinimumWidth(480)
 
@@ -89,6 +97,27 @@ class BadgerSettingsDialog(QDialog):
         )
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
+
+        # log level setting
+        self.logging_level = logging_level = QLabel("Logging level")
+        self.logging_level_setting = logging_level_setting = QComboBox()
+        self.logging_level_setting.addItems([
+            "CRITICAL",
+            "ERROR",
+            "WARNING",
+            "INFO",
+            "DEBUG",
+            "NOTSET"
+        ])
+
+        # set current value from config if it exists
+        current_level = self.config_singleton.read_value("BADGER_LOGGING_LEVEL")
+        if current_level in [self.logging_level_setting.itemText(i) for i in range(self.logging_level_setting.count())]:
+            self.logging_level_setting.setCurrentText(current_level)
+
+
+        grid.addWidget(logging_level, 5, 0)
+        grid.addWidget(logging_level_setting, 5, 1)
 
         # Auto refresh
         # self.auto_refresh = auto_refresh = QLabel("Auto Refresh")
@@ -147,11 +176,13 @@ class BadgerSettingsDialog(QDialog):
         vbox.addWidget(self.btns)
 
     def config_logic(self):
+        logger.info("Configuring logic for settings dialog.")
         # self.cb_theme.currentIndexChanged.connect(self.select_theme)
         self.btns.accepted.connect(self.apply_settings)
         self.btns.rejected.connect(self.restore_settings)
 
     def set_theme(self, theme):
+        logger.info(f"Setting theme: {theme}")
         app = QApplication.instance()
         if theme == "dark":
             app.setStyleSheet(load_stylesheet(palette=DarkPalette))
@@ -161,12 +192,14 @@ class BadgerSettingsDialog(QDialog):
             app.setStyleSheet("")
 
     def select_theme(self, i):
+        logger.info(f"Theme selected: {self.theme_list[i]}")
         theme = self.theme_list[i]
         self.set_theme(theme)
         # Update the internal settings
         self.config_singleton.write_value("BADGER_THEME", theme)
 
     def apply_settings(self):
+        logger.info("Applying settings.")
         self.accept()
         self.config_singleton.write_value(
             "BADGER_PLUGIN_ROOT", self.plugin_root_path.text()
@@ -180,6 +213,22 @@ class BadgerSettingsDialog(QDialog):
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
         )
+
+        level_str = self.logging_level_setting.currentText()
+        self.config_singleton.write_value(
+            "BADGER_LOGGING_LEVEL", level_str
+        )
+        # update loggers with new value
+        level = getattr(logging, level_str, logging.WARNING)
+        set_log_level(level)
+        logger.info(f"Logger level changed to {level}")
+
+        # IMPORTANT: Also update the centralized logging manager
+        logging_manager = get_logging_manager()
+        logging_manager.update_log_level(level)
+    
+        logger.info(f"Logger level changed to {level_str} across all processes")
+
         # self.config_singleton.write_value(
         #     "AUTO_REFRESH", self.enable_auto_refresh.isChecked()
         # )
@@ -194,6 +243,7 @@ class BadgerSettingsDialog(QDialog):
         # )
 
     def restore_settings(self):
+        logger.info("Restoring previous settings.")
         # Reset theme if needed
         theme_curr = self.config_singleton.read_value("BADGER_THEME")
         theme_prev = self.settings["BADGER_THEME"]["value"]
