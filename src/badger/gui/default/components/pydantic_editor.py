@@ -322,19 +322,21 @@ def _qt_widgets_to_yaml_recurse(
             child_item = item.child(i)
             if child_item is None:
                 continue
-            out += f'"{child_item.text(0)}":'
+
+            child_item_text = child_item.text(0)
+            out += f'"{child_item_text}":'
             widget = table.itemWidget(child_item, 1)
-            if widget is None:
+
+            if child_item.childCount() > 0:
+                out += _qt_widgets_to_yaml_recurse(table, child_item)
+            elif widget is None:
                 out += "null"
             else:
-                if child_item.childCount() > 0:
-                    out += _qt_widgets_to_yaml_recurse(table, child_item)
+                yaml_value = _qt_widget_to_yaml_value(widget)
+                if yaml_value is None:
+                    out += "null"
                 else:
-                    yaml_value = _qt_widget_to_yaml_value(widget)
-                    if yaml_value is None:
-                        out += "null"
-                    else:
-                        out += yaml_value
+                    out += yaml_value
 
             if i < item.childCount() - 1:
                 out += ","
@@ -443,7 +445,7 @@ class BadgerListEditor(QWidget):
 
 
 class BadgerPydanticEditor(QTreeWidget):
-    vocs: VOCS | None = None
+    vocs: VOCS = VOCS()
     model_class: type[BaseModel] | None = None
 
     def __init__(
@@ -524,6 +526,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self.clear()
         self.model_class = pydantic_class
         self._set_params_recurse(None, self.model_class.model_fields, None, False)
+        self.set_params_post_setup({})
         self.validate()
 
     def set_params_from_dict(self, params: dict[str, Any]):
@@ -539,6 +542,8 @@ class BadgerPydanticEditor(QTreeWidget):
             create_model("DynamicModel", **field_definitions),  # type: ignore
         )
         self._set_params_recurse(None, self.model_class.model_fields, params, False)
+
+        self.set_params_post_setup(params)
         self.validate()
 
     def set_params_from_generator(
@@ -546,24 +551,36 @@ class BadgerPydanticEditor(QTreeWidget):
     ):
         logger.debug(f"vocs: {vocs}")
         logger.debug(f"defaults: {defaults}")
-        self.vocs = vocs
+        self.vocs = vocs or VOCS()
         self.clear()
         self.model_class = get_generator(generator_name)
+
+        # defaults["vocs"] = self.vocs.model_dump()
+
         self._set_params_recurse(
             None,
             {k: v for k, v in self.model_class.model_fields.items() if k in defaults},
             defaults,
             False,
         )
+
         # Update parameters with defaults from generator class
+        self.set_params_post_setup(defaults)
+
+        self.validate()
+
+    def set_params_post_setup(self, defaults: dict[str, Any]):
+        if self.model_class is None:
+            raise ValueError("Model class is not set.")
+
+        # defaults["vocs"] = self.vocs.model_dump()
+
         if issubclass(self.model_class, BayesianGenerator):
             if self.model_class.model_fields.get("turbo_controller") is not None:
                 self.initialize_special_field(defaults, "turbo_controller")
 
             if self.model_class.model_fields.get("numerical_optimizer") is not None:
                 self.initialize_special_field(defaults, "numerical_optimizer")
-
-        self.validate()
 
     def initialize_special_field(self, defaults: dict[str, Any], field: str):
         widget_items = self.findItems(field, Qt.MatchFlag.MatchExactly)
@@ -593,6 +610,8 @@ class BadgerPydanticEditor(QTreeWidget):
                 f"Generator has {field} set but no compatible {field} exists."
             )
             special_item_dict = {}
+
+        special_item_dict["vocs"] = self.vocs.model_dump()
 
         name = special_item_dict.get("name", "")
         if name == "":
@@ -686,6 +705,8 @@ class BadgerPydanticEditor(QTreeWidget):
             field_name,
             defaults,
         )
+
+        self.validate()
 
     def update_params_from_generator_class(
         self,
@@ -794,6 +815,10 @@ class BadgerPydanticEditor(QTreeWidget):
         for j in range(item.childCount()):
             self.remove_style(item.child(j))
 
+    def update_vocs(self, vocs: VOCS):
+        self.vocs = vocs
+        self.validate()
+
     def validate(self):
         if self.model_class is None:
             return False
@@ -807,10 +832,7 @@ class BadgerPydanticEditor(QTreeWidget):
 
             # hack to pass validation for certain generators
             if issubclass(self.model_class, Generator) and "vocs" not in parameters:
-                if self.vocs is None:
-                    vocs = {}
-                else:
-                    vocs = str(self.vocs.model_dump())
+                vocs = self.vocs.model_dump()
 
                 parameters = (
                     parameters[:-1]
@@ -826,12 +848,6 @@ class BadgerPydanticEditor(QTreeWidget):
         except ValidationError as e:
             print(e)
 
-            # hack for generators
-            if str(e) == "'vocs'" or (
-                "turbo_controller.vocs" in str(e) and len(e.errors()) == 1
-            ):
-                return True
-
             for error in e.errors():
                 loc = error["loc"]
                 if len(loc) > 0:
@@ -844,5 +860,6 @@ class BadgerPydanticEditor(QTreeWidget):
                         error_widget.setStyleSheet(
                             f"{meta_object.className()} {{ border: 2px dashed red; }}"
                         )
+                        error_widget.setToolTip(str(error["msg"]))
 
             return False
