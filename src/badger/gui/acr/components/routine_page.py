@@ -63,6 +63,10 @@ from badger.utils import (
     get_xopt_version,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 LABEL_WIDTH = 96
 CONS_RELATION_DICT = {
     ">": "GREATER_THAN",
@@ -257,6 +261,9 @@ class BadgerRoutinePage(QWidget):
 
         # vbox.addStretch()
 
+        # Add connection to update vocs when env or generator changes for pydantic editor validation
+        self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
+
         # Template path
         try:
             self.template_dir = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
@@ -290,6 +297,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
+
+        # self.env_box.var_table.sig_sel_changed.connect(
+        #     lambda: logger.debug("Selection changed")
+        # )  # for debugging
 
     def load_template_yaml(self) -> None:
         """
@@ -556,7 +567,7 @@ class BadgerRoutinePage(QWidget):
         Generate a template dictionary from the current state of the GUI
         """
 
-        vocs, critical_constraints = self._compose_vocs()
+        vocs, critical_constraints = self.env_box.compose_vocs()
 
         # Filter generator
         generator_name = self.generator_box.cb.currentText()
@@ -657,9 +668,7 @@ class BadgerRoutinePage(QWidget):
             print(f"Error saving template: {e}")
             return
 
-    def refresh_ui(self, routine: Routine = None, silent: bool = False):
-        self.routine = routine  # save routine for future reference
-
+    def refresh_ui(self, routine: Routine | None = None, silent: bool = False):
         self.generators = list_generators()
         self.envs = list_env()
 
@@ -669,7 +678,9 @@ class BadgerRoutinePage(QWidget):
             self.env_box.cb.setCurrentIndex(-1)
             init_table = self.env_box.init_table
             init_table.clear()
-            init_table.horizontalHeader().setVisible(False)
+            hh = init_table.horizontalHeader()
+            if hh:
+                hh.setVisible(False)
             init_table.setRowCount(10)
             init_table.setColumnCount(0)
 
@@ -687,6 +698,8 @@ class BadgerRoutinePage(QWidget):
             self.btn_descr_update.setDisabled(True)
 
             return
+
+        self.routine = routine  # save routine for future reference
 
         # Enable description edition
         self.btn_descr_update.setDisabled(False)
@@ -991,7 +1004,7 @@ class BadgerRoutinePage(QWidget):
             env = self.create_env()
             # Get vocs
             try:
-                vocs = self._compose_vocs()
+                vocs = self.env_box.compose_vocs()
             except Exception:
                 vocs = None
             # Function generate comes from the script
@@ -1172,7 +1185,7 @@ class BadgerRoutinePage(QWidget):
 
         # get small region around current point to sample
         try:
-            vocs, _ = self._compose_vocs()
+            vocs, _ = self.env_box.compose_vocs()
         except Exception:
             # Switch to manual mode to allow the user fixing the vocs issue
             QMessageBox.warning(
@@ -1515,7 +1528,7 @@ class BadgerRoutinePage(QWidget):
     def toggle_relative_to_curr(self, checked, refresh=True):
         if checked:
             try:
-                _ = self._compose_vocs()
+                _ = self.env_box.compose_vocs()
             except Exception:
                 # Switch to manual mode to allow the user fixing the vocs issue
                 # Schedule the checkbox to be clicked after the event loop finishes
@@ -1641,7 +1654,6 @@ class BadgerRoutinePage(QWidget):
             raise BadgerRoutineError(
                 f"\n\nVOCS validation failed: {format_validation_error(e)}"
             ) from e
-
         return vocs, critical_constraints
 
     def _compose_routine(self) -> Routine:
@@ -1688,7 +1700,7 @@ class BadgerRoutinePage(QWidget):
         env_params = load_config(self.env_box.edit.get_parameters())
 
         # VOCS
-        vocs, critical_constraints = self._compose_vocs()
+        vocs, critical_constraints = self.env_box.compose_vocs()
         if not vocs.variables:
             raise BadgerRoutineError("no variables selected")
         if not vocs.objectives:
@@ -1730,6 +1742,7 @@ class BadgerRoutinePage(QWidget):
         vrange_hard_limit = self.var_hard_limit
 
         try:
+            generator_params.pop("vocs")  # remove vocs if present
             generator = get_generator_dynamic(generator_name)(
                 vocs=vocs, **generator_params
             )

@@ -11,14 +11,20 @@ from PyQt5.QtWidgets import (
     QDoubleSpinBox,
     QMessageBox,
 )
-from PyQt5.QtCore import Qt, QRegExp
+from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
 from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EditableTable(QTableWidget):
     """
     A custom QTableWidget that supports editing and managing tabular data.
     """
+
+    data_changed = pyqtSignal()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -64,7 +70,12 @@ class EditableTable(QTableWidget):
         Configure signal connections and internal logic.
         """
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        # self.itemChanged.connect(self.update_vocs)
         self.itemChanged.connect(self.on_edit_table_item)
+
+    def update_vocs(self):
+        logging.debug("Emitting data_changed signal from editable_table")
+        self.data_changed.emit()
 
     def default_info(self) -> list:
         """
@@ -499,6 +510,7 @@ class EditableTable(QTableWidget):
         self.status[name] = selected
         if self.show_selected_only:
             self.update_items()
+        self.update_vocs()
 
     def update_info(self, idx: int) -> None:
         for i in range(self.rowCount() - 1):
@@ -545,8 +557,12 @@ class EditableTable(QTableWidget):
         self.keyword = keyword
         self.update_items()
 
+    def update_items(self, data=None, status=None, formulas=None):
+        self.update_items_wrapper(data, status, formulas)
+        self.update_vocs()
+
     @block_signals
-    def update_items(self, data=None, status=None, formulas=None) -> None:
+    def update_items_wrapper(self, data=None, status=None, formulas=None) -> None:
         """
         Refresh the table with the current items.
         """

@@ -23,11 +23,16 @@ from badger.environment import instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class VariableTable(QTableWidget):
     sig_sel_changed = pyqtSignal()
     sig_pv_added = pyqtSignal()
     sig_var_config = pyqtSignal(str)
+    data_changed = pyqtSignal()
 
     PLACEHOLDER_TEXT = "Enter new variable here...."
 
@@ -70,10 +75,10 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(4, 44)
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
 
-        self.all_variables = []  # store all variables
-        self.variables = []  # store variables to be displayed
-        self.selected = {}  # track var selected status
-        self.bounds = {}  # track var bounds
+        self.all_variables: list[str] = []  # store all variables
+        self.variables: list[str] = []  # store variables to be displayed
+        self.selected: dict[str, bool] = {}  # track var selected status
+        self.bounds: dict[str, tuple[float, float]] = {}  # track var bounds
         self.checked_only = False
         self.bounds_locked = False
         self.addtl_vars = []  # track variables added on the fly
@@ -84,10 +89,18 @@ class VariableTable(QTableWidget):
         self.config_logic()
         self.customContextMenuRequested.connect(self.display_conext_menu)
 
+    def update_vocs(self):
+        """
+        Emit the data_changed signal to notify that the VOCS has been updated.
+        """
+        logging.debug("Emitting data_changed signal from VariableTable")
+        self.data_changed.emit()
+
     def config_logic(self):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
         # Catch if any item gets changed
         self.itemChanged.connect(self.add_additional_variable)
+        self.data_changed.connect(self.update_bounds)
 
     def setItem(self, row, column, item):
         text = item.text()
@@ -179,6 +192,7 @@ class VariableTable(QTableWidget):
                 self.selected[name] = _cb.isChecked()
 
         self.sig_sel_changed.emit()
+        self.update_vocs()
 
         if self.checked_only:
             self.show_checked_only()
@@ -208,7 +222,7 @@ class VariableTable(QTableWidget):
     def show_all(self):
         self.update_variables(self.variables, 3)
 
-    def is_checked(self, name):
+    def is_checked(self, name: str) -> bool:
         try:
             _checked = self.selected[name]
         except KeyError:
@@ -324,6 +338,7 @@ class VariableTable(QTableWidget):
 
         if filtered not in [1, 3]:
             self.sig_sel_changed.emit()
+        self.data_changed.emit()
 
     def handle_config_button(self, var_name):
         self.sig_var_config.emit(var_name)
@@ -443,8 +458,8 @@ class VariableTable(QTableWidget):
         self.variables.append(var)
         self.bounds[name] = [lb, ub]
 
-    def export_variables(self) -> dict:
-        variables_exported = {}
+    def export_variables(self) -> dict[str, tuple[float, float]]:
+        variables_exported: dict[str, tuple[float, float]] = {}
         for var in self.all_variables:
             name = next(iter(var))
             if self.is_checked(name):

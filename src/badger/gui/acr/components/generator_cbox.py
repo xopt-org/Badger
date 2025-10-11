@@ -14,6 +14,7 @@ from badger.gui.default.utils import (
     NoHoverFocusComboBox,
 )
 from badger.utils import strtobool
+from xopt.vocs import VOCS
 
 LABEL_WIDTH = 96
 
@@ -127,3 +128,6 @@ class BadgerAlgoBox(QWidget):
         cbox_misc.setContentLayout(vbox_misc)
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_misc.hide()
+
+    def update_vocs(self, vocs: VOCS):
+        self.edit.update_vocs(vocs)

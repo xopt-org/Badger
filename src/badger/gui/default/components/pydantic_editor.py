@@ -39,6 +39,9 @@ from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
+import re
+import ast
+
 import logging
 
 from xopt.vocs import VOCS
@@ -446,6 +449,8 @@ class BadgerListEditor(QWidget):
 
 class BadgerPydanticEditor(QTreeWidget):
     vocs: VOCS = VOCS()
+    defaults: dict[str, Any] = {}
+    generator_name: str = ""
     model_class: type[BaseModel] | None = None
 
     def __init__(
@@ -552,16 +557,32 @@ class BadgerPydanticEditor(QTreeWidget):
         logger.debug(f"vocs: {vocs}")
         logger.debug(f"defaults: {defaults}")
         self.vocs = vocs or VOCS()
+        self.generator_name = generator_name
+        self.defaults = defaults
+
         self.clear()
         self.model_class = get_generator(generator_name)
 
-        # defaults["vocs"] = self.vocs.model_dump()
+        defaults["vocs"] = self.vocs.model_dump()
+
+        fields_to_remove = ["vocs"]
+
+        filtered_class_fields, removed_class_fields = self.filter_class_fields(
+            self.model_class, fields_to_remove, defaults, include_defaults=True
+        )
 
         self._set_params_recurse(
             None,
-            {k: v for k, v in self.model_class.model_fields.items() if k in defaults},
+            filtered_class_fields,
             defaults,
             False,
+        )
+
+        self._set_params_recurse(
+            None,
+            removed_class_fields,
+            defaults,
+            True,
         )
 
         # Update parameters with defaults from generator class
@@ -723,8 +744,10 @@ class BadgerPydanticEditor(QTreeWidget):
             )
             return
 
+        fields_to_remove = ["name", "vocs"]
+
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
-            pydantic_class
+            pydantic_class, fields_to_remove, include_defaults=False
         )
 
         self._set_params_recurse(
@@ -743,14 +766,27 @@ class BadgerPydanticEditor(QTreeWidget):
         self.expandItem(tree_widget_item)
 
     def filter_class_fields(
-        self, pydantic_class: type[BaseModel]
+        self,
+        pydantic_class: type[BaseModel],
+        fields_to_remove: list[str] = [],
+        defaults: dict[str, Any] = {},
+        include_defaults: bool = False,
     ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
-        fields_to_remove = ["name", "vocs"]
+        condition: Callable[[str], bool]
+
+        def include_condition(k: str) -> bool:
+            return k in defaults and k not in fields_to_remove
+
+        def exclude_condition(k: str) -> bool:
+            return k not in fields_to_remove
+
+        if include_defaults:
+            condition = include_condition
+        else:
+            condition = exclude_condition
 
         filtered_class_fields = {
-            k: v
-            for k, v in pydantic_class.model_fields.items()
-            if k not in fields_to_remove
+            k: v for k, v in pydantic_class.model_fields.items() if condition(k)
         }
 
         removed_class_fields = {
@@ -816,7 +852,8 @@ class BadgerPydanticEditor(QTreeWidget):
             self.remove_style(item.child(j))
 
     def update_vocs(self, vocs: VOCS):
-        self.vocs = vocs
+        logger.debug(f"Updating VOCS in BadgerPydanticEditor: {vocs}")
+        self.set_params_from_generator(self.generator_name, self.defaults, self.vocs)
         self.validate()
 
     def validate(self):
@@ -841,7 +878,26 @@ class BadgerPydanticEditor(QTreeWidget):
                     + "}"
                 )
 
-            self.model_class.model_validate(yaml.safe_load(parameters))
+            # Regex to match a tuple string, e.g., "(0.0, 1.0)"
+            tuple_pattern = re.compile(r"\((.*?,.*?)\)")
+
+            class CustomSafeLoader(yaml.SafeLoader):
+                def tuple_constructor(self, node: yaml.ScalarNode | yaml.MappingNode):
+                    value = self.construct_scalar(node)
+                    if tuple_pattern.match(value):
+                        try:
+                            return ast.literal_eval(value)
+                        except Exception:
+                            pass
+                    return value
+
+            CustomSafeLoader.add_constructor(
+                "tag:yaml.org,2002:str", CustomSafeLoader.tuple_constructor
+            )
+
+            self.model_class.model_validate(
+                yaml.load(parameters, Loader=CustomSafeLoader)
+            )
             return True
         except KeyError as e:
             print(e)
