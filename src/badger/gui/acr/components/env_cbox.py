@@ -518,7 +518,8 @@ class BadgerEnvBox(QWidget):
 
     def update_vocs(self):
         logger.debug("Emitting vocs_updated signal from env_cbox")
-        self.vocs_updated.emit(self.compose_vocs())
+        vocs, _ = self.compose_vocs()
+        self.vocs_updated.emit(vocs)
 
     def toggle_params(self, checked: bool):
         if not checked:

@@ -51,6 +51,25 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
+# Regex to match a tuple string, e.g., "(0.0, 1.0)"
+TUPLE_PATTERN = re.compile(r"\((.*?,.*?)\)")
+
+
+class CustomSafeLoader(yaml.SafeLoader):
+    def tuple_constructor(self, node: yaml.ScalarNode | yaml.MappingNode):
+        value = self.construct_scalar(node)
+        if TUPLE_PATTERN.match(value):
+            try:
+                return ast.literal_eval(value)
+            except Exception:
+                pass
+        return value
+
+
+CustomSafeLoader.add_constructor(
+    "tag:yaml.org,2002:str", CustomSafeLoader.tuple_constructor
+)
+
 
 def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
     try:
@@ -512,7 +531,10 @@ class BadgerPydanticEditor(QTreeWidget):
             else:
                 self.setItemWidget(child, 1, widget)
 
-            child.setHidden(hidden)
+            # child.setHidden(hidden)
+            child.setDisabled(hidden)
+            if widget is not None:
+                widget.setDisabled(hidden)
 
     def initialize_combo_widget(
         self,
@@ -812,7 +834,9 @@ class BadgerPydanticEditor(QTreeWidget):
     def get_parameters(self) -> str:
         return _qt_widgets_to_yaml_recurse(self, self.invisibleRootItem())
 
-    def find_widget_at_path(self, path: tuple[int | str, ...]) -> QWidget | None:
+    def find_widget_at_path(
+        self, path: tuple[int | str, ...]
+    ) -> QTreeWidgetItem | None:
         if len(path) == 0:
             return None
 
@@ -833,7 +857,20 @@ class BadgerPydanticEditor(QTreeWidget):
                 return None
 
             if level == len(path) - 1:
-                return self.itemWidget(found_item, 1)
+                # if found_item.childCount() > 0:
+                # child_items: list[QTreeWidgetItem] = []
+                # for i in range(found_item.childCount()):
+                #     child_widget = found_item.child(i)
+                #     if child_widget is not None:
+                #         child_items.append(child_widget)
+                # if len(child_items) > 1:
+                #     return [self.itemWidget(ci, 1) for ci in child_items]
+                # elif len(child_items) == 1:
+                #     return self.itemWidget(child_items[0], 1)
+                # else:
+                #     return None
+                return found_item
+                # return self.itemWidget(found_item, 1)
 
             current_items = []
             for i in range(found_item.childCount()):
@@ -845,6 +882,8 @@ class BadgerPydanticEditor(QTreeWidget):
         # Have to reset border styling in case some errors were fixed
         if item is None:
             return
+        item.setData(0, Qt.ItemDataRole.BackgroundRole, None)
+        item.setToolTip(0, "")
         widget = self.itemWidget(item, 1)
         if widget:
             widget.setStyleSheet("")
@@ -853,7 +892,13 @@ class BadgerPydanticEditor(QTreeWidget):
 
     def update_vocs(self, vocs: VOCS):
         logger.debug(f"Updating VOCS in BadgerPydanticEditor: {vocs}")
-        self.set_params_from_generator(self.generator_name, self.defaults, self.vocs)
+        self.vocs = vocs
+
+        parameters = self.get_parameters()
+
+        defaults = yaml.load(parameters, Loader=CustomSafeLoader)
+
+        self.set_params_from_generator(self.generator_name, defaults, self.vocs)
         self.validate()
 
     def validate(self):
@@ -878,23 +923,6 @@ class BadgerPydanticEditor(QTreeWidget):
                     + "}"
                 )
 
-            # Regex to match a tuple string, e.g., "(0.0, 1.0)"
-            tuple_pattern = re.compile(r"\((.*?,.*?)\)")
-
-            class CustomSafeLoader(yaml.SafeLoader):
-                def tuple_constructor(self, node: yaml.ScalarNode | yaml.MappingNode):
-                    value = self.construct_scalar(node)
-                    if tuple_pattern.match(value):
-                        try:
-                            return ast.literal_eval(value)
-                        except Exception:
-                            pass
-                    return value
-
-            CustomSafeLoader.add_constructor(
-                "tag:yaml.org,2002:str", CustomSafeLoader.tuple_constructor
-            )
-
             self.model_class.model_validate(
                 yaml.load(parameters, Loader=CustomSafeLoader)
             )
@@ -906,16 +934,32 @@ class BadgerPydanticEditor(QTreeWidget):
 
             for error in e.errors():
                 loc = error["loc"]
+                msg = error["msg"]
                 if len(loc) > 0:
                     error_widget = self.find_widget_at_path(loc)
                 else:
                     error_widget = self
                 if error_widget:
-                    meta_object = error_widget.metaObject()
-                    if meta_object is not None:
-                        error_widget.setStyleSheet(
-                            f"{meta_object.className()} {{ border: 2px dashed red; }}"
+                    # widgets: list[QWidget] = (
+                    #     error_widget
+                    #     if isinstance(error_widget, list)
+                    #     else [error_widget]
+                    # )
+                    # for error_widget in widgets:
+                    # meta_object = error_widget.metaObject()
+                    # if meta_object is not None:
+                    #     error_widget.setStyleSheet(
+                    #         f"BadgerListItem {{ border: 2px dashed red; }}"
+                    #     )
+                    if type(error_widget) is QTreeWidgetItem:
+                        error_widget.setBackground(0, Qt.GlobalColor.red)
+                        widget = self.itemWidget(error_widget, 1)
+                        if widget is not None:
+                            widget.setStyleSheet("border: 2px dashed red;")
+                        error_widget.setToolTip(0, msg)
+                    else:
+                        logger.warning(
+                            f"Could not find widget for error at location {loc} with message {msg}"
                         )
-                        error_widget.setToolTip(str(error["msg"]))
 
             return False
