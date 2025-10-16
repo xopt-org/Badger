@@ -76,6 +76,8 @@ def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
         return type(value)
     except ValueError:
         raise ValueError(f"Cannot convert {value} to {type}")
+    except TypeError:
+        raise TypeError(f"Cannot convert {value} to {type}")
 
 
 def _set_value_for_basic_widget(
@@ -272,6 +274,7 @@ class BadgerResolvedType:
         elif resolved_type.main is float:
             widget = QDoubleSpinBox()
             widget.setRange(float("-inf"), float("inf"))
+            widget.setDecimals(6)
             value = convert_to_type(default, float) if default is not None else 0.0
             widget.setValue(value)
 

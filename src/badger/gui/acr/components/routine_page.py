@@ -1004,7 +1004,7 @@ class BadgerRoutinePage(QWidget):
             env = self.create_env()
             # Get vocs
             try:
-                vocs = self.env_box.compose_vocs()
+                vocs, _ = self.env_box.compose_vocs()
             except Exception:
                 vocs = None
             # Function generate comes from the script
@@ -1617,44 +1617,6 @@ class BadgerRoutinePage(QWidget):
             self.set_ind_vrange,
             configs,
         ).exec_()
-
-    def _compose_vocs(self) -> (VOCS, list[str]):
-        # Compose the VOCS settings
-        variables = self.env_box.var_table.export_variables()
-
-        objectives = {}
-        for objective in self.env_box.obj_table.export_data():
-            obj_name = next(iter(objective))
-            (rule,) = objective[obj_name]
-            objectives[obj_name] = rule
-
-        constraints = {}
-        critical_constraints = []
-        for constraint in self.env_box.con_table.export_data():
-            con_name = next(iter(constraint))
-            relation, threshold, critical = constraint[con_name]
-            constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
-            if critical:
-                critical_constraints.append(con_name)
-
-        observables = []
-        for observable in self.env_box.sta_table.export_data():
-            obs_name = next(iter(observable))
-            observables.append(obs_name)
-
-        try:
-            vocs = VOCS(
-                variables=variables,
-                objectives=objectives,
-                constraints=constraints,
-                constants={},
-                observables=observables,
-            )
-        except ValidationError as e:
-            raise BadgerRoutineError(
-                f"\n\nVOCS validation failed: {format_validation_error(e)}"
-            ) from e
-        return vocs, critical_constraints
 
     def _compose_routine(self) -> Routine:
         # Compose the routine

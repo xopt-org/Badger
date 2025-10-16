@@ -32,7 +32,7 @@ from badger.gui.default.utils import (
     NoHoverFocusComboBox,
 )
 from badger.utils import strtobool
-from xopt.vocs import VOCS
+from xopt.vocs import VOCS, ConstraintEnum
 import logging
 
 LABEL_WIDTH = 96
@@ -617,7 +617,7 @@ class BadgerEnvBox(QWidget):
             (rule,) = objective[obj_name]
             objectives[obj_name] = rule
 
-        constraints: dict[str, list[str | float]] = {}
+        constraints: dict[str, list[float | ConstraintEnum]] = {}
         critical_constraints: list[str] = []
         for constraint in self.con_table.export_data():
             con_name = next(iter(constraint))

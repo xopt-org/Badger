@@ -338,7 +338,8 @@ class VariableTable(QTableWidget):
 
         if filtered not in [1, 3]:
             self.sig_sel_changed.emit()
-        self.data_changed.emit()
+        if filtered != 0:
+            self.data_changed.emit()
 
     def handle_config_button(self, var_name):
         self.sig_var_config.emit(var_name)
