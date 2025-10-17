@@ -16,7 +16,7 @@ class BadgerError(Exception):
         """
         Method to create and display a popup window with the error message.
         """
-        from badger.gui.default.windows.expandable_message_box import (
+        from badger.gui.windows.expandable_message_box import (
             ExpandableMessageBox,
         )
 

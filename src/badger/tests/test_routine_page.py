@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication
 
 
 def test_routine_page_init(qtbot):
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
 
@@ -27,7 +27,7 @@ def test_routine_generation(qtbot):
     from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -69,7 +69,7 @@ def test_routine_generation(qtbot):
 
 
 def test_add_additional_vars(qtbot):
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -113,7 +113,7 @@ def test_add_additional_vars(qtbot):
 
 def test_initial_points(qtbot):
     # test to make sure initial points widget works properly
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -142,7 +142,7 @@ def test_initial_points(qtbot):
 
 def test_ui_update(qtbot):
     # test to make sure initial points widget works properly
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.tests.utils import create_routine
 
     window = BadgerRoutinePage()
@@ -160,7 +160,7 @@ def test_ui_update(qtbot):
 
 def test_constraints(qtbot):
     # test if a simple routine can be created
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -183,7 +183,7 @@ def test_constraints(qtbot):
 
 def test_observables(qtbot):
     # test if a simple routine can be created
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -205,7 +205,7 @@ def test_observables(qtbot):
 
 def test_add_random_points(qtbot):
     # test to add random points to initial points table
-    from badger.gui.acr.components.routine_page import BadgerRoutinePage
+    from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
