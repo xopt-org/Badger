@@ -76,22 +76,30 @@ class AnalysisExtension(QDialog):
 
 
 class ParetoFrontViewer(AnalysisExtension):
-    def __init__(self):
-        super().__init__()
+    def __init__(
+        self,
+        routine: Routine,
+        parent: Optional[QDialog] = None,
+    ):
+        super().__init__(parent=parent)
 
         self.initialize_extension(
-            extension_widget=ParetoFrontWidget(),
+            extension_widget=ParetoFrontWidget(routine=routine),
             extension_name="Pareto Front Viewer",
             generator_type=MOBOGenerator,
         )
 
 
 class BOVisualizer(AnalysisExtension):
-    def __init__(self):
-        super().__init__()
+    def __init__(
+        self,
+        routine: Routine,
+        parent: Optional[QDialog] = None,
+    ):
+        super().__init__(parent=parent)
 
         self.initialize_extension(
-            extension_widget=BOPlotWidget(),
+            extension_widget=BOPlotWidget(routine=routine),
             extension_name="Bayesian Optimization Visualizer",
             generator_type=BayesianGenerator,
         )
