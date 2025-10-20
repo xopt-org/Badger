@@ -406,6 +406,10 @@ class BadgerOptMonitor(QWidget):
             dot_symbol.addEllipse(QtCore.QRectF(-size / 2, -size / 2, size, size))
 
             pen = pg.mkPen(color, width=3)
+            hist_pen = pg.mkPen(color, width=3, style=QtCore.Qt.DashLine)
+            color = pen.color()
+            color.setAlpha(171)
+            hist_pen.setColor(color)
             _curve = plot_object.plot(
                 pen=pen,
                 symbol=dot_symbol,
@@ -413,7 +417,11 @@ class BadgerOptMonitor(QWidget):
                 name=name,
                 symbolBrush=pen.color(),
             )
+            _curve_hist = plot_object.plot(
+                pen=hist_pen, symbol=dot_symbol, name=None, symbolBrush=pen.color()
+            )
             curves[name] = _curve
+            curves[name + "_hist"] = _curve_hist
 
         return curves
 
@@ -549,6 +557,11 @@ class BadgerOptMonitor(QWidget):
             input_data[variable_names] = (
                 input_data[variable_names] - input_data[variable_names].iloc[0]
             )
+
+        if "live" in data_copy.columns:
+            input_data["live"] = data_copy["live"]
+        else:
+            input_data["live"] = data_copy["live"] = True
 
         set_data(variable_names, self.curves_variable, input_data, ts)
         set_data(self.vocs.objective_names, self.curves_objective, data_copy, ts)
@@ -983,8 +996,27 @@ def create_cursor_line():
 
 
 def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
+    # Split data into live and not live
+    live_mask = data["live"].astype(bool)
+    live_data = data.loc[live_mask]
+    not_live_data = data.loc[~live_mask]
+
+    # Add first live point to historical data for continuity
+    if len(live_data) > 0:
+        row_to_add = live_data.head(1)
+        not_live_data = pd.concat([not_live_data, row_to_add], ignore_index=False)
+
+    # Determine x-axis data
+    if ts is not None:
+        live_x = live_data["ts"]
+        hist_x = not_live_data["ts"]
+    else:
+        live_x = live_data.index.to_numpy(dtype=int)
+        hist_x = not_live_data.index.to_numpy(dtype=int)
+
+    # Update curves for each name
     for name in names:
-        if ts is not None:
-            curves[name].setData(ts, data[name].to_numpy(dtype=np.double))
-        else:
-            curves[name].setData(data[name].to_numpy(dtype=np.double))
+        curves[name].setData(live_x, live_data[name].to_numpy(dtype=np.double))
+        curves[name + "_hist"].setData(
+            hist_x, not_live_data[name].to_numpy(dtype=np.double)
+        )
