@@ -117,6 +117,7 @@ class Routine(Xopt):
 
                 ts = curr_ts()
                 obs["timestamp"] = ts.timestamp()
+                obs["live"] = 1
 
                 return obs
 
