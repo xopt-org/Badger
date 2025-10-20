@@ -444,17 +444,24 @@ class BadgerOptMonitor(QWidget):
             self.sig_stop.disconnect()
             self.routine_runner = None
 
-    def start(self, data_options: dict, use_termination_condition: bool = False):
+    def start(
+        self,
+        run_data_flag: bool = False,
+        init_points_flag: bool = False,
+        use_termination_condition: bool = False,
+    ):
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
-        if data_options["run_data"] is False:
+        if not run_data_flag:
             self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
         self.init_routine_runner()
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
-        self.routine_runner.run(data_options=data_options)
+        self.routine_runner.run(
+            run_data_flag=run_data_flag, init_points_flag=init_points_flag
+        )
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 

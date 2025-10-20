@@ -386,19 +386,14 @@ class BadgerHomePage(QWidget):
         """
 
         # Set data options based on checkbox states from data_panel
-        data_options = {
-            "run_data": self.data_panel.use_data,
-            "init_points": self.data_panel.init_points,
-        }
-        # A different option could be to store these as bool fields here in
-        # BadgerHomePage, eg. self.use_data and self.init_points, and connect
-        # the checkboxes in data_panel to signals to set those fields.
+        run_data_flag = self.data_panel.use_data
+        init_points_flag = self.data_panel.init_points
 
-        if data_options["run_data"]:
+        if run_data_flag:
             data_to_load = self.data_panel.get_data()  # Get data from data_panel
             self.prepare_run(
                 data=data_to_load
-            )  # Pass data to prepare run, to be loaded into plots
+            )  # Pass data to prepare run, to be saved to tmp file and loaded into plots
             self.run_monitor.init_plots(self.current_routine)
 
             # Add routine and generator data back to the routine
@@ -414,7 +409,8 @@ class BadgerHomePage(QWidget):
 
         self.run_monitor.start(
             use_termination_condition=use_termination_condition,
-            data_options=data_options,
+            run_data_flag=run_data_flag,
+            init_points_flag=init_points_flag,
         )
 
     def start_run_until(self):

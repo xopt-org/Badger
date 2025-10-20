@@ -109,7 +109,7 @@ def run_routine_subprocess(
             routine.environment.variables.update(routine.vrange_hard_limit)
 
         # Reset data if run_data option is False
-        if not args["data_options"]["run_data"]:
+        if not args["run_data"]:
             if routine.data is not None:
                 routine.data = routine.data.iloc[0:0]  # reset the data
 
@@ -168,7 +168,7 @@ def run_routine_subprocess(
     # timeout logic will be handled in the specific environment
     try:
         # initial sampling
-        if args["data_options"]["init_points"]:
+        if args["init_points"]:
             for _, ele in initial_points.iterrows():
                 result = routine.evaluate_data(ele.to_dict())
                 solution = convert_to_solution(result, routine)
