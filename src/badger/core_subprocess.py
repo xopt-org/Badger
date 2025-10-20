@@ -191,7 +191,14 @@ def run_routine_subprocess(
                 idx = tc_config["tc_idx"]
                 if idx == 0:
                     max_eval = tc_config["max_eval"]
-                    if len(routine.data) >= max_eval:
+                    if "live" in routine.data.columns:
+                        # Only count number of live data points
+                        count = sum(
+                            1 for live_val in routine.data["live"] if live_val == 1
+                        )
+                    else:
+                        count = len(routine.data)
+                    if count >= max_eval:
                         raise BadgerRunTerminated
                 elif idx == 1:
                     max_time = tc_config["max_time"]
