@@ -65,7 +65,6 @@ class BadgerDataPanel(QWidget):
         title_label = QLabel("Run Data")
         title_label.setStyleSheet(
             """
-                background-color: #455364;
                 font-weight: bold;
                 padding: 4px;
         """
@@ -78,7 +77,7 @@ class BadgerDataPanel(QWidget):
         self.data_table_widget = QWidget()
         self.data_table_widget.setObjectName("DataPanel")
         hbox_data_table = QHBoxLayout(self.data_table_widget)
-        hbox_data_table.setContentsMargins(0, 10, 0, 0)
+        hbox_data_table.setContentsMargins(0, 6, 0, 0)
         self.data_table = data_table()
         self.data_table.set_uneditable()
         self.data_table.setMinimumHeight(200)
@@ -99,6 +98,10 @@ class BadgerDataPanel(QWidget):
         hbox_load_data_options.addWidget(self.btn_load_data)
         hbox_load_data_options.addWidget(self.btn_reset_table)
         hbox_load_data_options.setAlignment(Qt.AlignLeft)
+        hbox_load_data_options.addStretch()
+        self.info_checkbox = QCheckBox("Display metadata  ")
+        self.info_checkbox.stateChanged.connect(self.show_metadata)
+        hbox_load_data_options.addWidget(self.info_checkbox)
         vbox.addWidget(load_data_options)
 
         # Widget for data options
@@ -111,6 +114,7 @@ class BadgerDataPanel(QWidget):
         vbox_generator = QVBoxLayout(generator_group)
         self.run_data_checkbox = QCheckBox("Load displayed data into routine")
         self.run_data_checkbox.stateChanged.connect(self.indicate_add_data_to_routine)
+        self.run_data_checkbox.setEnabled(False)
         self.init_points_checkbox = QCheckBox("Skip initial point sampling")
         self.init_points_checkbox.setEnabled(False)
 
@@ -120,6 +124,13 @@ class BadgerDataPanel(QWidget):
         # Group
         vbox.addWidget(data_opts_config)
         vbox.addWidget(generator_group)
+
+    def show_metadata(self):
+        self.info = self.info_checkbox.isChecked()
+        if self.has_data:
+            self.update_table(
+                self.data_table, self.table_data, vocs=self.selected_routine.vocs
+            )
 
     def load_from_dialog(self):
         """
@@ -243,7 +254,7 @@ class BadgerDataPanel(QWidget):
     def update_table(self, table, data=None, vocs=None) -> None:
         """Call data_table's update_table method but make sure table_data stays updated"""
         self.table_data = data
-        update_table(table, data, vocs)
+        update_table(table, data, vocs, info=self.info)
 
     def get_data(self):
         return self.table_data
@@ -257,13 +268,15 @@ class BadgerDataPanel(QWidget):
 
     def filter_metadata(self, data: dict) -> dict:
         """
-        Remove metadata columns from dictionary
+        Remove metadata columns from data dictionary
         """
-        metadata_cols = ["xopt_runtime", "xopt_error", "timestamp", "source"]
-        cols_to_drop = [col for col in metadata_cols if col in data]
+        data_copy = data.copy()
+
+        metadata_cols = ["xopt_runtime", "xopt_error", "timestamp", "live"]
+        cols_to_drop = [col for col in metadata_cols if col in data_copy]
         for key in cols_to_drop:
-            del data[key]
-        return data
+            del data_copy[key]
+        return data_copy
 
     def load_data_from_dialog(self, routine):
         """
@@ -301,7 +314,12 @@ class BadgerDataPanel(QWidget):
                 return
         else:
             # All keys match, add selected routine data to table
+            data["live"] = 0
             combined_data = pd.concat([self.table_data, data], ignore_index=True)
+            # Reorder so live is at end
+            data = self._reorder_cols(data)
+
+            self.run_data_checkbox.setEnabled(True)
             self.update_table(self.data_table, combined_data, routine.vocs)
 
     def load_data(self, routine):
@@ -314,11 +332,23 @@ class BadgerDataPanel(QWidget):
         self.set_routine(routine)
         data = routine.data
 
+        data = self._reorder_cols(data)
+
+        self.run_data_checkbox.setEnabled(True)
+
         self.update_table(
             self.data_table,
             data,
             routine.vocs,
         )
+
+    def _reorder_cols(self, data):
+        """Reorder datatable columns so that 'live' is at the end"""
+        if "live" in data.columns:
+            cols = [col for col in data.columns if col != "live"] + ["live"]
+            data = data[cols]
+
+        return data
 
     def reset_data_table(self):
         """Reset table and data"""
@@ -326,3 +356,5 @@ class BadgerDataPanel(QWidget):
         self.data_table.setRowCount(0)
         self.data_table.setColumnCount(0)
         self.table_data = pd.DataFrame()
+        self.run_data_checkbox.setChecked(False)
+        self.run_data_checkbox.setEnabled(False)
