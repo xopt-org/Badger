@@ -1790,7 +1790,9 @@ class BadgerRoutinePage(QWidget):
         Args:
             vocs: VOCS
         """
-        data_keys = self.data_panel.get_data_as_dict().keys()
+        data = self.data_panel.get_data_as_dict()
+        data = self.data_panel.filter_metadata(data)
+        data_keys = data.keys()
 
         # Raise error if loaded data keys do not match selected vocs
         if set(list(data_keys)) != set(vocs.variable_names + vocs.output_names):
