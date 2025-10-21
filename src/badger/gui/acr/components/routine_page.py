@@ -723,8 +723,15 @@ class BadgerRoutinePage(QWidget):
         filtered_config = filter_generator_config(
             name_generator, routine.generator.model_dump()
         )
+
+        # Get vocs
+        try:
+            vocs, _ = self.env_box.compose_vocs()
+        except Exception:
+            vocs = None
+
         self.generator_box.edit.set_params_from_generator(
-            name_generator, filtered_config, routine.vocs
+            name_generator, filtered_config, vocs
         )
         self.script = routine.script
 
@@ -936,7 +943,13 @@ class BadgerRoutinePage(QWidget):
 
         # Patch to only show part of the config
         filtered_config = filter_generator_config(name, default_config)
-        self.generator_box.edit.set_params_from_generator(name, filtered_config)
+
+        # Get vocs
+        try:
+            vocs, _ = self.env_box.compose_vocs()
+        except Exception:
+            vocs = None
+        self.generator_box.edit.set_params_from_generator(name, filtered_config, vocs)
 
         # Update the docs
         self.window_docs.update_docs(name)

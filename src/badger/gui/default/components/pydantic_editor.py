@@ -619,8 +619,6 @@ class BadgerPydanticEditor(QTreeWidget):
         if self.model_class is None:
             raise ValueError("Model class is not set.")
 
-        # defaults["vocs"] = self.vocs.model_dump()
-
         if issubclass(self.model_class, BayesianGenerator):
             if self.model_class.model_fields.get("turbo_controller") is not None:
                 self.initialize_special_field(defaults, "turbo_controller")
