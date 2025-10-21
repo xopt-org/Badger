@@ -1008,8 +1008,8 @@ def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
 
     # Determine x-axis data
     if ts is not None:
-        live_x = live_data["ts"]
-        hist_x = not_live_data["ts"]
+        live_x = [ts[i] for i in live_data.index.tolist()]
+        hist_x = [ts[i] for i in not_live_data.index.tolist()]
     else:
         live_x = live_data.index.to_numpy(dtype=int)
         hist_x = not_live_data.index.to_numpy(dtype=int)
