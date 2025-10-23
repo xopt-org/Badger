@@ -16,7 +16,7 @@ from badger.log import get_logging_manager, configure_process_logging
 
 
 def main():
-    # If not specified by cmdline arg, default to config-file vals
+    # If not specified by cmdline arg, default to config-file values
     config_singleton = init_settings()
     BADGER_LOGGING_LEVEL = config_singleton.read_value("BADGER_LOGGING_LEVEL")
     BADGER_LOGFILE_PATH = config_singleton.read_value("BADGER_LOGFILE_PATH")
