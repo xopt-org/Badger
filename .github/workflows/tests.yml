@@ -61,6 +61,7 @@ jobs:
 
   test-pypi-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30 # timeout should apply to each test run, so get 30 min for each of 3.10, 3.11, 3.12 python runs
     steps:
       - uses: actions/checkout@v4
         with:
