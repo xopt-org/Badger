@@ -90,12 +90,12 @@ class LoggingManager:
         for handler in self.handlers:
             handler.setLevel(log_level)
 
-        # Updating the "badger" namespace logger
-        # This ensures all badger.* loggers respect the new level
+        # Updating the "badger" namespace logger,
+        # ensures all badger.* loggers in main thread respect the new level
         badger_logger = logging.getLogger("badger")
         badger_logger.setLevel(log_level)
 
-        # Update all existing child loggers in badger namespace
+        # Update all existing child loggers too
         for name, logger_obj in logging.root.manager.loggerDict.items():
             if isinstance(logger_obj, logging.Logger) and name.startswith("badger"):
                 logger_obj.setLevel(log_level)
@@ -123,7 +123,7 @@ class LoggingManager:
         formatter = file_handler.formatter
         log_level = file_handler.level
 
-        # Stop the current QueueListener
+        # Stop the current QueueListener (should do before closing file-handler)
         if self.listener:
             self.listener.stop()
 
@@ -192,7 +192,7 @@ def configure_process_logging(
             logger_obj.setLevel(log_level)
 
     logger.info(
-        f"Subprocess logger configured with level {logging.getLevelName(log_level)}"
+        f"process logger configured with level {logging.getLevelName(log_level)}"
     )
 
 

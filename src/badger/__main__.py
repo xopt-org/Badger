@@ -1,5 +1,6 @@
 import argparse
 import pathlib
+import atexit
 
 from badger.actions import show_info
 from badger.actions.doctor import self_check
@@ -155,6 +156,10 @@ def main():
     # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
     log_queue = logging_manager.get_queue()
     configure_process_logging(log_queue=log_queue, log_level=args.log_level)
+    # cleanup QueueListener thread
+    atexit.register(
+        lambda: logging_manager.listener and logging_manager.listener.stop()
+    )
 
     args.func(args)
 
