@@ -90,11 +90,18 @@ class LoggingManager:
         for handler in self.handlers:
             handler.setLevel(log_level)
 
-        # Also update the curr module's logger level
-        logging.getLogger().setLevel(log_level)
+        # Updating the "badger" namespace logger
+        # This ensures all badger.* loggers respect the new level
+        badger_logger = logging.getLogger("badger")
+        badger_logger.setLevel(log_level)
+
+        # Update all existing child loggers in badger namespace
+        for name, logger_obj in logging.root.manager.loggerDict.items():
+            if isinstance(logger_obj, logging.Logger) and name.startswith("badger"):
+                logger_obj.setLevel(log_level)
 
         logger.info(
-            f"Log level updated to {logging.getLevelName(log_level)} for handlers"
+            f"Log level updated to {logging.getLevelName(log_level)} for badger namespace."
         )
 
     def update_logfile_path(self, new_logfile_path: str):
