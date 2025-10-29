@@ -1,6 +1,9 @@
 import argparse
 import pathlib
 import atexit
+import logging 
+
+logger = logging.getLogger("badger")
 
 from badger.actions import show_info
 from badger.actions.doctor import self_check
@@ -20,7 +23,7 @@ def main():
     # If not specified by cmdline arg, default to config-file values
     config_singleton = init_settings()
     BADGER_LOGGING_LEVEL = config_singleton.read_value("BADGER_LOGGING_LEVEL")
-    BADGER_LOGFILE_PATH = config_singleton.read_value("BADGER_LOGFILE_PATH")
+    DEFAULT_LOGFILE_PATH = config_singleton.get_logfile_path()
 
     # Create the top-level parser
     parser = argparse.ArgumentParser(description="Badger the optimizer")
@@ -41,7 +44,7 @@ def main():
         "-lf",
         "--log_filepath",
         type=pathlib.Path,
-        default=BADGER_LOGFILE_PATH,
+        default=DEFAULT_LOGFILE_PATH,
         help="Path to a logfile location",
     )
 
@@ -162,6 +165,10 @@ def main():
     )
 
     args.func(args)
+    logger.info(f"From config: BADGER_LOGGING_LEVEL = {BADGER_LOGGING_LEVEL}")
+    logger.info(f"Today's log file: {DEFAULT_LOGFILE_PATH}")
+    logger.info(f"args.log: {args.log_level}")
+    logger.info(f"args.log_filepath: {args.log_filepath}")
 
 
 if __name__ == "__main__":

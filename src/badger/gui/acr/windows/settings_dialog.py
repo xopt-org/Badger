@@ -1,4 +1,5 @@
 import logging
+import os 
 
 # from PyQt5.QtCore import QRegExp
 # from PyQt5.QtGui import QRegExpValidator
@@ -97,12 +98,12 @@ class BadgerSettingsDialog(QDialog):
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
 
-        self.logfile = QLabel("Logfile Path")
-        self.logfile_path = QLineEdit(
-            self.config_singleton.read_value("BADGER_LOGFILE_PATH")
+        self.log_dir_label = QLabel("Log Directory")
+        self.log_dir_path = QLineEdit(
+            self.config_singleton.read_value("BADGER_LOG_DIR") or ""
         )
-        grid.addWidget(self.logfile, 5, 0)
-        grid.addWidget(self.logfile_path, 5, 1)
+        grid.addWidget(self.log_dir_label, 5, 0)
+        grid.addWidget(self.log_dir_path, 5, 1)
 
         # Log level setting
         self.logging_level = logging_level = QLabel("Logging level")
@@ -216,17 +217,25 @@ class BadgerSettingsDialog(QDialog):
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
         )
+        # Save log directory 
+        self.config_singleton.write_value(
+            "BADGER_LOG_DIR", self.log_dir_path.text()
+        )
+
 
         # Update logging settings, apply to actively running main-process and subprocess loggers
         logging_manager = get_logging_manager()
 
-        logfile_path = self.logfile_path.text()
-        self.config_singleton.write_value("BADGER_LOGFILE_PATH", logfile_path)
-        logging_manager.update_logfile_path(logfile_path)
+
+        new_logfile_path = self.config_singleton.get_logfile_path()
+        logging_manager.update_logfile_path(new_logfile_path)
 
         level_str = self.logging_level_setting.currentText()
         self.config_singleton.write_value("BADGER_LOGGING_LEVEL", level_str)
         logging_manager.update_log_level(level_str)
+
+        logger.info(f"Logger level changed to {level_str}")
+        logger.info(f"Logs will be written to: {new_logfile_path}")
 
         # self.config_singleton.write_value(
         #     "AUTO_REFRESH", self.enable_auto_refresh.isChecked()
