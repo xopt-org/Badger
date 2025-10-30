@@ -159,6 +159,11 @@ def main():
     # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
     log_queue = logging_manager.get_queue()
     configure_process_logging(log_queue=log_queue, log_level=args.log_level)
+
+    #Prevent propagation to root logger
+    badger_logger = logging.getLogger("badger")
+    badger_logger.propagate = False
+
     # cleanup QueueListener thread
     atexit.register(
         lambda: logging_manager.listener and logging_manager.listener.stop()

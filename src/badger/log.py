@@ -179,6 +179,8 @@ def configure_process_logging(
     # Clear any existing handlers
     logger.handlers.clear()
 
+    logger.propagate = False
+
     if log_queue is not None:
         # Add queue handler so logs get sent to queue in main process
         queue_handler = QueueHandler(log_queue)

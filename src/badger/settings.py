@@ -426,7 +426,6 @@ class ConfigSingleton:
         
         # If not set, empty, or invalid, use default (user config folder)
         if log_dir is None or log_dir == "" or log_dir == "/logs":
-            from badger.settings import get_user_config_folder
             log_dir = os.path.join(get_user_config_folder(), "logs")
         
         # Expand user home directory if needed
@@ -434,7 +433,6 @@ class ConfigSingleton:
         
         # Make it absolute path if it's relative
         if not os.path.isabs(log_dir):
-            from badger.settings import get_user_config_folder
             log_dir = os.path.join(get_user_config_folder(), log_dir)
         
         # Create directory if it doesn't exist
@@ -443,13 +441,11 @@ class ConfigSingleton:
         except PermissionError:
             # Fall back to user config folder if we can't create the directory
             logger.warning(f"Cannot create log directory {log_dir}, using default")
-            from badger.settings import get_user_config_folder
             log_dir = os.path.join(get_user_config_folder(), "logs")
             os.makedirs(log_dir, exist_ok=True)
         except FileExistsError:
             # Something with this name exists but it's not a directory
             logger.warning(f"{log_dir} exists but is not a directory, using default")
-            from badger.settings import get_user_config_folder
             log_dir = os.path.join(get_user_config_folder(), "logs")
             os.makedirs(log_dir, exist_ok=True)
         
