@@ -151,7 +151,7 @@ class ParetoFrontWidget(AnalysisWidget):
         interval: int = 1000,
     ) -> None:
         if not requires_update(self.last_updated, interval, requires_rebuild):
-            logging.debug("Skipping plot update")
+            logger.debug("Skipping plot update")
             return
 
         self.update_pareto_front_plot()

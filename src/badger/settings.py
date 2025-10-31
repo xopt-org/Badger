@@ -7,6 +7,11 @@ from badger.utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 from badger.errors import BadgerLoadConfigError
+import logging
+import os
+import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class Setting(BaseModel):
@@ -46,6 +51,10 @@ class BadgerConfig(BaseModel):
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
         Setting for the archive root directory.
+    BADGER_LOGGING_LEVEL : Setting
+        Setting for the logging level.
+    BADGER_LOGFILE_PATH : Setting
+        Setting for the location of logfile.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
@@ -78,6 +87,18 @@ class BadgerConfig(BaseModel):
         value=None,
         is_path=True,
     )
+    BADGER_LOGGING_LEVEL: Setting = Setting(
+        display_name="logging level",
+        description="Logging level for the Badger logger",
+        value="WARNING",
+        is_path=False,
+    )
+    BADGER_LOG_DIR: Setting = Setting(
+        display_name="log directory",
+        description="Directory where daily log files will be stored",
+        value="logs",
+        is_path=True,
+    )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
         display_name="data dump period",
         description="Minimum time interval between data dumps, unit is second",
@@ -106,8 +127,21 @@ class BadgerConfig(BaseModel):
 
 class ConfigSingleton:
     _instance = None
+    _instance_pid = None
 
     def __new__(cls, config_path: str = None, user_flag: bool = False):
+        current_pid = os.getpid()
+        # Detect subprocess and reset singleton
+        if cls._instance is not None and cls._instance_pid!=current_pid:
+            logger.info(
+                f"ConfigSingleton reinitializing for subprocess (PID {current_pid})"
+            )
+            # Clear logging handlers inherited from parent 
+            root = logging.getLogger()
+            root.handlers.clear()
+            cls._instance = None
+
+
         if cls._instance is None:
             cls._instance = super(ConfigSingleton, cls).__new__(cls)
             cls._instance.user_flag = user_flag
@@ -368,6 +402,7 @@ class ConfigSingleton:
             sub_dict = sub_dict.setdefault(key, {})
         sub_dict[keys[-1]] = value
 
+        logger.info(f"writing to config file, setting: {key} = {value}")
         self.update_and_save_config(updates)
 
     def reset_settings(self) -> None:
@@ -377,6 +412,48 @@ class ConfigSingleton:
         print(
             f"All settings have been reset to their default values in {self.config_path}"
         )
+
+    def get_logfile_path(self):
+        """
+        Get the path to today's log file in the configured log directory.
+        Creates the directory if it doesn't exist.
+        
+        Returns:
+            str: Path to today's log file (e.g., /path/to/logs/log_01_25.log)
+        """
+        # Get the configured log directory
+        log_dir = self.read_value("BADGER_LOG_DIR")
+        
+        # If not set, empty, or invalid, use default (user config folder)
+        if log_dir is None or log_dir == "" or log_dir == "/logs":
+            log_dir = os.path.join(get_user_config_folder(), "logs")
+        
+        # Expand user home directory if needed
+        log_dir = os.path.expanduser(log_dir)
+        
+        # Make it absolute path if it's relative
+        if not os.path.isabs(log_dir):
+            log_dir = os.path.join(get_user_config_folder(), log_dir)
+        
+        # Create directory if it doesn't exist
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except PermissionError:
+            # Fall back to user config folder if we can't create the directory
+            logger.warning(f"Cannot create log directory {log_dir}, using default")
+            log_dir = os.path.join(get_user_config_folder(), "logs")
+            os.makedirs(log_dir, exist_ok=True)
+        except FileExistsError:
+            # Something with this name exists but it's not a directory
+            logger.warning(f"{log_dir} exists but is not a directory, using default")
+            log_dir = os.path.join(get_user_config_folder(), "logs")
+            os.makedirs(log_dir, exist_ok=True)
+        
+        # Generate today's date-based filename
+        today = datetime.date.today()
+        log_filename = f"log_{today.month:02d}_{today.day:02d}.log"
+        
+        return os.path.join(log_dir, log_filename)
 
 
 def init_settings(config_arg: bool = None) -> ConfigSingleton:
