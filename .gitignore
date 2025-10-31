@@ -17,3 +17,4 @@ src/badger/_version.py
 .venv/
 .python-version
 *.log
+logs/

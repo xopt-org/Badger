@@ -35,6 +35,8 @@ def show_info(args):
     BADGER_TEMPLATE_ROOT = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
     BADGER_LOGBOOK_ROOT = config_singleton.read_value("BADGER_LOGBOOK_ROOT")
     BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
+    BADGER_LOG_DIRECTORY = config_singleton.read_value("BADGER_LOG_DIR")
+    BADGER_LOGGING_LEVEL = config_singleton.read_value("BADGER_LOGGING_LEVEL")
 
     info = {
         "name": "Badger the optimizer",
@@ -44,6 +46,8 @@ def show_info(args):
         "template root": BADGER_TEMPLATE_ROOT,
         "logbook root": BADGER_LOGBOOK_ROOT,
         "archive root": BADGER_ARCHIVE_ROOT,
+        "logging directory": BADGER_LOG_DIRECTORY,
+        "logging level": BADGER_LOGGING_LEVEL
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
     }
 

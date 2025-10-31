@@ -96,7 +96,7 @@ class BadgerConfig(BaseModel):
     BADGER_LOG_DIR: Setting = Setting(
         display_name="log directory",
         description="Directory where daily log files will be stored",
-        value=None,
+        value="logs",
         is_path=True,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
