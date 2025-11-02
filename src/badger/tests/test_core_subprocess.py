@@ -12,8 +12,8 @@ class TestCore:
 
     @pytest.fixture
     def process_manager(self):
-        from badger.gui.default.components.create_process import CreateProcess
-        from badger.gui.default.components.process_manager import ProcessManager
+        from badger.gui.components.create_process import CreateProcess
+        from badger.gui.components.process_manager import ProcessManager
 
         process_manager = ProcessManager()
         process_builder = CreateProcess()
