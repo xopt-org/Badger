@@ -70,6 +70,23 @@ class UIComponents:
         # Initialize layouts
         self.variable_checkboxes_layout = None
 
+        self.restrict_selection_variables(default_parameters)
+
+    def restrict_selection_variables(self, parameters: ConfigurableOptions):
+        num_of_variables = len(parameters["variables"])
+        if num_of_variables < 2:
+            parameters["include_variable_2"] = False
+            with BlockSignalsContext((self.y_axis_combo, self.y_axis_checkbox)):
+                self.y_axis_checkbox.setChecked(False)
+                self.y_axis_checkbox.setEnabled(False)
+                self.y_axis_combo.setEnabled(False)
+        else:
+            parameters["include_variable_2"] = True
+            with BlockSignalsContext((self.y_axis_combo, self.y_axis_checkbox)):
+                self.y_axis_checkbox.setChecked(True)
+                self.y_axis_checkbox.setEnabled(True)
+                self.y_axis_combo.setEnabled(True)
+
     def create_variable_checkboxes(self):
         group_box = QGroupBox("Select Variables")
         layout = self.variable_checkboxes_layout or QVBoxLayout()

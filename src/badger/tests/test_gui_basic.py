@@ -153,7 +153,7 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     # Create and save a routine
 
     editor = window.home_page.routine_editor
-    cb_generator = editor.routine_page.generator_box.cb
+    cb_generator = editor.generator_box.cb
     algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
     for algo in algos:
         if algo in all_generator_names["bo"]:
@@ -187,7 +187,7 @@ def test_default_turbo_in_bo(qtbot):
     assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
     editor = window.home_page.routine_editor
-    cb_generator = editor.routine_page.generator_box.cb
+    cb_generator = editor.generator_box.cb
     algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
     for algo in algos:
         if algo in all_generator_names["bo"]:

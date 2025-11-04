@@ -4,12 +4,12 @@
     <br />
     <br />
     <a href="https://xopt-org.github.io/Badger">
-      <img src="pics/badger.png" alt="Badger" height=128>
+      <img src="images/badger.png" alt="Badger" height=128>
     </a>
   </h1>
 </div>
 
-![Badger main GUI](pics/main.png)
+![Badger main GUI](images/main.png)
 
 <div align="center">
 
@@ -100,8 +100,7 @@ BibTex entry:
 }
 ```
 
-Developers
-==========
+## Developers
 
 Clone this repository:
 ```shell
@@ -134,6 +133,11 @@ You can also do a run at any time to check your progress:
 ```shell
 pre-commit run --all-files
 ```
+
+### GUI guide
+
+There is also a [GUI component guide](./GUI_GUIDE.md) for your convenience. It shows all in-use components and their corresponding python script locations and brief descriptions. Check it out if you get lost in the non-ideal namings of the component files.
+
 ## Issues or questions?
 
 Please check out current Badger issues [here](https://github.com/xopt-org/Badger/issues) before [opening a new one](https://github.com/xopt-org/Badger/issues/new/). Alternatively, you are welcome to [shoot us an email](mailto:zhezhang@slac.stanford.edu), or join our [Slack channel](https://slac.slack.com/archives/C02AQS1EGB0) if you are a [SLACer](https://www6.slac.stanford.edu/about/our-people).
