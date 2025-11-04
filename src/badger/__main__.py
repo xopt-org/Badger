@@ -58,24 +58,6 @@ def main():
     parser_config.set_defaults(func=config_settings)
 
     args = parser.parse_args()
-
-    #config_singleton = init_settings()
-
-
-    #config_log_level = config_singleton.read_value("BADGER_LOGGING_LEVEL")
-    #config_log_path = config_singleton.get_logfile_path()
-
-    #print(f"DEBUG main: config_log_level = {config_log_level}")
-    #print(f"DEBUG main: config_log_path = {config_log_path}")
-
-    # Use command line args if provided, otherwise use config values
-    #log_level = args.log_level or config_log_level
-    #log_filepath = str(args.log_filepath or config_log_path)
-
-    #print(f"DEBUG main: final log_level = {log_level}")
-    #print(f"DEBUG main: final log_filepath = {log_filepath}")
-    
-
     # setup mutliprocess logging
     logging_manager = get_logging_manager()
     logging_manager.start_listener(

@@ -35,8 +35,6 @@ class LoggingManager:
             log_filepath (str): Path to the log file
             log_level (str or int): Logging level
         """
-
-        print(f"DEBUG start_listener: log_filepath={log_filepath}, log_level={log_level}")
         if isinstance(log_level, str):
             log_level = getattr(
                 logging, log_level.upper(), logging.DEBUG

@@ -105,7 +105,7 @@ class Routine(Xopt):
                 # should be put somewhere else (in parallel with env?)
                 try:
                     del data["environment"]["interface"]
-                except KeyError:
+                except KeyError:  # no interface at all, which is good
                     pass
                 name = data["environment"].pop("name")
                 env_class, configs_env = get_env(name)

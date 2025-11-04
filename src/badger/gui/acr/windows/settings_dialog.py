@@ -102,16 +102,16 @@ class BadgerSettingsDialog(QDialog):
 
         self.log_dir_label = QLabel("Log Directory")
         self.log_dir_path = QLineEdit(
-            self.config_singleton.read_value("BADGER_LOG_DIR") or ""
+            self.config_singleton.read_value("BADGER_LOG_DIR")
         )
         grid.addWidget(self.log_dir_label, 5, 0)
         grid.addWidget(self.log_dir_path, 5, 1)
 
         # Log level setting
-        self.logging_level = logging_level = QLabel("Logging level")
+        self.logging_level = logging_level = QLabel("Logging Level")
         self.logging_level_setting = logging_level_setting = QComboBox()
         self.logging_level_setting.addItems(
-            ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
+            ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
         )
 
         # Set current value from config, if exists
@@ -226,6 +226,7 @@ class BadgerSettingsDialog(QDialog):
         logging_manager.update_log_level(level_str)
         logger.info(f"Logger level changed to {level_str}")
 
+        ## Put this in a method and call 
         new_log_dir = self.log_dir_path.text()
         if new_log_dir and new_log_dir.strip():
             new_log_dir = os.path.expanduser(new_log_dir)
