@@ -1794,11 +1794,21 @@ class BadgerRoutinePage(QWidget):
         data = self.data_panel.filter_metadata(data)
         data_keys = data.keys()
 
+        routine = self.data_panel.routine
+
+        # Want to compare variables, objectives!!!
+        loaded_data_vars_objs_names = (
+            routine.vocs.variable_names + routine.vocs.objective_names
+        )
+
         # Raise error if loaded data keys do not match selected vocs
-        if set(list(data_keys)) != set(vocs.variable_names + vocs.output_names):
+        if set(loaded_data_vars_objs_names) != set(
+            vocs.variable_names + vocs.objective_names
+        ):
             raise BadgerRoutineError(
-                "The following keys loaded into generator data do not match selected VOCS:\n"
-                + f"{set(list(data_keys)) ^ set(vocs.variable_names + vocs.output_names)}"
+                "Keys in loaded data do not match selected VOCS:\n\n"
+                + f"Keys in data:\n {loaded_data_vars_objs_names}\n\n"
+                + f"Variable + objective names:\n {vocs.variable_names + vocs.output_names}"
             )
 
         # Notify user that data has been added to the routine

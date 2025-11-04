@@ -2,6 +2,7 @@ import gc
 import traceback
 from importlib import resources
 
+import numpy as np
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIcon, QKeySequence
@@ -361,8 +362,13 @@ class BadgerHomePage(QWidget):
 
         # Add data to routine before saving tmp file
         if data is not None:
+            # Check that routine variables and objectives match loaded data
             self.routine_editor.routine_page.validate_loaded_data_keys(routine.vocs)
             data["live"] = 0  # reset live data indicator for loaded data
+            for name in routine.vocs.output_names:
+                if name not in data.columns:
+                    # Add null datapoints for new constraints or observables
+                    data[name] = np.nan
             routine.data = data
 
         self.current_routine = routine
