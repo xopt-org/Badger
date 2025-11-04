@@ -28,6 +28,7 @@ ALGO_EXCLUDED = [
 
 # Check badger plugin root
 config_singleton = init_settings()
+
 BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
 if BADGER_PLUGIN_ROOT is None:
     raise BadgerConfigError("Please set the BADGER_PLUGIN_ROOT env var!")

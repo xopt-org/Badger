@@ -13,18 +13,11 @@ from badger.actions.env import show_env
 from badger.actions.install import plugin_install
 from badger.actions.uninstall import plugin_remove
 from badger.actions.intf import show_intf
-from badger.actions.run import run_routine
 from badger.actions.config import config_settings
-from badger.settings import init_settings
 from badger.log import get_logging_manager, configure_process_logging
 
 
 def main():
-    # If not specified by cmdline arg, default to config-file values
-    config_singleton = init_settings()
-    BADGER_LOGGING_LEVEL = config_singleton.read_value("BADGER_LOGGING_LEVEL")
-    DEFAULT_LOGFILE_PATH = config_singleton.get_logfile_path()
-
     # Create the top-level parser
     parser = argparse.ArgumentParser(description="Badger the optimizer")
     parser.add_argument("-g", "--gui", action="store_true", help="launch the GUI")
@@ -35,8 +28,8 @@ def main():
         "-l",
         "--log_level",
         choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"],
-        default=BADGER_LOGGING_LEVEL,
-        const=BADGER_LOGGING_LEVEL,
+        default="WARNING",
+        const=None,
         nargs="?",
         help="Set the logging level",
     )
@@ -44,7 +37,7 @@ def main():
         "-lf",
         "--log_filepath",
         type=pathlib.Path,
-        default=DEFAULT_LOGFILE_PATH,
+        default=None,
         help="Path to a logfile location",
     )
 
@@ -57,6 +50,51 @@ def main():
     )
     parser.set_defaults(func=show_info)
     subparsers = parser.add_subparsers(help="Badger commands help")
+
+    ###
+    # Parser for the 'config' command
+    parser_config = subparsers.add_parser("config", help="Badger configurations")
+    parser_config.add_argument("key", nargs="?", type=str, default=None)
+    parser_config.set_defaults(func=config_settings)
+
+    args = parser.parse_args()
+
+    #config_singleton = init_settings()
+
+
+    #config_log_level = config_singleton.read_value("BADGER_LOGGING_LEVEL")
+    #config_log_path = config_singleton.get_logfile_path()
+
+    #print(f"DEBUG main: config_log_level = {config_log_level}")
+    #print(f"DEBUG main: config_log_path = {config_log_path}")
+
+    # Use command line args if provided, otherwise use config values
+    #log_level = args.log_level or config_log_level
+    #log_filepath = str(args.log_filepath or config_log_path)
+
+    #print(f"DEBUG main: final log_level = {log_level}")
+    #print(f"DEBUG main: final log_filepath = {log_filepath}")
+    
+
+    # setup mutliprocess logging
+    logging_manager = get_logging_manager()
+    logging_manager.start_listener(
+        log_filepath=str(args.log_filepath), log_level=args.log_level
+    )
+    # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
+    log_queue = logging_manager.get_queue()
+    configure_process_logging(log_queue=log_queue, log_level=args.log_level)
+
+    #Prevent propagation to root logger
+    badger_logger = logging.getLogger("badger")
+    badger_logger.propagate = False
+
+    # cleanup QueueListener thread
+    atexit.register(
+        lambda: logging_manager.listener and logging_manager.listener.stop()
+    )
+
+    args.func(args)
 
     # Parser for the 'doctor' command
     parser_doctor = subparsers.add_parser("doctor", help="Badger status self-check")
@@ -113,6 +151,8 @@ def main():
     parser_remove.add_argument("plugin_specific", nargs="?", type=str, default=None)
     parser_remove.set_defaults(func=plugin_remove)
 
+    
+
     # Parser for the 'run' command
     parser_run = subparsers.add_parser("run", help="run routines")
     parser_run.add_argument("-a", "--generator", required=True, help="generator to use")
@@ -142,38 +182,9 @@ def main():
         nargs="?",
         help="verbose level of optimization progress",
     )
+
+    from badger.actions.run import run_routine
     parser_run.set_defaults(func=run_routine)
-
-    # Parser for the 'config' command
-    parser_config = subparsers.add_parser("config", help="Badger configurations")
-    parser_config.add_argument("key", nargs="?", type=str, default=None)
-    parser_config.set_defaults(func=config_settings)
-
-    args = parser.parse_args()
-
-    # setup mutliprocess logging
-    logging_manager = get_logging_manager()
-    logging_manager.start_listener(
-        log_filepath=str(args.log_filepath), log_level=args.log_level
-    )
-    # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
-    log_queue = logging_manager.get_queue()
-    configure_process_logging(log_queue=log_queue, log_level=args.log_level)
-
-    #Prevent propagation to root logger
-    badger_logger = logging.getLogger("badger")
-    badger_logger.propagate = False
-
-    # cleanup QueueListener thread
-    atexit.register(
-        lambda: logging_manager.listener and logging_manager.listener.stop()
-    )
-
-    args.func(args)
-    logger.info(f"From config: BADGER_LOGGING_LEVEL = {BADGER_LOGGING_LEVEL}")
-    logger.info(f"Today's log file: {DEFAULT_LOGFILE_PATH}")
-    logger.info(f"args.log: {args.log_level}")
-    logger.info(f"args.log_filepath: {args.log_filepath}")
 
 
 if __name__ == "__main__":

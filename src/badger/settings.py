@@ -96,7 +96,7 @@ class BadgerConfig(BaseModel):
     BADGER_LOG_DIR: Setting = Setting(
         display_name="log directory",
         description="Directory where daily log files will be stored",
-        value="logs",
+        value=None,
         is_path=True,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
@@ -130,9 +130,11 @@ class ConfigSingleton:
     _instance_pid = None
 
     def __new__(cls, config_path: str = None, user_flag: bool = False):
+        
         current_pid = os.getpid()
+
         # Detect subprocess and reset singleton
-        if cls._instance is not None and cls._instance_pid!=current_pid:
+        """if cls._instance is not None and cls._instance_pid!=current_pid:
             logger.info(
                 f"ConfigSingleton reinitializing for subprocess (PID {current_pid})"
             )
@@ -140,6 +142,17 @@ class ConfigSingleton:
             root = logging.getLogger()
             root.handlers.clear()
             cls._instance = None
+
+        # Also reset if config_path is different from current one
+        if cls._instance is not None and config_path is not None:
+            print("Something")
+            if cls._instance.config_path != config_path:
+                logger.info(
+                    f"ConfigSingleton reinitializing with new config path: {config_path}"
+                )
+                cls._instance = None"""
+        
+        
 
 
         if cls._instance is None:

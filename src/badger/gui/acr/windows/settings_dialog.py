@@ -37,6 +37,7 @@ class BadgerSettingsDialog(QDialog):
         super().__init__(parent)
 
         self.config_singleton = init_settings()
+
         self.settings = (
             self.config_singleton.list_settings()
         )  # store the current settings
