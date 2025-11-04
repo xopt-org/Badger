@@ -221,32 +221,7 @@ class BadgerDataPanel(QWidget):
 
         # reorder data columns to display on table
         vocs = self.selected_routine.vocs
-        columns = list(data.columns)
-        reordered_cols = []
-
-        # objectives, timestamp, constraints, variables, observables
-        for obj_name in vocs.objective_names:
-            if obj_name in columns:
-                reordered_cols.append(obj_name)
-        reordered_cols.append("timestamp")
-        for con_name in vocs.constraint_names:
-            if con_name in columns and con_name not in reordered_cols:
-                # add to table but avoid duplicate cols
-                reordered_cols.append(con_name)
-        for var_name in vocs.variable_names:
-            if var_name in columns:
-                reordered_cols.append(var_name)
-        for sta_name in vocs.observable_names:
-            if sta_name in columns and sta_name not in reordered_cols:
-                # add to table but avoid duplicate cols
-                reordered_cols.append(sta_name)
-
-        # other metadata (xopt_runtime, xopt_error)
-        reordered_cols.extend(["xopt_error", "xopt_runtime"])
-        additional_cols = list(set(columns) - set(reordered_cols))
-        reordered_cols.extend(additional_cols)
-
-        data = data[reordered_cols]
+        data = self._reorder_cols(data)
         all_data = pd.concat([self.table_data, data], ignore_index=True)
 
         self.update_table(self.data_table, all_data, vocs)
@@ -265,6 +240,10 @@ class BadgerDataPanel(QWidget):
             data = self.filter_metadata(data)
 
         return data
+
+    @property
+    def routine(self):
+        return self.selected_routine
 
     def filter_metadata(self, data: dict) -> dict:
         """
@@ -293,17 +272,14 @@ class BadgerDataPanel(QWidget):
         # Create copy of data without metadata columns
         filtered_data = self.filter_metadata(data)
         # Raise error if loaded data keys do not match selected vocs
-        if not self.info:
-            data = filtered_data
-
         if set(list(filtered_data.keys())) != set(
             vocs.variable_names + vocs.output_names
         ):
             dialog = QMessageBox(
                 text=str(
-                    "Data must match selected Variables, Objectives\n\n"
+                    "Variables and objectives in data must match currently selected VOCS\n\n"
                     + "Please check the following:\n"
-                    + f"{list(set(list(data.keys())) ^ set(vocs.variable_names + vocs.output_names))}"
+                    + f"{list(set(list(filtered_data.keys())) ^ set(vocs.variable_names + vocs.output_names))}"
                 ),
                 parent=self,
             )
@@ -317,7 +293,7 @@ class BadgerDataPanel(QWidget):
             data["live"] = 0
             combined_data = pd.concat([self.table_data, data], ignore_index=True)
             # Reorder so live is at end
-            data = self._reorder_cols(data)
+            combined_data = self._reorder_cols(combined_data)
 
             self.run_data_checkbox.setEnabled(True)
             self.update_table(self.data_table, combined_data, routine.vocs)
@@ -343,10 +319,35 @@ class BadgerDataPanel(QWidget):
         )
 
     def _reorder_cols(self, data):
-        """Reorder datatable columns so that 'live' is at the end"""
-        if "live" in data.columns:
-            cols = [col for col in data.columns if col != "live"] + ["live"]
-            data = data[cols]
+        """
+        Reorder datatable columns for consistency. Order will be objectives,
+        constraints, variables, then observables, followed by metadata columns
+        such as timestamp, xopt_error, xopt_runtime, and live indicator.
+        """
+
+        columns = list(data.columns)
+        columns_set = set(columns)
+        reordered_cols = []
+        vocs = self.selected_routine.vocs
+
+        priority_groups = [
+            vocs.objective_names,
+            vocs.constraint_names,
+            vocs.variable_names,
+            vocs.observable_names,
+            ["timestamp", "xopt_error", "xopt_runtime", "live"],
+        ]
+
+        seen = set()
+        for group in priority_groups:
+            for col_name in group:
+                if col_name in columns_set and col_name not in seen:
+                    reordered_cols.append(col_name)
+                    seen.add(col_name)
+
+        additional_cols = [col for col in columns if col not in seen]
+        reordered_cols.extend(additional_cols)
+        data = data[reordered_cols]
 
         return data
 
