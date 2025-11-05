@@ -1633,6 +1633,7 @@ class BadgerRoutinePage(QWidget):
             self.set_ind_vrange,
             configs,
         ).exec_()
+        self.env_box.var_table.data_changed.emit()
 
     def _compose_routine(self) -> Routine:
         # Compose the routine
