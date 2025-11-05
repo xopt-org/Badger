@@ -100,7 +100,7 @@ class VariableTable(QTableWidget):
         self.horizontalHeader().sectionClicked.connect(self.header_clicked)
         # Catch if any item gets changed
         self.itemChanged.connect(self.add_additional_variable)
-        self.data_changed.connect(self.update_bounds)
+        # self.data_changed.connect(self.update_bounds)
 
     def setItem(self, row, column, item):
         text = item.text()
@@ -137,6 +137,7 @@ class VariableTable(QTableWidget):
             sb_upper = self.cellWidget(i, 3)
             self.bounds[name] = [sb_lower.value(), sb_upper.value()]
             self.validate_row(i)  # Validate the row after updating bounds
+        self.data_changed.emit()
 
     def validate_row(self, row):
         """
@@ -338,7 +339,6 @@ class VariableTable(QTableWidget):
 
         if filtered not in [1, 3]:
             self.sig_sel_changed.emit()
-        if filtered != 0:
             self.data_changed.emit()
 
     def handle_config_button(self, var_name):

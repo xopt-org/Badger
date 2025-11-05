@@ -896,6 +896,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self.vocs = vocs
 
         parameters = self.get_parameters()
+        logger.debug(f"Extracted parameters from tree: {parameters}")
 
         defaults = yaml.load(parameters, Loader=CustomSafeLoader)
 

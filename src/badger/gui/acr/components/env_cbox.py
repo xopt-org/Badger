@@ -511,13 +511,13 @@ class BadgerEnvBox(QWidget):
         self.btn_params.toggled.connect(self.toggle_params)
         self.animation.finished.connect(self.animation_finished)
 
-        self.obj_table.data_changed.connect(self.update_vocs)
-        self.con_table.data_changed.connect(self.update_vocs)
-        self.sta_table.data_changed.connect(self.update_vocs)
-        self.var_table.data_changed.connect(self.update_vocs)
+        self.obj_table.data_changed.connect(lambda: self.update_vocs("obj_table"))
+        self.con_table.data_changed.connect(lambda: self.update_vocs("con_table"))
+        self.sta_table.data_changed.connect(lambda: self.update_vocs("sta_table"))
+        self.var_table.data_changed.connect(lambda: self.update_vocs("var_table"))
 
-    def update_vocs(self):
-        logger.debug("Emitting vocs_updated signal from env_cbox")
+    def update_vocs(self, origin: str):
+        logger.debug(f"Emitting vocs_updated signal from env_cbox: {origin}")
         vocs, _ = self.compose_vocs()
         self.vocs_updated.emit(vocs)
 

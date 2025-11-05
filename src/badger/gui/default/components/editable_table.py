@@ -532,6 +532,7 @@ class EditableTable(QTableWidget):
                         f"Unsupported cell widget type: {type(cell_widget)}"
                     )
                 item[name][idx] = value
+        self.data_changed.emit()
 
     def update_show_selected_only(self, show: bool) -> None:
         """
@@ -543,7 +544,7 @@ class EditableTable(QTableWidget):
             If True, only show selected constraints; otherwise, show all.
         """
         self.show_selected_only = show
-        self.update_items()
+        self.update_items(vocs_signal=False)
 
     def update_keyword(self, keyword: str) -> None:
         """
@@ -557,9 +558,12 @@ class EditableTable(QTableWidget):
         self.keyword = keyword
         self.update_items()
 
-    def update_items(self, data=None, status=None, formulas=None):
+    def update_items(
+        self, data=None, status=None, formulas=None, vocs_signal: bool = True
+    ) -> None:
         self.update_items_wrapper(data, status, formulas)
-        self.update_vocs()
+        if vocs_signal:
+            self.update_vocs()
 
     @block_signals
     def update_items_wrapper(self, data=None, status=None, formulas=None) -> None:
