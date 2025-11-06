@@ -33,7 +33,6 @@ from PyQt5.QtWidgets import (
 )
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
-from xopt.generator import Generator
 from xopt.generators import get_generator
 from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
@@ -647,13 +646,17 @@ class BadgerPydanticEditor(QTreeWidget):
 
         self.initialize_combo_widget(widget, selections)
 
-        special_item_dict: dict[str, Any] | None = defaults.get(field, {})
+        special_item_dict: dict[str, Any] = {}
+        value: dict[str, Any] | str | None = defaults.get(field, "")
 
-        if special_item_dict is None:
-            logger.warning(
-                f"Generator has {field} set but no compatible {field} exists."
-            )
-            special_item_dict = {}
+        if value is None:
+            value = ""
+        elif isinstance(value, dict):
+            value = value.get("name", "")
+        else:
+            value = str(value)
+
+        special_item_dict["name"] = value
 
         special_item_dict["vocs"] = self.vocs.model_dump()
 
@@ -903,6 +906,36 @@ class BadgerPydanticEditor(QTreeWidget):
         self.set_params_from_generator(self.generator_name, defaults, self.vocs)
         self.validate()
 
+    def update_after_validate(self, defaults: dict[str, Any]):
+        model_class = self.model_class
+        if model_class is None:
+            return
+
+        self.clear()
+
+        fields_to_remove = ["vocs"]
+
+        filtered_class_fields, removed_class_fields = self.filter_class_fields(
+            model_class, fields_to_remove, defaults, include_defaults=True
+        )
+
+        self._set_params_recurse(
+            None,
+            filtered_class_fields,
+            defaults,
+            False,
+        )
+
+        self._set_params_recurse(
+            None,
+            removed_class_fields,
+            defaults,
+            True,
+        )
+
+        # Update parameters with defaults from generator class
+        self.set_params_post_setup(defaults)
+
     def validate(self):
         if self.model_class is None:
             return False
@@ -914,20 +947,13 @@ class BadgerPydanticEditor(QTreeWidget):
         try:
             parameters = self.get_parameters()
 
-            # hack to pass validation for certain generators
-            if issubclass(self.model_class, Generator) and "vocs" not in parameters:
-                vocs = self.vocs.model_dump()
-
-                parameters = (
-                    parameters[:-1]
-                    + "," * (len(parameters) > 2)
-                    + f'"vocs":{vocs}'
-                    + "}"
-                )
-
-            self.model_class.model_validate(
+            model = self.model_class.model_validate(
                 yaml.load(parameters, Loader=CustomSafeLoader)
             )
+
+            defaults = model.model_dump()
+            self.update_after_validate(defaults)
+
             return True
         except KeyError as e:
             print(e)
