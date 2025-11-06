@@ -221,13 +221,13 @@ class BadgerDataPanel(QWidget):
 
         # reorder data columns to display on table
         vocs = self.selected_routine.vocs
-        data = self._reorder_cols(data)
         all_data = pd.concat([self.table_data, data], ignore_index=True)
 
         self.update_table(self.data_table, all_data, vocs)
 
     def update_table(self, table, data=None, vocs=None) -> None:
         """Call data_table's update_table method but make sure table_data stays updated"""
+        data = self._reorder_cols(data)
         self.table_data = data
         update_table(table, data, vocs, info=self.info)
 
@@ -293,7 +293,7 @@ class BadgerDataPanel(QWidget):
             data["live"] = 0
             combined_data = pd.concat([self.table_data, data], ignore_index=True)
             # Reorder so live is at end
-            combined_data = self._reorder_cols(combined_data)
+            # combined_data = self._reorder_cols(combined_data)
 
             self.run_data_checkbox.setEnabled(True)
             self.update_table(self.data_table, combined_data, routine.vocs)
@@ -307,8 +307,6 @@ class BadgerDataPanel(QWidget):
         """
         self.set_routine(routine)
         data = routine.data
-
-        data = self._reorder_cols(data)
 
         self.run_data_checkbox.setEnabled(True)
 
@@ -333,8 +331,8 @@ class BadgerDataPanel(QWidget):
         priority_groups = [
             vocs.objective_names,
             vocs.constraint_names,
-            vocs.variable_names,
             vocs.observable_names,
+            vocs.variable_names,
             ["timestamp", "xopt_error", "xopt_runtime", "live"],
         ]
 
@@ -347,7 +345,9 @@ class BadgerDataPanel(QWidget):
 
         additional_cols = [col for col in columns if col not in seen]
         reordered_cols.extend(additional_cols)
-        data = data[reordered_cols]
+
+        if list(data.columns) != reordered_cols:
+            data = data[reordered_cols]
 
         return data
 
