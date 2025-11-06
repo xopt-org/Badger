@@ -138,24 +138,6 @@ class BadgerRoutineSubprocess:
 
             self.routine.initial_points = init_points
 
-        if self.routine.data is not None:
-            # If there are empty columns, need to sample at least 1 initial point to build model:
-            if self.routine.data.isna().all().any() and not init_points_flag:
-                # set init_points_flag to true and overwrite with single add_curr
-                init_points_flag = True
-                self.routine.initial_point_actions = [{"type": "add_curr"}]
-                init_points = calculate_initial_points(
-                    self.routine.initial_point_actions,
-                    self.routine.vocs,
-                    self.routine.environment,
-                )
-                try:
-                    init_points = pd.DataFrame(init_points)
-                except IndexError:
-                    init_points = pd.DataFrame(init_points, index=[0])
-
-                self.routine.initial_points = init_points
-
         try:
             self.save_init_vars()
             process_with_args = self.process_manager.remove_from_queue()
