@@ -42,6 +42,7 @@ from badger.gui.default.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
 from badger.gui.default.utils import ModalOverlay
+from badger.errors import BadgerRoutineError
 
 import logging
 
@@ -353,7 +354,19 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self, data=None):
+    def prepare_run(self, data=None, init_points_flag=True):
+        """
+        Prepares the run by composing the routine, validating data if present,
+        saving created routine to a yaml file, and passing the routine to
+        the run monitor to initialize plots.
+
+        Args:
+            data (DataFrame) : Optional data to be loaded into the run, if provided
+            init_points_flag (bool) : Optional flag for init points, default value is True. Used to
+                confirm that initial points are being sampled if there are new columns in
+                the dataframe. If there are new columns and the flag is false, this function
+                raises an error.
+        """
         try:
             routine = self.routine_editor.routine_page._compose_routine()
         except Exception as e:
@@ -369,6 +382,14 @@ class BadgerHomePage(QWidget):
                 if name not in data.columns:
                     # Add null datapoints for new constraints or observables
                     data[name] = np.nan
+
+            # Raise error if there are new columns (all NaN) and no initial points selected
+            if data.isna().all().any() and not init_points_flag:
+                raise BadgerRoutineError(
+                    "Must select at least one initial point in order to add"
+                    + " new constraints to routine!"
+                )
+
             routine.data = data
 
         self.current_routine = routine
@@ -399,7 +420,8 @@ class BadgerHomePage(QWidget):
         if run_data_flag:
             data_to_load = self.data_panel.get_data()  # Get data from data_panel
             self.prepare_run(
-                data=data_to_load
+                data=data_to_load,
+                init_points_flag=init_points_flag,
             )  # Pass data to prepare run, to be saved to tmp file and loaded into plots
             self.run_monitor.init_plots(self.current_routine)
 
