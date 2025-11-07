@@ -1,20 +1,20 @@
 import argparse
 import pathlib
 import atexit
-import logging 
+import logging
 
 logger = logging.getLogger("badger")
 
-from badger.actions import show_info
-from badger.actions.doctor import self_check
-from badger.actions.routine import show_routine
-from badger.actions.generator import show_generator
-from badger.actions.env import show_env
-from badger.actions.install import plugin_install
-from badger.actions.uninstall import plugin_remove
-from badger.actions.intf import show_intf
-from badger.actions.config import config_settings
-from badger.log import get_logging_manager, configure_process_logging
+from badger.actions import show_info  # noqa: E402
+from badger.actions.doctor import self_check  # noqa: E402
+from badger.actions.routine import show_routine  # noqa: E402
+from badger.actions.generator import show_generator  # noqa: E402
+from badger.actions.env import show_env  # noqa: E402
+from badger.actions.install import plugin_install  # noqa: E402
+from badger.actions.uninstall import plugin_remove  # noqa: E402
+from badger.actions.intf import show_intf  # noqa: E402
+from badger.actions.config import config_settings  # noqa: E402
+from badger.log import get_logging_manager, configure_process_logging  # noqa: E402
 
 
 def main():
@@ -67,7 +67,7 @@ def main():
     log_queue = logging_manager.get_queue()
     configure_process_logging(log_queue=log_queue, log_level=args.log_level)
 
-    #Prevent propagation to root logger
+    # Prevent propagation to root logger
     badger_logger = logging.getLogger("badger")
     badger_logger.propagate = False
 
@@ -133,8 +133,6 @@ def main():
     parser_remove.add_argument("plugin_specific", nargs="?", type=str, default=None)
     parser_remove.set_defaults(func=plugin_remove)
 
-    
-
     # Parser for the 'run' command
     parser_run = subparsers.add_parser("run", help="run routines")
     parser_run.add_argument("-a", "--generator", required=True, help="generator to use")
@@ -165,7 +163,8 @@ def main():
         help="verbose level of optimization progress",
     )
 
-    from badger.actions.run import run_routine
+    from badger.actions.run import run_routine  # noqa: E402
+
     parser_run.set_defaults(func=run_routine)
 
 

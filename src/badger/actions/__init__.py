@@ -47,7 +47,7 @@ def show_info(args):
         "logbook root": BADGER_LOGBOOK_ROOT,
         "archive root": BADGER_ARCHIVE_ROOT,
         "logging directory": BADGER_LOG_DIRECTORY,
-        "logging level": BADGER_LOGGING_LEVEL
+        "logging level": BADGER_LOGGING_LEVEL,
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
     }
 

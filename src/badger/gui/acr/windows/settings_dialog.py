@@ -1,6 +1,7 @@
 import logging
-import os 
-import datetime 
+import os
+import datetime
+
 # from PyQt5.QtCore import QRegExp
 # from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import (
@@ -226,21 +227,19 @@ class BadgerSettingsDialog(QDialog):
         logging_manager.update_log_level(level_str)
         logger.info(f"Logger level changed to {level_str}")
 
-        ## Put this in a method and call 
+        ## Put this in a method and call
         new_log_dir = self.log_dir_path.text()
         if new_log_dir and new_log_dir.strip():
             new_log_dir = os.path.expanduser(new_log_dir)
-        
+
             os.makedirs(new_log_dir, exist_ok=True)
-        
+
             today = datetime.date.today()
             log_filename = f"log_{today.month:02d}_{today.day:02d}.log"
             new_logfile_path = os.path.join(new_log_dir, log_filename)  # Build from UI
-        
+
             logging_manager.update_logfile_path(new_logfile_path)
             logger.info(f"Runtime: Logs now writing to {new_logfile_path}")
-
-
 
     def restore_settings(self):
         logger.info("Restoring previous settings.")
