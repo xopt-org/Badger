@@ -11,7 +11,7 @@ const darkCodeTheme = require('prism-react-renderer').themes.dracula
 const config = {
   title: 'Badger',
   tagline: 'The Go-To Optimizer in ACR',
-  url: 'https://xopt-org.github.io',
+  url: 'https://testing_xopt-org.github.io',
   baseUrl: '/Badger/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
@@ -27,13 +27,13 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/SLAC-ML/Badger-Home/edit/master/',
+          editUrl: 'https://github.com/xopt-org/Badger/tree/documentation/docs',
           remarkPlugins: [remarkMath],
           rehypePlugins: [rehypeKatex],
         },
         blog: {
           showReadingTime: true,
-          editUrl: 'https://github.com/SLAC-ML/Badger-Home/edit/master/',
+          editUrl: 'https://github.com/xopt-org/Badger/tree/documentation/docs',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
