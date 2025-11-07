@@ -1,47 +1,62 @@
-name: documentation
+  name: documentation
 
-on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+  on:
+    pull_request:
+      branches: [main]
+    push:
+      branches: [main]
 
-permissions:
-  contents: write
+  permissions:
+    contents: write
 
-jobs:
-  checks:
-    # on PRs we should test that docs can still build
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '25.x'
-          cache: 'npm'
+  jobs:
+    checks:
+      # on PRs we should test that docs can still build
+      if: github.event_name == 'pull_request'
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: documentation
 
-      - name: test build
-        run: |
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: setup node
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20.x'
+            cache: 'npm'
+            cache-dependency-path: documentation/package-lock.json
+
+        - name: Test build
+          run: |
             npm ci
             npm run build
 
-  gh-release:
-    # actually build the docs on pushes to main
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '25.x'
-          cache: 'npm'
+    gh-release:
+      # actually build the docs on pushes to main
+      # if: github.event_name == 'push'
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: documentation
 
-      - name: deploy to github pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GIT_USER: github-actions[bot]
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          npm run deploy
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: setup node
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20.x'
+            cache: 'npm'
+            cache-dependency-path: documentation/package-lock.json
+
+        - name: deploy to github pages
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GIT_USER: github-actions[bot]
+          run: |
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global user.name "github-actions[bot]"
+            npm ci
+            GIT_PASS=${{ secrets.GITHUB_TOKEN }} npx docusaurus deploy
