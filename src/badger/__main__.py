@@ -57,27 +57,6 @@ def main():
     parser_config.add_argument("key", nargs="?", type=str, default=None)
     parser_config.set_defaults(func=config_settings)
 
-    args = parser.parse_args()
-    # setup mutliprocess logging
-    logging_manager = get_logging_manager()
-    logging_manager.start_listener(
-        log_filepath=str(args.log_filepath), log_level=args.log_level
-    )
-    # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
-    log_queue = logging_manager.get_queue()
-    configure_process_logging(log_queue=log_queue, log_level=args.log_level)
-
-    # Prevent propagation to root logger
-    badger_logger = logging.getLogger("badger")
-    badger_logger.propagate = False
-
-    # cleanup QueueListener thread
-    atexit.register(
-        lambda: logging_manager.listener and logging_manager.listener.stop()
-    )
-
-    args.func(args)
-
     # Parser for the 'doctor' command
     parser_doctor = subparsers.add_parser("doctor", help="Badger status self-check")
     parser_doctor.add_argument(
@@ -166,6 +145,27 @@ def main():
     from badger.actions.run import run_routine  # noqa: E402
 
     parser_run.set_defaults(func=run_routine)
+
+    args = parser.parse_args()
+    args.func(args)
+
+    # setup mutliprocess logging
+    logging_manager = get_logging_manager()
+    logging_manager.start_listener(
+        log_filepath=str(args.log_filepath), log_level=args.log_level
+    )
+    # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
+    log_queue = logging_manager.get_queue()
+    configure_process_logging(log_queue=log_queue, log_level=args.log_level)
+
+    # Prevent propagation to root logger
+    badger_logger = logging.getLogger("badger")
+    badger_logger.propagate = False
+
+    # cleanup QueueListener thread
+    atexit.register(
+        lambda: logging_manager.listener and logging_manager.listener.stop()
+    )
 
 
 if __name__ == "__main__":
