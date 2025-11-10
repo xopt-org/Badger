@@ -50,9 +50,9 @@ class BadgerConfig(BaseModel):
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
         Setting for the archive root directory.
-    BADGER_LOGGING_LEVEL : Setting
+    BADGER_LOG_LEVEL : Setting
         Setting for the logging level.
-    BADGER_LOGFILE_PATH : Setting
+    BADGER_LOG_DIR : Setting
         Setting for the location of logfile.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
@@ -86,13 +86,13 @@ class BadgerConfig(BaseModel):
         value=None,
         is_path=True,
     )
-    BADGER_LOGGING_LEVEL: Setting = Setting(
+    BADGER_LOG_LEVEL: Setting = Setting(
         display_name="logging level",
         description="Logging level for the Badger logger",
         value="WARNING",
         is_path=False,
     )
-    BADGER_LOG_DIR: Setting = Setting(
+    BADGER_LOG_DIRECTORY: Setting = Setting(
         display_name="log directory",
         description="Directory where daily log files will be stored",
         value=None,
@@ -409,7 +409,7 @@ class ConfigSingleton:
             str: Path to today's log file (e.g., /path/to/logs/log_01_25.log)
         """
         # Get the configured log directory
-        log_dir = self.read_value("BADGER_LOG_DIR")
+        log_dir = self.read_value("BADGER_LOG_DIRECTORY")
 
         # If not set, empty, or invalid, use default (user config folder)
         if log_dir is None or log_dir == "" or log_dir == "/logs":

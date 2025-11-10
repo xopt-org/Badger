@@ -103,7 +103,7 @@ class BadgerSettingsDialog(QDialog):
 
         self.log_dir_label = QLabel("Log Directory")
         self.log_dir_path = QLineEdit(
-            self.config_singleton.read_value("BADGER_LOG_DIR")
+            self.config_singleton.read_value("BADGER_LOG_DIRECTORY")
         )
         grid.addWidget(self.log_dir_label, 5, 0)
         grid.addWidget(self.log_dir_path, 5, 1)
@@ -116,7 +116,7 @@ class BadgerSettingsDialog(QDialog):
         )
 
         # Set current value from config, if exists
-        current_level = self.config_singleton.read_value("BADGER_LOGGING_LEVEL")
+        current_level = self.config_singleton.read_value("BADGER_LOG_LEVEL")
         if current_level in [
             self.logging_level_setting.itemText(i)
             for i in range(self.logging_level_setting.count())

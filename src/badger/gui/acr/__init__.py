@@ -96,12 +96,12 @@ def launch_gui(config_path=None):
 
     ### Method for creating the log file (put it in utils)
     logging_manager = get_logging_manager()
-    level_str = config_singleton.read_value("BADGER_LOGGING_LEVEL")
+    level_str = config_singleton.read_value("BADGER_LOG_LEVEL")
     logging_manager.update_log_level(level_str)
     logger.info(f"Logger level changed to {level_str}")
 
     ## Put this in a method and call
-    new_log_dir = config_singleton.read_value("BADGER_LOG_DIR")
+    new_log_dir = config_singleton.read_value("BADGER_LOG_DIRECTORY")
     if new_log_dir and new_log_dir.strip():
         new_log_dir = os.path.expanduser(new_log_dir)
 

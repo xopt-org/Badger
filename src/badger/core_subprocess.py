@@ -94,7 +94,7 @@ def run_routine_subprocess(
 
     if log_queue is not None:
         temp_config = init_settings(config_path)
-        log_level = temp_config.read_value("BADGER_LOGGING_LEVEL")
+        log_level = temp_config.read_value("BADGER_LOG_LEVEL")
 
         configure_process_logging(
             log_queue=log_queue,
