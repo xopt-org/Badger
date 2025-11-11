@@ -73,7 +73,7 @@ QPushButton
 class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
 
-    def __init__(self, process_manager=None):
+    def __init__(self, process_manager=None, routine=None, auto_run=False):
         super().__init__()
 
         self.mode = "regular"  # home page mode
@@ -86,6 +86,11 @@ class BadgerHomePage(QWidget):
         self.config_logic()
 
         self.load_all_runs()
+
+        # Auto-load routine from CLI if provided
+        if routine is not None:
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(100, lambda: self.load_routine_from_cli(routine, auto_run))
 
     def init_ui(self):
         self.config_singleton = init_settings()
@@ -688,3 +693,47 @@ class BadgerHomePage(QWidget):
             self.overlay.hide()
         except AttributeError:  # in test mode
             pass
+
+    def load_routine_from_cli(self, routine, auto_run):
+        """
+        Load routine from CLI and optionally start optimization.
+
+        This method is called when a routine is provided via CLI.
+        It loads the routine into the editor and optionally triggers a run.
+
+        Args:
+            routine: Routine object to load
+            auto_run: If True, automatically start optimization
+        """
+        # Switch to routine editor tab
+        self.tabs.setCurrentIndex(1)
+
+        # Load routine into editor using existing method
+        self.routine_page.refresh_ui(routine)
+
+        # If auto_run is requested, trigger run after a short delay
+        if auto_run:
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(500, self.trigger_run_from_cli)
+
+    def trigger_run_from_cli(self):
+        """
+        Trigger optimization run from CLI (auto-run mode).
+
+        This simulates clicking the "Run" button in the GUI.
+        """
+        # Get the routine from the editor
+        routine = self.routine_page.routine
+
+        if routine is None:
+            print("Error: No routine loaded in editor")
+            return
+
+        # Switch to run monitor tab
+        self.tabs.setCurrentIndex(2)
+
+        # Set up run monitor with routine
+        self.run_monitor.set_routine(routine)
+
+        # Start the run (uses existing start() method)
+        self.run_monitor.start()

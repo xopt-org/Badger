@@ -63,7 +63,7 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager=None):
+    def __init__(self, process_manager=None, routine=None, auto_run=False):
         super().__init__()
 
         self.mode = "regular"  # home page mode
@@ -76,6 +76,11 @@ class BadgerHomePage(QWidget):
 
         self.load_all_runs()
         self.init_home_page()
+
+        # Auto-load routine from CLI if provided
+        if routine is not None:
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(100, lambda: self.load_routine_from_cli(routine, auto_run))
 
     def init_ui(self):
         self.config_singleton = init_settings()
@@ -430,3 +435,32 @@ class BadgerHomePage(QWidget):
             self.overlay.hide()
         except AttributeError:  # in test mode
             pass
+
+    def load_routine_from_cli(self, routine, auto_run):
+        """
+        Load routine from CLI and optionally auto-start optimization.
+
+        This method is called when a routine is provided via CLI.
+        It loads the routine into the editor and optionally triggers a run.
+
+        Args:
+            routine: Routine object to load
+            auto_run: If True, automatically start optimization
+        """
+        # Set the routine in the editor (existing method)
+        self.routine_editor.set_routine(routine, silent=True)
+
+        # Update current routine
+        self.current_routine = routine
+
+        # Initialize plots and monitor (reuse existing logic)
+        self.run_monitor.init_plots(routine)
+
+        # Update data table if routine has data
+        if routine.data is not None and len(routine.data) > 0:
+            update_table(self.run_table, routine.sorted_data, routine.vocs)
+
+        # If auto-run requested, start optimization after short delay
+        if auto_run:
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(500, self.start_run)

@@ -78,7 +78,15 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui(config_path=None):
+def launch_gui(config_path=None, routine=None, auto_run=False):
+    """
+    Launch the Badger ACR GUI.
+
+    Args:
+        config_path: Optional path to configuration file
+        routine: Optional Routine object to pre-load in GUI
+        auto_run: If True and routine is provided, automatically start optimization
+    """
     sys.excepthook = error_handler
 
     app = QApplication(sys.argv)
@@ -109,7 +117,7 @@ def launch_gui(config_path=None):
         app.setStyleSheet("")
 
     # Show the main window
-    window = BadgerMainWindow()
+    window = BadgerMainWindow(routine=routine, auto_run=auto_run)
 
     # Enable Ctrl + C quit
     signal.signal(signal.SIGINT, on_exit)

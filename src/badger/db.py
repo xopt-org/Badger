@@ -20,6 +20,7 @@ config_singleton = init_settings()
 try:
     BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
 except KeyError:
+    BADGER_DB_ROOT = None  # FIX: Define variable even when not configured
     flag_use_db = False
 
 if flag_use_db:

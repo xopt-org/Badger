@@ -81,6 +81,65 @@ def load_config(fname):
     return configs
 
 
+def load_template_smart(template_input):
+    """
+    Load routine template from YAML string or file path.
+
+    Args:
+        template_input: Either a YAML string or a file path
+
+    Returns:
+        dict: Parsed template configuration
+
+    Raises:
+        BadgerLoadConfigError: If template cannot be loaded or parsed
+    """
+    if template_input is None:
+        raise BadgerLoadConfigError("Template input cannot be None")
+
+    # Try parsing as YAML string first
+    if not os.path.exists(template_input):
+        try:
+            config = yaml.safe_load(template_input)
+            # If result is a dict, it's valid template YAML
+            if isinstance(config, dict):
+                return config
+            # If result is a string, it wasn't actually YAML, likely a file path
+            elif isinstance(config, str):
+                raise BadgerLoadConfigError(
+                    f"Template file not found: {template_input}"
+                )
+            # Other types (None, list, etc.) are invalid
+            else:
+                raise BadgerLoadConfigError(
+                    f"Invalid template: expected dict, got {type(config).__name__}"
+                )
+        except yaml.YAMLError as e:
+            raise BadgerLoadConfigError(
+                f"Invalid YAML string: {str(e)}"
+            )
+
+    # Load from file path
+    try:
+        with open(template_input, 'r') as f:
+            config = yaml.safe_load(f)
+
+        if not isinstance(config, dict):
+            raise BadgerLoadConfigError(
+                f"Invalid template file: expected dict, got {type(config).__name__}"
+            )
+
+        return config
+    except yaml.YAMLError as e:
+        raise BadgerLoadConfigError(
+            f"Error parsing template file {template_input}: {str(e)}"
+        )
+    except IOError as e:
+        raise BadgerLoadConfigError(
+            f"Error reading template file {template_input}: {str(e)}"
+        )
+
+
 def merge_params(default_params, params):
     merged_params = None
 

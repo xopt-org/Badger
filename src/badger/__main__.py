@@ -11,7 +11,7 @@ from badger.actions.env import show_env  # noqa: E402
 from badger.actions.install import plugin_install  # noqa: E402
 from badger.actions.uninstall import plugin_remove  # noqa: E402
 from badger.actions.intf import show_intf  # noqa: E402
-from badger.actions.run import run_routine  # noqa: E402
+from badger.actions.run import run_routine, run_routine_cli  # noqa: E402
 from badger.actions.config import config_settings  # noqa: E402
 
 
@@ -97,35 +97,28 @@ def main():
     parser_remove.set_defaults(func=plugin_remove)
 
     # Parser for the 'run' command
-    parser_run = subparsers.add_parser("run", help="run routines")
-    parser_run.add_argument("-a", "--generator", required=True, help="generator to use")
-    parser_run.add_argument(
-        "-ap", "--generator_params", help="parameters for the generator"
-    )
-    parser_run.add_argument("-e", "--env", required=True, help="environment to use")
-    parser_run.add_argument(
-        "-ep", "--env_params", help="parameters for the environment"
+    parser_run = subparsers.add_parser(
+        "run", help="Run optimization from template (YAML file or string)"
     )
     parser_run.add_argument(
-        "-c", "--config", required=True, help="config for the routine"
+        "template", help="YAML template (string or file path)"
     )
     parser_run.add_argument(
-        "-s", "--save", nargs="?", const="", help="the routine name to be saved"
+        "--gui",
+        action="store_true",
+        help="Launch GUI mode (default)",
     )
     parser_run.add_argument(
-        "-y", "--yes", action="store_true", help="run the routine without confirmation"
+        "--headless",
+        action="store_true",
+        help="Run in headless mode without GUI",
     )
     parser_run.add_argument(
-        "-v",
-        "--verbose",
-        type=int,
-        choices=[0, 1, 2],
-        default=2,
-        const=2,
-        nargs="?",
-        help="verbose level of optimization progress",
+        "--auto-run",
+        action="store_true",
+        help="Auto-start optimization without confirmation",
     )
-    parser_run.set_defaults(func=run_routine)
+    parser_run.set_defaults(func=run_routine_cli)
 
     # Parser for the 'config' command
     parser_config = subparsers.add_parser("config", help="Badger configurations")
