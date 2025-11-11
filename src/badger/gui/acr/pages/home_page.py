@@ -450,6 +450,12 @@ class BadgerHomePage(QWidget):
         # Set the routine in the editor (existing method)
         self.routine_editor.set_routine(routine, silent=True)
 
+        # Populate initial points table based on actions (like "Load Template" does)
+        # This ensures actions like "add_curr" and "add_rand" are executed
+        if hasattr(self.routine_editor, 'init_table_actions') and self.routine_editor.init_table_actions:
+            self.routine_editor.clear_init_table(reset_actions=False)
+            self.routine_editor.update_init_table(force=True)
+
         # Update current routine
         self.current_routine = routine
 
