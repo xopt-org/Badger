@@ -947,12 +947,12 @@ class BadgerPydanticEditor(QTreeWidget):
         try:
             parameters = self.get_parameters()
 
-            model = self.model_class.model_validate(
+            self.model_class.model_validate(
                 yaml.load(parameters, Loader=CustomSafeLoader)
             )
 
-            defaults = model.model_dump()
-            self.update_after_validate(defaults)
+            # defaults = model.model_dump()
+            # self.update_after_validate(defaults)
 
             return True
         except KeyError as e:

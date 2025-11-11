@@ -1,9 +1,9 @@
 import time
 from functools import wraps
 import traceback
-from typing import Any, Callable, Optional, Iterable, ParamSpec
+from typing import Any, Callable, Optional, ParamSpec
 from types import TracebackType
-from PyQt5.QtWidgets import QWidget, QLayout, QTabWidget
+from PyQt5.QtWidgets import QLayout, QTabWidget
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -98,37 +98,6 @@ class HandledException(Exception):
 
     def __str__(self) -> str:
         return f"{self.exception_type.__name__}: {self.message}"
-
-
-class BlockSignalsContext:
-    widgets: Iterable[QWidget | QLayout]
-
-    def __init__(self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]):
-        if isinstance(widgets, Iterable):
-            self.widgets = widgets
-        else:
-            self.widgets = [widgets]
-
-    def __enter__(self):
-        for widget in self.widgets:
-            if widget.signalsBlocked():
-                logger.warning(
-                    f"Signals already blocked for {widget} when entering context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
-                )
-            widget.blockSignals(True)
-
-    def __exit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
-    ):
-        for widget in self.widgets:
-            if not widget.signalsBlocked():
-                logger.warning(
-                    f"Signals not blocked for {widget} when exiting context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
-                )
-            widget.blockSignals(False)
 
 
 class MatplotlibFigureContext:

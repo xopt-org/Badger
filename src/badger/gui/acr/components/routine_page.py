@@ -925,7 +925,7 @@ class BadgerRoutinePage(QWidget):
     def set_routine(self, routine: Routine, silent: bool = False):
         self.refresh_ui(routine, silent=silent)
 
-    def select_generator(self, i):
+    def select_generator(self, i: int):
         # Reset the script
         self.script = ""
         self.generator_box.check_use_script.setChecked(False)

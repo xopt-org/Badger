@@ -1,5 +1,6 @@
 from importlib import resources
 import traceback
+from typing import Any, cast
 from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -75,8 +76,12 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(4, 44)
         self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
 
-        self.all_variables: list[str] = []  # store all variables
-        self.variables: list[str] = []  # store variables to be displayed
+        self.all_variables: list[
+            dict[str, tuple[float, float]]
+        ] = []  # store all variables
+        self.variables: list[
+            dict[str, tuple[float, float]]
+        ] = []  # store variables to be displayed
         self.selected: dict[str, bool] = {}  # track var selected status
         self.bounds: dict[str, tuple[float, float]] = {}  # track var bounds
         self.checked_only = False
@@ -102,7 +107,7 @@ class VariableTable(QTableWidget):
         self.itemChanged.connect(self.add_additional_variable)
         # self.data_changed.connect(self.update_bounds)
 
-    def setItem(self, row, column, item):
+    def setItem(self, row: int, column: int, item: QTableWidgetItem):
         text = item.text()
         if text != self.PLACEHOLDER_TEXT:
             self.previous_values[(row, column)] = item.text()
@@ -111,6 +116,9 @@ class VariableTable(QTableWidget):
     def is_all_checked(self):
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
+            if not item:
+                raise Exception("Checkbox widget not found!")
+            item = cast(QCheckBox, item)
             if not item.isChecked():
                 return False
 
@@ -132,19 +140,38 @@ class VariableTable(QTableWidget):
 
     def update_bounds(self):
         for i in range(self.rowCount() - 1):
-            name = self.item(i, 1).text()
+            widget = self.item(i, 1)
+            if not widget:
+                raise Exception("Variable name widget not found!")
+            name = widget.text()
+
             sb_lower = self.cellWidget(i, 2)
+            if not sb_lower:
+                raise Exception("Variable bound spinbox widget not found!")
             sb_upper = self.cellWidget(i, 3)
-            self.bounds[name] = [sb_lower.value(), sb_upper.value()]
+            if not sb_upper:
+                raise Exception("Variable bound spinbox widget not found!")
+
+            sb_lower = cast(RobustSpinBox, sb_lower)
+            sb_upper = cast(RobustSpinBox, sb_upper)
+
+            self.bounds[name] = (sb_lower.value(), sb_upper.value())
             self.validate_row(i)  # Validate the row after updating bounds
         self.data_changed.emit()
 
-    def validate_row(self, row):
+    def validate_row(self, row: int):
         """
         Validate the bounds for a given row. If invalid, apply a red border to the row.
         """
         sb_lower = self.cellWidget(row, 2)  # Min value spinbox
+        if not sb_lower:
+            raise Exception("Variable bound spinbox widget not found!")
         sb_upper = self.cellWidget(row, 3)  # Max value spinbox
+        if not sb_upper:
+            raise Exception("Variable bound spinbox widget not found!")
+
+        sb_lower = cast(RobustSpinBox, sb_lower)
+        sb_upper = cast(RobustSpinBox, sb_upper)
 
         if sb_lower.value() >= sb_upper.value():  # Invalid bounds
             # Apply a red border to the entire row
@@ -159,16 +186,20 @@ class VariableTable(QTableWidget):
                 if widget:
                     widget.setStyleSheet("")
 
-    def set_bounds(self, variables: dict, signal=True):
+    def set_bounds(
+        self, variables: dict[str, tuple[float, float]], signal: bool = True
+    ):
         for name in variables:
-            self.bounds[name] = variables[name]
+            self.bounds[name] = tuple(variables[name])
 
         if signal:
             self.update_variables(self.variables, 2)
         else:
             self.update_variables(self.variables, 3)
 
-    def refresh_variable(self, name: str, bounds: list, hard_bounds: list):
+    def refresh_variable(
+        self, name: str, bounds: tuple[float, float], hard_bounds: tuple[float, float]
+    ):
         self.bounds[name] = bounds
 
         # Update the variable in self.variables
@@ -185,10 +216,17 @@ class VariableTable(QTableWidget):
 
         self.update_variables(self.variables, 2)
 
-    def update_selected(self, _):
+    def update_selected(self):
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
-            name = self.item(i, 1).text()
+            if not _cb:
+                raise Exception("Checkbox widget not found!")
+            _cb = cast(QCheckBox, _cb)
+
+            widget = self.item(i, 1)
+            if not widget:
+                raise Exception("Variable name widget not found!")
+            name = widget.text()
             if name != self.PLACEHOLDER_TEXT:  # TODO: fix...
                 self.selected[name] = _cb.isChecked()
 
@@ -213,7 +251,7 @@ class VariableTable(QTableWidget):
             self.show_all()
 
     def show_checked_only(self):
-        checked_variables = []
+        checked_variables: list[dict[str, tuple[float, float]]] = []
         for var in self.variables:
             name = next(iter(var))
             if self.is_checked(name):
@@ -231,8 +269,12 @@ class VariableTable(QTableWidget):
 
         return _checked
 
-    def get_visible_variables(self, variables):
-        _variables = []  # store variables to be displayed
+    def get_visible_variables(
+        self, variables: list[dict[str, tuple[float, float]]]
+    ) -> list[dict[str, tuple[float, float]]]:
+        _variables: list[
+            dict[str, tuple[float, float]]
+        ] = []  # store variables to be displayed
         if self.checked_only:
             for var in variables:
                 name = next(iter(var))
@@ -243,7 +285,12 @@ class VariableTable(QTableWidget):
 
         return _variables
 
-    def update_variables(self, variables, filtered=0):
+    def _convert_bounds_to_tuple(self, bounds: Any) -> dict[str, tuple[float, float]]:
+        return {k: (v[0], v[1]) for k, v in bounds.items()}
+
+    def update_variables(
+        self, variables: list[dict[str, tuple[float, float]]], filtered: int = 0
+    ):
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
         # filtered = 2: just rerender based on check status
@@ -251,12 +298,14 @@ class VariableTable(QTableWidget):
 
         self.setRowCount(0)
 
+        variables = [self._convert_bounds_to_tuple(var) for var in variables]
+
         if not filtered:
             self.all_variables = variables or []
             self.variables = self.all_variables[:]  # make a copy
             self.selected = {}
             self.bounds = {}
-            self.addtl_vars = []
+            self.addtl_vars: list[str] = []
             for var in self.variables:
                 name = next(iter(var))
                 self.bounds[name] = var[name]
@@ -279,6 +328,10 @@ class VariableTable(QTableWidget):
             self.setCellWidget(i, 0, QCheckBox())
 
             _cb = self.cellWidget(i, 0)
+            if not _cb:
+                raise Exception("Checkbox widget not found!")
+            _cb = cast(QCheckBox, _cb)
+
             _cb.setChecked(self.is_checked(name))
             _cb.stateChanged.connect(self.update_selected)
             item = QTableWidgetItem(name)
@@ -318,7 +371,7 @@ class VariableTable(QTableWidget):
             self.setCellWidget(i, 4, button_container)
 
             config_button.clicked.connect(
-                lambda _, var_name=name: self.handle_config_button(var_name)
+                lambda var_name=name: self.handle_config_button(var_name)
             )
 
             if self.bounds_locked:
@@ -341,10 +394,10 @@ class VariableTable(QTableWidget):
             self.sig_sel_changed.emit()
             self.data_changed.emit()
 
-    def handle_config_button(self, var_name):
+    def handle_config_button(self, var_name: str):
         self.sig_var_config.emit(var_name)
 
-    def add_additional_variable(self, item):
+    def add_additional_variable(self, item: QTableWidgetItem):
         row = item.row()
         column = item.column()
         name = item.text()
@@ -457,7 +510,7 @@ class VariableTable(QTableWidget):
 
         self.all_variables.append(var)
         self.variables.append(var)
-        self.bounds[name] = [lb, ub]
+        self.bounds[name] = (lb, ub)
 
     def export_variables(self) -> dict[str, tuple[float, float]]:
         variables_exported: dict[str, tuple[float, float]] = {}

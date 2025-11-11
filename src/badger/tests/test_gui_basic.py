@@ -157,8 +157,8 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
     for algo in algos:
         if algo in all_generator_names["bo"]:
-            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
-            params = editor.routine_page.generator_box.edit.get_parameters()
+            qtbot.keyClicks(editor.generator_box.cb, algo)
+            params = editor.generator_box.edit.get_parameters()
             params_dict = yaml.safe_load(params)
 
             if "gp_constructor" in params_dict:
