@@ -93,7 +93,7 @@ def run_routine_subprocess(
     wait_event.wait()
 
     try:
-        args = queue.get(timeout=1)
+        args = queue.get(timeout=5)
     except Exception as e:
         print(f"Error in subprocess: {type(e).__name__}, {str(e)}")
 

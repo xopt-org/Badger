@@ -188,11 +188,10 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
         auto_run: If True, skip confirmation prompt
         verbose: Verbosity level (0, 1, or 2)
     """
-    from multiprocessing import Process, Queue, Event
+    from multiprocessing import Process, Queue, Event, Pipe
     from badger.core_subprocess import run_routine_subprocess
-    from badger.archive import archive_run
-    import tempfile
-    from badger.utils import get_yaml_string
+    from badger.archive import save_tmp_run
+    from badger.settings import init_settings
 
     # Display routine summary
     print(f"\n{'='*60}")
@@ -216,35 +215,73 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
             print("\nCancelled.")
             return
 
-    # Set up subprocess communication
+    # Set up subprocess communication (matching GUI architecture)
+    # CRITICAL: Must create these BEFORE starting subprocess with 'spawn'
     data_queue = Queue()
+    evaluate_queue = Pipe()
     stop_event = Event()
     pause_event = Event()
-    pause_event.set()  # Start unpaused
+    wait_event = Event()
+    config_path = init_settings()._instance.config_path
 
-    # Save routine temporarily to file
-    routine_filename = tempfile.mktemp(suffix='.yaml')
-    with open(routine_filename, 'w') as f:
-        # Convert routine to YAML
-        routine_dict = routine.model_dump(mode='json')
-        f.write(get_yaml_string(routine_dict))
-
-    # Start subprocess
-    start_time = time.time()
+    # Start subprocess FIRST (matching GUI pattern)
     process = Process(
         target=run_routine_subprocess,
         args=(
             data_queue,
+            evaluate_queue,
             stop_event,
             pause_event,
-            routine_filename,
-            True,  # archive
-            None,  # termination_condition (could add from args)
-            start_time,
-            False,  # testing
+            wait_event,
+            config_path,
         )
     )
     process.start()
+
+    # Give subprocess time to start and reach wait_event.wait()
+    # With 'spawn' on macOS, starting Python interpreter takes time
+    time.sleep(3)
+
+    # NOW calculate initial points and prepare data
+    from badger.routine import calculate_initial_points
+    import pandas as pd
+
+    if routine.initial_points is None or len(routine.initial_points) == 0:
+        init_points = calculate_initial_points(
+            routine.initial_point_actions,
+            routine.vocs,
+            routine.environment,
+        )
+        try:
+            init_points = pd.DataFrame(init_points)
+        except (IndexError, ValueError):
+            init_points = pd.DataFrame(init_points, index=[0])
+        routine.initial_points = init_points
+
+    # Record start time and save routine
+    start_time = time.time()
+    routine_filename = save_tmp_run(routine)
+
+    # Prepare arguments to send to subprocess
+    arg_dict = {
+        "routine_id": routine.id if hasattr(routine, 'id') else None,
+        "routine_filename": routine_filename,
+        "routine_name": routine.name,
+        "variable_ranges": routine.vocs.variables,
+        "initial_points": routine.initial_points,
+        "evaluate": True,
+        "archive": True,
+        "termination_condition": None,
+        "start_time": start_time,
+        "testing": False,
+    }
+
+    # NOW put data in queue (subprocess is already running and waiting)
+    data_queue.put(arg_dict)
+
+    # Signal subprocess to begin execution
+    pause_event.set()  # Start unpaused
+    wait_event.set()   # Signal subprocess to begin
 
     # Monitor progress
     print("Optimization started. Press Ctrl+C to stop.\n")
@@ -255,17 +292,13 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
         while process.is_alive():
             time.sleep(0.1)
 
-            # Check for data from subprocess
-            while not data_queue.empty():
-                data_dict = data_queue.get()
+            # Check for data from subprocess via evaluate_queue (Pipe)
+            # This is how the GUI does it - evaluate_queue sends (data, generator) tuples
+            if evaluate_queue[1].poll():
+                while evaluate_queue[1].poll():
+                    results = evaluate_queue[1].recv()
+                    df = results[0]  # First element is the data DataFrame
 
-                if 'error' in data_dict:
-                    print(f"\n❌ Error: {data_dict['error']}")
-                    break
-
-                if 'data' in data_dict:
-                    # Display progress
-                    df = data_dict['data']
                     if last_data is None or len(df) > len(last_data):
                         iteration = len(df)
                         last_row = df.iloc[-1]
@@ -280,6 +313,16 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
                         print()
 
                         last_data = df
+
+            # Check for errors in data_queue
+            if not data_queue.empty():
+                try:
+                    error_title, error_traceback = data_queue.get()
+                    print(f"\n❌ Error: {error_title}")
+                    print(error_traceback)
+                    break
+                except ValueError:
+                    pass
 
     except KeyboardInterrupt:
         print("\n\nStopping optimization...")
@@ -297,10 +340,6 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
     print(f"Optimization completed in {elapsed:.2f}s")
     print(f"Total iterations: {iteration}")
     print(f"{'='*60}\n")
-
-    # Clean up
-    if os.path.exists(routine_filename):
-        os.remove(routine_filename)
 
 
 def run_routine_cli(args):
