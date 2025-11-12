@@ -292,11 +292,12 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
     storage = {"paused": False, "should_exit": False}
 
     def sigint_handler(*args):
-        """Signal handler for Ctrl+C - sets pause flag or exit flag"""
+        """Signal handler for Ctrl+C - sets pause flag or raises to exit"""
         if storage["paused"]:
-            # Second Ctrl+C while paused - request exit
+            # Second Ctrl+C while paused - raise to interrupt input() and exit
             print("")  # new line
             storage["should_exit"] = True
+            raise KeyboardInterrupt  # Interrupt the input() call
         else:
             # First Ctrl+C - request pause
             storage["paused"] = True
@@ -313,11 +314,15 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
             pause_event.clear()  # Pause subprocess
             print("")  # new line
 
-            res = input("Optimization paused. Press Enter to resume or Ctrl+C to terminate: ")
-            while res != "":
-                # Invalid input, ask again
-                sys.stdout.write("\033[F")  # Move cursor up to erase line
-                res = input("Invalid choice. Press Enter to resume or Ctrl+C to terminate: ")
+            try:
+                res = input("Optimization paused. Press Enter to resume or Ctrl+C to terminate: ")
+                while res != "":
+                    # Invalid input, ask again
+                    sys.stdout.write("\033[F")  # Move cursor up to erase line
+                    res = input("Invalid choice. Press Enter to resume or Ctrl+C to terminate: ")
+            except KeyboardInterrupt:
+                # Ctrl+C pressed during input - signal handler already set should_exit=True
+                pass
 
             # Check if exit was requested during pause
             if storage["should_exit"]:
