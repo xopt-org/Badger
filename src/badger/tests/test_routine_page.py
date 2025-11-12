@@ -122,8 +122,8 @@ def test_initial_points(qtbot: QtBot):
     # Turn off relative to current
     window.env_box.relative_to_curr.setChecked(False)
 
-    qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
+    qtbot.keyClicks(window.env_box.cb, "test")
 
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.var_table.cellWidget(1, 0).setChecked(True)
@@ -217,8 +217,8 @@ def test_add_random_points(qtbot: QtBot):
     # Turn off relative to current
     window.env_box.relative_to_curr.setChecked(False)
 
-    qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
+    qtbot.keyClicks(window.env_box.cb, "test")
 
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.var_table.cellWidget(1, 0).setChecked(True)

@@ -90,7 +90,9 @@ class VariableTable(QTableWidget):
         self.env_class = None  # needed to get bounds on the fly
         self.env = None  # needed to get bounds on the fly
         self.configs = None  # needed to get bounds on the fly
-        self.previous_values = {}  # to track changes in table
+        self.previous_values: dict[
+            tuple[int, int], str
+        ] = {}  # to track changes in table
         self.config_logic()
         self.customContextMenuRequested.connect(self.display_conext_menu)
 
@@ -236,8 +238,8 @@ class VariableTable(QTableWidget):
         if self.checked_only:
             self.show_checked_only()
 
-    def set_selected(self, variable_names):
-        self.selected = {}
+    def set_selected(self, variable_names: list[str]):
+        self.selected: dict[str, bool] = {}
         for vname in variable_names:
             self.selected[vname] = True
 
@@ -370,9 +372,7 @@ class VariableTable(QTableWidget):
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
             self.setCellWidget(i, 4, button_container)
 
-            config_button.clicked.connect(
-                lambda var_name=name: self.handle_config_button(var_name)
-            )
+            config_button.clicked.connect(lambda: self.handle_config_button(name))
 
             if self.bounds_locked:
                 sb_lower.setEnabled(False)
