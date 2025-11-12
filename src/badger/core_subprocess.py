@@ -1,5 +1,6 @@
 from copy import deepcopy
 import logging
+import signal
 import time
 import traceback
 from pandas import DataFrame
@@ -89,6 +90,10 @@ def run_routine_subprocess(
     init_settings(config_path)
     # Now load the archive would use the correct config
     from badger.archive import load_run, archive_run
+
+    # Ignore SIGINT (Ctrl+C) in subprocess - only parent should handle it
+    # Subprocess is controlled via multiprocessing Events (pause_event, stop_event)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     wait_event.wait()
 
@@ -229,6 +234,10 @@ def run_routine_subprocess(
                     archive_run(routine)
 
     except BadgerRunTerminated:
+        opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
+        evaluate_queue[0].close()
+    except KeyboardInterrupt:
+        # Clean exit on user interrupt - don't print traceback
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
     except XoptError as e:

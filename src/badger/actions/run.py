@@ -283,50 +283,74 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
     pause_event.set()  # Start unpaused
     wait_event.set()   # Signal subprocess to begin
 
-    # Monitor progress
-    print("Optimization started. Press Ctrl+C to stop.\n")
+    # Monitor progress with pause/resume support using signal handler (like old run_n_archive)
+    print("Optimization started. Press Ctrl+C to pause.\n")
     iteration = 0
     last_data = None
 
-    try:
-        while process.is_alive():
-            time.sleep(0.1)
+    # Storage for signal handler state
+    storage = {"paused": False, "should_exit": False}
 
-            # Check for data from subprocess via evaluate_queue (Pipe)
-            # This is how the GUI does it - evaluate_queue sends (data, generator) tuples
-            if evaluate_queue[1].poll():
-                while evaluate_queue[1].poll():
-                    results = evaluate_queue[1].recv()
-                    df = results[0]  # First element is the data DataFrame
+    def sigint_handler(*args):
+        """Signal handler for Ctrl+C - sets pause flag or exit flag"""
+        if storage["paused"]:
+            # Second Ctrl+C while paused - request exit
+            print("")  # new line
+            storage["should_exit"] = True
+        else:
+            # First Ctrl+C - request pause
+            storage["paused"] = True
 
-                    if last_data is None or len(df) > len(last_data):
-                        iteration = len(df)
-                        last_row = df.iloc[-1]
+    # Install signal handler
+    signal.signal(signal.SIGINT, sigint_handler)
 
-                        print(f"Iteration {iteration}:")
-                        for var_name in routine.vocs.variables:
-                            if var_name in last_row:
-                                print(f"  {var_name}: {last_row[var_name]:.4f}")
-                        for obj_name in routine.vocs.objectives:
-                            if obj_name in last_row:
-                                print(f"  {obj_name}: {last_row[obj_name]:.4f}")
-                        print()
+    # Main monitoring loop - check pause flag instead of using try-except
+    while process.is_alive() and not storage["should_exit"]:
+        time.sleep(0.1)
 
-                        last_data = df
+        # Check if paused - handle pause prompt
+        if storage["paused"]:
+            pause_event.clear()  # Pause subprocess
+            print("")  # new line
 
-            # Check for errors in data_queue
-            if not data_queue.empty():
-                try:
-                    error_title, error_traceback = data_queue.get()
-                    print(f"\n❌ Error: {error_title}")
-                    print(error_traceback)
-                    break
-                except ValueError:
-                    pass
+            res = input("Optimization paused. Press Enter to resume or Ctrl+C to terminate: ")
+            while res != "":
+                # Invalid input, ask again
+                sys.stdout.write("\033[F")  # Move cursor up to erase line
+                res = input("Invalid choice. Press Enter to resume or Ctrl+C to terminate: ")
 
-    except KeyboardInterrupt:
-        print("\n\nStopping optimization...")
-        stop_event.set()
+            # Check if exit was requested during pause
+            if storage["should_exit"]:
+                print("\nStopping optimization...")
+                stop_event.set()
+                break
+
+            # Resume
+            print("Resuming optimization...\n")
+            storage["paused"] = False
+            pause_event.set()  # Resume subprocess
+
+        # Check for data from subprocess via evaluate_queue (Pipe)
+        if evaluate_queue[1].poll():
+            while evaluate_queue[1].poll():
+                results = evaluate_queue[1].recv()
+                df = results[0]  # First element is the data DataFrame
+                if len(df) > iteration:
+                    iteration = len(df)
+                    last_data = df
+
+        # Check for errors in data_queue
+        if not data_queue.empty():
+            try:
+                error_title, error_traceback = data_queue.get()
+                print(f"\n❌ Error: {error_title}")
+                print(error_traceback)
+                break
+            except ValueError:
+                pass
+
+    # Restore default signal handler
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     # Wait for completion
     process.join(timeout=5)
