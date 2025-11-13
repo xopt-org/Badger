@@ -17,7 +17,14 @@ from PyQt5.QtWidgets import (
     QDialog,
 )
 from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
-from PyQt5.QtGui import QColor, QIcon, QGuiApplication
+from PyQt5.QtGui import (
+    QColor,
+    QIcon,
+    QGuiApplication,
+    QDropEvent,
+    QDragMoveEvent,
+    QDragEnterEvent,
+)
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import instantiate_env
@@ -37,7 +44,7 @@ class VariableTable(QTableWidget):
 
     PLACEHOLDER_TEXT = "Enter new variable here...."
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
         icon_ref = resources.files(__package__) / "../images/gear.png"
@@ -47,8 +54,8 @@ class VariableTable(QTableWidget):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
-        self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDefaultDropAction(Qt.MoveAction)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         # Reorder the rows by dragging around
         # self.setSelectionBehavior(self.SelectRows)
@@ -63,13 +70,16 @@ class VariableTable(QTableWidget):
         self.setStyleSheet("alternate-background-color: #262E38;")
         # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        self.verticalHeader().setVisible(False)
+        vheader = self.verticalHeader()
+        if vheader:
+            vheader.setVisible(False)
         header = self.horizontalHeader()
-        # header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(0, QHeaderView.Fixed)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
-        # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        # header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        if header:
+            # header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+            # header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 96)
         self.setColumnWidth(3, 96)
@@ -94,7 +104,7 @@ class VariableTable(QTableWidget):
             tuple[int, int], str
         ] = {}  # to track changes in table
         self.config_logic()
-        self.customContextMenuRequested.connect(self.display_conext_menu)
+        self.customContextMenuRequested.connect(self.display_context_menu)
 
     def update_vocs(self):
         """
@@ -104,15 +114,18 @@ class VariableTable(QTableWidget):
         self.data_changed.emit()
 
     def config_logic(self):
-        self.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        hheader = self.horizontalHeader()
+        if hheader:
+            hheader.sectionClicked.connect(self.header_clicked)
         # Catch if any item gets changed
         self.itemChanged.connect(self.add_additional_variable)
         # self.data_changed.connect(self.update_bounds)
 
-    def setItem(self, row: int, column: int, item: QTableWidgetItem):
-        text = item.text()
-        if text != self.PLACEHOLDER_TEXT:
-            self.previous_values[(row, column)] = item.text()
+    def setItem(self, row: int, column: int, item: QTableWidgetItem | None) -> None:
+        if item:
+            text = item.text()
+            if text != self.PLACEHOLDER_TEXT:
+                self.previous_values[(row, column)] = item.text()
         super().setItem(row, column, item)
 
     def is_all_checked(self):
@@ -126,7 +139,7 @@ class VariableTable(QTableWidget):
 
         return True
 
-    def header_clicked(self, idx):
+    def header_clicked(self, idx: int):
         if idx:
             return
 
@@ -134,6 +147,9 @@ class VariableTable(QTableWidget):
 
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
+            if not item:
+                raise Exception("Checkbox widget not found!")
+            item = cast(QCheckBox, item)
             # Doing batch update
             item.blockSignals(True)
             item.setChecked(not all_checked)
@@ -192,7 +208,7 @@ class VariableTable(QTableWidget):
         self, variables: dict[str, tuple[float, float]], signal: bool = True
     ):
         for name in variables:
-            self.bounds[name] = tuple(variables[name])
+            self.bounds[name] = variables[name]
 
         if signal:
             self.update_variables(self.variables, 2)
@@ -368,7 +384,7 @@ class VariableTable(QTableWidget):
             button_container = QWidget()
             layout = QHBoxLayout(button_container)
             layout.addWidget(config_button)
-            layout.setAlignment(Qt.AlignLeft)
+            layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
             self.setCellWidget(i, 4, button_container)
 
@@ -423,7 +439,7 @@ class VariableTable(QTableWidget):
         if row == self.rowCount() - 1 and column == 1 and name != self.PLACEHOLDER_TEXT:
             self.try_insert_variable(name)
 
-    def try_insert_variable(self, name):
+    def try_insert_variable(self, name: str):
         idx = self.rowCount() - 1
 
         # Check that variables doesn't already exist in table
@@ -461,7 +477,7 @@ class VariableTable(QTableWidget):
                     text=detailed_text,
                     detailedText=traceback.format_exc(),
                 )
-                dialog.setIcon(QMessageBox.Critical)
+                dialog.setIcon(QMessageBox.Icon.Critical)
                 dialog.exec_()
 
         else:
@@ -472,6 +488,9 @@ class VariableTable(QTableWidget):
         self.setCellWidget(idx, 0, QCheckBox())
 
         _cb = self.cellWidget(idx, 0)
+        if not _cb:
+            raise Exception("Checkbox widget not found!")
+        _cb = cast(QCheckBox, _cb)
 
         # Checked by default when entered
         _cb.setChecked(True)
@@ -497,7 +516,7 @@ class VariableTable(QTableWidget):
 
         self.sig_pv_added.emit()  # notify the routine page that a new PV has been added
 
-    def get_bounds(self, name):
+    def get_bounds(self, name: str) -> tuple[Any, Any]:
         # TODO: move elsewhere?
         self.env = instantiate_env(self.env_class, self.configs)
 
@@ -505,8 +524,8 @@ class VariableTable(QTableWidget):
         bound = self.env.get_bounds([name])[name]
         return value, bound
 
-    def add_variable(self, name, lb, ub):
-        var = {name: [lb, ub]}
+    def add_variable(self, name: str, lb: float, ub: float):
+        var = {name: (lb, ub)}
 
         self.all_variables.append(var)
         self.variables.append(var)
@@ -529,21 +548,45 @@ class VariableTable(QTableWidget):
         self.bounds_locked = False
         self.toggle_show_mode(self.checked_only)
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasText():
+    def dragEnterEvent(self, event: QDragEnterEvent | None):
+        if event is None:
+            return
+
+        mime_data = event.mimeData()
+        if not mime_data:
+            event.ignore()
+            return
+
+        if mime_data.hasText():
             event.acceptProposedAction()
         else:
             event.ignore()
 
-    def dragMoveEvent(self, event):
-        if event.mimeData().hasText():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+    def dragMoveEvent(self, e: QDragMoveEvent | None):
+        if e is None:
+            return
 
-    def dropEvent(self, event):
-        if event.mimeData().hasText():
-            text = event.mimeData().text()
+        mime_data = e.mimeData()
+        if not mime_data:
+            e.ignore()
+            return
+
+        if mime_data.hasText():
+            e.acceptProposedAction()
+        else:
+            e.ignore()
+
+    def dropEvent(self, event: QDropEvent | None):
+        if event is None:
+            return
+
+        mime_data = event.mimeData()
+        if not mime_data:
+            event.ignore()
+            return
+
+        if mime_data.hasText():
+            text = mime_data.text()
             strings = text.strip().split("\n")
 
             for string in strings:
@@ -589,27 +632,39 @@ class VariableTable(QTableWidget):
 
         # Add a close button
         close = QPushButton("Close", mb)
-        close.pressed.connect(lambda: mb.close())
+        close.pressed.connect(lambda: self._handle_close(mb))
         layout.addWidget(close, row, 0, 1, 2)
 
         layout.setRowStretch(row + 1, 1)
         mb.exec()
 
+    @staticmethod
+    def _handle_close(widget: QPushButton):
+        widget.close()
+
     def copy_name(self, item: QTableWidgetItem | None):
         if item is None:
             return
-        QGuiApplication.clipboard().setText(item.text())
+        clipboard = QGuiApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(item.text())
 
-    def display_conext_menu(self, pt: QPoint):
+    def display_context_menu(self, pt: QPoint):
         menu = QMenu(self)
         item = self.itemAt(pt)
         if item is None or item.text() == self.PLACEHOLDER_TEXT or item.column() != 1:
             return
 
-        menu.addAction("&Info").triggered.connect(lambda c: self.display_info(item))
-        menu.addAction("&Config").triggered.connect(
-            lambda c: self.handle_config_button(item.text())
-        )
+        info_action = menu.addAction("&Info")
+        if info_action is not None:
+            info_action.triggered.connect(lambda: self.display_info(item))
+        config_action = menu.addAction("&Config")
+        if config_action is not None:
+            config_action.triggered.connect(
+                lambda: self.handle_config_button(item.text())
+            )
         menu.addSeparator()
-        menu.addAction("Cop&y").triggered.connect(lambda c: self.copy_name(item))
+        copy_action = menu.addAction("&Copy")
+        if copy_action is not None:
+            copy_action.triggered.connect(lambda: self.copy_name(item))
         menu.exec(self.mapToGlobal(pt))

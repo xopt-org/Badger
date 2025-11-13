@@ -8,6 +8,7 @@ from badger.errors import (
     BadgerEnvVarError,
     BadgerNoInterfaceError,
 )
+from badger.factory import BadgerPluginConfig
 from badger.formula import extract_variable_keys, interpret_expression
 from badger.interface import Interface
 
@@ -101,7 +102,7 @@ def validate_bounds(func):
 
 
 class EnvMeta(ModelMetaclass):
-    def __new__(mcs, name, bases, namespace):
+    def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]):
         # Wrap get_bounds with validate_bounds if defined
         if "get_bounds" in namespace:
             namespace["get_bounds"] = validate_bounds(namespace["get_bounds"])
@@ -127,11 +128,11 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         validate_assignment=True, use_enum_values=True, arbitrary_types_allowed=True
     )
     name: ClassVar[str] = Field(description="environment name")
-    variables: ClassVar[Dict[str, List]]  # bounds list could be empty for var
-    observables: ClassVar[List[str]]
+    variables: ClassVar[Dict[str, list[float]]]  # bounds list could be empty for var
+    observables: ClassVar[list[str]]
 
     @abstractmethod
-    def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+    def get_variables(self, variable_names: list[str]) -> Dict[str, float]:
         """
         Get the values of the specified variables from the environment.
 
@@ -201,7 +202,9 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         """
         return {}
 
-    def get_bounds(self, variable_names: List[str]) -> dict[str, float]:
+    def get_bounds(
+        self, variable_names: dict[str, list[float]]
+    ) -> dict[str, list[float]]:
         """
         Get the bounds for the specified variables in the environment.
         The bounds are returned as a dictionary with variable names as keys
@@ -323,7 +326,9 @@ class Environment(BaseEnvironment):
         return [k for k in self.variables]
 
 
-def instantiate_env(env_class, configs, manager=None):
+def instantiate_env(
+    env_class: type[Environment], configs: BadgerPluginConfig, manager=None
+) -> Environment:
     # Configure interface
     # TODO: figure out the correct logic
     # It seems that the interface should be given rather than

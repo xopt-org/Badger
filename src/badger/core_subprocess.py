@@ -2,6 +2,7 @@ from copy import deepcopy
 import logging
 import time
 import traceback
+from typing import Any
 from pandas import DataFrame
 import multiprocessing as mp
 
@@ -92,6 +93,7 @@ def run_routine_subprocess(
 
     wait_event.wait()
 
+    args: dict[str, Any] = {}
     try:
         args = queue.get(timeout=1)
     except Exception as e:
