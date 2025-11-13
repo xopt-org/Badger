@@ -1,5 +1,5 @@
-from typing import Any, List, Dict
-from functools import partial
+from typing import Any, Callable, List, Dict, ParamSpec, cast
+from functools import partial, wraps
 from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
@@ -10,15 +10,27 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QDoubleSpinBox,
     QMessageBox,
+    QWidget,
 )
-from PyQt5.QtCore import Qt, QRegExp
+from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
 from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
+
+import logging
+
+from pyparsing import TypeVar
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class EditableTable(QTableWidget):
     """
     A custom QTableWidget that supports editing and managing tabular data.
     """
+
+    data_changed = pyqtSignal()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -33,9 +45,9 @@ class EditableTable(QTableWidget):
         """
         super().__init__(*args, **kwargs)
 
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
-        self.setDragDropMode(QAbstractItemView.InternalMove)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.setDragDropOverwriteMode(False)
         self.setAcceptDrops(True)
 
@@ -44,10 +56,13 @@ class EditableTable(QTableWidget):
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
 
-        self.verticalHeader().setVisible(False)
+        vheader = self.verticalHeader()
+        if vheader is not None:
+            vheader.setVisible(False)
         header = self.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Fixed)
-        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.setColumnWidth(0, 20)  # width for checkboxes
 
         self.data: List[Dict[str, Any]] = []
@@ -63,10 +78,16 @@ class EditableTable(QTableWidget):
         """
         Configure signal connections and internal logic.
         """
-        self.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        hheader = self.horizontalHeader()
+        if hheader is not None:
+            hheader.sectionClicked.connect(self.header_clicked)
         self.itemChanged.connect(self.on_edit_table_item)
 
-    def default_info(self) -> list:
+    def update_vocs(self):
+        logging.debug("Emitting data_changed signal from editable_table")
+        self.data_changed.emit()
+
+    def default_info(self) -> list[Any]:
         """
         Get the default information list for a new item.
 
@@ -77,7 +98,7 @@ class EditableTable(QTableWidget):
         """
         return ["<", 0.0, False]
 
-    def new_item_prompt(self):
+    def new_item_prompt(self) -> str:
         """
         The prompt text to enter a new item.
         """
@@ -98,7 +119,7 @@ class EditableTable(QTableWidget):
             f"Item {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list):
+    def create_cell_widgets(self, info: list[Any]) -> tuple[QWidget, ...]:
         # Relation
         relation_combo = QComboBox()
         relation_combo.setItemDelegate(QStyledItemDelegate())
@@ -115,9 +136,9 @@ class EditableTable(QTableWidget):
         critical_checkbox = QCheckBox()
         critical_checkbox.setChecked(info[2])
 
-        return [relation_combo, threshold_spinbox, critical_checkbox]
+        return (relation_combo, threshold_spinbox, critical_checkbox)
 
-    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+    def dragEnterEvent(self, e: QDragEnterEvent | None) -> None:
         """
         Accept the drag event if it contains text or originates from within the table.
 
@@ -127,12 +148,21 @@ class EditableTable(QTableWidget):
             The drag enter event.
         """
         # Accept internal moves (reordering) or external text drops.
-        if event.source() == self or event.mimeData().hasText():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
 
-    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        if e is None:
+            return
+        cond = False
+
+        mimedata = e.mimeData()
+        if mimedata:
+            cond = mimedata.hasText()
+
+        if e.source() == self or cond:
+            e.acceptProposedAction()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e: QDragMoveEvent | None) -> None:
         """
         Continue accepting the drag move event if it contains text or is internal.
 
@@ -141,12 +171,21 @@ class EditableTable(QTableWidget):
         event : QDragMoveEvent
             The drag move event.
         """
-        if event.source() == self or event.mimeData().hasText():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
 
-    def dropEvent(self, event: QDropEvent) -> None:
+        if e is None:
+            return
+
+        cond = False
+
+        mimedata = e.mimeData()
+        if mimedata:
+            cond = mimedata.hasText()
+        if e.source() == self or cond:
+            e.acceptProposedAction()
+        else:
+            e.ignore()
+
+    def dropEvent(self, event: QDropEvent | None) -> None:
         """
         Handle drop events.
 
@@ -162,8 +201,18 @@ class EditableTable(QTableWidget):
         event : QDropEvent
             The drop event.
         """
-        if event.mimeData().hasText():
-            text: str = event.mimeData().text()
+
+        if event is None:
+            return
+
+        cond = True
+
+        mimedata = event.mimeData()
+        if mimedata:
+            cond = mimedata.hasText()
+
+        if cond and mimedata:
+            text: str = mimedata.text()
             lines = text.splitlines()
             for line in lines:
                 line = line.strip()
@@ -203,13 +252,15 @@ class EditableTable(QTableWidget):
         """
         return [next(iter(item)) for item in self.data]
 
-    def block_signals(func):
+    @staticmethod
+    def block_signals(func: Callable[..., Any]) -> Callable[..., Any]:
         """
         A decorator to block signals at the beginning of a function
         and unblock them at the end.
         """
 
-        def wrapper(self, *args, **kwargs):
+        @wraps(func)
+        def wrapper(self: "EditableTable", *args: P.args, **kwargs: P.kwargs) -> Any:
             self.blockSignals(True)
             try:
                 return func(self, *args, **kwargs)
@@ -231,10 +282,17 @@ class EditableTable(QTableWidget):
             return
 
         all_checked = True
-        visible_names = []
+        visible_names: list[str] = []
         for i in range(self.rowCount() - 1):  # Exclude the last empty row
             checkbox = self.cellWidget(i, 0)
+            if checkbox is None:
+                raise ValueError("Checkbox widget is None")
+            checkbox = cast(QCheckBox, checkbox)
+
             name_item = self.item(i, 1)
+            if name_item is None:
+                raise ValueError("Name item is None")
+
             visible_names.append(name_item.text())
             if not checkbox.isChecked():
                 all_checked = False
@@ -248,7 +306,7 @@ class EditableTable(QTableWidget):
         self,
         row: int,
         name: str,
-        info: list,
+        info: list[Any],
         selected: bool = False,
     ) -> None:
         """
@@ -285,17 +343,20 @@ class EditableTable(QTableWidget):
         cell_widgets = self.create_cell_widgets(info)
         for i, widget in enumerate(cell_widgets):
             if isinstance(widget, QComboBox):
+                widget = cast(QComboBox, widget)
                 widget.currentIndexChanged.connect(partial(self.update_info, i))
             elif isinstance(widget, QDoubleSpinBox):
+                widget = cast(QDoubleSpinBox, widget)
                 widget.valueChanged.connect(partial(self.update_info, i))
             elif isinstance(widget, QCheckBox):
+                widget = cast(QCheckBox, widget)
                 widget.stateChanged.connect(partial(self.update_info, i))
             else:
                 raise NotImplementedError(f"Unsupported widget type: {type(widget)}")
             self.setCellWidget(row, 2 + i, widget)
 
     @block_signals
-    def add_formula_item(self, formula_tuple: tuple) -> None:
+    def add_formula_item(self, formula_tuple: tuple[str, str, dict[str, str]]) -> None:
         """
         Add a formula-based item to the table.
         Parameters
@@ -345,7 +406,7 @@ class EditableTable(QTableWidget):
             print(f"Error adding formula item: {e}")
             return
 
-    def add_plain_item(self, name):
+    def add_plain_item(self, name: str):
         self.add_formula_item((name, "", {}))
 
     def get_visible_items(self) -> List[str]:
@@ -357,7 +418,7 @@ class EditableTable(QTableWidget):
         List[str]
             A list of visible item names.
         """
-        visible_items = []
+        visible_items: list[str] = []
         rx = QRegExp(self.keyword)
 
         for item in self.data:
@@ -375,7 +436,7 @@ class EditableTable(QTableWidget):
         return visible_items
 
     @block_signals
-    def on_edit_table_item(self, item):
+    def on_edit_table_item(self, item: QTableWidgetItem) -> None:
         row = item.row()
         column = item.column()
         name = item.text()
@@ -499,6 +560,7 @@ class EditableTable(QTableWidget):
         self.status[name] = selected
         if self.show_selected_only:
             self.update_items()
+        self.update_vocs()
 
     def update_info(self, idx: int) -> None:
         for i in range(self.rowCount() - 1):
@@ -510,16 +572,20 @@ class EditableTable(QTableWidget):
             if cell_widget is not None:
                 item = self.get_item_by_name(name)
                 if isinstance(cell_widget, QComboBox):
+                    cell_widget = cast(QComboBox, cell_widget)
                     value = cell_widget.currentText()
                 elif isinstance(cell_widget, QDoubleSpinBox):
+                    cell_widget = cast(QDoubleSpinBox, cell_widget)
                     value = cell_widget.value()
                 elif isinstance(cell_widget, QCheckBox):
+                    cell_widget = cast(QCheckBox, cell_widget)
                     value = cell_widget.isChecked()
                 else:
                     raise NotImplementedError(
                         f"Unsupported cell widget type: {type(cell_widget)}"
                     )
                 item[name][idx] = value
+        self.data_changed.emit()
 
     def update_show_selected_only(self, show: bool) -> None:
         """
@@ -531,7 +597,7 @@ class EditableTable(QTableWidget):
             If True, only show selected constraints; otherwise, show all.
         """
         self.show_selected_only = show
-        self.update_items()
+        self.update_items(vocs_signal=False)
 
     def update_keyword(self, keyword: str) -> None:
         """
@@ -545,8 +611,24 @@ class EditableTable(QTableWidget):
         self.keyword = keyword
         self.update_items()
 
+    def update_items(
+        self,
+        data: list[dict[str, Any]] | None = None,
+        status: dict[str, bool] | None = None,
+        formulas: dict[str, dict[str, Any]] | None = None,
+        vocs_signal: bool = True,
+    ) -> None:
+        self.update_items_wrapper(data, status, formulas)
+        if vocs_signal:
+            self.update_vocs()
+
     @block_signals
-    def update_items(self, data=None, status=None, formulas=None) -> None:
+    def update_items_wrapper(
+        self,
+        data: list[dict[str, Any]] | None = None,
+        status: dict[str, bool] | None = None,
+        formulas: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
         """
         Refresh the table with the current items.
         """
@@ -594,7 +676,7 @@ class EditableTable(QTableWidget):
         List[Dict[str, Any]]
             A list of items with their properties.
         """
-        exported_items = []
+        exported_items: list[dict[str, Any]] = []
         for item in self.data:
             if self.status.get(next(iter(item)), False):
                 exported_items.append(item)

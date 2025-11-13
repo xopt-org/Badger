@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QDoubleSpinBox,
     QMessageBox,
+    QWidget,
 )
 
 from badger.gui.default.components.editable_table import EditableTable
@@ -42,7 +43,7 @@ class ConstraintTable(EditableTable):
             ["", "Name", "Relation", "Threshold", "Critical"]
         )
 
-    def default_info(self) -> list:
+    def default_info(self) -> list[Any]:
         """
         Get the default information list for a new item.
 
@@ -53,7 +54,7 @@ class ConstraintTable(EditableTable):
         """
         return ["<", 0.0, False]
 
-    def new_item_prompt(self):
+    def new_item_prompt(self) -> str:
         """
         The prompt text to enter a new item.
         """
@@ -74,7 +75,7 @@ class ConstraintTable(EditableTable):
             f"Constraint {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list):
+    def create_cell_widgets(self, info: list[Any]) -> tuple[QWidget, ...]:
         # Relation
         relation_combo = QComboBox()
         relation_combo.setItemDelegate(QStyledItemDelegate())
@@ -91,4 +92,4 @@ class ConstraintTable(EditableTable):
         critical_checkbox = QCheckBox()
         critical_checkbox.setChecked(info[2])
 
-        return [relation_combo, threshold_spinbox, critical_checkbox]
+        return (relation_combo, threshold_spinbox, critical_checkbox)
