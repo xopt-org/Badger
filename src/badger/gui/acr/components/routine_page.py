@@ -664,7 +664,7 @@ class BadgerRoutinePage(QWidget):
                     f"Current routine options saved to template: {os.path.basename(template_path)}"
                 )
         except (FileNotFoundError, yaml.YAMLError) as e:
-            logging.error(f"Error saving template: {e}")
+            logger.error(f"Error saving template: {e}")
             return
 
     def refresh_ui(self, routine: Routine = None, silent: bool = False):

@@ -14,10 +14,7 @@ import traceback
 from badger.errors import BadgerError
 from types import TracebackType
 from typing import Type, NoReturn
-from badger.log import get_logging_manager
 import logging
-import os
-import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -93,26 +90,6 @@ def launch_gui(config_path=None):
         config_singleton = init_settings(config_path)
     else:
         config_singleton = init_settings()
-
-    ### Method for creating the log file (put it in utils)
-    logging_manager = get_logging_manager()
-    level_str = config_singleton.read_value("BADGER_LOG_LEVEL")
-    logging_manager.update_log_level(level_str)
-    logger.info(f"Logger level changed to {level_str}")
-
-    ## Put this in a method and call
-    new_log_dir = config_singleton.read_value("BADGER_LOG_DIRECTORY")
-    if new_log_dir and new_log_dir.strip():
-        new_log_dir = os.path.expanduser(new_log_dir)
-
-        os.makedirs(new_log_dir, exist_ok=True)
-
-        today = datetime.date.today()
-        log_filename = f"log_{today.month:02d}_{today.day:02d}.log"
-        new_logfile_path = os.path.join(new_log_dir, log_filename)  # Build from UI
-
-        logging_manager.update_logfile_path(new_logfile_path)
-        logger.info(f"Runtime: Logs now writing to {new_logfile_path}")
 
     # Set app metainfo
     app.setApplicationName("Badger")

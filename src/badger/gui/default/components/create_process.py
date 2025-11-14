@@ -37,7 +37,7 @@ class CreateProcess(QObject):
 
         # Get the logging queue from the centralized manager
         logging_manager = get_logging_manager()
-        log_queue = logging_manager.get_queue()
+
         logger.info("Creating subprocess with centralized logging")
 
         new_process = Process(
@@ -49,7 +49,7 @@ class CreateProcess(QObject):
                 self.pause_event,
                 self.wait_event,
                 config_path,
-                log_queue,
+                logging_manager,
             ),
         )
         new_process.start()

@@ -52,7 +52,7 @@ class BadgerConfig(BaseModel):
         Setting for the archive root directory.
     BADGER_LOG_LEVEL : Setting
         Setting for the logging level.
-    BADGER_LOG_DIR : Setting
+    BADGER_LOG_DIRECTORY : Setting
         Setting for the location of logfile.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
@@ -95,7 +95,7 @@ class BadgerConfig(BaseModel):
     BADGER_LOG_DIRECTORY: Setting = Setting(
         display_name="log directory",
         description="Directory where daily log files will be stored",
-        value=None,
+        value="logs",
         is_path=True,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
@@ -400,48 +400,6 @@ class ConfigSingleton:
             f"All settings have been reset to their default values in {self.config_path}"
         )
 
-    def get_logfile_path(self):
-        """
-        Get the path to today's log file in the configured log directory.
-        Creates the directory if it doesn't exist.
-
-        Returns:
-            str: Path to today's log file (e.g., /path/to/logs/log_01_25.log)
-        """
-        # Get the configured log directory
-        log_dir = self.read_value("BADGER_LOG_DIRECTORY")
-
-        # If not set, empty, or invalid, use default (user config folder)
-        if log_dir is None or log_dir == "" or log_dir == "/logs":
-            log_dir = os.path.join(get_user_config_folder(), "logs")
-
-        # Expand user home directory if needed
-        log_dir = os.path.expanduser(log_dir)
-
-        # Make it absolute path if it's relative
-        if not os.path.isabs(log_dir):
-            log_dir = os.path.join(get_user_config_folder(), log_dir)
-
-        # Create directory if it doesn't exist
-        try:
-            os.makedirs(log_dir, exist_ok=True)
-        except PermissionError:
-            # Fall back to user config folder if we can't create the directory
-            logger.warning(f"Cannot create log directory {log_dir}, using default")
-            log_dir = os.path.join(get_user_config_folder(), "logs")
-            os.makedirs(log_dir, exist_ok=True)
-        except FileExistsError:
-            # Something with this name exists but it's not a directory
-            logger.warning(f"{log_dir} exists but is not a directory, using default")
-            log_dir = os.path.join(get_user_config_folder(), "logs")
-            os.makedirs(log_dir, exist_ok=True)
-
-        # Generate today's date-based filename
-        today = datetime.date.today()
-        log_filename = f"log_{today.month:02d}_{today.day:02d}.log"
-
-        return os.path.join(log_dir, log_filename)
-
 
 def init_settings(config_arg: bool = None) -> ConfigSingleton:
     """
@@ -498,6 +456,7 @@ def mock_settings():
 
     # Set other settings to the default values
     for key in config_singleton.config.model_dump(by_alias=True).keys():
+        print("!! key: ", key, ", value: ", config_singleton.config.model_dump(by_alias=True)[key]["value"])
         config_singleton.write_value(
             key, config_singleton.config.model_dump(by_alias=True)[key]["value"]
         )

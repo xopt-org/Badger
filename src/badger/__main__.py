@@ -1,20 +1,21 @@
+import os
 import argparse
-import pathlib
 import atexit
 import logging
 
-logger = logging.getLogger("badger")
+from badger.actions import show_info
+from badger.actions.doctor import self_check
+from badger.actions.routine import show_routine
+from badger.actions.generator import show_generator
+from badger.actions.env import show_env
+from badger.actions.install import plugin_install
+from badger.actions.uninstall import plugin_remove
+from badger.actions.intf import show_intf
+from badger.actions.config import config_settings
+from badger.settings import init_settings
+from badger.log import get_logging_manager
 
-from badger.actions import show_info  # noqa: E402
-from badger.actions.doctor import self_check  # noqa: E402
-from badger.actions.routine import show_routine  # noqa: E402
-from badger.actions.generator import show_generator  # noqa: E402
-from badger.actions.env import show_env  # noqa: E402
-from badger.actions.install import plugin_install  # noqa: E402
-from badger.actions.uninstall import plugin_remove  # noqa: E402
-from badger.actions.intf import show_intf  # noqa: E402
-from badger.actions.config import config_settings  # noqa: E402
-from badger.log import get_logging_manager, configure_process_logging  # noqa: E402
+logger = logging.getLogger("badger")
 
 
 def main():
@@ -24,21 +25,15 @@ def main():
     parser.add_argument(
         "-ga", "--gui-acr", action="store_true", help="launch the GUI for ACR"
     )
+
     parser.add_argument(
         "-l",
         "--log_level",
-        choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"],
+        choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"],
         default="WARNING",
-        const=None,
+        const="WARNING",
         nargs="?",
         help="Set the logging level",
-    )
-    parser.add_argument(
-        "-lf",
-        "--log_filepath",
-        type=pathlib.Path,
-        default=None,
-        help="Path to a logfile location",
     )
 
     parser.add_argument(
@@ -50,12 +45,6 @@ def main():
     )
     parser.set_defaults(func=show_info)
     subparsers = parser.add_subparsers(help="Badger commands help")
-
-    ###
-    # Parser for the 'config' command
-    parser_config = subparsers.add_parser("config", help="Badger configurations")
-    parser_config.add_argument("key", nargs="?", type=str, default=None)
-    parser_config.set_defaults(func=config_settings)
 
     # Parser for the 'doctor' command
     parser_doctor = subparsers.add_parser("doctor", help="Badger status self-check")
@@ -142,21 +131,28 @@ def main():
         help="verbose level of optimization progress",
     )
 
-    from badger.actions.run import run_routine  # noqa: E402
-
-    parser_run.set_defaults(func=run_routine)
+    # Parser for the 'config' command
+    parser_config = subparsers.add_parser("config", help="Badger configurations")
+    parser_config.add_argument("key", nargs="?", type=str, default=None)
+    parser_config.set_defaults(func=config_settings)
 
     args = parser.parse_args()
-    args.func(args)
 
     # setup mutliprocess logging
+    config_singleton = init_settings(args.config_filepath)
+
     logging_manager = get_logging_manager()
+
+    log_dir = config_singleton.read_value("BADGER_LOG_DIRECTORY")
+    logging_manager.create_log_dir(log_dir)
+    log_dir_expanded_path = os.path.expanduser(log_dir)
+    log_filename = logging_manager.get_logfile_name()
+    new_logfile_path = os.path.join(log_dir_expanded_path, log_filename)
     logging_manager.start_listener(
-        log_filepath=str(args.log_filepath), log_level=args.log_level
+        log_filepath=str(new_logfile_path), log_level=args.log_level
     )
     # configure main process logger to use a shared queue, which subprocesses will send their log msgs to
-    log_queue = logging_manager.get_queue()
-    configure_process_logging(log_queue=log_queue, log_level=args.log_level)
+    logging_manager.configure_process_logging(log_level=args.log_level)
 
     # Prevent propagation to root logger
     badger_logger = logging.getLogger("badger")
@@ -166,6 +162,8 @@ def main():
     atexit.register(
         lambda: logging_manager.listener and logging_manager.listener.stop()
     )
+
+    args.func(args)
 
 
 if __name__ == "__main__":

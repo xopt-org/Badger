@@ -1,7 +1,7 @@
 import logging
 import time
 from multiprocessing import Process
-from badger.log import get_logging_manager, configure_process_logging
+from badger.log import get_logging_manager
 
 """
 Testing of code used for managing logging across Badger's multiple processes,
@@ -14,8 +14,8 @@ is likely broken aswell. Testing should eventually be expanded to test the loggi
 """
 
 
-def simple_subprocess(log_queue):
-    configure_process_logging(log_queue=log_queue, log_level="DEBUG")
+def simple_subprocess(logging_manager):
+    logging_manager.configure_process_logging(log_level="DEBUG")
 
     sub_logger = logging.getLogger("badger.subprocess")
 
@@ -34,14 +34,13 @@ def test_multiprocessed_logging(tmp_path):
     logging_manager.start_listener(log_filepath=str(log_filepath_1), log_level="DEBUG")
 
     # configure main process logger to use the shared queue
-    log_queue = logging_manager.get_queue()
-    configure_process_logging(log_queue=log_queue, log_level="DEBUG")
+    logging_manager.configure_process_logging(log_level="DEBUG")
 
     main_logger = logging.getLogger("badger.main")
     main_logger.info("main process: starting test")
 
     # start subprocess
-    p = Process(target=simple_subprocess, args=(log_queue,))
+    p = Process(target=simple_subprocess, args=(logging_manager,))
     p.start()
 
     # main process continues logging
@@ -62,6 +61,10 @@ def test_multiprocessed_logging(tmp_path):
     main_logger.error("This ERROR message should appear")
 
     p.join()
+    assert p.exitcode == 0, (
+        f"subprocess crashed with exit code {p.exitcode}. "
+        "check subprocess func for errors."
+    )
 
     # stop logging
     logging_manager.stop_listener()

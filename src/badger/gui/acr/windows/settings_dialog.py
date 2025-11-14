@@ -1,6 +1,5 @@
 import logging
 import os
-import datetime
 
 # from PyQt5.QtCore import QRegExp
 # from PyQt5.QtGui import QRegExpValidator
@@ -220,6 +219,18 @@ class BadgerSettingsDialog(QDialog):
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
         )
+        # self.config_singleton.write_value(
+        #     "AUTO_REFRESH", self.enable_auto_refresh.isChecked()
+        # )
+        # write_value('BADGER_CHECK_VAR_INTERVAL', self.var_int_val.text())
+        # write_value('BADGER_CHECK_VAR_TIMEOUT', self.var_time_val.text())
+        # write_value('BADGER_PLUGINS_URL', self.plugin_url_name.text())
+        # self.config_singleton.write_value(
+        #     "BADGER_DATA_DUMP_PERIOD", float(self.dump_period_val.text())
+        # )
+        # self.config_singleton.write_value(
+        #     "BADGER_ENABLE_ADVANCED", self.enable_adv_features.isChecked()
+        # )
 
         # Update logging settings, apply to actively running main-process and subprocess loggers
         logging_manager = get_logging_manager()
@@ -227,16 +238,13 @@ class BadgerSettingsDialog(QDialog):
         logging_manager.update_log_level(level_str)
         logger.info(f"Logger level changed to {level_str}")
 
-        ## Put this in a method and call
         new_log_dir = self.log_dir_path.text()
         if new_log_dir and new_log_dir.strip():
+            logging_manager.create_log_dir(new_log_dir)
+
             new_log_dir = os.path.expanduser(new_log_dir)
-
-            os.makedirs(new_log_dir, exist_ok=True)
-
-            today = datetime.date.today()
-            log_filename = f"log_{today.month:02d}_{today.day:02d}.log"
-            new_logfile_path = os.path.join(new_log_dir, log_filename)  # Build from UI
+            log_filename = logging_manager.get_logfile_name()
+            new_logfile_path = os.path.join(new_log_dir, log_filename)
 
             logging_manager.update_logfile_path(new_logfile_path)
             logger.info(f"Runtime: Logs now writing to {new_logfile_path}")
