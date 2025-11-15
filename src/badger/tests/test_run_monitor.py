@@ -108,9 +108,18 @@ class TestRunMonitor:
 
         # test updating plots
         monitor.update_curves()
-        assert set(monitor.curves_variable.keys()) == {"x0", "x1", "x2", "x3"}
-        assert set(monitor.curves_objective.keys()) == {"f"}
-        assert set(monitor.curves_constraint.keys()) == {"c"}
+        assert set(monitor.curves_variable.keys()) == {
+            "x0",
+            "x0_hist",
+            "x1",
+            "x1_hist",
+            "x2",
+            "x2_hist",
+            "x3",
+            "x3_hist",
+        }
+        assert set(monitor.curves_objective.keys()) == {"f", "f_hist"}
+        assert set(monitor.curves_constraint.keys()) == {"c", "c_hist"}
 
         # set up run monitor and test it
         monitor.init_routine_runner()
