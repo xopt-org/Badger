@@ -454,9 +454,9 @@ class BadgerOptMonitor(QWidget):
 
     def start(
         self,
-        run_data_flag: bool = False,
-        init_points_flag: bool = False,
         use_termination_condition: bool = False,
+        run_data_flag: bool = False,
+        init_points_flag: bool = True,
     ):
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
