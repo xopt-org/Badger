@@ -14,6 +14,9 @@ import traceback
 from badger.errors import BadgerError
 from types import TracebackType
 from typing import Type, NoReturn
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Fix the scaling issue on multiple monitors w/ different scaling settings
 # if sys.platform == 'win32':

@@ -80,6 +80,7 @@ class BadgerRoutineSubprocess:
         self.config_singleton = init_settings()
 
     def set_termination_condition(self, termination_condition: dict) -> None:
+        logger.info(f"Setting termination condition: {termination_condition}")
         """
         Setter method for the termination condition.
 
@@ -90,6 +91,7 @@ class BadgerRoutineSubprocess:
         self.termination_condition = termination_condition
 
     def run(self) -> None:
+        logger.info("Starting routine run.")
         """
         This method starts up the routine.
         The method grabs a subprocess from self.process_manager queue.
@@ -201,6 +203,7 @@ class BadgerRoutineSubprocess:
             self.signals.error.emit(e)
 
     def setup_timer(self) -> None:
+        logger.info("Setting up QTimer for routine subprocess.")
         """
         This sets up a QTimer to check for updates from the subprocess.
         The clock checks are every 100 miliseconds.
@@ -211,6 +214,7 @@ class BadgerRoutineSubprocess:
         self.timer.start()
 
     def check_queue(self) -> None:
+        logger.debug("Checking subprocess queues for updates.")
         """
         This method checks the subprocess for updates in the evaluate_queue.
         It also checks the self.data_and_error_queue to see if an exception was thrown during the routine.
@@ -234,6 +238,7 @@ class BadgerRoutineSubprocess:
             self.evaluate_queue[1].close()
 
     def after_evaluate(self, results: pd.DataFrame) -> None:
+        logger.debug("Received evaluation results from subprocess.")
         """
         This method emits updates sent over from the subprocess running the routine on the evaluate_queue.
 
@@ -245,6 +250,7 @@ class BadgerRoutineSubprocess:
             self.signals.progress.emit(results)
 
     def save_init_vars(self) -> None:
+        logger.info("Saving initial variables and emitting env_ready signal.")
         """
         Emits the intital variables in the env_ready signal.
         """
@@ -252,6 +258,7 @@ class BadgerRoutineSubprocess:
         self.signals.env_ready.emit(init_vars)
 
     def stop_routine(self) -> None:
+        logger.info("Stopping routine subprocess.")
         """
         This method will attempt to close the subprocess running the routine.
         If the process does not close withing the timeout time (0.1 seconds)
@@ -268,6 +275,7 @@ class BadgerRoutineSubprocess:
         self.close()
 
     def ctrl_routine(self, pause: bool) -> None:
+        logger.info(f"{'Pausing' if pause else 'Unpausing'} routine subprocess.")
         """
         This method will pause and unpause the routine.
         This is accomplished by a multiprocessing Event which when set will pause the subprocess.
@@ -282,5 +290,6 @@ class BadgerRoutineSubprocess:
             self.pause_event.set()
 
     def close(self) -> None:
+        logger.info("Closing routine subprocess and stopping timer.")
         self.timer.stop()
         self.signals.finished.emit()

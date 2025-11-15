@@ -5,6 +5,11 @@ from PyQt5.QtCore import pyqtSignal, QObject
 from badger.settings import init_settings
 from badger.core_subprocess import run_routine_subprocess
 
+import logging
+from badger.log import get_logging_manager
+
+logger = logging.getLogger(__name__)
+
 
 class CreateProcess(QObject):
     """
@@ -30,6 +35,11 @@ class CreateProcess(QObject):
         self.wait_event = Event()
         config_path = init_settings()._instance.config_path
 
+        # Get the logging queue from the centralized manager
+        logging_manager = get_logging_manager()
+        log_queue = logging_manager.get_queue()
+        logger.info("Creating subprocess with centralized logging")
+
         new_process = Process(
             target=run_routine_subprocess,
             args=(
@@ -39,6 +49,7 @@ class CreateProcess(QObject):
                 self.pause_event,
                 self.wait_event,
                 config_path,
+                log_queue,
             ),
         )
         new_process.start()
