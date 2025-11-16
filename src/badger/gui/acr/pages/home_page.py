@@ -151,8 +151,8 @@ class BadgerHomePage(QWidget):
         self.routine_editor = routine_editor = BadgerRoutinePage()
         vbox_routine_view.addWidget(routine_editor)
 
-        self.data_panel = self.routine_editor.routine_page.data_panel
-        self.run_table_2 = self.routine_editor.routine_page.data_panel.data_table
+        self.data_panel = self.routine_editor.data_panel
+        self.run_table_2 = self.routine_editor.data_panel.data_table
 
         # Add action bar
         self.run_action_bar = run_action_bar = BadgerActionBar()
@@ -376,7 +376,7 @@ class BadgerHomePage(QWidget):
         # Add data to routine before saving tmp file
         if data is not None:
             # Check that routine variables and objectives match loaded data
-            self.routine_editor.routine_page.validate_loaded_data_keys(routine.vocs)
+            self.routine_editor.validate_loaded_data_keys(routine.vocs)
             data["live"] = 0  # reset live data indicator for loaded data
             for name in routine.vocs.output_names:
                 if name not in data.columns:
