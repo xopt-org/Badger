@@ -29,7 +29,7 @@ from badger.gui.default.components.data_table import (
     update_table,
 )
 from badger.gui.acr.components.history_navigator import HistoryNavigator
-from badger.gui.acr.components.routine_editor import BadgerRoutineEditor
+from badger.gui.acr.components.routine_page import BadgerRoutinePage
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.acr.components.status_bar import BadgerStatusBar
 from badger.gui.acr.components.action_bar import BadgerActionBar
@@ -148,7 +148,7 @@ class BadgerHomePage(QWidget):
         routine_view.setMinimumWidth(640)
         vbox_routine_view = QVBoxLayout(routine_view)
         vbox_routine_view.setContentsMargins(0, 0, 0, 10)
-        self.routine_editor = routine_editor = BadgerRoutineEditor()
+        self.routine_editor = routine_editor = BadgerRoutinePage()
         vbox_routine_view.addWidget(routine_editor)
 
         self.data_panel = self.routine_editor.routine_page.data_panel
@@ -204,8 +204,8 @@ class BadgerHomePage(QWidget):
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
-        self.routine_editor.routine_page.sig_load_template.connect(self.update_status)
-        self.routine_editor.routine_page.sig_save_template.connect(self.update_status)
+        self.routine_editor.sig_load_template.connect(self.update_status)
+        self.routine_editor.sig_save_template.connect(self.update_status)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
@@ -256,7 +256,7 @@ class BadgerHomePage(QWidget):
 
     def init_home_page(self):
         # Load the default generator
-        self.routine_editor.routine_page.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.generator_box.cb.setCurrentIndex(0)
 
     def go_run(self, i: int = None):
         gc.collect()
@@ -368,7 +368,7 @@ class BadgerHomePage(QWidget):
                 raises an error.
         """
         try:
-            routine = self.routine_editor.routine_page._compose_routine()
+            routine = self.routine_editor._compose_routine()
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
