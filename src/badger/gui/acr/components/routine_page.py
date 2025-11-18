@@ -1780,56 +1780,7 @@ class BadgerRoutinePage(QWidget):
                 else:
                     print(f"Caught warning: {warning.message}")
 
-            self.data_panel.set_routine(routine)
             return routine
-
-    def validate_loaded_data_keys(self, vocs):
-        """
-        Makes sure that the keys of data to be loaded from data_panel match the
-        variable and objective names in vocs. If they do not, raises an error.
-        If the set of data keys from self.data_panel matches provided VOCS variables
-        and objectives, opens a dialog to inform user that data has been added.
-
-        Args:
-            vocs: VOCS
-        """
-        data = self.data_panel.get_data_as_dict()
-        data = self.data_panel.filter_metadata(data)
-        data_keys = data.keys()
-
-        routine = self.data_panel.routine
-
-        # Want to compare variables, objectives!!!
-        loaded_data_vars_objs_names = (
-            routine.vocs.variable_names + routine.vocs.objective_names
-        )
-
-        # Raise error if loaded data keys do not match selected vocs
-        if set(loaded_data_vars_objs_names) != set(
-            vocs.variable_names + vocs.objective_names
-        ):
-            raise BadgerRoutineError(
-                "Keys in loaded data do not match selected VOCS:\n\n"
-                + f"Keys in data:\n {loaded_data_vars_objs_names}\n\n"
-                + f"Variable + objective names:\n {vocs.variable_names + vocs.output_names}"
-            )
-
-        # Notify user that data has been added to the routine
-        dialog = QMessageBox(
-            text=str(
-                "Data loaded into routine for the following objectives, variables:\n\n"
-                + f"{list(data_keys)}\n\n"
-                + "Click OK to continue!"
-            ),
-            parent=self,
-        )
-        dialog.setIcon(QMessageBox.Information)
-        dialog.setWindowTitle("Data added to routine")
-        dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        result = dialog.exec_()
-
-        if result == QMessageBox.Cancel:
-            raise BadgerRoutineError("Routine initialization cancelled by user.")
 
     def review(self):
         try:

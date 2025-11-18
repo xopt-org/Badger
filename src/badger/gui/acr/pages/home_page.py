@@ -354,6 +354,56 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
+    def validate_loaded_data_keys(self, vocs):
+        """
+        Makes sure that the keys of data to be loaded from data_panel match the
+        variable and objective names in vocs. If they do not, raises an error.
+        If the set of data keys from self.data_panel matches provided VOCS variables
+        and objectives, opens a dialog to inform user that data has been added.
+
+        Args:
+            vocs: VOCS
+        """
+        routine = self.data_panel.routine
+
+        # Want to compare variables, objectives!!!
+        loaded_data_vars_objs_names = (
+            routine.vocs.variable_names + routine.vocs.objective_names
+        )
+
+        # Raise error if loaded data keys do not match selected vocs
+        if set(loaded_data_vars_objs_names) != set(
+            vocs.variable_names + vocs.objective_names
+        ):
+            self.run_action_bar.routine_finished()  # Reset action bar
+            raise BadgerRoutineError(
+                "Keys in loaded data do not match selected VOCS:\n\n"
+                + f"Keys in data to load:\n {loaded_data_vars_objs_names}\n\n"
+                + f"Selected variable + objectives:\n {vocs.variable_names + vocs.objective_names}"
+            )
+
+        data = self.data_panel.get_data_as_dict()
+        data = self.data_panel.filter_metadata(data)
+        data_keys = data.keys()
+
+        # Notify user that data has been added to the routine
+        dialog = QMessageBox(
+            text=str(
+                "Data loaded into routine for the following vocss:\n\n"
+                + f"{list(data_keys)}\n\n"
+                + "Click OK to continue!"
+            ),
+            parent=self,
+        )
+        dialog.setIcon(QMessageBox.Information)
+        dialog.setWindowTitle("Data added to routine")
+        dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        result = dialog.exec_()
+
+        if result == QMessageBox.Cancel:
+            self.run_action_bar.routine_finished()  # Reset action bar
+            raise BadgerRoutineError("Routine initialization cancelled by user.")
+
     def prepare_run(self, data=None, init_points_flag=True):
         """
         Prepares the run by composing the routine, validating data if present,
@@ -376,7 +426,8 @@ class BadgerHomePage(QWidget):
         # Add data to routine before saving tmp file
         if data is not None:
             # Check that routine variables and objectives match loaded data
-            self.routine_editor.validate_loaded_data_keys(routine.vocs)
+            self.validate_loaded_data_keys(routine.vocs)
+            self.data_panel.set_routine(routine)
             data["live"] = 0  # reset live data indicator for loaded data
             for name in routine.vocs.output_names:
                 if name not in data.columns:
@@ -385,6 +436,7 @@ class BadgerHomePage(QWidget):
 
             # Raise error if there are new columns (all NaN) and no initial points selected
             if data.isna().all().any() and not init_points_flag:
+                self.run_action_bar.routine_finished()  # Reset action bar
                 raise BadgerRoutineError(
                     "Must select at least one initial point in order to add"
                     + " new constraints to routine!"
