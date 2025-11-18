@@ -646,25 +646,17 @@ class BadgerPydanticEditor(QTreeWidget):
 
         self.initialize_combo_widget(widget, selections)
 
-        special_item_dict: dict[str, Any] = {}
-        value: dict[str, Any] | str | None = defaults.get(field, "")
+        special_item_dict: dict[str, Any] | None = defaults.get(field, {})
 
-        if value is None:
-            value = ""
-        elif isinstance(value, dict):
-            value = value.get("name", "")
-        else:
-            value = str(value)
-
-        special_item_dict["name"] = value
+        if special_item_dict is None:
+            logger.warning(
+                f"Generator has {field} set but no compatible {field} exists."
+            )
+            special_item_dict = {}
 
         special_item_dict["vocs"] = self.vocs.model_dump()
 
         name = special_item_dict.get("name", "")
-        if name == "":
-            logger.warning(
-                f"Generator has {field} set but no name exists in the {field} defaults."
-            )
 
         # Update combo box selection with name
         if (index := widget.findText(name) if name else widget.findText("null")) >= 0:
@@ -947,12 +939,14 @@ class BadgerPydanticEditor(QTreeWidget):
         try:
             parameters = self.get_parameters()
 
-            self.model_class.model_validate(
-                yaml.load(parameters, Loader=CustomSafeLoader)
-            )
+            parameters_dict = yaml.load(parameters, Loader=CustomSafeLoader)
 
-            # defaults = model.model_dump()
-            # self.update_after_validate(defaults)
+            model = self.model_class.model_validate(parameters_dict)
+
+            defaults = model.model_dump()
+
+            defaults = {k: v for k, v in defaults.items() if k in parameters_dict}
+            self.update_after_validate(defaults)
 
             return True
         except KeyError as e:
