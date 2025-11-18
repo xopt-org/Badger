@@ -946,6 +946,10 @@ class BadgerPydanticEditor(QTreeWidget):
             defaults = model.model_dump()
 
             defaults = {k: v for k, v in defaults.items() if k in parameters_dict}
+            # FIX:
+            # vocs Field on the Xopt Generator model has an explicit "exclude=True" which prevents a required field from being serialized when using model_dump()
+            # so we have to manually re-add it here unless Xopt model changes this behavior
+            defaults["vocs"] = self.vocs.model_dump()
             self.update_after_validate(defaults)
 
             return True
