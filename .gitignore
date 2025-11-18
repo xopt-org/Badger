@@ -16,3 +16,5 @@ src/badger/_version.py
 .coverage*
 .venv/
 .python-version
+*.log
+logs/
