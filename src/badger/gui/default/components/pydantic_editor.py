@@ -204,10 +204,8 @@ class BadgerResolvedType:
                 widget = QComboBox()
             elif issubclass(resolved_type.main, NumericalOptimizer):
                 widget = QComboBox()
-
             else:
                 return None
-
             if resolved_type.nullable:
                 widget.addItem("null", {})
 
@@ -216,9 +214,6 @@ class BadgerResolvedType:
             if isinstance(default, dict) and "name" in default:
                 if (index := widget.findText(default["name"])) >= 0:
                     widget.setCurrentIndex(index)
-
-            # if editor_info is not None:
-            #     widget.currentIndexChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main == NoneType:
             widget = QLabel()
             widget.setText("null")
@@ -533,7 +528,6 @@ class BadgerPydanticEditor(QTreeWidget):
             else:
                 self.setItemWidget(child, 1, widget)
 
-            # child.setHidden(hidden)
             child.setDisabled(hidden)
             if widget is not None:
                 widget.setDisabled(hidden)
@@ -783,8 +777,8 @@ class BadgerPydanticEditor(QTreeWidget):
 
         self.expandItem(tree_widget_item)
 
+    @staticmethod
     def filter_class_fields(
-        self,
         pydantic_class: type[BaseModel],
         fields_to_remove: list[str] = [],
         defaults: dict[str, Any] = {},
@@ -853,20 +847,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 return None
 
             if level == len(path) - 1:
-                # if found_item.childCount() > 0:
-                # child_items: list[QTreeWidgetItem] = []
-                # for i in range(found_item.childCount()):
-                #     child_widget = found_item.child(i)
-                #     if child_widget is not None:
-                #         child_items.append(child_widget)
-                # if len(child_items) > 1:
-                #     return [self.itemWidget(ci, 1) for ci in child_items]
-                # elif len(child_items) == 1:
-                #     return self.itemWidget(child_items[0], 1)
-                # else:
-                #     return None
                 return found_item
-                # return self.itemWidget(found_item, 1)
 
             current_items = []
             for i in range(found_item.childCount()):
@@ -943,20 +924,20 @@ class BadgerPydanticEditor(QTreeWidget):
 
             model = self.model_class.model_validate(parameters_dict)
 
+            # After we validate the model, some fields may have been changed due to any validation logic present within the Pydantic model (i.e. field validators changing default values). We need to update the tree to reflect these changes.
             defaults = model.model_dump()
-
             defaults = {k: v for k, v in defaults.items() if k in parameters_dict}
-            # FIX:
-            # vocs Field on the Xopt Generator model has an explicit "exclude=True" which prevents a required field from being serialized when using model_dump()
-            # so we have to manually re-add it here unless Xopt model changes this behavior
+
+            # FIX: `vocs` Field in the Xopt Generator model has an explicit "exclude=True" which prevents the `vocs` field from being serialized when using model_dump(). This field needs to be present to properly validate the model. We have to manually re-add it here.
             defaults["vocs"] = self.vocs.model_dump()
+
             self.update_after_validate(defaults)
 
             return True
         except KeyError as e:
-            print(e)
+            logger.error(e)
         except ValidationError as e:
-            print(e)
+            logger.error(e)
 
             for error in e.errors():
                 loc = error["loc"]
@@ -966,17 +947,6 @@ class BadgerPydanticEditor(QTreeWidget):
                 else:
                     error_widget = self
                 if error_widget:
-                    # widgets: list[QWidget] = (
-                    #     error_widget
-                    #     if isinstance(error_widget, list)
-                    #     else [error_widget]
-                    # )
-                    # for error_widget in widgets:
-                    # meta_object = error_widget.metaObject()
-                    # if meta_object is not None:
-                    #     error_widget.setStyleSheet(
-                    #         f"BadgerListItem {{ border: 2px dashed red; }}"
-                    #     )
                     if type(error_widget) is QTreeWidgetItem:
                         error_widget.setBackground(0, Qt.GlobalColor.red)
                         widget = self.itemWidget(error_widget, 1)
@@ -987,5 +957,4 @@ class BadgerPydanticEditor(QTreeWidget):
                         logger.warning(
                             f"Could not find widget for error at location {loc} with message {msg}"
                         )
-
             return False
