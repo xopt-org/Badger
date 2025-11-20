@@ -1,0 +1,60 @@
+# https://docusaurus.io/docs/deployment#triggering-deployment-with-github-actions
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  # test docs build for PRs, but don't deploy until merged into main
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: build docusaurus
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: documentation
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: documentation/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: build website
+        run: npm run build
+
+      - name: uipload Build Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: documentation/build
+
+  deploy:
+    name: deploy to github pages
+    needs: build
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: deploy website
+        id: deploy
+        uses: actions/deploy-pages@v4
