@@ -64,6 +64,7 @@ class BadgerHomePage(QWidget):
     sig_routine_invalid = pyqtSignal()
 
     def __init__(self, process_manager=None):
+        logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
         self.mode = "regular"  # home page mode
@@ -78,6 +79,7 @@ class BadgerHomePage(QWidget):
         self.init_home_page()
 
     def init_ui(self):
+        logger.info("Initializing UI for BadgerHomePage.")
         self.config_singleton = init_settings()
         icon_ref = resources.files(__package__) / "../images/add.png"
 
@@ -185,6 +187,7 @@ class BadgerHomePage(QWidget):
         vbox.addWidget(status_bar)
 
     def config_logic(self):
+        logger.info("Configuring logic for BadgerHomePage.")
         self.colors = ["c", "g", "m", "y", "b", "r", "w"]
         self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
 
@@ -237,18 +240,22 @@ class BadgerHomePage(QWidget):
         self.shortcut_go_search.activated.connect(self.go_search)
 
     def go_search(self):
+        logger.info("Activating search bar.")
         self.sbar.setFocus()
 
     def load_all_runs(self):
+        logger.info("Loading all runs into history browser.")
         runs = get_runs()
         self.history_browser.updateItems(runs)
 
     def init_home_page(self):
+        logger.info("Initializing home page.")
         # Load the default generator
         with BlockSignalsContext(self.routine_editor.generator_box.cb):
             self.routine_editor.generator_box.cb.setCurrentIndex(0)
 
     def go_run(self, i: int = None):
+        logger.info(f"Activating run: {i}")
         gc.collect()
 
         # if self.cb_history.itemText(0) == "Optimization in progress...":
@@ -305,12 +312,15 @@ class BadgerHomePage(QWidget):
         self.run_monitor.update_analysis_extensions()
 
     def inspect_solution(self, idx):
+        logger.info(f"Inspecting solution at index: {idx}")
         self.run_table.selectRow(idx)
 
     def solution_selected(self, r, c):
+        logger.info(f"Solution selected at row {r}, column {c}")
         self.run_monitor.jump_to_solution(r)
 
     def table_selection_changed(self):
+        logger.info("Table selection changed.")
         indices = self.run_table.selectedIndexes()
         if len(indices) == 1:  # let other method handles it
             return
@@ -333,6 +343,7 @@ class BadgerHomePage(QWidget):
         self.run_monitor.jump_to_solution(row)
 
     def toggle_lock(self, lock, lock_tab=1):
+        logger.info(f"Toggling lock: {lock}, tab: {lock_tab}")
         if lock:
             self.history_browser.setDisabled(True)
         else:
@@ -341,6 +352,7 @@ class BadgerHomePage(QWidget):
             self.uncover_page()
 
     def prepare_run(self):
+        logger.info("Preparing new run.")
         try:
             routine = self.routine_editor._compose_routine()
         except Exception as e:
@@ -358,14 +370,17 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine)
 
     def start_run(self):
+        logger.info("Starting run.")
         self.prepare_run()
         self.run_monitor.start()
 
     def start_run_until(self):
+        logger.info("Starting run until condition met.")
         self.prepare_run()
         self.run_monitor.start_until()
 
     def new_run(self):
+        logger.info("Creating new run.")
         self.cover_page()
 
         # self.cb_history.insertItem(0, "Optimization in progress...")
@@ -375,11 +390,13 @@ class BadgerHomePage(QWidget):
         reset_table(self.run_table, header)
 
     def run_name(self, name):
+        logger.info(f"Updating run name: {name}")
         runs = get_runs()
         self.history_browser.updateItems(runs)
         self.history_browser._selectItemByRun(name)
 
     def update_status(self, info):
+        logger.info(f"Updating status: {info}")
         self.status_bar.set_summary(info)
 
     def progress(self, solution: DataFrame):
@@ -391,6 +408,7 @@ class BadgerHomePage(QWidget):
         add_row(self.run_table, objs + cons + vars + stas)
 
     def delete_run(self):
+        logger.info("Deleting run.")
         run_name = get_base_run_filename(self.history_browser.currentText())
 
         reply = QMessageBox.question(
@@ -411,6 +429,7 @@ class BadgerHomePage(QWidget):
         self.go_run(-1)
 
     def cover_page(self):
+        logger.info("Covering page with overlay.")
         return  # disable overlay for now
 
         try:
@@ -425,6 +444,7 @@ class BadgerHomePage(QWidget):
         self.overlay.show()
 
     def uncover_page(self):
+        logger.info("Uncovering page overlay.")
         return  # disable overlay for now
 
         try:

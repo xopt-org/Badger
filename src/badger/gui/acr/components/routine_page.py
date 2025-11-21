@@ -78,6 +78,8 @@ CONS_RELATION_DICT_INV = {
     "LESS_THAN": "<",
 }
 
+logger = logging.getLogger(__name__)
+
 
 def format_validation_error(e: ValidationError) -> str:
     """Convert Pydantic ValidationError into a friendly message."""
@@ -95,6 +97,7 @@ class BadgerRoutinePage(QWidget):
     sig_save_template = pyqtSignal(str)  # template path
 
     def __init__(self):
+        logger.info("Initializing BadgerRoutinePage.")
         super().__init__()
 
         self.generators = list_generators()
@@ -139,6 +142,7 @@ class BadgerRoutinePage(QWidget):
         self.lim_apply_to_vars = 2
 
     def init_ui(self):
+        logger.info("Initializing UI for BadgerRoutinePage.")
         config_singleton = init_settings()
 
         # Set up the layout
@@ -272,6 +276,7 @@ class BadgerRoutinePage(QWidget):
             self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
     def config_logic(self):
+        logger.info("Configuring logic for BadgerRoutinePage.")
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
         self.save_template_button.clicked.connect(self.save_template_yaml)
@@ -304,6 +309,7 @@ class BadgerRoutinePage(QWidget):
         # )  # for debugging
 
     def load_template_yaml(self) -> None:
+        logger.info("Loading template YAML.")
         """
         Load data from template .yaml into template_dict dictionary.
         This function expects to be called via an action from
@@ -337,6 +343,9 @@ class BadgerRoutinePage(QWidget):
             return
 
     def set_options_from_template(self, template_dict: dict[str, Any]):
+        logger.info(
+            f"Setting options from template: {template_dict.get('name', 'unknown')}"
+        )
         """
         Fills in routine_page GUI with relevant info from template_dict
         dictionary
@@ -564,6 +573,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
+        logger.info("Generating template dictionary from GUI state.")
         """
         Generate a template dictionary from the current state of the GUI
         """
@@ -636,6 +646,7 @@ class BadgerRoutinePage(QWidget):
         return generator_config
 
     def save_template_yaml(self):
+        logger.info("Saving routine as template YAML.")
         """
         Save the current routine as a template .yaml file
         """
@@ -666,10 +677,13 @@ class BadgerRoutinePage(QWidget):
                     f"Current routine options saved to template: {os.path.basename(template_path)}"
                 )
         except (FileNotFoundError, yaml.YAMLError) as e:
-            print(f"Error saving template: {e}")
+            logger.error(f"Error saving template: {e}")
             return
 
     def refresh_ui(self, routine: Routine | None = None, silent: bool = False):
+        logger.info(
+            f"Refreshing UI for routine: {getattr(routine, 'name', None)} (silent={silent})"
+        )
         self.generators = list_generators()
         self.envs = list_env()
 
@@ -930,6 +944,9 @@ class BadgerRoutinePage(QWidget):
         self.refresh_ui(routine, silent=silent)
 
     def select_generator(self, i: int):
+        logger.info(
+            f"Generator selected: {self.generator_box.cb.itemText(i)} (index={i})"
+        )
         # Reset the script
         self.script = ""
         self.generator_box.check_use_script.setChecked(False)
@@ -984,15 +1001,18 @@ class BadgerRoutinePage(QWidget):
             self.generator_box.edit.setDisabled(False)
 
     def edit_script(self):
+        logger.info("Editing script for routine.")
         generator = self.generator_box.cb.currentText()
         dlg = BadgerEditScriptDialog(self, generator, self.script, self.script_updated)
         dlg.exec()
 
     def script_updated(self, text):
+        logger.info("Script updated.")
         self.script = text
         self.refresh_params_generator()
 
     def create_env(self):
+        logger.info("Creating environment instance.")
         env_params = load_config(self.env_box.edit.get_parameters())
         try:
             intf_name = self.configs["interface"][0]
@@ -1036,6 +1056,7 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     def select_env(self, i: int):
+        logger.info(f"Environment selected: {self.env_box.cb.itemText(i)} (index={i})")
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1173,6 +1194,7 @@ class BadgerRoutinePage(QWidget):
         return header_list
 
     def fill_curr_in_init_table(self, record=False):
+        logger.info(f"Filling current values in init table (record={record})")
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
@@ -1205,6 +1227,9 @@ class BadgerRoutinePage(QWidget):
         self.add_rand_config = add_rand_config
 
     def add_rand_in_init_table(self, add_rand_config=None, record=True):
+        logger.info(
+            f"Adding random points in init table (config={add_rand_config}, record={record})"
+        )
         if add_rand_config is None:
             add_rand_config = self.add_rand_config
 
@@ -1285,6 +1310,7 @@ class BadgerRoutinePage(QWidget):
             self.rc_dialog = None
 
     def clear_init_table(self, reset_actions=True):
+        logger.info(f"Clearing init table (reset_actions={reset_actions})")
         table = self.env_box.init_table
         for row in range(table.rowCount()):
             for col in range(table.columnCount()):
@@ -1296,6 +1322,7 @@ class BadgerRoutinePage(QWidget):
             self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
+        logger.info("Adding row to init table.")
         table = self.env_box.init_table
         row_position = table.rowCount()
         table.insertRow(row_position)
@@ -1429,6 +1456,9 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
 
     def set_ind_vrange(self, vname, config):
+        logger.info(
+            f"Setting individual variable range for {vname} with config: {config}"
+        )
         hard_bounds = [config["lower_bound"], config["upper_bound"]]
         option = {
             "limit_option_idx": config["limit_option_idx"],
@@ -1461,6 +1491,9 @@ class BadgerRoutinePage(QWidget):
             ]
             bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
 
+        logger.info(
+            f"Setting bounds for {vname}: {bounds} (hard bounds: {hard_bounds})"
+        )
         # Set the bounds in the table
         self.env_box.var_table.refresh_variable(vname, bounds, hard_bounds)
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
@@ -1472,9 +1505,11 @@ class BadgerRoutinePage(QWidget):
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
 
     def save_limit_option(self, limit_option):
+        logger.info(f"Saving limit option: {limit_option}")
         self.limit_option = limit_option
 
     def add_var_to_list(self, name, lb, ub):
+        logger.info(f"Adding variable to list: {name}, lb={lb}, ub={ub}")
         # Check if already in the list
         ok = False
         try:
@@ -1482,6 +1517,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             ok = True
         if not ok:
+            logger.warning(f"Variable {name} already exists!")
             QMessageBox.warning(
                 self, "Variable already exists!", f"Variable {name} already exists!"
             )
@@ -1491,6 +1527,7 @@ class BadgerRoutinePage(QWidget):
         return 0
 
     def update_init_table(self, force=False):
+        logger.info(f"Updating init table (force={force})")
         selected = self.env_box.var_table.selected
         variable_names = [v for v in selected if selected[v]]
         update_init_data_table(self.env_box.init_table, variable_names)
@@ -1500,6 +1537,7 @@ class BadgerRoutinePage(QWidget):
 
         # Auto populate the initial table based on recorded actions
         if not self.init_table_actions:
+            logger.info("No init_table_actions recorded, using default actions.")
             self.init_table_actions = [
                 {"type": "add_curr"},
                 {"type": "add_rand", "config": self.add_rand_config},
@@ -1508,6 +1546,7 @@ class BadgerRoutinePage(QWidget):
         self._fill_init_table()
 
     def calc_auto_bounds(self):
+        logger.info("Calculating auto bounds for selected variables.")
         vname_selected = []
         vrange = {}
 
@@ -1537,12 +1576,14 @@ class BadgerRoutinePage(QWidget):
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
+                logger.info(f"Auto bounds for {name} (full range): {bounds}")
             elif option_idx == 2:
                 delta = limit_option["delta"]
                 hard_bounds = vrange[name]
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
+                logger.info(f"Auto bounds for {name} (delta): {bounds}")
             else:
                 ratio = limit_option["ratio_curr"]
                 hard_bounds = vrange[name]
@@ -1553,16 +1594,17 @@ class BadgerRoutinePage(QWidget):
                 ]
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
+                logger.info(f"Auto bounds for {name} (current ratio): {bounds}")
 
         return vrange
 
     def toggle_relative_to_curr(self, checked, refresh=True):
+        logger.info(f"Toggling relative_to_curr: checked={checked}, refresh={refresh}")
         if checked:
             try:
                 _ = self.env_box.compose_vocs()
             except Exception:
-                # Switch to manual mode to allow the user fixing the vocs issue
-                # Schedule the checkbox to be clicked after the event loop finishes
+                logger.warning("Variable range is not valid, switching to manual mode.")
                 QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
                 QMessageBox.warning(
                     self,
@@ -1574,21 +1616,23 @@ class BadgerRoutinePage(QWidget):
             self.env_box.switch_var_panel_style(True)
 
             if refresh and self.env_box.var_table.selected:
+                logger.info("Refreshing auto bounds and initial table.")
                 bounds = self.calc_auto_bounds()
                 self.env_box.var_table.set_bounds(bounds)
                 self.clear_init_table(reset_actions=False)
-                # Auto populate the initial table
                 self.try_populate_init_table()
 
             self.env_box.var_table.lock_bounds()
             self.env_box.init_table.set_uneditable()
         else:
+            logger.info("Switching to manual variable range mode.")
             self.env_box.switch_var_panel_style(False)
 
             self.env_box.var_table.unlock_bounds()
             self.env_box.init_table.set_editable()
 
     def refresh_variables(self):
+        logger.info("Refreshing variables and bounds.")
         variables = self.env_box.var_table.export_variables()
         bounds = self.calc_auto_bounds()
 
@@ -1598,13 +1642,16 @@ class BadgerRoutinePage(QWidget):
                 no_need_to_update = False
                 break
         if no_need_to_update:
+            logger.info("No need to update variable bounds.")
             return
 
+        logger.info("Updating variable bounds and initial table.")
         self.env_box.var_table.set_bounds(bounds)
         self.clear_init_table(reset_actions=False)
         self.try_populate_init_table()
 
     def try_populate_init_table(self):
+        logger.info("Trying to auto-populate initial table.")
         if (
             self.env_box.relative_to_curr.isChecked()
             and self.env_box.var_table.selected
@@ -1612,6 +1659,7 @@ class BadgerRoutinePage(QWidget):
             self.update_init_table()
 
     def handle_pv_added(self):
+        logger.info("Handling PV added event.")
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange()
 
@@ -1651,6 +1699,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.data_changed.emit()
 
     def _compose_routine(self) -> Routine:
+        logger.info("Composing routine from GUI state.")
         # Compose the routine
         # Metadata
         name = self.edit_save.text() or self.edit_save.placeholderText()
@@ -1658,14 +1707,19 @@ class BadgerRoutinePage(QWidget):
 
         # General sanity checks
         if self.generator_box.cb.currentIndex() == -1:
+            logger.error("No generator selected.")
             raise BadgerRoutineError("no generator selected")
         if self.env_box.cb.currentIndex() == -1:
+            logger.error("No environment selected.")
             raise BadgerRoutineError("no environment selected")
 
         # Generator
         generator_name = self.generators[self.generator_box.cb.currentIndex()]
         env_name = self.envs[self.env_box.cb.currentIndex()]
         generator_params = load_config(self.generator_box.edit.get_parameters())
+        logger.debug(
+            f"Generator selected: {generator_name}, params: {generator_params}"
+        )
         if generator_name in all_generator_names["bo"]:
             # Patch the BO generators to make sure use_low_noise_prior is False
             if "gp_constructor" not in generator_params:
@@ -1692,12 +1746,18 @@ class BadgerRoutinePage(QWidget):
 
         # Environment
         env_params = load_config(self.env_box.edit.get_parameters())
+        logger.debug(f"Environment selected: {env_name}, params: {env_params}")
 
         # VOCS
         vocs, critical_constraints = self.env_box.compose_vocs()
+        logger.debug(
+            f"VOCS composed: variables={list(vocs.variables.keys())}, objectives={list(vocs.objectives.keys())}, constraints={list(vocs.constraints.keys())}"
+        )
         if not vocs.variables:
+            logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
         if not vocs.objectives:
+            logger.error("No objectives selected.")
             raise BadgerRoutineError("no objectives selected")
 
         # Initial points
@@ -1707,11 +1767,13 @@ class BadgerRoutinePage(QWidget):
         init_points_df = init_points_df.replace("", pd.NA)
         init_points_df = init_points_df.dropna(subset=init_points_df.columns, how="all")
         if init_points_df.empty:
+            logger.error("No initial points provided.")
             raise BadgerRoutineError(
                 "No initial points provided. Please add at least one initial point"
             )
         contains_na = init_points_df.isna().any().any()
         if contains_na:
+            logger.error("Initial points are not valid, missing values detected.")
             raise BadgerRoutineError(
                 "Initial points are not valid, please fill in the missing values"
             )
@@ -1719,6 +1781,7 @@ class BadgerRoutinePage(QWidget):
         # Script that generates generator params
         if self.generator_box.check_use_script.isChecked():
             script = self.script
+            logger.debug("Using custom script for generator params.")
         else:
             script = None
 
@@ -1727,10 +1790,12 @@ class BadgerRoutinePage(QWidget):
             relative_to_current = True
             vrange_limit_options = self.ratio_var_ranges
             initial_point_actions = self.init_table_actions
+            logger.debug("Routine is set to use relative to current variable ranges.")
         else:
             relative_to_current = False
             vrange_limit_options = None
             initial_point_actions = None
+            logger.debug("Routine is set to use manual variable ranges.")
 
         # Save hard limits no matter relative to current or not
         vrange_hard_limit = self.var_hard_limit
@@ -1740,7 +1805,9 @@ class BadgerRoutinePage(QWidget):
             generator = get_generator_dynamic(generator_name)(
                 vocs=vocs, **generator_params
             )
+            logger.info(f"Generator instance created: {generator_name}")
         except ValidationError as e:
+            logger.error(f"Algorithm validation failed: {format_validation_error(e)}")
             raise BadgerRoutineError(
                 f"\n\nAlgorithm validation failed: {format_validation_error(e)}"
             ) from e
@@ -1774,14 +1841,16 @@ class BadgerRoutinePage(QWidget):
             # Check if any user warnings were caught
             for warning in caught_warnings:
                 if issubclass(warning.category, UserWarning):
+                    logger.warning(f"UserWarning caught: {warning.message}")
                     QMessageBox.warning(
                         self,
                         "Warning!",
                         f"Warning: {warning.message}",
                     )
                 else:
-                    print(f"Caught warning: {warning.message}")
+                    logger.warning(f"Caught warning: {warning.message}")
 
+            logger.info(f"Routine composed successfully: {routine.name}")
             return routine
 
     def review(self):
