@@ -1169,10 +1169,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_sta.setChecked(False)
         self.env_box.check_only_sta.blockSignals(False)
         self.env_box.sta_table.show_selected_only = False
-        with BlockSignalsContext(self.env_box.sta_table):
-            self.env_box.sta_table.update_items(
-                observables, status, formulas={}, vocs_signal=False
-            )
+        # with BlockSignalsContext(self.env_box.sta_table):
+        self.env_box.sta_table.update_items(
+            observables, status, formulas={}, vocs_signal=False
+        )
 
         self.env_box.fit_content()
         # self.routine = None

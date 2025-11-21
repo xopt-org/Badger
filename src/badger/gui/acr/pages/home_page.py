@@ -32,7 +32,7 @@ from badger.gui.acr.components.routine_page import BadgerRoutinePage
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.acr.components.status_bar import BadgerStatusBar
 from badger.gui.acr.components.action_bar import BadgerActionBar
-from badger.utils import BlockSignalsContext, get_header
+from badger.utils import get_header
 from badger.settings import init_settings
 
 # from PyQt5.QtGui import QBrush, QColor
@@ -251,8 +251,7 @@ class BadgerHomePage(QWidget):
     def init_home_page(self):
         logger.info("Initializing home page.")
         # Load the default generator
-        with BlockSignalsContext(self.routine_editor.generator_box.cb):
-            self.routine_editor.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.generator_box.cb.setCurrentIndex(0)
 
     def go_run(self, i: int = None):
         logger.info(f"Activating run: {i}")

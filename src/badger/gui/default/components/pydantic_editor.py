@@ -669,11 +669,7 @@ class BadgerPydanticEditor(QTreeWidget):
         )
 
         widget.currentIndexChanged.connect(
-            lambda: self.on_radio_changed(
-                special_item,
-                field,
-                special_item_dict,
-            )
+            lambda: self.on_radio_changed(special_item, "turbo_controller")
         )
 
     def get_all_compatible_classes(self, field_name: str):
@@ -720,7 +716,6 @@ class BadgerPydanticEditor(QTreeWidget):
         self,
         tree_widget_item: QTreeWidgetItem,
         field_name: str,
-        defaults: dict[str, Any],
     ):
         # Clear out existing children
         for cc in tree_widget_item.takeChildren():
@@ -728,15 +723,16 @@ class BadgerPydanticEditor(QTreeWidget):
 
         widget = self.itemWidget(tree_widget_item, 1)
         if widget is None or not isinstance(widget, QComboBox):
-            raise ValueError(
-                "Numerical optimizer item does not have a combo box widget."
-            )
+            raise ValueError("tree widget item does not have a combo box widget.")
         widget = cast(QComboBox, widget)
 
         name = widget.currentText()
         if name == "null":
             return
 
+        # get values from current parameters
+        parameters = self.get_parameters()
+        defaults = yaml.load(parameters, Loader=CustomSafeLoader)
         self.update_params_from_generator_class(
             tree_widget_item,
             name,
