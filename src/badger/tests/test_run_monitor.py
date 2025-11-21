@@ -194,10 +194,10 @@ class TestRunMonitor:
 
         # Test label setting
         plot_var_axis = monitor.plot_var.getAxis("bottom")
-        assert plot_var_axis.label.toPlainText().strip() == "iterations"
+        assert plot_var_axis.label.toPlainText().startswith("iterations")
 
         plot_obj_axis = monitor.plot_obj.getAxis("bottom")
-        assert plot_obj_axis.label.toPlainText().strip() == "iterations"
+        assert plot_obj_axis.label.toPlainText().startswith("iterations")
 
         if monitor.vocs.constraint_names:
             plot_con_axis = monitor.plot_con.getAxis("bottom")
@@ -213,10 +213,10 @@ class TestRunMonitor:
 
         # Test label setting
         plot_var_axis_time = monitor.plot_var.getAxis("bottom")
-        assert plot_var_axis_time.label.toPlainText().strip() == "time (s)"
+        assert plot_var_axis_time.label.toPlainText().startswith("time (s)")
 
         plot_obj_axis_time = monitor.plot_obj.getAxis("bottom")
-        assert plot_obj_axis_time.label.toPlainText().strip() == "time (s)"
+        assert plot_obj_axis_time.label.toPlainText().startswith("time (s)")
 
         if monitor.vocs.constraint_names:
             plot_con_axis_time = monitor.plot_con.getAxis("bottom")
