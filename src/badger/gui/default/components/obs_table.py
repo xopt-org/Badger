@@ -35,7 +35,7 @@ class ObservableTable(EditableTable):
 
         self.setHorizontalHeaderLabels(["", "Name"])
 
-    def default_info(self) -> list:
+    def default_info(self) -> list[Any]:
         """
         Get the default information list for a new item.
 
@@ -67,5 +67,5 @@ class ObservableTable(EditableTable):
             f"Observable {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list):
-        return []
+    def create_cell_widgets(self, info: list[Any]) -> tuple[Any, ...]:
+        return ()

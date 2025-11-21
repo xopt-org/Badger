@@ -15,12 +15,13 @@ from PyQt5.QtCore import Qt
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
-    BlockSignalsContext,
     HandledException,
     to_precision_float,
 )
 
 import logging
+
+from badger.utils import BlockSignalsContext
 
 
 logger = logging.getLogger(__name__)

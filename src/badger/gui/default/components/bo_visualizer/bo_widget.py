@@ -10,13 +10,12 @@ from PyQt5.QtWidgets import QSizePolicy
 
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
-    BlockSignalsContext,
     HandledException,
     signal_logger,
     to_precision_float,
 )
 from badger.routine import Routine
-from badger.utils import create_archive_run_filename
+from badger.utils import BlockSignalsContext, create_archive_run_filename
 
 from xopt.generator import Generator
 from badger.gui.default.components.bo_visualizer.ui_components import UIComponents
