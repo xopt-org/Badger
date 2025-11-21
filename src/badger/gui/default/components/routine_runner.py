@@ -96,7 +96,7 @@ class BadgerRoutineSubprocess:
         The method grabs a subprocess from self.process_manager queue.
         Then the method unpauses the process along with passing the selected routine name.
         """
-        
+
         logger.info("Starting routine run.")
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer

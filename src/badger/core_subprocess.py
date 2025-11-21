@@ -236,9 +236,9 @@ def run_routine_subprocess(
                             )
                         else:
                             count = len(routine.data)
-                    logger.debug(
-                        f"Checking max_eval termination: {count} >= {max_eval}"
-                    )
+                        logger.debug(
+                            f"Checking max_eval termination: {count} >= {max_eval}"
+                        )
                     else:
                         count = 0
 

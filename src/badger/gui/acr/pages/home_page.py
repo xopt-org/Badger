@@ -465,7 +465,7 @@ class BadgerHomePage(QWidget):
 
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
-        
+
     def start_run(self, use_termination_condition: bool = False):
         """
         Prepares and starts optimization run with provided options.
