@@ -57,6 +57,7 @@ from badger.routine import Routine
 from badger.settings import init_settings
 from datetime import datetime
 from badger.utils import (
+    BlockSignalsContext,
     load_config,
     strtobool,
     get_badger_version,
@@ -718,20 +719,22 @@ class BadgerRoutinePage(QWidget):
                 dialog.exec_()
 
             idx_generator = -1
-
-        self.generator_box.cb.setCurrentIndex(idx_generator)
+        with BlockSignalsContext(self.generator_box.cb):
+            self.generator_box.cb.setCurrentIndex(idx_generator)
         filtered_config = filter_generator_config(
             name_generator, routine.generator.model_dump()
         )
 
-        # Get vocs
-        try:
-            vocs, _ = self.env_box.compose_vocs()
-        except Exception:
-            vocs = None
+        vocs = routine.vocs
+        # if not vocs:
+        #     # Get vocs
+        #     try:
+        #         vocs, _ = self.env_box.compose_vocs()
+        #     except Exception:
+        #         vocs = None
 
         self.generator_box.edit.set_params_from_generator(
-            name_generator, filtered_config, vocs
+            name_generator, filtered_config, vocs, validate=False
         )
         self.script = routine.script
 
@@ -773,7 +776,8 @@ class BadgerRoutinePage(QWidget):
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
 
-        self.env_box.var_table.update_variables(all_variables)
+        with BlockSignalsContext(self.env_box.var_table):
+            self.env_box.var_table.update_variables(all_variables)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.addtl_vars = routine.additional_variables
 
@@ -833,8 +837,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.edit_obj.blockSignals(False)
         self.env_box.obj_table.keyword = ""
         self.env_box.obj_table.show_selected_only = True
-
-        self.env_box.obj_table.update_items(objectives, status, formulas)
+        with BlockSignalsContext(self.env_box.obj_table):
+            self.env_box.obj_table.update_items(objectives, status, formulas)
 
         # Initialize the constraints table with env observables
         try:
@@ -1086,7 +1090,8 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_var.setChecked(False)
         self.env_box.var_table.checked_only = False  # reset the checked only flag
         self.env_box.check_only_var.blockSignals(False)
-        self.env_box.var_table.update_variables(vars_combine)
+        with BlockSignalsContext(self.env_box.var_table):
+            self.env_box.var_table.update_variables(vars_combine)
         # Auto apply the limited variable ranges if the option is set
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange()
@@ -1106,7 +1111,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_obj.setChecked(False)
         self.env_box.check_only_obj.blockSignals(False)
         self.env_box.obj_table.show_selected_only = False
-        self.env_box.obj_table.update_items(objectives, status, formulas={})
+        # with BlockSignalsContext(self.env_box.obj_table):
+        self.env_box.obj_table.update_items(
+            objectives, status, formulas={}, vocs_signal=False
+        )
 
         # Initialize the constraints table with env observables
         constraints = []
@@ -1119,7 +1127,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_con.setChecked(False)
         self.env_box.check_only_con.blockSignals(False)
         self.env_box.con_table.show_selected_only = False
-        self.env_box.con_table.update_items(constraints, status, formulas={})
+        # with BlockSignalsContext(self.env_box.con_table):
+        self.env_box.con_table.update_items(
+            constraints, status, formulas={}, vocs_signal=False
+        )
 
         # Initialize the observable table with env variables and observables
         observables = []
@@ -1137,7 +1148,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.check_only_sta.setChecked(False)
         self.env_box.check_only_sta.blockSignals(False)
         self.env_box.sta_table.show_selected_only = False
-        self.env_box.sta_table.update_items(observables, status, formulas={})
+        with BlockSignalsContext(self.env_box.sta_table):
+            self.env_box.sta_table.update_items(
+                observables, status, formulas={}, vocs_signal=False
+            )
 
         self.env_box.fit_content()
         # self.routine = None
@@ -1399,7 +1413,8 @@ class BadgerRoutinePage(QWidget):
                 bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
                 vrange[name] = bounds
 
-        self.env_box.var_table.set_bounds(vrange)
+        with BlockSignalsContext(self.env_box.var_table):
+            self.env_box.var_table.set_bounds(vrange)
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 

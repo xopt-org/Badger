@@ -570,7 +570,11 @@ class BadgerPydanticEditor(QTreeWidget):
         self.validate()
 
     def set_params_from_generator(
-        self, generator_name: str, defaults: dict[str, Any], vocs: VOCS | None = None
+        self,
+        generator_name: str,
+        defaults: dict[str, Any],
+        vocs: VOCS | None = None,
+        validate: bool = True,
     ):
         logger.debug(f"vocs: {vocs}")
         logger.debug(f"defaults: {defaults}")
@@ -606,7 +610,8 @@ class BadgerPydanticEditor(QTreeWidget):
         # Update parameters with defaults from generator class
         self.set_params_post_setup(defaults)
 
-        self.validate()
+        if validate:
+            self.validate()
 
     def set_params_post_setup(self, defaults: dict[str, Any]):
         if self.model_class is None:
