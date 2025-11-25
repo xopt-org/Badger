@@ -86,11 +86,11 @@ class BadgerLoadDataFromRunDialog(QDialog):
         label.setFixedWidth(360)
         plot_label = QLabel("Data Preview:")
         plot_label.setFixedWidth(550)
-        var_table_label = QLabel("Variables:")
+        # var_table_label = QLabel("Variables:")
 
         header_hbox.addWidget(label)
         header_hbox.addWidget(plot_label)
-        header_hbox.addWidget(var_table_label)
+        # header_hbox.addWidget(var_table_label)
 
         content_widget = QWidget()
         hbox_content = QHBoxLayout(content_widget)
@@ -148,6 +148,18 @@ class BadgerLoadDataFromRunDialog(QDialog):
             self.plot_obj,
             routine.vocs.output_names,
         )
+
+        if len(routine.vocs.constraint_names) > 0:
+            curves_constraint = self._configure_plot(
+                self.plot_cons,
+                routine.vocs.constraint_names,
+            )
+            self._set_plot_data(
+                routine.vocs.constraint_names, curves_constraint, routine.generator.data
+            )
+            self.plot_cons.show()
+        else:
+            self.plot_cons.hide()
 
         curves_variable = self._configure_plot(
             self.plot_var,
@@ -235,8 +247,21 @@ class BadgerLoadDataFromRunDialog(QDialog):
         leg_obj = self.plot_obj.addLegend()
         leg_obj.setBrush((50, 50, 100, 200))
 
+        # create constraints plot
+        self.plot_cons = plot_layout.addPlot(
+            row=1, col=0, title="Evaluation History (C)"
+        )
+        self.plot_cons.setLabel("left", "constraints")
+        self.plot_cons.setLabel("bottom", "iterations")
+        self.plot_cons.showGrid(x=True, y=True)
+        leg_cons = self.plot_cons.addLegend()
+        leg_cons.setBrush((50, 50, 100, 200))
+        # hide unless there are constraints in routine
+        self.plot_cons.hide()
+
+        # create variables plot
         self.plot_var = plot_layout.addPlot(
-            row=1, col=0, title="Relative Variable History (Y)"
+            row=2, col=0, title="Relative Variable History (X)"
         )
         self.plot_var.setLabel("left", "variables")
         self.plot_var.setLabel("bottom", "iterations")
@@ -269,6 +294,10 @@ class BadgerLoadDataFromRunDialog(QDialog):
             dot_symbol.addEllipse(QtCore.QRectF(-size / 2, -size / 2, size, size))
 
             pen = pg.mkPen(color, width=3)
+            hist_pen = pg.mkPen(color, width=3, style=QtCore.Qt.DashLine)
+            color = pen.color()
+            color.setAlpha(171)
+            hist_pen.setColor(color)
             _curve = plot_object.plot(
                 pen=pen,
                 symbol=dot_symbol,
@@ -276,22 +305,39 @@ class BadgerLoadDataFromRunDialog(QDialog):
                 name=name,
                 symbolBrush=pen.color(),
             )
+            _curve_hist = plot_object.plot(
+                pen=hist_pen, symbol=dot_symbol, name=None, symbolBrush=pen.color()
+            )
             curves[name] = _curve
+            curves[name + "_hist"] = _curve_hist
 
         return curves
 
-    def _set_plot_data(
-        self, names: List[str], curves: dict, data: pd.DataFrame, ts=None
-    ):
+    def _set_plot_data(self, names: List[str], curves: dict, data: pd.DataFrame):
         """
         Set data for the plot curves.
         Adapted from BadgerOptMonitor.set_data
         """
+        # Split data into live and not live
+        live_mask = data["live"].astype(bool)
+        live_data = data.loc[live_mask]
+        not_live_data = data.loc[~live_mask]
+
+        # Add first live point to historical data for continuity
+        if len(live_data) > 0:
+            row_to_add = live_data.head(1)
+            not_live_data = pd.concat([not_live_data, row_to_add], ignore_index=False)
+
+        # Determine x-axis data
+        live_x = live_data.index.to_numpy(dtype=int)
+        hist_x = not_live_data.index.to_numpy(dtype=int)
+
+        # Update curves for each name
         for name in names:
-            if ts is not None:
-                curves[name].setData(ts, data[name].to_numpy(dtype=np.double))
-            else:
-                curves[name].setData(data[name].to_numpy(dtype=np.double))
+            curves[name].setData(live_x, live_data[name].to_numpy(dtype=np.double))
+            curves[name + "_hist"].setData(
+                hist_x, not_live_data[name].to_numpy(dtype=np.double)
+            )
 
     def cancel_changes(self):
         self.close()

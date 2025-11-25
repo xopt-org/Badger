@@ -45,7 +45,7 @@ class BadgerDataPanel(QWidget):
         # Set up ui
         self.init_ui()
 
-        # DataFrame to keep track of data in table
+        # DataFrame to keep track of data in table including metadata
         self.table_data = pd.DataFrame()
 
         self.selected_routine = None
@@ -207,8 +207,7 @@ class BadgerDataPanel(QWidget):
 
     def add_live_data(self, data):
         """
-        Add datapoint from optimization run. This function expects a DataFrame as its argument. It first reorders
-        the columns to maintain consistency with any existing data. It then concatenates any existing data with
+        Add datapoint from optimization run. This function expects a DataFrame as its argument, and concatenates any existing data with
         the new dataframe, and updates the table.
 
         Arguments:
@@ -226,7 +225,8 @@ class BadgerDataPanel(QWidget):
         self.update_table(self.data_table, all_data, vocs)
 
     def update_table(self, table, data=None, vocs=None) -> None:
-        """Call data_table's update_table method but make sure table_data stays updated"""
+        """Makes sure column order remains consistent and self.table_data stays updated
+        to match displayed table. Call data_table's update_table method to update the table"""
         data = self._reorder_cols(data)
         self.table_data = data
         update_table(table, data, vocs, info=self.info)
