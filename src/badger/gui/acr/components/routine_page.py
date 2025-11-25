@@ -24,6 +24,7 @@ from xopt.utils import get_local_region
 from pydantic import ValidationError
 
 from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.data_panel import BadgerDataPanel
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
@@ -62,6 +63,7 @@ from badger.utils import (
     strtobool,
     get_badger_version,
     get_xopt_version,
+    ts_float_to_str,
 )
 
 LABEL_WIDTH = 96
@@ -257,6 +259,10 @@ class BadgerRoutinePage(QWidget):
         # Algo box
         self.generator_box = BadgerAlgoBox(None, self.generators)
         tabs.addTab(self.generator_box, "Algorithm")
+
+        # Data panel
+        self.data_panel = BadgerDataPanel(self)
+        tabs.addTab(self.data_panel, "Data")
 
         tabs.setCurrentIndex(1)  # Show the env box by default
 
@@ -1814,6 +1820,7 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
+                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
                 # Xopt part
                 vocs=vocs,
                 generator=generator,

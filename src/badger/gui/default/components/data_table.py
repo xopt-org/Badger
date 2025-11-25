@@ -74,7 +74,7 @@ def format_value(v):
     return f
 
 
-def update_table(table, data=None, vocs=None):
+def update_table(table, data=None, vocs=None, info=False):
     table.setRowCount(0)
     table.horizontalHeader().setVisible(False)
 
@@ -84,7 +84,11 @@ def update_table(table, data=None, vocs=None):
     if vocs is None:
         raise ValueError("vocs must be provided to update the table")
 
-    columns = vocs.output_names + vocs.variable_names
+    if info:
+        columns = data.columns
+    else:
+        columns = vocs.output_names + vocs.variable_names
+
     _data = data[columns]
 
     m, n = _data.shape

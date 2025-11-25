@@ -90,14 +90,14 @@ class BadgerRoutineSubprocess:
         """
         self.termination_condition = termination_condition
 
-    def run(self) -> None:
-        logger.info("Starting routine run.")
+    def run(self, run_data_flag: bool = False, init_points_flag: bool = False) -> None:
         """
         This method starts up the routine.
         The method grabs a subprocess from self.process_manager queue.
         Then the method unpauses the process along with passing the selected routine name.
         """
 
+        logger.info("Starting routine run.")
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
@@ -112,7 +112,9 @@ class BadgerRoutineSubprocess:
         except TypeError:
             pass
 
-        self.routine.data = None  # reset data
+        if not run_data_flag:
+            self.routine.data = None  # reset data
+
         # Recalculate the bounds and initial points if asked
         if (
             self.config_singleton.read_value("AUTO_REFRESH")
@@ -159,6 +161,8 @@ class BadgerRoutineSubprocess:
                 "termination_condition": self.termination_condition,
                 "start_time": self.start_time,
                 "testing": self.testing,
+                "run_data": run_data_flag,
+                "init_points": init_points_flag,
             }
 
             self.data_and_error_queue.put(arg_dict)
@@ -167,7 +171,9 @@ class BadgerRoutineSubprocess:
             self.setup_timer()
             # self.signals.finished.emit(self.routine.states)
 
-            self.routine.data = None  # reset data
+            if not run_data_flag:
+                self.routine.data = None  # reset data
+
             # Recalculate the bounds and initial points if asked
             if (
                 self.config_singleton.read_value("AUTO_REFRESH")
