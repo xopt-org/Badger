@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QLabel,
-    QTabWidget
+    QTabWidget,
 )
 
 from badger.archive import (
@@ -105,7 +105,6 @@ class BadgerHomePage(QWidget):
         # Template browser
         self.template_browser = template_browser = TemplateNavigator()
         template_browser.setFixedWidth(360)
-
 
         # Splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -326,7 +325,7 @@ class BadgerHomePage(QWidget):
             expanded = self.template_browser.tree_view.isExpanded(index)
             self.template_browser.tree_view.setExpanded(index, not expanded)
             return
-        
+
         # otherwise, open the template
         self.routine_editor.load_template_yaml(False, template_path=path)
         self.status_bar.set_summary(f"Current template {path}")

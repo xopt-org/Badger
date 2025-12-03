@@ -291,7 +291,9 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
 
-    def load_template_yaml(self, checked_state, template_path: str|None = None) -> None:
+    def load_template_yaml(
+        self, checked_state, template_path: str | None = None
+    ) -> None:
         """
         Load data from template .yaml into template_dict dictionary.
         This function expects to be called via an action from
