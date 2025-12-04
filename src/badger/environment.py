@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from logging import warning
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from pydantic._internal._model_construction import ModelMetaclass
@@ -8,7 +8,9 @@ from badger.errors import (
     BadgerEnvVarError,
     BadgerNoInterfaceError,
 )
-from badger.factory import BadgerPluginConfig
+
+if TYPE_CHECKING:
+    from badger.factory import BadgerPluginConfig
 from badger.formula import extract_variable_keys, interpret_expression
 from badger.interface import Interface
 
@@ -327,7 +329,7 @@ class Environment(BaseEnvironment):
 
 
 def instantiate_env(
-    env_class: type[Environment], configs: BadgerPluginConfig, manager=None
+    env_class: type[Environment], configs: "BadgerPluginConfig", manager=None
 ) -> Environment:
     # Configure interface
     # TODO: figure out the correct logic
