@@ -308,15 +308,17 @@ class BadgerRoutinePage(QWidget):
         #     lambda: logger.debug("Selection changed")
         # )  # for debugging
 
-    def load_template_yaml(self) -> None:
+    def load_template_yaml(
+        self, checked_state, template_path: str | None = None
+    ) -> None:
         logger.info("Loading template YAML.")
         """
         Load data from template .yaml into template_dict dictionary.
         This function expects to be called via an action from
-        a QPushButton
+        a QPushButton. However, if `template_path` is provided, it will
+        try to directly open the file.
         """
-
-        if isinstance(self.sender(), QPushButton):
+        if (template_path is None) and isinstance(self.sender(), QPushButton):
             # load template from button
             options = QFileDialog.Options()
             template_path, _ = QFileDialog.getOpenFileName(
