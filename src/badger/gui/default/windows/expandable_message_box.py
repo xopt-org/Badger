@@ -83,13 +83,21 @@ class ExpandableMessageBox(QDialog):
     def setDetailedText(self, detailedText):
         self.detailedTextWidget.setText(detailedText)
 
-    def setIcon(self, icon):
+    def setIcon(self, icon: QMessageBox.Icon):
         # This maps the QMessageBox icons to the QDialog
         iconMap = {
-            QMessageBox.Information: QMessageBox.standardIcon(QMessageBox.Information),
-            QMessageBox.Warning: QMessageBox.standardIcon(QMessageBox.Warning),
-            QMessageBox.Critical: QMessageBox.standardIcon(QMessageBox.Critical),
-            QMessageBox.Question: QMessageBox.standardIcon(QMessageBox.Question),
+            QMessageBox.Icon.Information: QMessageBox.standardIcon(
+                QMessageBox.Icon.Information
+            ),
+            QMessageBox.Icon.Warning: QMessageBox.standardIcon(
+                QMessageBox.Icon.Warning
+            ),
+            QMessageBox.Icon.Critical: QMessageBox.standardIcon(
+                QMessageBox.Icon.Critical
+            ),
+            QMessageBox.Icon.Question: QMessageBox.standardIcon(
+                QMessageBox.Icon.Question
+            ),
         }
         standardIcon = iconMap.get(icon)
         if standardIcon:
