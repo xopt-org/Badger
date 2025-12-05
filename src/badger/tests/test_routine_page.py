@@ -59,7 +59,7 @@ def test_routine_generation(qtbot):
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
 
     routine = window._compose_routine()
-    assert routine.vocs.variables == {"x0": [-1, 1]}
+    assert routine.vocs.variables == {"x0": [-1.0, 1.0]}
     assert routine.vocs.objectives == {"f": "MINIMIZE"}
     # assert routine.initial_points.empty
 
