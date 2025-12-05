@@ -2,7 +2,6 @@ from collections.abc import Callable
 from typing import Optional, cast
 from badger.gui.default.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.default.components.extension_utilities import (
-    BlockSignalsContext,
     HandledException,
     MatplotlibFigureContext,
     clear_layout,
@@ -18,6 +17,7 @@ from matplotlib.backends.backend_qt import (
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from badger.utils import BlockSignalsContext
 from xopt.generators.bayesian.visualize import (
     visualize_generator_model,
 )

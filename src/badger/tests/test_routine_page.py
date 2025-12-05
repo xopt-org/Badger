@@ -1,10 +1,11 @@
 import pandas as pd
 import pytest
+from pytestqt.qtbot import QtBot
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
 
 
-def test_routine_page_init(qtbot):
+def test_routine_page_init(qtbot: QtBot):
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
@@ -12,7 +13,7 @@ def test_routine_page_init(qtbot):
     qtbot.addWidget(window)
 
 
-def test_set_routine(qtbot):
+def test_set_routine(qtbot: QtBot):
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
     from badger.tests.utils import create_routine
 
@@ -22,7 +23,7 @@ def test_set_routine(qtbot):
     window.set_routine(routine)
 
 
-def test_routine_generation(qtbot):
+def test_routine_generation(qtbot: QtBot):
     from badger.errors import BadgerRoutineError
     from badger.utils import get_badger_version, get_xopt_version
 
@@ -49,7 +50,7 @@ def test_routine_generation(qtbot):
 
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
-    assert window.env_box.var_table.export_variables() == {"x0": [-1, 1]}
+    assert window.env_box.var_table.export_variables() == {"x0": (-1, 1)}
 
     window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
     # Remember to post-process the exported data to match the expected format
@@ -59,7 +60,7 @@ def test_routine_generation(qtbot):
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
 
     routine = window._compose_routine()
-    assert routine.vocs.variables == {"x0": [-1, 1]}
+    assert routine.vocs.variables == {"x0": (-1, 1)}
     assert routine.vocs.objectives == {"f": "MINIMIZE"}
     # assert routine.initial_points.empty
 
@@ -68,7 +69,7 @@ def test_routine_generation(qtbot):
     assert routine.xopt_version == get_xopt_version()
 
 
-def test_add_additional_vars(qtbot):
+def test_add_additional_vars(qtbot: QtBot):
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
@@ -85,7 +86,7 @@ def test_add_additional_vars(qtbot):
 
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
-    assert window.env_box.var_table.export_variables() == {"x0": [-1, 1]}
+    assert window.env_box.var_table.export_variables() == {"x0": (-1, 1)}
 
     # Check that there is an extra row: X0 to X19, and one to enter a new PV
     n_rows = window.env_box.var_table.rowCount()
@@ -100,7 +101,7 @@ def test_add_additional_vars(qtbot):
     window.env_box.var_table.cellChanged.emit(20, 1)
 
     # Why isn't this updating the table after changing the value?
-    variables = {"x0": [-1, 1], "x20": [-1, 1]}
+    variables = {"x0": (-1, 1), "x20": (-1, 1)}
 
     # Check that new variable was added
     # Its checkbox checked by default when added
@@ -111,7 +112,7 @@ def test_add_additional_vars(qtbot):
     assert window.env_box.var_table.rowCount() == n_rows + 1
 
 
-def test_initial_points(qtbot):
+def test_initial_points(qtbot: QtBot):
     # test to make sure initial points widget works properly
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
@@ -121,8 +122,8 @@ def test_initial_points(qtbot):
     # Turn off relative to current
     window.env_box.relative_to_curr.setChecked(False)
 
-    qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
+    qtbot.keyClicks(window.env_box.cb, "test")
 
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.var_table.cellWidget(1, 0).setChecked(True)
@@ -140,7 +141,7 @@ def test_initial_points(qtbot):
     )
 
 
-def test_ui_update(qtbot):
+def test_ui_update(qtbot: QtBot):
     # test to make sure initial points widget works properly
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
     from badger.tests.utils import create_routine
@@ -155,10 +156,13 @@ def test_ui_update(qtbot):
     idx = window.generators.index(routine.generator.name)
     window.select_generator(idx)
 
-    assert window.generator_box.edit.toPlainText() == "{}\n"
+    assert (
+        window.generator_box.edit.get_parameters()
+        == '{"vocs":{"variables":{"x0":"(-1.0, 1.0)","x1":"(-1.0, 1.0)","x2":"(-1.0, 1.0)","x3":"(-1.0, 1.0)"},"constraints":{"c":"(\'GREATER_THAN\', 0.0)"},"objectives":{"f":"MAXIMIZE"},"constants":{},"observables":[]}}'
+    )
 
 
-def test_constraints(qtbot):
+def test_constraints(qtbot: QtBot):
     # test if a simple routine can be created
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
@@ -177,11 +181,11 @@ def test_constraints(qtbot):
     con_widget_critical.setChecked(True)
 
     routine = window._compose_routine()
-    assert routine.vocs.constraints == {"c": ["LESS_THAN", 0]}
+    assert routine.vocs.constraints == {"c": ("LESS_THAN", 0.0)}
     assert routine.critical_constraint_names == ["c"]
 
 
-def test_observables(qtbot):
+def test_observables(qtbot: QtBot):
     # test if a simple routine can be created
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
@@ -203,7 +207,7 @@ def test_observables(qtbot):
     assert routine.vocs.observables == ["c"]
 
 
-def test_add_random_points(qtbot):
+def test_add_random_points(qtbot: QtBot):
     # test to add random points to initial points table
     from badger.gui.acr.components.routine_page import BadgerRoutinePage
 
@@ -213,8 +217,8 @@ def test_add_random_points(qtbot):
     # Turn off relative to current
     window.env_box.relative_to_curr.setChecked(False)
 
-    qtbot.keyClicks(window.env_box.cb, "test")
     qtbot.keyClicks(window.generator_box.cb, "random")
+    qtbot.keyClicks(window.env_box.cb, "test")
 
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
     window.env_box.var_table.cellWidget(1, 0).setChecked(True)
@@ -244,28 +248,28 @@ def test_add_random_points(qtbot):
 
 # TODO: Test if the EI, Simplex, and RCDS params show o the params editor
 # are the simplified versions
-def test_simplified_generator_params(qtbot):
+def test_simplified_generator_params(qtbot: QtBot):
     pass
 
 
 # TODO: First load an old routine w/ initail points,
 # then create a new routine and check if the initial points panel
 # is cleared
-def test_initial_points_clear_when_create_routine(qtbot):
+def test_initial_points_clear_when_create_routine(qtbot: QtBot):
     pass
 
 
 # TODO: Test if env selector reacts to scroll events, it should not
-def test_scroll_on_environment_selector(qtbot):
+def test_scroll_on_environment_selector(qtbot: QtBot):
     pass
 
 
 # TODO: Test if generator selector reacts to scroll events, it should not
-def test_scroll_on_generator_selector(qtbot):
+def test_scroll_on_generator_selector(qtbot: QtBot):
     pass
 
 
 # TODO: Test relative to current behavior, including the auto calculated
 # bounds and initial points wrt the current variable values
-def test_relative_to_current(qtbot):
+def test_relative_to_current(qtbot: QtBot):
     pass

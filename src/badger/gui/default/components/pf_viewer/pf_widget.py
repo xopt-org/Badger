@@ -22,7 +22,7 @@ from badger.gui.default.components.plot_event_handlers import (
 from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions
 from badger.routine import Routine
 
-from badger.utils import create_archive_run_filename
+from badger.utils import BlockSignalsContext, create_archive_run_filename
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -45,7 +45,6 @@ from badger.gui.default.components.pf_viewer.types import (
 from badger.gui.default.components.analysis_widget import AnalysisWidget
 
 from badger.gui.default.components.extension_utilities import (
-    BlockSignalsContext,
     HandledException,
     MatplotlibFigureContext,
     signal_logger,
