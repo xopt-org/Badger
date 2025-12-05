@@ -177,7 +177,7 @@ def test_constraints(qtbot):
     con_widget_critical.setChecked(True)
 
     routine = window._compose_routine()
-    assert routine.vocs.constraints == {"c": ["LESS_THAN", 0.0]}
+    assert routine.vocs.constraints == {"c": ("LESS_THAN", 0.0)}
     assert routine.critical_constraint_names == ["c"]
 
 
