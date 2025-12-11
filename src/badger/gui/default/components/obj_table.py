@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
     QMessageBox,
+    QWidget,
 )
 
 from badger.gui.default.components.editable_table import EditableTable
@@ -38,7 +39,7 @@ class ObjectiveTable(EditableTable):
         self.setColumnWidth(2, 192)
         self.setHorizontalHeaderLabels(["", "Name", "Rule"])
 
-    def default_info(self) -> list:
+    def default_info(self) -> list[str]:
         """
         Get the default information list for a new item.
 
@@ -70,11 +71,13 @@ class ObjectiveTable(EditableTable):
             f"Objective {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list):
+    def create_cell_widgets(self, info: list[Any]) -> tuple[QWidget, ...]:
         # Rule
         cb_rule = QComboBox()
         cb_rule.setItemDelegate(QStyledItemDelegate())
         cb_rule.addItems(["MINIMIZE", "MAXIMIZE"])
         cb_rule.setCurrentIndex(0 if info[0] == "MINIMIZE" else 1)
+
+        return (cb_rule,)
 
         return [cb_rule]

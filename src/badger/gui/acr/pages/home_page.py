@@ -1,10 +1,11 @@
 import gc
+import os
 import traceback
 from importlib import resources
 
 import numpy as np
 from pandas import DataFrame
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
     QMessageBox,
@@ -13,6 +14,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QLabel,
+    QTabWidget,
 )
 
 from badger.archive import (
@@ -29,6 +31,7 @@ from badger.gui.default.components.data_table import (
     update_table,
 )
 from badger.gui.acr.components.history_navigator import HistoryNavigator
+from badger.gui.acr.components.template_navigator import TemplateNavigator
 from badger.gui.acr.components.routine_page import BadgerRoutinePage
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.acr.components.status_bar import BadgerStatusBar
@@ -106,6 +109,10 @@ class BadgerHomePage(QWidget):
         self.history_browser = history_browser = HistoryNavigator()
         history_browser.setFixedWidth(360)
 
+        # Template browser
+        self.template_browser = template_browser = TemplateNavigator()
+        template_browser.setFixedWidth(360)
+
         # Splitter
         splitter = QSplitter(Qt.Horizontal)
         splitter.setStretchFactor(0, 0)
@@ -181,8 +188,14 @@ class BadgerHomePage(QWidget):
 
         vbox_run.addWidget(run_action_bar, 0)
 
+        # tabs for history and Templates
+        tabs_left = QTabWidget(self)
+        tabs_left.addTab(history_browser, "History")
+        tabs_left.addTab(template_browser, "Templates")
+        tabs_left.setFixedWidth(360)
+
         # Add panels to splitter
-        splitter.addWidget(history_browser)
+        splitter.addWidget(tabs_left)
         splitter.addWidget(panel_run)
 
         # Set initial sizes (left fixed, middle and right equal)
@@ -206,6 +219,8 @@ class BadgerHomePage(QWidget):
         self.run_table_2.itemSelectionChanged.connect(self.table_selection_changed)
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
+
+        self.template_browser.tree_view.clicked.connect(self.go_template)
 
         self.routine_editor.sig_load_template.connect(self.update_status)
         self.routine_editor.sig_save_template.connect(self.update_status)
@@ -322,6 +337,19 @@ class BadgerHomePage(QWidget):
         self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")
 
         self.run_monitor.update_analysis_extensions()
+
+    def go_template(self, index: QModelIndex):
+        path = self.template_browser.file_sys_model.filePath(index)
+        # if directory, expand it.
+        if os.path.isdir(path):
+            expanded = self.template_browser.tree_view.isExpanded(index)
+            self.template_browser.tree_view.setExpanded(index, not expanded)
+            return
+
+        # otherwise, open the template
+        self.routine_editor.load_template_yaml(False, template_path=path)
+        self.status_bar.set_summary(f"Current template {path}")
+        return
 
     def inspect_solution(self, idx):
         logger.info(f"Inspecting solution at index: {idx}")

@@ -5,12 +5,46 @@ import os
 import sys
 import pathlib
 from datetime import datetime
+from types import TracebackType
+from typing import Iterable, Optional
 
 import yaml
 
 from badger.errors import BadgerLoadConfigError
+from PyQt5.QtWidgets import QWidget, QLayout
 
 logger = logging.getLogger(__name__)
+
+
+class BlockSignalsContext:
+    widgets: Iterable[QWidget | QLayout]
+
+    def __init__(self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]):
+        if isinstance(widgets, Iterable):
+            self.widgets = widgets
+        else:
+            self.widgets = [widgets]
+
+    def __enter__(self):
+        for widget in self.widgets:
+            if widget.signalsBlocked():
+                logger.warning(
+                    f"Signals already blocked for {widget} when entering context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
+                )
+            widget.blockSignals(True)
+
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_value: Optional[BaseException],
+        exc_traceback: Optional[TracebackType],
+    ):
+        for widget in self.widgets:
+            if not widget.signalsBlocked():
+                logger.warning(
+                    f"Signals not blocked for {widget} when exiting context. Nesting BlockSignalsContext is not recommended as blockSignals is set to False upon exiting the context. This may lead to unexpected behavior if the widget is used again from within another BlockSignalsContext."
+                )
+            widget.blockSignals(False)
 
 
 # https://stackoverflow.com/a/39681672/4263605

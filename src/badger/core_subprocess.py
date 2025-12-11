@@ -2,6 +2,7 @@ from copy import deepcopy
 import logging
 import time
 import traceback
+from typing import Any
 from pandas import DataFrame
 import multiprocessing as mp
 import os
@@ -114,6 +115,7 @@ def run_routine_subprocess(
     logger.info("Waiting for wait_event to be set...")
     wait_event.wait()
 
+    args: dict[str, Any] = {}
     try:
         args = queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
