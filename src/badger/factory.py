@@ -1,3 +1,4 @@
+from typing import Any, TypedDict, cast, TYPE_CHECKING
 from badger.settings import init_settings
 from badger.utils import get_value_or_none
 from badger.errors import (
@@ -6,6 +7,8 @@ from badger.errors import (
     BadgerInvalidDocsError,
     BadgerPluginNotFoundError,
 )
+
+from badger.interface import Interface as BadgerInterface
 import sys
 import os
 import importlib
@@ -13,6 +16,10 @@ import yaml
 from xopt.generators import generators, get_generator_defaults
 
 import logging
+
+if TYPE_CHECKING:
+    from badger.environment import Environment as BadgerEnvironment
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +32,18 @@ ALGO_EXCLUDED = [
     "multi_fidelity",
     "nsga2",
 ]
+
+
+class BadgerPluginConfig(TypedDict):
+    name: str
+    description: str
+    version: str
+    dependencies: list[str]
+    interface: str
+    params: dict[str, Any]
+    variables: list[dict[str, Any]]
+    observations: list[str]
+
 
 # Check badger plugin root
 config_singleton = init_settings()
@@ -43,8 +62,8 @@ else:
 sys.path.append(BADGER_PLUGIN_ROOT)
 
 
-def scan_plugins(root):
-    factory = {}
+def scan_plugins(root: str):
+    factory: dict[str, Any] = {}
 
     # Do not scan local generators if option disabled
     if LOAD_LOCAL_ALGO:
@@ -75,7 +94,9 @@ def scan_plugins(root):
     return factory
 
 
-def load_plugin(root, pname, ptype):
+def load_plugin(
+    root: str, pname: str, ptype: str
+) -> tuple[Any | None, BadgerPluginConfig | None]:
     assert ptype in [
         "generator",
         "interface",
@@ -85,7 +106,7 @@ def load_plugin(root, pname, ptype):
     proot = os.path.join(root, f"{ptype}s")
 
     # Load the params in the configs
-    configs = None
+    configs: BadgerPluginConfig | None = None
     with open(os.path.join(proot, pname, "configs.yaml"), "r") as f:
         try:
             configs = yaml.safe_load(f)
@@ -93,6 +114,10 @@ def load_plugin(root, pname, ptype):
             raise BadgerInvalidPluginError(
                 f"Error loading plugin {ptype} {pname}: invalid config"
             )
+    if not configs:
+        raise BadgerInvalidPluginError(
+            f"Error loading plugin {ptype} {pname}: invalid config"
+        )
 
     # Load module
     try:
@@ -105,18 +130,20 @@ def load_plugin(root, pname, ptype):
         raise _e
 
     if ptype == "generator":
-        plugin = [module.optimize, configs]
+        plugin = (module.optimize, configs)
     elif ptype == "interface":
-        params = module.Interface.model_json_schema()["properties"]
+        m_intf = cast(type["BadgerInterface"], module.Interface)
+        params = m_intf.model_json_schema()["properties"]
         params = {
             name: get_value_or_none(info, "default") for name, info in params.items()
         }
         configs["params"] = params
-        plugin = [module.Interface, configs]
+        plugin = (m_intf, configs)
     elif ptype == "environment":
-        vars = module.Environment.variables
-        obses = module.Environment.observables
-        params = module.Environment.model_json_schema()["properties"]
+        m_env = cast(type["BadgerEnvironment"], module.Environment)
+        vars = m_env.variables
+        obses = m_env.observables
+        params = m_env.model_json_schema()["properties"]
         params = {
             name: get_value_or_none(info, "default")
             for name, info in params.items()
@@ -126,27 +153,30 @@ def load_plugin(root, pname, ptype):
         try:
             intf_name = configs["interface"][0]
             Interface, _ = get_intf(intf_name)
-            intf = Interface()
+            if Interface is None:
+                intf = None
+            else:
+                intf = cast(BadgerInterface, Interface())
         except KeyError:
             intf = None
         except Exception as e:
             logger.warning(e)
             intf = None
-        env = module.Environment(interface=intf, params=configs)
+        env = m_env(interface=intf, params=configs)
         var_bounds = env.get_bounds(vars)
 
-        vars_info = []
+        vars_info: list[dict[str, list[float]]] = []
         for var in vars:
-            var_info = {}
+            var_info: dict[str, list[float]] = {}
             var_info[var] = var_bounds[var]
             vars_info.append(var_info)
 
         configs["params"] = params
         configs["variables"] = vars_info
         configs["observations"] = obses
-        plugin = [module.Environment, configs]
+        plugin = (m_env, configs)
     else:  # TODO: raise an exception here instead?
-        return [None, None]
+        return (None, None)
 
     BADGER_FACTORY[ptype][pname] = plugin
 
@@ -162,26 +192,39 @@ def load_docs(root, pname, ptype):
 
     proot = os.path.join(root, f"{ptype}s")
 
-    # Load the readme
+    # Load the readme and the docs
     readme = None
+    docstring = None
+
     try:
-        with open(os.path.join(proot, pname, "README.md"), "r") as f:
-            readme = f.read()
-        return readme
+        try:
+            with open(os.path.join(proot, pname, "README.md"), "r") as f:
+                readme = f.read()
+        except:
+            readme = f"# {pname}\nNo readme found.\n"
+
+        module = importlib.import_module(f"{ptype}s.{pname}")
+        docstring = module.Environment.__doc__
+
+        # Format as Markdown code block
+        help_md = f"```text\n{readme}\n# Environment Documentation\n{docstring}\n```"
+        return help_md
     except:
         raise BadgerInvalidDocsError(
             f"Error loading docs for {ptype} {pname}: docs not found"
         )
 
 
-def get_plug(root, name, ptype):
+def get_plug(root: str, name: str, ptype: str):
     try:
         plug = BADGER_FACTORY[ptype][name]
         if plug is None:  # lazy loading
             plug = load_plugin(root, name, ptype)
             BADGER_FACTORY[ptype][name] = plug
         # Prevent accidentially modifying default configs
-        plug = [plug[0], plug[1].copy()]
+        a, config = plug
+        _config = config.copy() if config is not None else None
+        plug = (a, _config)
     except KeyError:
         raise BadgerPluginNotFoundError(
             f"Error loading plugin {ptype} {name}: plugin not found"
@@ -196,19 +239,19 @@ def scan_extensions(root):
     return extensions
 
 
-def get_generator_docs(name):
+def get_generator_docs(name: str):
     return generators[name].__doc__
 
 
-def get_env_docs(name):
+def get_env_docs(name: str):
     return load_docs(BADGER_PLUGIN_ROOT, name, "environment")
 
 
-def get_intf(name):
+def get_intf(name: str):
     return get_plug(BADGER_PLUGIN_ROOT, name, "interface")
 
 
-def get_env(name):
+def get_env(name: str):
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 

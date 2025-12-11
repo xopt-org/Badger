@@ -4,18 +4,18 @@
     <br />
     <br />
     <a href="https://xopt-org.github.io/Badger">
-      <img src="pics/badger.png" alt="Badger" height=128>
+      <img src="images/badger.png" alt="Badger" height=128>
     </a>
   </h1>
 </div>
 
-![Badger main GUI](pics/main.png)
+![Badger main GUI](images/main.png)
 
 <div align="center">
 
-| Documentation | Package | Downloads | Version | Platforms |
-| --- | --- | --- | --- | --- |
-| [![Documentation](https://img.shields.io/badge/Badger-documentation-blue.svg)](https://xopt-org.github.io/Badger/) | [![Conda Recipe](https://img.shields.io/badge/recipe-badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) |
+| Documentation | Package | Downloads | Version | Platforms | Tests |
+| --- | --- | --- | --- | --- | --- |
+| [![Documentation](https://img.shields.io/badge/Badger-documentation-blue.svg)](https://xopt-org.github.io/Badger/) | [![Conda Recipe](https://img.shields.io/badge/recipe-badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Downloads](https://img.shields.io/conda/dn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/badger-opt.svg)](https://anaconda.org/conda-forge/badger-opt) | [![Tests](https://github.com/xopt-org/Badger/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/xopt-org/Badger/actions/workflows/tests.yml?query=branch%3Amain)
 
 </div>
 

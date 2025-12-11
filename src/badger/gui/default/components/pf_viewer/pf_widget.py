@@ -22,7 +22,7 @@ from badger.gui.default.components.plot_event_handlers import (
 from badger.gui.default.components.pf_viewer.types import PFUI, ConfigurableOptions
 from badger.routine import Routine
 
-from badger.utils import create_archive_run_filename
+from badger.utils import BlockSignalsContext, create_archive_run_filename
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -45,7 +45,6 @@ from badger.gui.default.components.pf_viewer.types import (
 from badger.gui.default.components.analysis_widget import AnalysisWidget
 
 from badger.gui.default.components.extension_utilities import (
-    BlockSignalsContext,
     HandledException,
     MatplotlibFigureContext,
     signal_logger,
@@ -155,7 +154,7 @@ class ParetoFrontWidget(AnalysisWidget):
         interval: int = 1000,
     ) -> None:
         if not requires_update(self.last_updated, interval, requires_rebuild):
-            logging.debug("Skipping plot update")
+            logger.debug("Skipping plot update")
             return
 
         self.update_pareto_front_plot()
@@ -425,7 +424,7 @@ class ParetoFrontWidget(AnalysisWidget):
                     ax.set_title("Data Points")
                     plot_tab_widget.addTab(widget, "Variable Space")
                 except ValueError:
-                    logging.error("No data points available for Variable Space")
+                    logger.error("No data points available for Variable Space")
                     blank_canvas = FigureCanvas(fig)
                     plot_tab_widget.addTab(blank_canvas, "Variable Space")
 
@@ -457,7 +456,7 @@ class ParetoFrontWidget(AnalysisWidget):
                     ax.set_title("Pareto Front")
                     plot_tab_widget.addTab(widget, "Objective Space")
                 except ValueError:
-                    logging.error("No data points available for Objective Space")
+                    logger.error("No data points available for Objective Space")
                     blank_canvas = FigureCanvas(fig)
                     plot_tab_widget.addTab(blank_canvas, "Objective Space")
 
@@ -482,7 +481,7 @@ class ParetoFrontWidget(AnalysisWidget):
                     canvas = FigureCanvas(fig)
                     plot_hypervolume.addWidget(canvas)
                 except ValueError:
-                    logging.error("No data points available for Hypervolume")
+                    logger.error("No data points available for Hypervolume")
                     blank_canvas = FigureCanvas(fig)
                     plot_hypervolume.addWidget(blank_canvas)
 
@@ -516,7 +515,7 @@ class ParetoFrontWidget(AnalysisWidget):
             )
 
         if self.pf_mask is None or self.pf_1 is None or self.pf_2 is None:
-            logging.error("No pareto front data available")
+            logger.error("No pareto front data available")
             # Return empty plot, does not raise an error
             return fig, ax
 
@@ -631,7 +630,7 @@ class ParetoFrontWidget(AnalysisWidget):
         pf_1, pf_2, pf_mask, _ = self.generator.get_pareto_front_and_hypervolume()
 
         if pf_mask is None or pf_1 is None or pf_2 is None:
-            logging.error("No pareto front")
+            logger.error("No pareto front")
             return
 
         self.pf_mask = pf_mask[1:]

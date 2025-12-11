@@ -1,11 +1,11 @@
 from importlib import resources
+from typing import Any
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
     QWidget,
-    QPlainTextEdit,
     QLineEdit,
 )
 from PyQt5.QtWidgets import (
@@ -15,9 +15,12 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
 )
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import QRegExp, QPropertyAnimation
+from PyQt5.QtCore import QRegExp, QPropertyAnimation, pyqtSignal
+from pydantic_core import ValidationError
 
+from badger.errors import BadgerRoutineError
 from badger.gui.default.components.collapsible_box import CollapsibleBox
+from badger.gui.default.components.pydantic_editor import BadgerPydanticEditor
 from badger.gui.default.components.var_table import VariableTable
 from badger.gui.default.components.obj_table import ObjectiveTable
 from badger.gui.default.components.con_table import ConstraintTable
@@ -29,6 +32,8 @@ from badger.gui.default.utils import (
     NoHoverFocusComboBox,
 )
 from badger.utils import strtobool
+from xopt.vocs import VOCS, ConstraintEnum
+import logging
 
 LABEL_WIDTH = 96
 ENV_PARAMS_BTN = 1  # use button or collapsible box for env parameters
@@ -103,9 +108,34 @@ MSG_MANUAL = (
     'check the "Automatic" check box.'
 )
 
+CONS_RELATION_DICT = {
+    ">": "GREATER_THAN",
+    "<": "LESS_THAN",
+}
+
+
+logger = logging.getLogger(__name__)
+
+
+def format_validation_error(e: ValidationError) -> str:
+    """Convert Pydantic ValidationError into a friendly message."""
+    messages = ["\n"]
+    for err in e.errors():
+        loc = " -> ".join(str(item) for item in err["loc"])
+        msg = f"{loc}: {err['msg']}\n"
+        messages.append(msg)
+    return "\n".join(messages)
+
 
 class BadgerEnvBox(QWidget):
-    def __init__(self, env_dict, parent=None, envs=[]):
+    vocs_updated = pyqtSignal(object)  # or use a more specific type if you want
+
+    def __init__(
+        self,
+        env_dict: dict[str, Any],
+        parent: QWidget | None = None,
+        envs: list[str] = [],
+    ):
         super().__init__(parent)
 
         self.envs = envs
@@ -177,7 +207,7 @@ class BadgerEnvBox(QWidget):
         hbox_name.addWidget(btn_docs)
         vbox.addWidget(name)
 
-        self.edit = edit = QPlainTextEdit()
+        self.edit = edit = BadgerPydanticEditor()
         # edit.setMinimumHeight(480)
         if ENV_PARAMS_BTN:
             vbox.addWidget(edit)
@@ -481,7 +511,17 @@ class BadgerEnvBox(QWidget):
         self.btn_params.toggled.connect(self.toggle_params)
         self.animation.finished.connect(self.animation_finished)
 
-    def toggle_params(self, checked):
+        self.obj_table.data_changed.connect(lambda: self.update_vocs("obj_table"))
+        self.con_table.data_changed.connect(lambda: self.update_vocs("con_table"))
+        self.sta_table.data_changed.connect(lambda: self.update_vocs("sta_table"))
+        self.var_table.data_changed.connect(lambda: self.update_vocs("var_table"))
+
+    def update_vocs(self, origin: str):
+        logger.debug(f"Emitting vocs_updated signal from env_cbox: {origin}")
+        vocs, _ = self.compose_vocs()
+        self.vocs_updated.emit(vocs)
+
+    def toggle_params(self, checked: bool):
         if not checked:
             self.animation.setStartValue(self.edit.sizeHint().height())
             self.animation.setEndValue(0)
@@ -566,3 +606,41 @@ class BadgerEnvBox(QWidget):
         else:
             stylesheet = ""
         self.setStyleSheet(stylesheet)
+
+    def compose_vocs(self) -> tuple[VOCS, list[str]]:
+        # Compose the VOCS settings
+        variables = self.var_table.export_variables()
+
+        objectives: dict[str, Any] = {}
+        for objective in self.obj_table.export_data():
+            obj_name = next(iter(objective))
+            (rule,) = objective[obj_name]
+            objectives[obj_name] = rule
+
+        constraints: dict[str, list[float | ConstraintEnum]] = {}
+        critical_constraints: list[str] = []
+        for constraint in self.con_table.export_data():
+            con_name = next(iter(constraint))
+            relation, threshold, critical = constraint[con_name]
+            constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
+            if critical:
+                critical_constraints.append(con_name)
+
+        observables: list[str] = []
+        for observable in self.sta_table.export_data():
+            obs_name = next(iter(observable))
+            observables.append(obs_name)
+
+        try:
+            vocs = VOCS(
+                variables=variables,
+                objectives=objectives,
+                constraints=constraints,
+                constants={},
+                observables=observables,
+            )
+        except ValidationError as e:
+            raise BadgerRoutineError(
+                f"\n\nVOCS validation failed: {format_validation_error(e)}"
+            ) from e
+        return vocs, critical_constraints

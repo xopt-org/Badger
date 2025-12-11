@@ -22,7 +22,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
 ]
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.14"
 dependencies = [
     "coolname",
     "pyqt5",
@@ -30,7 +30,7 @@ dependencies = [
     "qdarkstyle>=3.0",
     "pillow",
     "requests",
-    "xopt>=2.6.5",
+    "xopt>=2.6.8",
 ]
 dynamic = ["version"]
 [tool.setuptools_scm]

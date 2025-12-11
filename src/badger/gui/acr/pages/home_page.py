@@ -1,9 +1,10 @@
 import gc
+import os
 import traceback
 from importlib import resources
 
 from pandas import DataFrame
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
     QMessageBox,
@@ -12,6 +13,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QLabel,
+    QTabWidget,
 )
 
 from badger.archive import (
@@ -28,7 +30,8 @@ from badger.gui.default.components.data_table import (
     update_table,
 )
 from badger.gui.acr.components.history_navigator import HistoryNavigator
-from badger.gui.acr.components.routine_editor import BadgerRoutineEditor
+from badger.gui.acr.components.template_navigator import TemplateNavigator
+from badger.gui.acr.components.routine_page import BadgerRoutinePage
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.acr.components.status_bar import BadgerStatusBar
 from badger.gui.acr.components.action_bar import BadgerActionBar
@@ -64,6 +67,7 @@ class BadgerHomePage(QWidget):
     sig_routine_invalid = pyqtSignal()
 
     def __init__(self, process_manager=None):
+        logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
         self.mode = "regular"  # home page mode
@@ -78,6 +82,7 @@ class BadgerHomePage(QWidget):
         self.init_home_page()
 
     def init_ui(self):
+        logger.info("Initializing UI for BadgerHomePage.")
         self.config_singleton = init_settings()
         icon_ref = resources.files(__package__) / "../images/add.png"
 
@@ -98,6 +103,10 @@ class BadgerHomePage(QWidget):
         # History run browser
         self.history_browser = history_browser = HistoryNavigator()
         history_browser.setFixedWidth(360)
+
+        # Template browser
+        self.template_browser = template_browser = TemplateNavigator()
+        template_browser.setFixedWidth(360)
 
         # Splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -143,7 +152,7 @@ class BadgerHomePage(QWidget):
         routine_view.setMinimumWidth(640)
         vbox_routine_view = QVBoxLayout(routine_view)
         vbox_routine_view.setContentsMargins(0, 0, 0, 10)
-        self.routine_editor = routine_editor = BadgerRoutineEditor()
+        self.routine_editor = routine_editor = BadgerRoutinePage()
         vbox_routine_view.addWidget(routine_editor)
 
         # Add action bar
@@ -171,8 +180,14 @@ class BadgerHomePage(QWidget):
 
         vbox_run.addWidget(run_action_bar, 0)
 
+        # tabs for history and Templates
+        tabs_left = QTabWidget(self)
+        tabs_left.addTab(history_browser, "History")
+        tabs_left.addTab(template_browser, "Templates")
+        tabs_left.setFixedWidth(360)
+
         # Add panels to splitter
-        splitter.addWidget(history_browser)
+        splitter.addWidget(tabs_left)
         splitter.addWidget(panel_run)
 
         # Set initial sizes (left fixed, middle and right equal)
@@ -185,6 +200,7 @@ class BadgerHomePage(QWidget):
         vbox.addWidget(status_bar)
 
     def config_logic(self):
+        logger.info("Configuring logic for BadgerHomePage.")
         self.colors = ["c", "g", "m", "y", "b", "r", "w"]
         self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
 
@@ -193,8 +209,10 @@ class BadgerHomePage(QWidget):
 
         self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
 
-        self.routine_editor.routine_page.sig_load_template.connect(self.update_status)
-        self.routine_editor.routine_page.sig_save_template.connect(self.update_status)
+        self.template_browser.tree_view.clicked.connect(self.go_template)
+
+        self.routine_editor.sig_load_template.connect(self.update_status)
+        self.routine_editor.sig_save_template.connect(self.update_status)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
@@ -237,17 +255,21 @@ class BadgerHomePage(QWidget):
         self.shortcut_go_search.activated.connect(self.go_search)
 
     def go_search(self):
+        logger.info("Activating search bar.")
         self.sbar.setFocus()
 
     def load_all_runs(self):
+        logger.info("Loading all runs into history browser.")
         runs = get_runs()
         self.history_browser.updateItems(runs)
 
     def init_home_page(self):
+        logger.info("Initializing home page.")
         # Load the default generator
-        self.routine_editor.routine_page.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.generator_box.cb.setCurrentIndex(0)
 
     def go_run(self, i: int = None):
+        logger.info(f"Activating run: {i}")
         gc.collect()
 
         # if self.cb_history.itemText(0) == "Optimization in progress...":
@@ -303,13 +325,29 @@ class BadgerHomePage(QWidget):
 
         self.run_monitor.update_analysis_extensions()
 
+    def go_template(self, index: QModelIndex):
+        path = self.template_browser.file_sys_model.filePath(index)
+        # if directory, expand it.
+        if os.path.isdir(path):
+            expanded = self.template_browser.tree_view.isExpanded(index)
+            self.template_browser.tree_view.setExpanded(index, not expanded)
+            return
+
+        # otherwise, open the template
+        self.routine_editor.load_template_yaml(False, template_path=path)
+        self.status_bar.set_summary(f"Current template {path}")
+        return
+
     def inspect_solution(self, idx):
+        logger.info(f"Inspecting solution at index: {idx}")
         self.run_table.selectRow(idx)
 
     def solution_selected(self, r, c):
+        logger.info(f"Solution selected at row {r}, column {c}")
         self.run_monitor.jump_to_solution(r)
 
     def table_selection_changed(self):
+        logger.info("Table selection changed.")
         indices = self.run_table.selectedIndexes()
         if len(indices) == 1:  # let other method handles it
             return
@@ -332,6 +370,7 @@ class BadgerHomePage(QWidget):
         self.run_monitor.jump_to_solution(row)
 
     def toggle_lock(self, lock, lock_tab=1):
+        logger.info(f"Toggling lock: {lock}, tab: {lock_tab}")
         if lock:
             self.history_browser.setDisabled(True)
         else:
@@ -340,8 +379,9 @@ class BadgerHomePage(QWidget):
             self.uncover_page()
 
     def prepare_run(self):
+        logger.info("Preparing new run.")
         try:
-            routine = self.routine_editor.routine_page._compose_routine()
+            routine = self.routine_editor._compose_routine()
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
@@ -357,14 +397,17 @@ class BadgerHomePage(QWidget):
         self.run_monitor.init_plots(routine)
 
     def start_run(self):
+        logger.info("Starting run.")
         self.prepare_run()
         self.run_monitor.start()
 
     def start_run_until(self):
+        logger.info("Starting run until condition met.")
         self.prepare_run()
         self.run_monitor.start_until()
 
     def new_run(self):
+        logger.info("Creating new run.")
         self.cover_page()
 
         # self.cb_history.insertItem(0, "Optimization in progress...")
@@ -374,11 +417,13 @@ class BadgerHomePage(QWidget):
         reset_table(self.run_table, header)
 
     def run_name(self, name):
+        logger.info(f"Updating run name: {name}")
         runs = get_runs()
         self.history_browser.updateItems(runs)
         self.history_browser._selectItemByRun(name)
 
     def update_status(self, info):
+        logger.info(f"Updating status: {info}")
         self.status_bar.set_summary(info)
 
     def progress(self, solution: DataFrame):
@@ -390,6 +435,7 @@ class BadgerHomePage(QWidget):
         add_row(self.run_table, objs + cons + vars + stas)
 
     def delete_run(self):
+        logger.info("Deleting run.")
         run_name = get_base_run_filename(self.history_browser.currentText())
 
         reply = QMessageBox.question(
@@ -410,6 +456,7 @@ class BadgerHomePage(QWidget):
         self.go_run(-1)
 
     def cover_page(self):
+        logger.info("Covering page with overlay.")
         return  # disable overlay for now
 
         try:
@@ -424,6 +471,7 @@ class BadgerHomePage(QWidget):
         self.overlay.show()
 
     def uncover_page(self):
+        logger.info("Uncovering page overlay.")
         return  # disable overlay for now
 
         try:
