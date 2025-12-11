@@ -26,13 +26,13 @@
         ({
           docs: {
             sidebarPath: require.resolve('./sidebars.js'),
-            editUrl: 'https://github.com/slaclab/Badger/tree/documentation/docs',
+            editUrl: 'https://github.com/xopt-org/Badger/tree/main/documentation',
             remarkPlugins: [remarkMath],
             rehypePlugins: [rehypeKatex],
           },
           blog: {
             showReadingTime: true,
-            editUrl: 'https://github.com/slaclab/Badger/tree/documentation/docs',
+            editUrl: 'https://github.com/xopt-org/Badger/tree/main/documentation',
           },
           theme: {
             customCss: require.resolve('./src/css/custom.css'),
