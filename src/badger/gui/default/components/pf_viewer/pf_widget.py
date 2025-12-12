@@ -73,8 +73,8 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 
 
 class ParetoFrontWidget(AnalysisWidget):
-    generator: MOBOGenerator
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
+    generator: MOBOGenerator  # type: ignore
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS  # type: ignore
 
     hypervolume_history: pd.DataFrame = pd.DataFrame()
     pf_1: Optional[Tensor] = None
@@ -82,8 +82,12 @@ class ParetoFrontWidget(AnalysisWidget):
     pf_mask: Optional[Tensor] = None
     plot_size: tuple[float, float] = (8, 6)
 
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent=parent)
+    def __init__(
+        self,
+        routine: Routine,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(routine, parent)
 
         self.create_ui()
         self.setWindowTitle("Pareto Front Viewer")

@@ -48,14 +48,16 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 
 
 class BOPlotWidget(AnalysisWidget):
-    generator: BayesianGenerator
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
+    generator: BayesianGenerator  # type: ignore
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()  # type: ignore
 
     def __init__(
-        self, parent: Optional[QWidget] = None, routine: Optional[Routine] = None
+        self,
+        routine: Routine,
+        parent: Optional[QWidget] = None,
     ):
         logger.debug("Initializing BOPlotWidget")
-        super().__init__(parent)
+        super().__init__(routine, parent)
 
         self.create_ui()
 
@@ -65,7 +67,22 @@ class BOPlotWidget(AnalysisWidget):
         self.setMinimumSize(1250, 720)
 
     def isValidRoutine(self, routine: Routine) -> None:
-        pass
+        variables = routine.vocs.variable_names
+        if len(variables) < 1:
+            raise HandledException(
+                ValueError,
+                "BO Visualizer requires at least one variable in the VOCS",
+            )
+        if len(routine.vocs.objective_names) < 1:
+            raise HandledException(
+                ValueError,
+                "BO Visualizer requires at least one objective in the VOCS",
+            )
+        if not isinstance(routine.generator, BayesianGenerator):
+            raise HandledException(
+                ValueError,
+                "BO Visualizer requires a BayesianGenerator",
+            )
 
     def create_ui(self) -> None:
         self.ui_components = UIComponents(self.parameters)
@@ -93,6 +110,10 @@ class BOPlotWidget(AnalysisWidget):
 
         variable_names = self.routine.vocs.variable_names
         self.parameters["variables"] = variable_names
+
+        if len(variable_names) < 2:
+            self.parameters["include_variable_2"] = False
+            self.parameters["variable_2"] = -1
 
         vocs_variables = cast(
             dict[str, tuple[float, float]],
@@ -217,6 +238,7 @@ class BOPlotWidget(AnalysisWidget):
         """
         logger.debug("Resetting components of BOPlotWidget")
         self.ui_components.best_point_display.setText("")
+        self.parameters = DEFAULT_PARAMETERS.copy()  # type: ignore
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -269,17 +291,38 @@ class BOPlotWidget(AnalysisWidget):
         )
 
         x_var_index = self.ui_components.x_axis_combo.currentIndex()
-        self.parameters["variable_1"] = x_var_index
-
+        y_var_index = self.ui_components.y_axis_combo.currentIndex()
         include_var2 = self.ui_components.y_axis_checkbox.isChecked()
+
+        # Check if variable 1 and variable 2 are the same
+        if x_var_index == y_var_index:
+            # Revert the change by resetting y_axis_combo to the previous value
+            with BlockSignalsContext(
+                [
+                    self.ui_components.y_axis_combo,
+                    self.ui_components.x_axis_combo,
+                ]
+            ):
+                self.ui_components.y_axis_combo.setCurrentIndex(
+                    self.parameters["variable_2"]
+                )
+                self.ui_components.x_axis_combo.setCurrentIndex(
+                    self.parameters["variable_1"]
+                )
+
+            # Swap the variables instead
+            x_var_index = self.parameters["variable_2"]
+            y_var_index = self.parameters["variable_1"]
+
+        self.parameters["variable_1"] = x_var_index
+        self.parameters["variable_2"] = y_var_index
+
         self.parameters["include_variable_2"] = include_var2
         if not include_var2:
             # Disable the y-axis combo box if variable 2 is not included
             self.ui_components.y_axis_combo.setEnabled(False)
         else:
             self.ui_components.y_axis_combo.setEnabled(True)
-            y_var_index = self.ui_components.y_axis_combo.currentIndex()
-            self.parameters["variable_2"] = y_var_index
 
         current_selected_options = (
             self.parameters["variable_1"],
@@ -293,8 +336,20 @@ class BOPlotWidget(AnalysisWidget):
         # Update the selected variables based on the selected indices
         self.selected_variables = list(set(selected_variables))
 
-        self.ui_components.x_axis_combo.setCurrentIndex(self.parameters["variable_1"])
-        self.ui_components.y_axis_combo.setCurrentIndex(self.parameters["variable_2"])
+        with BlockSignalsContext(
+            [
+                self.ui_components.y_axis_combo,
+                self.ui_components.x_axis_combo,
+            ]
+        ):
+            # Update the combo boxes to reflect the current parameters
+            self.ui_components.x_axis_combo.setCurrentIndex(
+                self.parameters["variable_1"]
+            )
+            if self.parameters["variable_2"] >= 0:
+                self.ui_components.y_axis_combo.setCurrentIndex(
+                    self.parameters["variable_2"]
+                )
 
         if previous_selected_options != current_selected_options:
             logger.debug(f"Selected variables for plotting: {self.selected_variables}")
@@ -357,14 +412,37 @@ class BOPlotWidget(AnalysisWidget):
     ) -> None:
         logger.debug("Updating plot in BOPlotWidget")
 
-        variable_1 = self.parameters["variables"][self.parameters["variable_1"]]
+        variable_1_index = self.parameters["variable_1"]
+        if (
+            variable_1_index > len(self.parameters["variables"]) - 1
+            or variable_1_index < 0
+        ):
+            logger.error("Variable 1 index out of range")
+            logger.debug(f"variable_1_index: {variable_1_index}")
+            logger.debug(f"len(variables): {len(self.parameters['variables'])}")
+            logger.debug(f"variables: {self.parameters['variables']}")
+
+            return
+
+        variable_1 = self.parameters["variables"][variable_1_index]
 
         selected_variables = [
             variable_1,
         ]
 
         if self.ui_components.y_axis_checkbox.isChecked():
-            variable_2 = self.parameters["variables"][self.parameters["variable_2"]]
+            variable_2_index = self.parameters["variable_2"]
+            if (
+                variable_2_index > len(self.parameters["variables"]) - 1
+                or variable_2_index < 0
+            ):
+                logger.error("Variable 2 index out of range")
+                logger.debug(f"variable_2_index: {variable_2_index}")
+                logger.debug(f"len(variables): {len(self.parameters['variables'])}")
+                logger.debug(f"variables: {self.parameters['variables']}")
+                return
+
+            variable_2 = self.parameters["variables"][variable_2_index]
 
             selected_variables.append(variable_2)
 
