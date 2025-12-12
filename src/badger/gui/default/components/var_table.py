@@ -27,7 +27,7 @@ from PyQt5.QtGui import (
 )
 from badger.gui.default.components.robust_spinbox import RobustSpinBox
 
-from badger.environment import instantiate_env
+from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.default.windows.expandable_message_box import ExpandableMessageBox
 
@@ -97,7 +97,9 @@ class VariableTable(QTableWidget):
         self.checked_only = False
         self.bounds_locked = False
         self.addtl_vars = []  # track variables added on the fly
-        self.env_class = None  # needed to get bounds on the fly
+        self.env_class: type[Environment] | None = (
+            None  # needed to get bounds on the fly
+        )
         self.env = None  # needed to get bounds on the fly
         self.configs = None  # needed to get bounds on the fly
         self.previous_values: dict[
@@ -154,7 +156,7 @@ class VariableTable(QTableWidget):
             item.blockSignals(True)
             item.setChecked(not all_checked)
             item.blockSignals(False)
-        self.update_selected(0)
+        self.update_selected()
 
     def update_bounds(self):
         for i in range(self.rowCount() - 1):
@@ -548,19 +550,19 @@ class VariableTable(QTableWidget):
         self.bounds_locked = False
         self.toggle_show_mode(self.checked_only)
 
-    def dragEnterEvent(self, event: QDragEnterEvent | None):
-        if event is None:
+    def dragEnterEvent(self, e: QDragEnterEvent | None):
+        if e is None:
             return
 
-        mime_data = event.mimeData()
+        mime_data = e.mimeData()
         if not mime_data:
-            event.ignore()
+            e.ignore()
             return
 
         if mime_data.hasText():
-            event.acceptProposedAction()
+            e.acceptProposedAction()
         else:
-            event.ignore()
+            e.ignore()
 
     def dragMoveEvent(self, e: QDragMoveEvent | None):
         if e is None:
