@@ -30,6 +30,7 @@ from PyQt5.QtWidgets import (
     QScrollArea,
     QHBoxLayout,
     QComboBox,
+    QSizePolicy,
 )
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
@@ -373,17 +374,30 @@ class BadgerListItem(QWidget):
         self.parameter_value = BadgerResolvedType.resolve_qt(
             editor.widget_type, default=None
         )
+        if self.parameter_value:
+            self.parameter_value.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            )
+
         layout.addWidget(self.parameter_value)
         self.parameter_value2 = None
         if editor.widget_type2 is not None:
             self.parameter_value2 = BadgerResolvedType.resolve_qt(
                 editor.widget_type2, default=None
             )
-            layout.addWidget(self.parameter_value2)
+            if self.parameter_value2:
+                self.parameter_value2.setSizePolicy(
+                    QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+                )
+            # Set fixed width for QLineEdit to avoid excessive stretching for dictionary keys
+            if isinstance(self.parameter_value, QLineEdit):
+                self.parameter_value.setFixedWidth(100)
+
+            layout.addWidget(self.parameter_value2, 1)
         remove_button = QPushButton("Remove")
         remove_button.setFixedWidth(85)
         remove_button.clicked.connect(self.remove)
-        layout.addWidget(remove_button, Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(remove_button, alignment=Qt.AlignmentFlag.AlignRight)
 
     def parameter1(self):
         return self.parameter_value
