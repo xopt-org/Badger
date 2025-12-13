@@ -274,6 +274,7 @@ class BadgerRoutinePage(QWidget):
 
         # Add connection to update vocs when env or generator changes for pydantic editor validation
         self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
+        self.env_box.vocs_updated.connect(self.data_panel.update_vocs)
 
         # Template path
         try:
@@ -799,7 +800,7 @@ class BadgerRoutinePage(QWidget):
         all_variables = [{key: value} for key, value in all_variables.items()]
 
         with BlockSignalsContext(self.env_box.var_table):
-            self.env_box.var_table.update_variables(all_variables)
+            self.env_box.var_table.update_variables(variables=all_variables, filtered=2)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.addtl_vars = routine.additional_variables
 

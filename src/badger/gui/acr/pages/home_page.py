@@ -395,17 +395,19 @@ class BadgerHomePage(QWidget):
 
     def validate_loaded_data_keys(self, vocs):
         """
+        This function is called when adding historical data to a new routine.
         Makes sure that the keys of data to be loaded from data_panel match the
-        variable and objective names in vocs. If they do not, raises an error.
+        selected variables and objectives in VOCS. If they do not, raises an error.
         If the set of data keys from self.data_panel matches provided VOCS variables
         and objectives, opens a dialog to inform user that data has been added.
 
         Args:
             vocs: VOCS
         """
+        # get routine selected from data_panel
         routine = self.data_panel.routine
 
-        # Want to compare variables, objectives!!!
+        # Want to compare variables, objectives
         loaded_data_vars_objs_names = (
             routine.vocs.variable_names + routine.vocs.objective_names
         )
@@ -483,6 +485,8 @@ class BadgerHomePage(QWidget):
                 )
 
             routine.data = data
+        else:
+            self.data_panel.set_routine(routine)
 
         self.current_routine = routine
 
@@ -523,10 +527,8 @@ class BadgerHomePage(QWidget):
                 self.current_routine.generator.data = data_to_load
 
         else:
-            self.prepare_run()
-
-        if not self.data_panel.use_data:
             self.data_panel.reset_data_table()
+            self.prepare_run()
 
         self.run_monitor.start(
             use_termination_condition=use_termination_condition,

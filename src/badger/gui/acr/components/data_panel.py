@@ -18,7 +18,6 @@ from badger.gui.default.components.data_table import (
 from badger.gui.default.windows.load_data_from_run_dialog import (
     BadgerLoadDataFromRunDialog,
 )
-import yaml
 
 LABEL_WIDTH = 96
 
@@ -48,7 +47,8 @@ class BadgerDataPanel(QWidget):
         # DataFrame to keep track of data in table including metadata
         self.table_data = pd.DataFrame()
 
-        self.selected_routine = None
+        self.selected_routine = None  # Keeps track of VOCS in displayed data
+        self.env_vocs = None  # Keeps track of selected VOCS from environment tab
 
         # boolean indicating whether to show metadata in table
         self.info = False
@@ -132,14 +132,16 @@ class BadgerDataPanel(QWidget):
                 self.data_table, self.table_data, vocs=self.selected_routine.vocs
             )
 
+    def update_vocs(self, vocs):
+        self.env_vocs = vocs
+
     def load_from_dialog(self):
         """
         Verify that variables and objectives have been selected, then open dialog to load data
         """
-        vocs_str = self.parent._compose_vocs()[0].as_yaml()
-        vocs = yaml.safe_load(vocs_str)
+        vocs = self.env_vocs
 
-        if not vocs["variables"] or not vocs["objectives"]:
+        if not vocs.variable_names or not vocs.objective_names:
             dialog = QMessageBox(
                 text=str("Select Environment + VOCS before adding data!"),
                 parent=self,
@@ -266,20 +268,22 @@ class BadgerDataPanel(QWidget):
             routine (Xopt Routine) : A routine selected from the load data dialog
 
         """
+        # Data from routine to load
         data = routine.data
-        vocs = self.parent._compose_vocs()[0]
-
         # Create copy of data without metadata columns
         filtered_data = self.filter_metadata(data)
+        data_keys = list(filtered_data.keys())
+
+        # VOCS selected in environment tab
+        selected_vocs = self.env_vocs.variable_names + self.env_vocs.output_names
+
         # Raise error if loaded data keys do not match selected vocs
-        if set(list(filtered_data.keys())) != set(
-            vocs.variable_names + vocs.output_names
-        ):
+        if set(data_keys) != set(selected_vocs):
             dialog = QMessageBox(
                 text=str(
                     "Variables and objectives in data must match currently selected VOCS\n\n"
-                    + "Please check the following:\n"
-                    + f"{list(set(list(filtered_data.keys())) ^ set(vocs.variable_names + vocs.output_names))}"
+                    "The following are not included in both selected VOCS and data keys:\n\n"
+                    f"{list(set(data_keys) ^ set(selected_vocs))}\n"
                 ),
                 parent=self,
             )
@@ -292,10 +296,9 @@ class BadgerDataPanel(QWidget):
             # All keys match, add selected routine data to table
             data["live"] = 0
             combined_data = pd.concat([self.table_data, data], ignore_index=True)
-            # Reorder so live is at end
-            # combined_data = self._reorder_cols(combined_data)
-
             self.run_data_checkbox.setEnabled(True)
+
+            self.selected_routine = routine
             self.update_table(self.data_table, combined_data, routine.vocs)
 
     def load_data(self, routine):

@@ -319,9 +319,16 @@ class BadgerLoadDataFromRunDialog(QDialog):
         Adapted from BadgerOptMonitor.set_data
         """
         # Split data into live and not live
-        live_mask = data["live"].astype(bool)
-        live_data = data.loc[live_mask]
-        not_live_data = data.loc[~live_mask]
+        if "live" in data.columns:
+            live_mask = data["live"].astype(bool)
+            live_data = data.loc[live_mask]
+            not_live_data = data.loc[~live_mask]
+        else:
+            # If no 'live' column, consider all data as live
+            # An alternative could be to check the timestamp of each datapoint
+            # against the creation timestamp of the routine
+            live_data = data
+            not_live_data = pd.DataFrame()
 
         # Add first live point to historical data for continuity
         if len(live_data) > 0:
