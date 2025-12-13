@@ -14,6 +14,7 @@ from badger.gui.default.components.data_table import (
 )
 from badger.gui.default.components.data_table import (
     data_table,
+    get_horizontal_header_as_list,
 )
 from badger.gui.default.windows.load_data_from_run_dialog import (
     BadgerLoadDataFromRunDialog,
@@ -100,6 +101,9 @@ class BadgerDataPanel(QWidget):
         hbox_load_data_options.setAlignment(Qt.AlignLeft)
         hbox_load_data_options.addStretch()
         self.info_checkbox = QCheckBox("Display metadata  ")
+        self.info_checkbox.setToolTip(
+            "Show extra columns like \ntimestamp, error, and runtime."
+        )
         self.info_checkbox.stateChanged.connect(self.show_metadata)
         hbox_load_data_options.addWidget(self.info_checkbox)
         vbox.addWidget(load_data_options)
@@ -131,6 +135,12 @@ class BadgerDataPanel(QWidget):
             self.update_table(
                 self.data_table, self.table_data, vocs=self.selected_routine.vocs
             )
+            if self.info:
+                headers = get_horizontal_header_as_list(self.data_table)
+                i = headers.index("live")
+                self.data_table.horizontalHeaderItem(i).setToolTip(
+                    "Indicates whether data was acquired \n(1) live during the current run, or \n(0) imported from previous optimizations"
+                )
 
     def update_vocs(self, vocs):
         self.env_vocs = vocs
@@ -282,8 +292,8 @@ class BadgerDataPanel(QWidget):
             dialog = QMessageBox(
                 text=str(
                     "Variables and objectives in data must match currently selected VOCS\n\n"
-                    "The following are not included in both selected VOCS and data keys:\n\n"
-                    f"{list(set(data_keys) ^ set(selected_vocs))}\n"
+                    + f"Keys in data to load:\n {data_keys}\n\n"
+                    + f"Selected variables + objectives:\n {selected_vocs}"
                 ),
                 parent=self,
             )

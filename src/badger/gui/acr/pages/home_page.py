@@ -420,7 +420,7 @@ class BadgerHomePage(QWidget):
             raise BadgerRoutineError(
                 "Keys in loaded data do not match selected VOCS:\n\n"
                 + f"Keys in data to load:\n {loaded_data_vars_objs_names}\n\n"
-                + f"Selected variable + objectives:\n {vocs.variable_names + vocs.objective_names}"
+                + f"Selected VOCS:\n {vocs.variable_names + vocs.objective_names}"
             )
 
         data = self.data_panel.get_data_as_dict()
