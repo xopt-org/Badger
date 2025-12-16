@@ -137,10 +137,11 @@ class BadgerDataPanel(QWidget):
             )
             if self.info:
                 headers = get_horizontal_header_as_list(self.data_table)
-                i = headers.index("live")
-                self.data_table.horizontalHeaderItem(i).setToolTip(
-                    "Indicates whether data was acquired \n(1) live during the current run, or \n(0) imported from previous optimizations"
-                )
+                if "live" in headers:
+                    i = headers.index("live")
+                    self.data_table.horizontalHeaderItem(i).setToolTip(
+                        "Indicates whether data was acquired \n(1) live during the current run, or \n(0) imported from previous optimizations"
+                    )
 
     def update_vocs(self, vocs):
         self.env_vocs = vocs
@@ -194,7 +195,6 @@ class BadgerDataPanel(QWidget):
 
     @property
     def init_points(self) -> bool:
-        # Apologies for double negative, should probably be called skip_init_points_checkbox
         return not self.init_points_checkbox.isChecked()
 
     @property
@@ -293,7 +293,7 @@ class BadgerDataPanel(QWidget):
                 text=str(
                     "Variables and objectives in data must match currently selected VOCS\n\n"
                     + f"Keys in data to load:\n {data_keys}\n\n"
-                    + f"Selected variables + objectives:\n {selected_vocs}"
+                    + f"Selected VOCS:\n {selected_vocs}"
                 ),
                 parent=self,
             )

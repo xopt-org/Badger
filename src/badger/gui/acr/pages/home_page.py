@@ -430,7 +430,7 @@ class BadgerHomePage(QWidget):
         # Notify user that data has been added to the routine
         dialog = QMessageBox(
             text=str(
-                "Data loaded into routine for the following vocss:\n\n"
+                "Data loaded into routine for the following VOCS:\n\n"
                 + f"{list(data_keys)}\n\n"
                 + "Click OK to continue!"
             ),
