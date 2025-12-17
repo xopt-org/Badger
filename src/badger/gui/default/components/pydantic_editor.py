@@ -305,7 +305,8 @@ class BadgerResolvedType:
 
 
 def handle_changed(editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem]):
-    editor_info[0].validate()
+    tree_widget, _ = editor_info
+    tree_widget.validate()
 
 
 def _qt_widget_to_yaml_value(widget: Any) -> str | None:
@@ -323,7 +324,7 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
         return f'"{widget.currentText()}"'
     elif isinstance(widget, (QLabel, QLineEdit)):
         if widget.text() == "null" or widget.text() == "None":
-            return "null"
+            return '"null"'
         else:
             return (
                 ('"' + widget.text() + '"')
@@ -378,6 +379,11 @@ class BadgerListItem(QWidget):
             self.parameter_value.setSizePolicy(
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
             )
+            if isinstance(self.parameter_value, QLineEdit):
+                self.parameter_value = cast(QLineEdit, self.parameter_value)
+                self.parameter_value.editingFinished.connect(
+                    lambda: self.editor.listChanged.emit()
+                )
 
         layout.addWidget(self.parameter_value)
         self.parameter_value2 = None
@@ -436,10 +442,14 @@ class BadgerListEditor(QWidget):
         scroll.setWidget(self.list_container)
         layout.addWidget(scroll)
 
+        button_layout = QHBoxLayout()
+
         add_button = QPushButton("Add")
         add_button.setFixedWidth(90)
         add_button.clicked.connect(lambda: self.handle_button_click())
-        layout.addWidget(add_button)
+        button_layout.addWidget(add_button)
+
+        layout.addLayout(button_layout)
 
     def handle_button_click(self):
         self.add_widget()
