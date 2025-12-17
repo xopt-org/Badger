@@ -610,7 +610,7 @@ class BadgerRoutinePage(QWidget):
             "observable_formulas": self.env_box.sta_table.formulas,
             "initial_point_actions": self.init_table_actions,
             "critical_constraint_names": critical_constraints,
-            "vocs": vars(vocs),
+            "vocs": vocs.model_dump(mode="json"),
             "badger_version": get_badger_version(),
             "xopt_version": get_xopt_version(),
         }
