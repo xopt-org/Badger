@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class Routine(Xopt):
     id: Optional[str] = Field(None)
+    creation_ts: Optional[str] = Field(None)  # Timestamp of routine creation
     name: str
     description: Optional[str] = Field(None)
     environment: SerializeAsAny[BaseEnvironment]
@@ -122,6 +123,7 @@ class Routine(Xopt):
                 obs = env.get_observables(data["vocs"].output_names)
                 ts = curr_ts()
                 obs["timestamp"] = ts.timestamp()
+                obs["live"] = 1
                 logger.debug(f"Evaluation result: {obs}")
                 return obs
 

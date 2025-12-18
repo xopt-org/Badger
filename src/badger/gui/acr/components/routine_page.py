@@ -24,6 +24,7 @@ from xopt.utils import get_local_region
 from pydantic import ValidationError
 
 from badger.gui.acr.components.generator_cbox import BadgerAlgoBox
+from badger.gui.acr.components.data_panel import BadgerDataPanel
 from badger.gui.default.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
@@ -62,6 +63,7 @@ from badger.utils import (
     strtobool,
     get_badger_version,
     get_xopt_version,
+    ts_float_to_str,
 )
 
 import logging
@@ -262,12 +264,17 @@ class BadgerRoutinePage(QWidget):
         self.generator_box = BadgerAlgoBox(None, self.generators)
         tabs.addTab(self.generator_box, "Algorithm")
 
+        # Data panel
+        self.data_panel = BadgerDataPanel(self)
+        tabs.addTab(self.data_panel, "Data")
+
         tabs.setCurrentIndex(1)  # Show the env box by default
 
         # vbox.addStretch()
 
         # Add connection to update vocs when env or generator changes for pydantic editor validation
         self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
+        self.env_box.vocs_updated.connect(self.data_panel.update_vocs)
 
         # Template path
         try:
@@ -793,7 +800,7 @@ class BadgerRoutinePage(QWidget):
         all_variables = [{key: value} for key, value in all_variables.items()]
 
         with BlockSignalsContext(self.env_box.var_table):
-            self.env_box.var_table.update_variables(all_variables)
+            self.env_box.var_table.update_variables(variables=all_variables, filtered=2)
         self.env_box.var_table.set_selected(variables)
         self.env_box.var_table.addtl_vars = routine.additional_variables
 
@@ -1819,6 +1826,7 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
+                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
                 # Xopt part
                 vocs=vocs,
                 generator=generator,
