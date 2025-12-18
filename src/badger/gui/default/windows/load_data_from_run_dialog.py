@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
 )
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
-from typing import List
+from typing import List, Callable
 import numpy as np
 import pandas as pd
 from badger.archive import (
@@ -20,6 +20,8 @@ from badger.archive import (
 from badger.gui.acr.components.history_navigator import HistoryNavigator
 from badger.settings import init_settings
 from badger.errors import BadgerRoutineError
+from badger.routine import Routine
+from badger.gui.default.components.data_table import TableWithCopy
 
 stylesheet_run = """
 QPushButton:hover:pressed
@@ -44,7 +46,12 @@ class BadgerLoadDataFromRunDialog(QDialog):
     previewing its data, and loading the data into the application.
     """
 
-    def __init__(self, parent, data_table=None, on_set=None):
+    def __init__(
+        self,
+        parent: QWidget,
+        data_table: TableWithCopy = None,
+        on_set: Callable[[Routine], None] = None,
+    ):
         """
         Initialize the dialog.
 
@@ -65,7 +72,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         """
         Initialize the user interface.
         """
@@ -128,7 +135,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         vbox.addWidget(content_widget)
         vbox.addWidget(button_set)
 
-    def preview_run(self, routine=None):
+    def preview_run(self, routine: Routine = None) -> None:
         """
         Add data to plot to preview the selected run.
         """
@@ -173,19 +180,19 @@ class BadgerLoadDataFromRunDialog(QDialog):
             routine.vocs.variable_names, curves_variable, routine.generator.data
         )
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_cancel.clicked.connect(self.cancel_changes)
         self.btn_load.clicked.connect(self.select_run)
         self.btn_from_file.clicked.connect(self.load_from_file)
 
-    def select_run(self):
+    def select_run(self) -> None:
         """
         Update the data table with variable and objective data from the selected routine
         """
         self.on_set(self.selected_routine)
         self.close()
 
-    def load_from_file(self):
+    def load_from_file(self) -> None:
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly
         file_path, _ = QFileDialog.getOpenFileName(
@@ -205,7 +212,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         except Exception as e:
             raise BadgerRoutineError(f"{e}")
 
-    def load_data(self, run_filename: str):
+    def load_data(self, run_filename: str) -> None:
         """
         Load data from the selected run.
 
@@ -222,7 +229,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         except Exception:  # failed to load the run
             return
 
-    def init_plots(self):
+    def init_plots(self) -> None:
         """
         Initialize the plots for data preview. These are static plots styled to
         match the plots on the main GUI from BadgerOptMonitor
@@ -271,7 +278,9 @@ class BadgerLoadDataFromRunDialog(QDialog):
 
         return plot_layout
 
-    def _configure_plot(self, plot_object, names):
+    def _configure_plot(
+        self, plot_object: pg.PlotItem, names: List[str]
+    ) -> dict[str : pg.PlotCurveItem]:
         """
         Configure the plot with the given data names.
         Adapted from BadgerOptMonitor._configure_plot
@@ -313,7 +322,9 @@ class BadgerLoadDataFromRunDialog(QDialog):
 
         return curves
 
-    def _set_plot_data(self, names: List[str], curves: dict, data: pd.DataFrame):
+    def _set_plot_data(
+        self, names: List[str], curves: dict, data: pd.DataFrame
+    ) -> None:
         """
         Set data for the plot curves.
         Adapted from BadgerOptMonitor.set_data
@@ -349,5 +360,5 @@ class BadgerLoadDataFromRunDialog(QDialog):
     def cancel_changes(self):
         self.close()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         event.accept()

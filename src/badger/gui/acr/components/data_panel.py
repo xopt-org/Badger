@@ -9,16 +9,19 @@ import pandas as pd
 from PyQt5.QtWidgets import QGroupBox, QCheckBox, QLabel
 from PyQt5.QtCore import Qt
 from badger.gui.default.components.data_table import (
-    update_table,
-    get_table_content_as_dict,
+    TableWithCopy,
 )
 from badger.gui.default.components.data_table import (
     data_table,
     get_horizontal_header_as_list,
+    update_table,
+    get_table_content_as_dict,
 )
 from badger.gui.default.windows.load_data_from_run_dialog import (
     BadgerLoadDataFromRunDialog,
 )
+from badger.routine import Routine
+from xopt.vocs import VOCS
 
 LABEL_WIDTH = 96
 
@@ -54,7 +57,7 @@ class BadgerDataPanel(QWidget):
         # boolean indicating whether to show metadata in table
         self.info = False
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         """Initialize interface"""
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(8, 8, 8, 8)
@@ -102,7 +105,7 @@ class BadgerDataPanel(QWidget):
         hbox_load_data_options.addStretch()
         self.info_checkbox = QCheckBox("Display metadata  ")
         self.info_checkbox.setToolTip(
-            "Show extra columns like \ntimestamp, error, and runtime."
+            "Show extra columns such as \ntimestamp, error, and runtime."
         )
         self.info_checkbox.stateChanged.connect(self.show_metadata)
         hbox_load_data_options.addWidget(self.info_checkbox)
@@ -129,7 +132,7 @@ class BadgerDataPanel(QWidget):
         vbox.addWidget(data_opts_config)
         vbox.addWidget(generator_group)
 
-    def show_metadata(self):
+    def show_metadata(self) -> None:
         self.info = self.info_checkbox.isChecked()
         if self.has_data:
             self.update_table(
@@ -143,10 +146,22 @@ class BadgerDataPanel(QWidget):
                         "Indicates whether data was acquired \n(1) live during the current run, or \n(0) imported from previous optimizations"
                     )
 
-    def update_vocs(self, vocs):
+    def update_vocs(self, vocs: VOCS) -> None:
+        """
+        Update the environment VOCS with the provided VOCS object.
+
+        Parameters
+        ----------
+        vocs : VOCS
+            The VOCS object to be used for updating the environment VOCS in the data panel.
+
+        Behavior
+        --------
+        Sets the internal `env_vocs` attribute to the provided VOCS object.
+        """
         self.env_vocs = vocs
 
-    def load_from_dialog(self):
+    def load_from_dialog(self) -> None:
         """
         Verify that variables and objectives have been selected, then open dialog to load data
         """
@@ -165,10 +180,10 @@ class BadgerDataPanel(QWidget):
         else:
             _ = self.get_data_from_dialog()
 
-    def set_routine(self, routine):
+    def set_routine(self, routine: Routine) -> None:
         self.selected_routine = routine
 
-    def indicate_add_data_to_routine(self):
+    def indicate_add_data_to_routine(self) -> None:
         """
         This function indicates visually whether the displayed data will be loaded into the routine,
         by placing a green border around the data table.
@@ -202,7 +217,7 @@ class BadgerDataPanel(QWidget):
         table_as_dict = get_table_content_as_dict(self.data_table)
         return bool(table_as_dict)
 
-    def get_data_from_dialog(self):
+    def get_data_from_dialog(self) -> None:
         """
         Opens a dialog window for loading data into generator.
         """
@@ -217,7 +232,7 @@ class BadgerDataPanel(QWidget):
         finally:
             self.tc_dialog = None
 
-    def add_live_data(self, data):
+    def add_live_data(self, data: pd.DataFrame) -> None:
         """
         Add datapoint from optimization run. This function expects a DataFrame as its argument, and concatenates any existing data with
         the new dataframe, and updates the table.
@@ -236,14 +251,17 @@ class BadgerDataPanel(QWidget):
 
         self.update_table(self.data_table, all_data, vocs)
 
-    def update_table(self, table, data=None, vocs=None) -> None:
+    def update_table(
+        self, table: TableWithCopy, data: pd.DataFrame = None, vocs: VOCS = None
+    ) -> None:
         """Makes sure column order remains consistent and self.table_data stays updated
-        to match displayed table. Call data_table's update_table method to update the table"""
+        to match displayed table. Call data_table's update_table method to update the table
+        """
         data = self._reorder_cols(data)
         self.table_data = data
         update_table(table, data, vocs, info=self.info)
 
-    def get_data(self):
+    def get_data(self) -> pd.DataFrame:
         return self.table_data
 
     def get_data_as_dict(self) -> dict:
@@ -254,10 +272,10 @@ class BadgerDataPanel(QWidget):
         return data
 
     @property
-    def routine(self):
+    def routine(self) -> Routine:
         return self.selected_routine
 
-    def filter_metadata(self, data: dict) -> dict:
+    def filter_metadata(self, data: pd.DataFrame) -> dict:
         """
         Remove metadata columns from data dictionary
         """
@@ -269,7 +287,7 @@ class BadgerDataPanel(QWidget):
             del data_copy[key]
         return data_copy
 
-    def load_data_from_dialog(self, routine):
+    def load_data_from_dialog(self, routine: Routine) -> None:
         """
         Load routine data from dialog window. Checks to make sure the data in the selected routine to load
         matches VOCS from the environment + VOCS tab. If they match, update table with data.
@@ -311,7 +329,7 @@ class BadgerDataPanel(QWidget):
             self.selected_routine = routine
             self.update_table(self.data_table, combined_data, routine.vocs)
 
-    def load_data(self, routine):
+    def load_data(self, routine: Routine) -> None:
         """
         Load data from routine and update table
 
@@ -329,7 +347,7 @@ class BadgerDataPanel(QWidget):
             routine.vocs,
         )
 
-    def _reorder_cols(self, data):
+    def _reorder_cols(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Reorder datatable columns for consistency. Order will be objectives,
         constraints, variables, then observables, followed by metadata columns
@@ -364,7 +382,7 @@ class BadgerDataPanel(QWidget):
 
         return data
 
-    def reset_data_table(self):
+    def reset_data_table(self) -> None:
         """Reset table and data"""
         self.data_table.clear()
         self.data_table.setRowCount(0)
