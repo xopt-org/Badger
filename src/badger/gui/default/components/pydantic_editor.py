@@ -395,6 +395,12 @@ class BadgerListItem(QWidget):
                 self.parameter_value2.setSizePolicy(
                     QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
                 )
+
+                if isinstance(self.parameter_value2, QDoubleSpinBox):
+                    self.parameter_value2 = cast(QDoubleSpinBox, self.parameter_value2)
+                    self.parameter_value2.valueChanged.connect(
+                        lambda: self.editor.listChanged.emit()
+                    )
             # Set fixed width for QLineEdit to avoid excessive stretching for dictionary keys
             if isinstance(self.parameter_value, QLineEdit):
                 self.parameter_value.setFixedWidth(100)
@@ -976,10 +982,23 @@ class BadgerPydanticEditor(QTreeWidget):
                         error_widget.setBackground(0, Qt.GlobalColor.red)
                         widget = self.itemWidget(error_widget, 1)
                         if widget is not None:
-                            widget.setStyleSheet("border: 2px dashed red;")
+                            widget.setProperty("error", True)
+                            widget.setStyleSheet(
+                                '*[error="true"] { border: 2px dashed red }'
+                            )
+                            if isinstance(widget, BadgerListEditor):
+                                widget = cast(BadgerListEditor, widget)
+                                widget.list_container.setProperty("error", True)
+                                widget.list_container.setStyleSheet(
+                                    '*[error="true"] { border: 2px dashed red }'
+                                )
+
                         error_widget.setToolTip(0, msg)
                     else:
-                        logger.warning(
-                            f"Could not find widget for error at location {loc} with message {msg}"
+                        error_widget = cast(QTreeWidget, error_widget)
+                        error_widget.setProperty("error", True)
+                        error_widget.setStyleSheet(
+                            '*[error="true"] { border: 2px dashed red }'
                         )
+                        error_widget.setToolTip(msg)
             return False
