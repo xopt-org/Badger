@@ -30,6 +30,7 @@ from PyQt5.QtWidgets import (
     QScrollArea,
     QHBoxLayout,
     QComboBox,
+    QSizePolicy,
 )
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
@@ -304,7 +305,8 @@ class BadgerResolvedType:
 
 
 def handle_changed(editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem]):
-    editor_info[0].validate()
+    tree_widget, _ = editor_info
+    tree_widget.validate()
 
 
 def _qt_widget_to_yaml_value(widget: Any) -> str | None:
@@ -322,7 +324,7 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
         return f'"{widget.currentText()}"'
     elif isinstance(widget, (QLabel, QLineEdit)):
         if widget.text() == "null" or widget.text() == "None":
-            return "null"
+            return '"null"'
         else:
             return (
                 ('"' + widget.text() + '"')
@@ -373,17 +375,41 @@ class BadgerListItem(QWidget):
         self.parameter_value = BadgerResolvedType.resolve_qt(
             editor.widget_type, default=None
         )
+        if self.parameter_value:
+            self.parameter_value.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            )
+            if isinstance(self.parameter_value, QLineEdit):
+                self.parameter_value = cast(QLineEdit, self.parameter_value)
+                self.parameter_value.editingFinished.connect(
+                    lambda: self.editor.listChanged.emit()
+                )
+
         layout.addWidget(self.parameter_value)
         self.parameter_value2 = None
         if editor.widget_type2 is not None:
             self.parameter_value2 = BadgerResolvedType.resolve_qt(
                 editor.widget_type2, default=None
             )
-            layout.addWidget(self.parameter_value2)
+            if self.parameter_value2:
+                self.parameter_value2.setSizePolicy(
+                    QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+                )
+
+                if isinstance(self.parameter_value2, QDoubleSpinBox):
+                    self.parameter_value2 = cast(QDoubleSpinBox, self.parameter_value2)
+                    self.parameter_value2.valueChanged.connect(
+                        lambda: self.editor.listChanged.emit()
+                    )
+            # Set fixed width for QLineEdit to avoid excessive stretching for dictionary keys
+            if isinstance(self.parameter_value, QLineEdit):
+                self.parameter_value.setFixedWidth(100)
+
+            layout.addWidget(self.parameter_value2, 1)
         remove_button = QPushButton("Remove")
         remove_button.setFixedWidth(85)
         remove_button.clicked.connect(self.remove)
-        layout.addWidget(remove_button, Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(remove_button, alignment=Qt.AlignmentFlag.AlignRight)
 
     def parameter1(self):
         return self.parameter_value
@@ -422,10 +448,14 @@ class BadgerListEditor(QWidget):
         scroll.setWidget(self.list_container)
         layout.addWidget(scroll)
 
+        button_layout = QHBoxLayout()
+
         add_button = QPushButton("Add")
         add_button.setFixedWidth(90)
         add_button.clicked.connect(lambda: self.handle_button_click())
-        layout.addWidget(add_button)
+        button_layout.addWidget(add_button)
+
+        layout.addLayout(button_layout)
 
     def handle_button_click(self):
         self.add_widget()
@@ -952,10 +982,23 @@ class BadgerPydanticEditor(QTreeWidget):
                         error_widget.setBackground(0, Qt.GlobalColor.red)
                         widget = self.itemWidget(error_widget, 1)
                         if widget is not None:
-                            widget.setStyleSheet("border: 2px dashed red;")
+                            widget.setProperty("error", True)
+                            widget.setStyleSheet(
+                                '*[error="true"] { border: 2px dashed red }'
+                            )
+                            if isinstance(widget, BadgerListEditor):
+                                widget = cast(BadgerListEditor, widget)
+                                widget.list_container.setProperty("error", True)
+                                widget.list_container.setStyleSheet(
+                                    '*[error="true"] { border: 2px dashed red }'
+                                )
+
                         error_widget.setToolTip(0, msg)
                     else:
-                        logger.warning(
-                            f"Could not find widget for error at location {loc} with message {msg}"
+                        error_widget = cast(QTreeWidget, error_widget)
+                        error_widget.setProperty("error", True)
+                        error_widget.setStyleSheet(
+                            '*[error="true"] { border: 2px dashed red }'
                         )
+                        error_widget.setToolTip(msg)
             return False
