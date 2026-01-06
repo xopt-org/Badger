@@ -17,7 +17,7 @@ from badger.archive import (
     get_runs,
     load_run,
 )
-from badger.gui.acr.components.history_navigator import HistoryNavigator
+from badger.gui.acr.components.navigators import HistoryNavigator
 from badger.settings import init_settings
 from badger.errors import BadgerRoutineError
 from badger.routine import Routine
@@ -108,7 +108,9 @@ class BadgerLoadDataFromRunDialog(QDialog):
         self.history_browser.setFixedWidth(360)
         runs = get_runs()
         self.history_browser.updateItems(runs)
-        self.history_browser.tree_widget.itemSelectionChanged.connect(self.preview_run)
+        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+            self.preview_run
+        )
         hbox_content.addWidget(self.history_browser)
 
         # Data preview

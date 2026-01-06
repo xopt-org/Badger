@@ -30,8 +30,8 @@ from badger.gui.default.components.data_table import (
     reset_table,
     update_table,
 )
-from badger.gui.acr.components.history_navigator import HistoryNavigator
-from badger.gui.acr.components.template_navigator import TemplateNavigator
+from badger.gui.acr.components.navigators import HistoryNavigator
+from badger.gui.acr.components.navigators import TemplateNavigator
 from badger.gui.acr.components.routine_page import BadgerRoutinePage
 from badger.gui.default.components.run_monitor import BadgerOptMonitor
 from badger.gui.acr.components.status_bar import BadgerStatusBar
@@ -218,9 +218,11 @@ class BadgerHomePage(QWidget):
         self.run_table_2.cellClicked.connect(self.solution_selected)
         self.run_table_2.itemSelectionChanged.connect(self.table_selection_changed)
 
-        self.history_browser.tree_widget.itemSelectionChanged.connect(self.go_run)
+        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+            self.go_run
+        )
 
-        self.template_browser.tree_view.clicked.connect(self.go_template)
+        self.template_browser.template_tree_view.clicked.connect(self.go_template)
 
         self.routine_editor.sig_load_template.connect(self.update_status)
         self.routine_editor.sig_save_template.connect(self.update_status)
@@ -342,8 +344,8 @@ class BadgerHomePage(QWidget):
         path = self.template_browser.file_sys_model.filePath(index)
         # if directory, expand it.
         if os.path.isdir(path):
-            expanded = self.template_browser.tree_view.isExpanded(index)
-            self.template_browser.tree_view.setExpanded(index, not expanded)
+            expanded = self.template_browser.template_tree_view.isExpanded(index)
+            self.template_browser.template_tree_view.setExpanded(index, not expanded)
             return
 
         # otherwise, open the template
@@ -604,9 +606,9 @@ class BadgerHomePage(QWidget):
 
         delete_run(run_name)
         runs = get_runs()
-        self.history_browser.tree_widget.blockSignals(True)
+        self.history_browser.history_tree_widget.blockSignals(True)
         self.history_browser.updateItems(runs)
-        self.history_browser.tree_widget.blockSignals(False)
+        self.history_browser.history_tree_widget.blockSignals(False)
         self.go_run(-1)
 
     def cover_page(self):

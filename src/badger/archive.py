@@ -115,6 +115,9 @@ def list_run():
                 files = [
                     p for p in os.listdir(path_day) if os.path.splitext(p)[1] == ".yaml"
                 ]
+                files = [
+                    os.path.join(path_day, f) for f in files
+                ]  # Save the full path into the result arr
                 files = sorted(
                     files,
                     key=lambda f: os.path.getmtime(os.path.join(path_day, f)),
