@@ -209,6 +209,7 @@ def get_header(routine):
 def run_names_to_dict(run_names):
     runs = {}
     for name in run_names:
+        name = os.path.basename(name)  # name is full path to run-file
         tokens = name.split("-")
         year = tokens[1]
         month = tokens[2]
