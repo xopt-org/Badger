@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QFileDialog,
+    QMessageBox,
 )
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
@@ -21,7 +22,7 @@ from badger.gui.components.navigators import HistoryNavigator
 from badger.settings import init_settings
 from badger.errors import BadgerRoutineError
 from badger.routine import Routine
-from badger.gui.components.data_table import TableWithCopy
+from xopt.vocs import VOCS
 
 stylesheet_run = """
 QPushButton:hover:pressed
@@ -49,7 +50,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
     def __init__(
         self,
         parent: QWidget,
-        data_table: TableWithCopy = None,
+        env_vocs: VOCS = None,
         on_set: Callable[[Routine], None] = None,
     ):
         """
@@ -65,8 +66,8 @@ class BadgerLoadDataFromRunDialog(QDialog):
         """
         super().__init__(parent)
 
-        self.data_table = data_table
         self.selected_routine = None
+        self.env_vocs = env_vocs
         self.on_set = on_set  # function from parent to call when loading data
 
         self.init_ui()
@@ -191,8 +192,18 @@ class BadgerLoadDataFromRunDialog(QDialog):
         """
         Update the data table with variable and objective data from the selected routine
         """
-        self.on_set(self.selected_routine)
-        self.close()
+        # Data from routine to load
+        data_keys = list(
+            self.selected_routine.vocs.variable_names
+            + self.selected_routine.vocs.objective_names
+        )
+
+        # Check that variables and objectives match selected VOCS
+        if set(data_keys) == set(self.env_vocs):
+            self.on_set(self.selected_routine)
+            self.close()
+        else:
+            self.show_vocs_mismatch_dialog(data_keys, self.env_vocs)
 
     def load_from_file(self) -> None:
         options = QFileDialog.Options()
@@ -359,8 +370,27 @@ class BadgerLoadDataFromRunDialog(QDialog):
                 hist_x, not_live_data[name].to_numpy(dtype=np.double)
             )
 
+    def show_vocs_mismatch_dialog(self, list1: List[str], list2: List[str]):
+        """
+        Display a helpful dialog notifying the user that the data they are trying to load
+        does not have the same variables and objectives as they have selected in the GUI.
+        list1: list of keys (variables + objectives) in data to be loaded
+        list2: list of selected VOCS in main GUI for data to be added to
+        """
+        dialog = QMessageBox(
+            text=str(
+                "Variables and objectives in data must match currently selected VOCS\n\n"
+                + f"Keys in data to load:\n {list1}\n\n"
+                + f"Selected VOCS:\n {list2}"
+            ),
+            parent=None,
+        )
+        dialog.setIcon(QMessageBox.Warning)
+        dialog.setStandardButtons(QMessageBox.Ok)
+        dialog.exec_()
+
     def cancel_changes(self):
         self.close()
 
-    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+    def closeEvent(self, event):
         event.accept()

@@ -223,7 +223,7 @@ class BadgerDataPanel(QWidget):
         """
         dlg = BadgerLoadDataFromRunDialog(
             parent=self,
-            data_table=self.data_table,
+            env_vocs=self.env_vocs.variable_names + self.env_vocs.output_names,
             on_set=self.load_data_from_dialog,
         )
         self.tc_dialog = dlg
@@ -267,25 +267,13 @@ class BadgerDataPanel(QWidget):
     def get_data_as_dict(self) -> dict:
         data = get_table_content_as_dict(self.data_table)
         if not self.info:
-            data = self.filter_metadata(data)
+            data = filter_metadata(data)
 
         return data
 
     @property
     def routine(self) -> Routine:
         return self.selected_routine
-
-    def filter_metadata(self, data: pd.DataFrame) -> dict:
-        """
-        Remove metadata columns from data dictionary
-        """
-        data_copy = data.copy()
-
-        metadata_cols = ["xopt_runtime", "xopt_error", "timestamp", "live"]
-        cols_to_drop = [col for col in metadata_cols if col in data_copy]
-        for key in cols_to_drop:
-            del data_copy[key]
-        return data_copy
 
     def load_data_from_dialog(self, routine: Routine) -> None:
         """
@@ -299,35 +287,34 @@ class BadgerDataPanel(QWidget):
         # Data from routine to load
         data = routine.data
         # Create copy of data without metadata columns
-        filtered_data = self.filter_metadata(data)
+        filtered_data = filter_metadata(data)
         data_keys = list(filtered_data.keys())
 
-        # VOCS selected in environment tab
-        selected_vocs = self.env_vocs.variable_names + self.env_vocs.output_names
+        # Data currently in table:
+        filtered_table_keys = list(filter_metadata(self.table_data).keys())
 
         # Raise error if loaded data keys do not match selected vocs
-        if set(data_keys) != set(selected_vocs):
+        # This happens here if selected VOCS have been changed but old data is still in the table.
+        if self.has_data and set(data_keys) != set(filtered_table_keys):
             dialog = QMessageBox(
                 text=str(
-                    "Variables and objectives in data must match currently selected VOCS\n\n"
-                    + f"Keys in data to load:\n {data_keys}\n\n"
-                    + f"Selected VOCS:\n {selected_vocs}"
+                    "Keys in loaded data do not match current table!"
+                    "\nTry clearing the table before adding new data."
                 ),
                 parent=self,
             )
             dialog.setIcon(QMessageBox.Warning)
-            dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            result = dialog.exec_()
-            if result == QMessageBox.Cancel:
-                return
-        else:
-            # All keys match, add selected routine data to table
-            data["live"] = 0
-            combined_data = pd.concat([self.table_data, data], ignore_index=True)
-            self.run_data_checkbox.setEnabled(True)
+            dialog.setStandardButtons(QMessageBox.Ok)
+            _ = dialog.exec_()
+            return
 
-            self.selected_routine = routine
-            self.update_table(self.data_table, combined_data, routine.vocs)
+        # All keys match, add selected routine data to table
+        data["live"] = 0
+        combined_data = pd.concat([self.table_data, data], ignore_index=True)
+        self.run_data_checkbox.setEnabled(True)
+
+        self.selected_routine = routine
+        self.update_table(self.data_table, combined_data, routine.vocs)
 
     def load_data(self, routine: Routine) -> None:
         """
@@ -390,3 +377,16 @@ class BadgerDataPanel(QWidget):
         self.table_data = pd.DataFrame()
         self.run_data_checkbox.setChecked(False)
         self.run_data_checkbox.setEnabled(False)
+
+
+def filter_metadata(data: dict) -> dict:
+    """
+    Remove metadata columns from data dictionary
+    """
+    data_copy = data.copy()
+
+    metadata_cols = ["xopt_runtime", "xopt_error", "timestamp", "live"]
+    cols_to_drop = [col for col in metadata_cols if col in data_copy]
+    for key in cols_to_drop:
+        del data_copy[key]
+    return data_copy

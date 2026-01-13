@@ -37,6 +37,7 @@ from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
 from badger.gui.components.action_bar import BadgerActionBar
+from badger.gui.components.data_panel import filter_metadata
 from badger.utils import get_header
 from badger.settings import init_settings
 
@@ -399,7 +400,7 @@ class BadgerHomePage(QWidget):
     def validate_loaded_data_keys(self, vocs):
         """
         This function is called when adding historical data to a new routine.
-        Makes sure that the keys of data to be loaded from data_panel match the
+        It makes sure that the keys of data to be loaded from data_panel match the
         selected variables and objectives in VOCS. If they do not, raises an error.
         If the set of data keys from self.data_panel matches provided VOCS variables
         and objectives, opens a dialog to inform user that data has been added.
@@ -427,7 +428,7 @@ class BadgerHomePage(QWidget):
             )
 
         data = self.data_panel.get_data_as_dict()
-        data = self.data_panel.filter_metadata(data)
+        data = filter_metadata(data)
         data_keys = data.keys()
 
         # Notify user that data has been added to the routine
