@@ -23,8 +23,8 @@ class TestRunMonitor:
 
     @pytest.fixture
     def process_manager(self):
-        from badger.gui.default.components.create_process import CreateProcess
-        from badger.gui.default.components.process_manager import ProcessManager
+        from badger.gui.components.create_process import CreateProcess
+        from badger.gui.components.process_manager import ProcessManager
 
         process_manager = ProcessManager()
         process_builder = CreateProcess()
@@ -37,7 +37,7 @@ class TestRunMonitor:
     @pytest.fixture
     def monitor(self, process_manager, init_multiprocessing):
         from badger.archive import save_tmp_run
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
+        from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
         routine = create_routine()
@@ -52,7 +52,7 @@ class TestRunMonitor:
     @pytest.fixture
     def home_page(self, process_manager):
         from badger.archive import save_tmp_run
-        from badger.gui.acr.pages.home_page import BadgerHomePage
+        from badger.gui.pages.home_page import BadgerHomePage
         from badger.tests.utils import create_routine
 
         routine = create_routine()
@@ -70,7 +70,7 @@ class TestRunMonitor:
     @pytest.fixture
     def home_page_critical(self, process_manager):
         from badger.archive import save_tmp_run
-        from badger.gui.acr.pages.home_page import BadgerHomePage
+        from badger.gui.pages.home_page import BadgerHomePage
         from badger.tests.utils import create_routine_critical
 
         routine = create_routine_critical()
@@ -92,7 +92,7 @@ class TestRunMonitor:
         assert len(monitor.routine.data) == 10
 
     def test_run_monitor(self, process_manager):
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
+        from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
         monitor = BadgerOptMonitor(process_manager)
@@ -166,7 +166,7 @@ class TestRunMonitor:
         assert len(sig_inspect_spy) == 1
 
     def create_test_run_monitor(self, process_manager, add_data=True):
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
+        from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
         monitor = BadgerOptMonitor(process_manager)
@@ -332,7 +332,7 @@ class TestRunMonitor:
 
     def test_reset_environment(self, qtbot, init_multiprocessing):
         from badger.archive import save_tmp_run
-        from badger.gui.acr.windows.main_window import BadgerMainWindow
+        from badger.gui.windows.main_window import BadgerMainWindow
         from badger.tests.utils import (
             create_routine,
             get_current_vars,
@@ -470,8 +470,8 @@ class TestRunMonitor:
 
     """
     def test_add_extensions(self, qtbot, process_manager, init_multiprocessing):
-        from badger.gui.default.components.analysis_extensions import ParetoFrontViewer
-        from badger.gui.default.components.run_monitor import BadgerOptMonitor
+        from badger.gui.components.analysis_extensions import ParetoFrontViewer
+        from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
         routine = create_routine()
