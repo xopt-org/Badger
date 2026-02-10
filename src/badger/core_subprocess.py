@@ -2,6 +2,7 @@ from copy import deepcopy
 import logging
 import time
 import traceback
+from typing import Any
 from pandas import DataFrame
 import multiprocessing as mp
 import os
@@ -114,6 +115,7 @@ def run_routine_subprocess(
     logger.info("Waiting for wait_event to be set...")
     wait_event.wait()
 
+    args: dict[str, Any] = {}
     try:
         args = queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
@@ -131,9 +133,13 @@ def run_routine_subprocess(
                 f"Updating environment variables with hard limits: {routine.vrange_hard_limit}"
             )
             routine.environment.variables.update(routine.vrange_hard_limit)
-        if routine.data is not None:
-            logger.info("Resetting routine data")
-            routine.data = routine.data.iloc[0:0]
+
+        # Reset data if run_data option is False
+        if not args["run_data"]:
+            if routine.data is not None:
+                logger.info("Resetting routine data")
+                routine.data = routine.data.iloc[0:0]  # reset the data
+
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
@@ -197,15 +203,17 @@ def run_routine_subprocess(
     # evaluate initial points:
     # timeout logic will be handled in the specific environment
     try:
-        logger.info("Evaluating initial points...")
-        for _, ele in initial_points.iterrows():
-            logger.debug(f"Evaluating initial point: {ele.to_dict()}")
-            result = routine.evaluate_data(ele.to_dict())
-            solution = convert_to_solution(result, routine)
-            opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate:
-                time.sleep(0.1)
-                evaluate_queue[0].send((routine.data, routine.generator))
+        # initial sampling
+        if args["init_points"]:
+            logger.info("Evaluating initial points...")
+            for _, ele in initial_points.iterrows():
+                logger.debug(f"Evaluating initial point: {ele.to_dict()}")
+                result = routine.evaluate_data(ele.to_dict())
+                solution = convert_to_solution(result, routine)
+                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                if evaluate:
+                    time.sleep(0.1)  # give it some break tp catch up
+                    evaluate_queue[0].send((routine.data, routine.generator))
 
         logger.info("Starting optimization loop...")
         while True:
@@ -222,10 +230,21 @@ def run_routine_subprocess(
                 idx = tc_config["tc_idx"]
                 if idx == 0:
                     max_eval = tc_config["max_eval"]
-                    logger.debug(
-                        f"Checking max_eval termination: {len(routine.data)} >= {max_eval}"
-                    )
-                    if len(routine.data) >= max_eval:
+                    if routine.data is not None:
+                        if "live" in routine.data.columns:
+                            # Only count number of live data points
+                            count = sum(
+                                1 for live_val in routine.data["live"] if live_val == 1
+                            )
+                        else:
+                            count = len(routine.data)
+                        logger.debug(
+                            f"Checking max_eval termination: {count} >= {max_eval}"
+                        )
+                    else:
+                        count = 0
+
+                    if count >= max_eval:
                         logger.info(
                             "Max evaluations reached. Terminating optimization."
                         )

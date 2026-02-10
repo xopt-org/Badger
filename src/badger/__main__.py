@@ -19,10 +19,11 @@ def main():
     # Create the top-level parser
     parser = argparse.ArgumentParser(description="Badger the optimizer")
     parser.add_argument("-g", "--gui", action="store_true", help="launch the GUI")
+    # Deprecated: since acr gui and default gui have been consolidated, using this flag is same as `--gui`` flag.
+    # Keep here for now to avoid breaking any scripts that call badger with `--gui-acr` arg.
     parser.add_argument(
         "-ga", "--gui-acr", action="store_true", help="launch the GUI for ACR"
     )
-
     parser.add_argument(
         "-l",
         "--log_level",

@@ -20,8 +20,8 @@ class TestRoutineRunner:
 
     @pytest.fixture
     def process_manager(self):
-        from badger.gui.default.components.create_process import CreateProcess
-        from badger.gui.default.components.process_manager import ProcessManager
+        from badger.gui.components.create_process import CreateProcess
+        from badger.gui.components.process_manager import ProcessManager
 
         process_manager = ProcessManager()
         process_builder = CreateProcess()
@@ -35,7 +35,7 @@ class TestRoutineRunner:
     @pytest.fixture
     def instance(self, process_manager, init_multiprocessing):
         from badger.archive import save_tmp_run
-        from badger.gui.default.components.routine_runner import (
+        from badger.gui.components.routine_runner import (
             BadgerRoutineSubprocess,
         )
         from badger.tests.utils import create_routine
@@ -112,8 +112,8 @@ class TestRoutineRunner:
         # TODO: make this test more stable
         return
 
-        from badger.gui.acr.windows.main_window import BadgerMainWindow
-        from badger.gui.default.windows.message_dialog import (
+        from badger.gui.windows.main_window import BadgerMainWindow
+        from badger.gui.windows.message_dialog import (
             BadgerScrollableMessageBox,
         )
 

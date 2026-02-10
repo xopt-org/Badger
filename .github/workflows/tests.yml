@@ -52,7 +52,7 @@ jobs:
       - name: Install Badger
         shell: bash -l {0}
         run: |
-          pip install ".[dev]"
+          pip install ".[dev]" --no-cache-dir
 
       - name: Run Tests
         shell: bash -l {0}

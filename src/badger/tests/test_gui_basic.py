@@ -12,7 +12,7 @@ def init_multiprocessing():
 
 
 def test_gui_main(qtbot, init_multiprocessing):
-    from badger.gui.acr.windows.main_window import BadgerMainWindow
+    from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_path_issues
 
     fix_path_issues()
@@ -40,7 +40,7 @@ def test_gui_main(qtbot, init_multiprocessing):
 
 def test_close_main(qtbot, init_multiprocessing):
     from badger.archive import save_tmp_run
-    from badger.gui.acr.windows.main_window import BadgerMainWindow
+    from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
 
     fix_path_issues()
@@ -82,8 +82,8 @@ def test_traceback_during_run(qtbot, init_multiprocessing):
     with patch("badger.core.run_routine") as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
-        from badger.gui.acr.windows.main_window import BadgerMainWindow
-        from badger.gui.default.windows.message_dialog import BadgerScrollableMessageBox
+        from badger.gui.windows.main_window import BadgerMainWindow
+        from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
         from badger.tests.utils import create_routine, fix_path_issues
 
         fix_path_issues()
@@ -137,7 +137,7 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     import yaml
     from xopt.generators import all_generator_names
 
-    from badger.gui.acr.windows.main_window import BadgerMainWindow
+    from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_path_issues
 
     fix_path_issues()
@@ -158,7 +158,7 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     for algo in algos:
         if algo in all_generator_names["bo"]:
             qtbot.keyClicks(editor.generator_box.cb, algo)
-            params = editor.generator_box.edit.toPlainText()
+            params = editor.generator_box.edit.get_parameters_yaml()
             params_dict = yaml.safe_load(params)
 
             if "gp_constructor" in params_dict:
@@ -172,7 +172,7 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
 def test_default_turbo_in_bo(qtbot):
     return
 
-    from badger.gui.default.windows.main_window import BadgerMainWindow
+    from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
     from xopt.generators import all_generator_names
     import yaml
@@ -191,8 +191,8 @@ def test_default_turbo_in_bo(qtbot):
     algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
     for algo in algos:
         if algo in all_generator_names["bo"]:
-            qtbot.keyClicks(editor.generator_box.cb, algo)
-            params = editor.generator_box.edit.toPlainText()
+            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
+            params = editor.routine_page.generator_box.edit.get_parameters_yaml()
             params_dict = yaml.safe_load(params)
 
             assert params_dict["turbo_controller"] == "optimize"

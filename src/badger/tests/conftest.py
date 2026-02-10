@@ -6,7 +6,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def suppress_popups(mocker):
     mocker.patch(
-        "badger.gui.default.windows.expandable_message_box.ExpandableMessageBox.exec_",
+        "badger.gui.windows.expandable_message_box.ExpandableMessageBox.exec_",
         return_value=None,
     )
 

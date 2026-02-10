@@ -26,8 +26,11 @@ def archive_run(routine, states=None):
 
     data = routine.sorted_data
     data_dict = data.to_dict("list")
-    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
-    suffix = ts_float_to_str(ts_float, "lcls-fname")
+    if hasattr(routine, "creation_ts"):
+        suffix = routine.creation_ts
+    else:  # compatibility with old routines
+        ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
+        suffix = ts_float_to_str(ts_float, "lcls-fname")
     tokens = suffix.split("-")
     first_level = tokens[0]
     second_level = f"{tokens[0]}-{tokens[1]}"
@@ -112,6 +115,9 @@ def list_run():
                 files = [
                     p for p in os.listdir(path_day) if os.path.splitext(p)[1] == ".yaml"
                 ]
+                files = [
+                    os.path.join(path_day, f) for f in files
+                ]  # Save the full path into the result arr
                 files = sorted(
                     files,
                     key=lambda f: os.path.getmtime(os.path.join(path_day, f)),
@@ -134,7 +140,7 @@ def get_runs():
     return run_list
 
 
-def load_run(run_fname) -> Routine:
+def load_run(run_fname: str) -> Routine:
     if run_fname.startswith(".tmp"):  # temp run file
         filename = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp", run_fname)
     else:

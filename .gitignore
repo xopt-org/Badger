@@ -18,3 +18,8 @@ src/badger/_version.py
 .python-version
 *.log
 logs/
+
+# build artifacts from building docs
+documentation/.docusaurus/
+documentation/build/
+documentation/node_modules/

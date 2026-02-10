@@ -9,21 +9,13 @@ def show_info(args):
     if args.config_filepath:
         config_path = args.config_filepath
 
-    if args.gui:
+    if args.gui or args.gui_acr:
         if check_n_config_paths(args.config_filepath):
-            from badger.gui.acr import launch_gui
+            from badger.gui import launch_gui
 
             launch_gui(config_path)
 
-        return
-
-    if args.gui_acr:
-        if check_n_config_paths(args.config_filepath):
-            from badger.gui.acr import launch_gui
-
-            launch_gui(config_path)
-
-        return
+            return
 
     if not check_n_config_paths():
         return
