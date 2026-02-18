@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def run_n_archive(
-    routine: Routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
+    routine: Routine,
+    yes: bool = False,
+    save: bool = False,
+    verbose: int = 2,
+    sleep: int = 0,
+    flush_prompt: bool = False,
 ):
     try:
         from badger.archive import archive_run

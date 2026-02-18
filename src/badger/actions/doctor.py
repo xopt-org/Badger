@@ -31,7 +31,7 @@ def self_check(args):
         print("Badger is healthy!")
 
 
-def check_n_config_paths(config_filepath=None):
+def check_n_config_paths(config_filepath: str | None = None):
     if config_filepath is not None:
         config = init_settings(config_filepath)
     else:
@@ -39,7 +39,7 @@ def check_n_config_paths(config_filepath=None):
 
     good = True
     all_bad = True  # if all config paths are empty, we'll suggest initialization
-    issue_list = []
+    issue_list: list[str] = []
 
     for pname, pvalue in config._config.model_dump(by_alias=True).items():
         if config.read_value(pname) is None:

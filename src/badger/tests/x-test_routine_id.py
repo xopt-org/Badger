@@ -1,4 +1,7 @@
-def test_routines_same_name():
+from pytestqt.qtbot import QtBot
+
+
+def test_routines_same_name() -> None:
     from badger.db import save_routine, remove_routine
     from badger.tests.utils import create_routine, fix_db_path_issue
 
@@ -15,7 +18,7 @@ def test_routines_same_name():
     remove_routine(routine2.id)
 
 
-def test_modify_routine_no_runs(qtbot):
+def test_modify_routine_no_runs(qtbot: QtBot) -> None:
     from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.db import list_routine, remove_routine, load_routine
 
@@ -47,7 +50,7 @@ def test_modify_routine_no_runs(qtbot):
 
 
 # TODO: write test for modifying name of routine with runs
-def test_modify_routine_name(qtbot):
+def test_modify_routine_name(qtbot: QtBot) -> None:
     from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.db import list_routine, remove_routine, load_routine, save_run
 
@@ -87,7 +90,7 @@ def test_modify_routine_name(qtbot):
 
 
 # TODO: write test for modifying algorithm of routine with runs
-def test_modify_routine_algorithm(qtbot):
+def test_modify_routine_algorithm(qtbot: QtBot) -> None:
     from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.db import list_routine, remove_routine, load_routine, save_run
 

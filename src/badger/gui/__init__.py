@@ -13,7 +13,7 @@ from badger.gui.windows.main_window import BadgerMainWindow
 import traceback
 from badger.errors import BadgerError
 from types import TracebackType
-from typing import Type, NoReturn
+from typing import Any, Type, NoReturn
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,10 +32,10 @@ if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):
 #     QApplication.setAttribute(
 #         QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
-TIMER = {"time": None}
+TIMER: dict[str, float | None] = {"time": None}
 
 
-def on_exit(*args):
+def on_exit(*args: Any):
     if TIMER["time"] is None:
         print("Press Ctrl/Cmd + C again within 1s to quit Badger")
         TIMER["time"] = time.time()
@@ -81,7 +81,7 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui(config_path=None):
+def launch_gui(config_path: str | None = None):
     sys.excepthook = error_handler
 
     app = QApplication(sys.argv)

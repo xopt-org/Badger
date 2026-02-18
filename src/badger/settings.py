@@ -124,9 +124,12 @@ class BadgerConfig(BaseModel):
 
 
 class ConfigSingleton:
-    _instance = None
+    _instance: "ConfigSingleton | None" = None
+    user_flag: bool
+    _config: BadgerConfig
+    config_path: str | None
 
-    def __new__(cls, config_path: str = None, user_flag: bool = False):
+    def __new__(cls, config_path: str, user_flag: bool = False):
         if cls._instance is None:
             cls._instance = super(ConfigSingleton, cls).__new__(cls)
             cls._instance.user_flag = user_flag

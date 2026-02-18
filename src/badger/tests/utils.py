@@ -1,14 +1,17 @@
 import os
+from typing import Any
+import numpy as np
 import pandas as pd
 from xopt import VOCS
 from xopt.generators.bayesian import UpperConfidenceBoundGenerator
 from xopt.generators import RandomGenerator
 
+from badger.routine import Routine
 
-def create_routine():
-    from badger.routine import Routine
 
-    test_routine = {
+def create_routine() -> Routine:
+
+    test_routine: dict[str, Any] = {
         "name": "routine-for-core-test",
         "generator": "random",
         "env": "test",
@@ -35,10 +38,9 @@ def create_routine():
     )
 
 
-def create_multiobjective_routine():
-    from badger.routine import Routine
+def create_multiobjective_routine() -> Routine:
 
-    test_routine = {
+    test_routine: dict[str, Any] = {
         "name": "routine-for-core-test",
         "generator": "random",
         "generator_params": {},
@@ -64,10 +66,9 @@ def create_multiobjective_routine():
     )
 
 
-def create_routine_turbo():
-    from badger.routine import Routine
+def create_routine_turbo() -> Routine:
 
-    test_routine = {
+    test_routine: dict[str, Any] = {
         "name": "routine-for-turbo-test",
         "generator": "expected_improvement",
         "env": "test",
@@ -105,10 +106,9 @@ def create_routine_turbo():
     )
 
 
-def create_routine_critical():
-    from badger.routine import Routine
+def create_routine_critical() -> Routine:
 
-    test_routine = {
+    test_routine: dict[str, Any] = {
         "name": "routine-for-critical-test",
         "generator": "random",
         "env": "test",
@@ -136,10 +136,9 @@ def create_routine_critical():
     )
 
 
-def create_routine_constrained_ucb():
-    from badger.routine import Routine
+def create_routine_constrained_ucb() -> Routine:
 
-    test_routine = {
+    test_routine: dict[str, Any] = {
         "name": "routine-for-ucb-cons-test",
         "generator": "expected_improvement",
         "env": "test",
@@ -175,19 +174,23 @@ def create_routine_constrained_ucb():
     )
 
 
-def get_current_vars(routine):
+def get_current_vars(routine: Routine) -> list[float]:
     var_names = routine.vocs.variable_names
     var_dict = routine.environment.get_variables(var_names)
 
     return list(var_dict.values())
 
 
-def get_vars_in_row(routine, idx=0):
+def get_vars_in_row(routine: Routine, idx: int = 0) -> np.ndarray:
     var_names = routine.vocs.variable_names
-    return routine.data.iloc[idx][var_names].to_numpy()
+    if routine.data is None:
+        raise ValueError("Routine data is None. Unable to get variables in row.")
+    output = routine.data.iloc[idx][var_names].to_numpy()
+    # output = routine.data.iat[idx][var_names].to_numpy()
+    return output
 
 
-def fix_path_issues():
+def fix_path_issues() -> None:
     from badger.settings import init_settings
     from badger.archive import BADGER_ARCHIVE_ROOT
 
