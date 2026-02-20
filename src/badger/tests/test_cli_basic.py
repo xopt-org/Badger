@@ -18,7 +18,7 @@ def test_cli_main():
 
     # Check output lines
     outlines = out.splitlines()
-    assert len(outlines) == 9
+    assert len(outlines) == 11
 
     # Check name
     assert outlines[0] == "name: Badger the optimizer"
