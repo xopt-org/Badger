@@ -1830,7 +1830,6 @@ class BadgerRoutinePage(QWidget):
                 xopt_version=get_xopt_version(),
                 creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
                 # Xopt part
-                vocs=vocs,
                 generator=generator,
                 # Badger part
                 name=name,

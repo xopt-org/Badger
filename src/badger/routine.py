@@ -56,9 +56,12 @@ class Routine(Xopt):
         if isinstance(data, dict):
             logger.debug(f"Routine data dict received: {list(data.keys())}")
             # validate vocs
-            if isinstance(data["vocs"], dict):
-                logger.debug("Validating VOCS from dict.")
-                data["vocs"] = VOCS(**data["vocs"])
+            if "vocs" in data:
+                if isinstance(data["vocs"], dict):
+                    logger.debug("Validating VOCS from dict.")
+                    data["vocs"] = VOCS(**data["vocs"])
+            elif "generator" in data and hasattr(data["generator"], "vocs"):
+                data["vocs"] = data["generator"].vocs
 
             # validate generator
             if isinstance(data["generator"], dict):
