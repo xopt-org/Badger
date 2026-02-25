@@ -4,19 +4,23 @@ sidebar_position: 1
 
 # Introduction
 
-Badger is an optimizer specifically designed for Accelerator Control Room (ACR).
+Badger is an optimizer interface specifically designed for Accelerator Control Room (ACR) environments, built on top of [Xopt](https://github.com/ChristopherMayes/Xopt) optimization toolkit. It makes advanced optimization algorithms accessible to accelerator operators and physicsts who need to tune complex beamline parameters in real-time.
 
 ![Badger architecture](/img/intro/architecture_re.png)
 
-Badger abstracts an optimization run as an optimization algorithm interacts with an environment, by following some pre-defined rules.[^vocs] As visualized in the picture above, the environment is controlled by the algorithm and tunes/observes the control system/machine through an interface, while the users control/monitor the optimization flow through a graphical user interface (GUI) or a command line interface (CLI).
+Badger abstracts an optimization run as an optimization algorithm interacts with an environment, by following some pre-defined rules.[^vocs] As visualized in the picture above, the environment is controlled by the algorithm and tunes/observes the control system/machine through an interface, while the users control/monitor the optimization flow through a graphical user interface (GUI), command line interface (CLI) or application programming interface (API). Configuration settings tell Badger where plugin files are located and where optimization data should be saved. 
 
-Environments and interfaces in Badger are managed through a plugin system, and could be developed and maintained separately. While the algorithms are provided by the [Xopt](https://github.com/ChristopherMayes/Xopt) package. The application interfaces (API) for creating the plugins are very straightforward and simple, yet abstractive enough to handle various situations.
+Environments and interfaces in Badger are managed through a plugin system that implement how Badger interacts with the optimization probem and physical machine. Environment plugins define what parameters can be tuned and what metrics should be optimized, while interface plugins handle protocol-specific communication with hardware (EPICS, Tango, custom APIs). 
+These plugins can be developed and maintained separately. 
+
+While the algorithms are provided by the Xopt package. The application interfaces (API) for creating the plugins are very straightforward and simple, yet abstractive enough to handle various situations. 
 
 Badger offers 3 modes to satisfy different user groups:
 
 - GUI mode, for ACR operators, enable them to perform regular optimization tasks with one click
-- CLI mode, for the command line lovers or the situation without a screen, configure and run the whole optimization in one line efficiently
 - API mode, for the algorithm developers, use the environments provided by Badger without the troubles to configure them
+- CLI mode, for the command line lovers or the situation without a screen, configure and run the whole optimization in one line efficiently
+
 
 ## Important concepts
 
