@@ -6,12 +6,16 @@
   const lightCodeTheme = require('prism-react-renderer').themes.github
   const darkCodeTheme = require('prism-react-renderer').themes.dracula
 
+  console.log("BASE_URL_BADGER_DOCS: ", process.env.BASE_URL_BADGER_DOCS)
   /** @type {import('@docusaurus/types').Config} */
   const config = {
     title: 'Badger',
     tagline: 'The Go-To Optimizer in ACR',
     url: 'https://xopt-org.github.io',
-    baseUrl: '/Badger/',
+    // if building locally or for github-actions, use baseUrl='/Badger/'.
+    // if building for another url then set a custom path with this env variable,
+    // ex: if url is https://example.edu/docs/are/here, use baseUrl='/docs/are/here'.
+    baseUrl: process.env.BASE_URL_BADGER_DOCS || '/Badger/',
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'warn',
     favicon: 'img/favicon.ico',
