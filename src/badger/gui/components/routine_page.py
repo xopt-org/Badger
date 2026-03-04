@@ -33,7 +33,6 @@ from badger.gui.components.data_table import (
 from badger.gui.components.env_cbox import BadgerEnvBox
 from badger.gui.components.filter_cbox import BadgerFilterBox
 from badger.gui.windows.docs_window import BadgerDocsWindow
-from badger.gui.windows.env_docs_window import BadgerEnvDocsWindow
 from badger.gui.windows.edit_script_dialog import BadgerEditScriptDialog
 from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.ind_lim_vrange_dialog import (
@@ -108,7 +107,7 @@ class BadgerRoutinePage(QWidget):
         self.routine = None
         self.script = ""
         self.window_docs = BadgerDocsWindow(self, "")
-        self.window_env_docs = BadgerEnvDocsWindow(self, "")
+        self.window_env_docs = BadgerDocsWindow(self, "", plugin_type="environment")
         self.vars_env = None  # needed for passing env vars to the var table
 
         # Limit variable ranges
@@ -985,7 +984,7 @@ class BadgerRoutinePage(QWidget):
         self.generator_box.edit.set_params_from_generator(name, filtered_config, vocs)
 
         # Update the docs
-        self.window_docs.update_docs(name)
+        self.window_docs.update_docs(name, "generator")
 
     def _fill_init_table(self):  # make sure self.init_table_actions is set
         for action in self.init_table_actions:
@@ -1189,7 +1188,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.update_stylesheets(env.name)
 
         # Update the docs
-        self.window_env_docs.update_docs(env.name)
+        self.window_env_docs.update_docs(env.name, "environment")
 
     def get_init_table_header(self):
         table = self.env_box.init_table
@@ -1344,6 +1343,8 @@ class BadgerRoutinePage(QWidget):
         pass
 
     def open_generator_docs(self):
+        name = self.generator_box.cb.currentText()
+        self.window_docs.update_docs(name, "generator")
         self.window_docs.show()
 
     def open_environment_docs(self):

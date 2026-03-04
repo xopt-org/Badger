@@ -112,7 +112,7 @@ Environments and interfaces are all plugins in Badger.[^algo] A plugin in Badger
     |--...
 ```
 
-The role/feature of each file will be discussed in details later in the [create environments and interfaces](guides/create-environments-and-interfaces) section.
+The role/feature of each file will be discussed in details later in the [create environments and interfaces](guides/more/create-environments-and-interfaces) section.
 
 :::tip
 

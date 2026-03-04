@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QSize
 from importlib import resources
 from badger.gui.utils import create_button
+from badger.gui.windows.docs_window import BadgerDocsWindow
 
 stylesheet_del = """
 QPushButton:hover:pressed
@@ -134,6 +135,9 @@ class BadgerActionBar(QWidget):
 
         self.btn_del = create_button("trash.png", "Delete run", stylesheet_del)
         self.btn_log = create_button("book.png", "Logbook", stylesheet_log)
+        self.btn_help = create_button("help_btn.png", "Open Docs", stylesheet_log)
+        self.btn_help.setIconSize(QSize(20, 20))
+
         self.btn_reset = create_button("undo.png", "Reset environment")
         self.btn_checkpoint = create_button(
             "flag.png", "Checkpoint", size=(48, 32), tool_button=True
@@ -204,9 +208,13 @@ class BadgerActionBar(QWidget):
         self.btn_config = btn_config = create_button("tools.png", "Configure run")
         btn_config.hide()
 
+        # Docs Window
+        self.window_docs = BadgerDocsWindow(self, "")
+
         hbox_bg.addWidget(self.btn_del)
         # hbox_action.addWidget(btn_edit)
         hbox_bg.addWidget(self.btn_log)
+        hbox_bg.addWidget(self.btn_help)
         hbox_bg.addStretch(1)
         hbox_bg.addWidget(self.btn_reset)
         hbox_bg.addWidget(self.btn_ctrl)
@@ -227,6 +235,7 @@ class BadgerActionBar(QWidget):
     def config_logic(self):
         self.btn_del.clicked.connect(self.delete_run)
         self.btn_log.clicked.connect(self.logbook)
+        self.btn_help.clicked.connect(self.open_docs)
         self.btn_reset.clicked.connect(self.reset_env)
         self.btn_opt.clicked.connect(self.jump_to_optimal)
         self.btn_set.clicked.connect(self.dial_in)
@@ -337,6 +346,10 @@ class BadgerActionBar(QWidget):
 
     def logbook(self):
         self.sig_logbook.emit()
+
+    def open_docs(self):
+        self.window_docs.update_docs("gui-usage")
+        self.window_docs.show()
 
     def reset_env(self):
         self.sig_reset_env.emit()
