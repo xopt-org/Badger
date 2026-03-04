@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # Introduction
 
-Badger is an optimizer interface specifically designed for Accelerator Control Room (ACR) environments, built on top of [Xopt](https://github.com/ChristopherMayes/Xopt) optimization toolkit. It makes advanced optimization algorithms accessible to accelerator operators and physicsts who need to tune complex beamline parameters in real-time.
+Badger is an optimizer interface specifically designed for Accelerator Control Room (ACR) environments, built on top of [Xopt](https://github.com/ChristopherMayes/Xopt) optimization toolkit. It makes advanced optimization algorithms accessible to accelerator operators and physicists who need to tune complex beamline parameters in real-time.
 
-![Badger architecture](/img/intro/architecture_re.png)
+![Badger architecture](/img/intro/newBadgerWorkflow.png)
 
 Badger abstracts an optimization run as an optimization algorithm interacts with an environment, by following some pre-defined rules.[^vocs] As visualized in the picture above, the environment is controlled by the algorithm and tunes/observes the control system/machine through an interface, while the users control/monitor the optimization flow through a graphical user interface (GUI), command line interface (CLI) or application programming interface (API). Configuration settings tell Badger where plugin files are located and where optimization data should be saved. 
 
@@ -17,7 +17,7 @@ While the algorithms are provided by the Xopt package. The application interface
 
 Badger offers 3 modes to satisfy different user groups:
 
-- GUI mode, for ACR operators, enable them to perform regular optimization tasks with one click
+- GUI mode, for ACR operators, enable them to perform regular optimization tasks with one click. Users can browse optimization history, configure routines, and monitor them in real-time with live plotting.
 - API mode, for the algorithm developers, use the environments provided by Badger without the troubles to configure them
 - CLI mode, for the command line lovers or the situation without a screen, configure and run the whole optimization in one line efficiently
 

@@ -277,8 +277,14 @@ Now you can take `myenv` for a spin -- just write some routine configs and run s
 ### Advanced topics
 
 #### Specify variable range
+Each optimzation variable must have defined bounds that specify the valid search space. These ranges serve dual purposes: they constrain the optimization algorithm to explore only physically meaningful parameter values, and they enforce safety limits to prevent damage to the equipment. Variable ranges are defined in the Environment + VOCS section. 
+![Variable Range](/img/guides/variablerange.png)
 
-#### Incorperate hyper-parameters
+#### Incorporate hyper-parameters
+
+Algorithm hyperparameters control how Xopt optimization algorithms explore the parameter space. These are distinct from the optimization variables (the machine parameters being tuned) and are algorithm-specific settings. These can be specified under Algorithm section. In Bayesian Optimization, hyperparameters include exploration parameter (beta) and maximum number of iterations (max_iter).
+![Hyperparameters](/img/guides/hyperparameter.png)
+
 
 #### Check variable readout
 
