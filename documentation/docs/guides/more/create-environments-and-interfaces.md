@@ -280,15 +280,23 @@ Now you can take `myenv` for a spin -- just write some routine configs and run s
 Each optimzation variable must have defined bounds that specify the valid search space. These ranges serve dual purposes: they constrain the optimization algorithm to explore only physically meaningful parameter values, and they enforce safety limits to prevent damage to the equipment. Variable ranges are defined in the Environment + VOCS section. 
 ![Variable Range](/img/guides/variablerange.png)
 
-#### Incorporate hyper-parameters
+#### Incorporate algorithm parameters
 
 Algorithm hyperparameters control how Xopt optimization algorithms explore the parameter space. These are distinct from the optimization variables (the machine parameters being tuned) and are algorithm-specific settings. These can be specified under Algorithm section. In Bayesian Optimization, hyperparameters include exploration parameter (beta) and maximum number of iterations (max_iter).
 ![Hyperparameters](/img/guides/hyperparameter.png)
 
 
 #### Check variable readout
+Variable setters and getters may operate on different process variables (PVs). For example, magnet control typically sets via BCTRL but reads via BACT. Since Badger saves initial values using the getter and restores using the setter, reading BACT but writing to BCTRL during restoration may not return the system to its original state. Configure getters to read the same PV type as setters (preferably BCTRL for both) to ensure accurate save/restore functionality.
+
 
 #### Delayed observation
+
+Accelerator control systems require time to settle after parameter changes. Reading observables before the system reaches steady state would give the optimization algorithm misleading data.
+Badger provides trim delay settings to specify wait times between applying new vriable values and reading measurements.
+Because on real machine almost all changes to variables will take time to reach stable state, users can add wait time with trim delay under Environment and VOCS.
+
+![Trimdelay](/img/guides/trimdelay.png)
 
 <!-- ```python
 from badger import environment
