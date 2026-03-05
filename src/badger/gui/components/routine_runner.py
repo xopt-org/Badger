@@ -3,7 +3,7 @@ import time
 import traceback
 
 import pandas as pd
-from PyQt5.QtCore import pyqtSignal, QObject, QTimer
+from qtpy.QtCore import Signal, QObject, QTimer
 
 from badger.errors import BadgerRunTerminated
 from badger.tests.utils import get_current_vars
@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class BadgerRoutineSignals(QObject):
-    env_ready = pyqtSignal(list)
-    finished = pyqtSignal()
-    progress = pyqtSignal(object)
-    error = pyqtSignal(Exception)
-    info = pyqtSignal(str)
-    states = pyqtSignal(str)
+    env_ready = Signal(list)
+    finished = Signal()
+    progress = Signal(object)
+    error = Signal(Exception)
+    info = Signal(str)
+    states = Signal(str)
 
 
 class BadgerRoutineSubprocess:

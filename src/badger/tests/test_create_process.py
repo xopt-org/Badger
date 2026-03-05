@@ -3,7 +3,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt5.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication
 
 app = QApplication(sys.argv)
 

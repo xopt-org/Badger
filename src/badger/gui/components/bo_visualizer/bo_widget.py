@@ -1,12 +1,12 @@
 from typing import Optional, cast
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QVBoxLayout,
     QMessageBox,
     QTableWidgetItem,
 )
-from PyQt5.QtWidgets import QSizePolicy
+from qtpy.QtWidgets import QSizePolicy
 
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.components.extension_utilities import (
@@ -20,7 +20,7 @@ from badger.utils import BlockSignalsContext, create_archive_run_filename
 from xopt.generator import Generator
 from badger.gui.components.bo_visualizer.ui_components import UIComponents
 from badger.gui.components.bo_visualizer.plotting_area import PlottingArea
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from badger.gui.components.analysis_widget import AnalysisWidget
 

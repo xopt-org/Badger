@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout
-from PyQt5.QtWidgets import QToolButton, QMenu, QAction
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import pyqtSignal, QSize
+from qtpy.QtWidgets import QWidget, QHBoxLayout
+from qtpy.QtWidgets import QToolButton, QMenu
+from qtpy.QtGui import QAction, QIcon, QFont
+from qtpy.QtCore import Signal, QSize
 from importlib import resources
 from badger.gui.utils import create_button
 from badger.gui.windows.docs_window import BadgerDocsWindow
@@ -85,21 +85,21 @@ QToolButton
 
 
 class BadgerActionBar(QWidget):
-    sig_start = pyqtSignal()
-    sig_start_until = pyqtSignal()
-    sig_stop = pyqtSignal()
+    sig_start = Signal()
+    sig_start_until = Signal()
+    sig_stop = Signal()
 
-    sig_delete_run = pyqtSignal()
-    sig_logbook = pyqtSignal()
-    sig_reset_env = pyqtSignal()
-    sig_jump_to_optimal = pyqtSignal()
-    sig_dial_in = pyqtSignal()
-    sig_ctrl = pyqtSignal(bool)
-    sig_open_extensions_palette = pyqtSignal()
+    sig_delete_run = Signal()
+    sig_logbook = Signal()
+    sig_reset_env = Signal()
+    sig_jump_to_optimal = Signal()
+    sig_dial_in = Signal()
+    sig_ctrl = Signal(bool)
+    sig_open_extensions_palette = Signal()
 
-    sig_save_checkpoint = pyqtSignal()
-    sig_edit_checkpoint = pyqtSignal()
-    sig_load_checkpoint = pyqtSignal()
+    sig_save_checkpoint = Signal()
+    sig_edit_checkpoint = Signal()
+    sig_load_checkpoint = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

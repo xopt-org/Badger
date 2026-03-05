@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 from pytestqt.qtbot import QtBot
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QApplication
+from qtpy.QtCore import Qt, QTimer
+from qtpy.QtWidgets import QApplication
 
 
 def test_routine_page_init(qtbot: QtBot):

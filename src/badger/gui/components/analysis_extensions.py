@@ -1,9 +1,9 @@
 from typing import Optional, cast
 import logging
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
-from PyQt5.QtGui import QCloseEvent
+from qtpy.QtCore import Signal
+from qtpy.QtWidgets import QDialog, QVBoxLayout
+from qtpy.QtGui import QCloseEvent
 from badger.gui.components.analysis_widget import AnalysisWidget
 from badger.gui.components.bo_visualizer.bo_widget import BOPlotWidget
 from badger.gui.components.pf_viewer.pf_widget import ParetoFrontWidget
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class AnalysisExtension(QDialog):
-    window_closed = pyqtSignal(object)
+    window_closed = Signal(object)
     generator_type = Generator
     widget = AnalysisWidget
 

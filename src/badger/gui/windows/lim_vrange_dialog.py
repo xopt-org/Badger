@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -9,14 +9,14 @@ from PyQt5.QtWidgets import (
     QDoubleSpinBox,
     QRadioButton,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QGroupBox,
     QLabel,
     QComboBox,
     QStyledItemDelegate,
     QStackedWidget,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 
 
 class BadgerLimitVariableRangeDialog(QDialog):

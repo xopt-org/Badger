@@ -1,6 +1,6 @@
 from pandas import DataFrame
-from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
+from qtpy.QtCore import Qt
 
 
 stylesheet = """

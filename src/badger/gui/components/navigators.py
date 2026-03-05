@@ -11,20 +11,19 @@ This file defines the following classes:
 """
 
 import os
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QTreeView,
     QTreeWidget,
     QTreeWidgetItem,
     QMenu,
-    QAction,
     QApplication,
     QToolTip,
     QFileSystemModel,
 )
-from PyQt5.QtGui import QFont, QDesktopServices, QCursor
-from PyQt5.QtCore import Qt, QUrl, QTimer, QDir
+from qtpy.QtGui import QAction, QFont, QDesktopServices, QCursor
+from qtpy.QtCore import Qt, QUrl, QTimer, QDir
 from badger.archive import get_base_run_filename, get_runs
 from badger.utils import run_names_to_dict
 from badger.settings import init_settings

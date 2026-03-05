@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QSpinBox,
     QDoubleSpinBox,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QGroupBox,
     QLabel,
     QComboBox,
