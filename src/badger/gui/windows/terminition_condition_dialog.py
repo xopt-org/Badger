@@ -2,7 +2,7 @@
 when an optimization run should automatically stop — either after a maximum
 number of evaluations or after a maximum elapsed time."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -10,8 +10,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QSpinBox,
     QDoubleSpinBox,
-)
-from PyQt5.QtWidgets import (
     QGroupBox,
     QLabel,
     QComboBox,

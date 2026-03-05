@@ -1,9 +1,9 @@
 import multiprocessing
 
 import pytest
-from PyQt5.QtCore import QEventLoop, Qt, QTimer
-from PyQt5.QtTest import QSignalSpy
-from PyQt5.QtWidgets import QApplication
+from qtpy.QtCore import QEventLoop, Qt, QTimer
+from qtpy.QtTest import QSignalSpy
+from qtpy.QtWidgets import QApplication
 from unittest.mock import Mock
 
 

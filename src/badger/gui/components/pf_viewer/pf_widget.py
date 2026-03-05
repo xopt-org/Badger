@@ -5,7 +5,7 @@ updating live as new solutions come in."""
 import time
 from typing import Optional
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QWidget,
     QSizePolicy,
     QVBoxLayout,
@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QTabWidget,
 )
 
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from badger.gui.components.plot_event_handlers import (
     MatplotlibInteractionHandler,
 )

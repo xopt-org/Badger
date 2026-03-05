@@ -8,9 +8,9 @@ from gest_api.vocs import (
     MinimizeObjective,
     Observable,
 )
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
+from qtpy.QtCore import Qt, QTimer
+from qtpy.QtWidgets import QApplication
 
 
 def test_routine_page_init(qtbot: QtBot):

@@ -25,9 +25,9 @@ from functools import partial, wraps
 from typing import Any, Callable, Dict, List, ParamSpec, cast
 
 from pyparsing import TypeVar
-from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Qt, QRegularExpression, Signal
+from qtpy.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent
+from qtpy.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
@@ -51,7 +51,7 @@ class EditableTable(QTableWidget):
     A custom QTableWidget that supports editing and managing tabular data.
     """
 
-    data_changed = pyqtSignal()
+    data_changed = Signal()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -403,7 +403,10 @@ class EditableTable(QTableWidget):
             }
 
             # Only insert if the name matches the keyword
-            if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
+            if (
+                self.keyword
+                and not QRegularExpression(self.keyword).match(name).hasMatch()
+            ):
                 return
 
             # Remove the last row if it exists
@@ -440,11 +443,11 @@ class EditableTable(QTableWidget):
             A list of visible item names.
         """
         visible_items: list[str] = []
-        rx = QRegExp(self.keyword)
+        rx = QRegularExpression(self.keyword)
 
         for item in self.data:
             name = next(iter(item))
-            visible = rx.indexIn(name, 0) != -1
+            visible = rx.match(name).hasMatch()
             if not visible:
                 continue
 
@@ -486,7 +489,10 @@ class EditableTable(QTableWidget):
             }
 
             # Only insert if the name matches the keyword
-            if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
+            if (
+                self.keyword
+                and not QRegularExpression(self.keyword).match(name).hasMatch()
+            ):
                 self.removeRow(row)
                 self.add_empty_row()
                 return
@@ -536,7 +542,10 @@ class EditableTable(QTableWidget):
             self.status[name] = self.status.pop(original_name)
             self.formulas[name] = self.formulas.pop(original_name)
             # Check if the new name is visible under the current filters
-            if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
+            if (
+                self.keyword
+                and not QRegularExpression(self.keyword).match(name).hasMatch()
+            ):
                 self.removeRow(row)
 
     def add_empty_row(self):
@@ -662,13 +671,13 @@ class EditableTable(QTableWidget):
         if formulas is not None:
             self.formulas = formulas
 
-        rx = QRegExp(self.keyword)
+        rx = QRegularExpression(self.keyword)
 
         for item in self.data:
             row = self.rowCount()
 
             name = next(iter(item))
-            visible = rx.indexIn(name, 0) != -1
+            visible = rx.match(name).hasMatch()
             if not visible:
                 continue
 

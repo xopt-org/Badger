@@ -1,14 +1,17 @@
 """Panel where users pick an optimization algorithm from the Xopt registry
 and configure its parameters via the Pydantic tree editor."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
     QWidget,
     QPlainTextEdit,
+    QComboBox,
+    QCheckBox,
+    QStyledItemDelegate,
+    QLabel,
 )
-from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
 from badger.gui.components.collapsible_box import CollapsibleBox
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
 from badger.settings import init_settings

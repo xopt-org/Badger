@@ -2,7 +2,7 @@
 preview of a fully-configured routine before it is saved or run, allowing the
 user to confirm the settings."""
 
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
+from qtpy.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
 
 from badger.routine import Routine
 from badger.utils import get_yaml_string

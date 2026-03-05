@@ -18,11 +18,19 @@ import yaml
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
-from PyQt5.QtWidgets import QVBoxLayout, QScrollArea
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+from qtpy.QtCore import Signal, QTimer
+from qtpy.QtWidgets import (
+    QLineEdit,
+    QPushButton,
+    QFileDialog,
+    QMessageBox,
+    QWidget,
+    QTabWidget,
+    QVBoxLayout,
+    QScrollArea,
+    QTableWidgetItem,
+    QPlainTextEdit,
+)
 from badger.gui.components.navigators import HistoryNavigator
 from coolname import generate_slug
 from xopt import VOCS
@@ -121,11 +129,11 @@ def extract_objective_symbol(objective: BaseObjective) -> str:
 
 
 class BadgerRoutinePage(QWidget):
-    sig_updated = pyqtSignal(str, str)  # routine name, routine description
-    sig_load_template = pyqtSignal(str)  # template path
-    sig_save_template = pyqtSignal(str)  # template path
-    sig_go_run = pyqtSignal()
-    sig_select_env = pyqtSignal(str)
+    sig_updated = Signal(str, str)  # routine name, routine description
+    sig_load_template = Signal(str)  # template path
+    sig_save_template = Signal(str)  # template path
+    sig_go_run = Signal()
+    sig_select_env = Signal(str)
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")

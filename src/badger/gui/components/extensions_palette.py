@@ -3,7 +3,7 @@ Pareto Front Viewer) with buttons to open each in its own window."""
 
 import traceback
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QMainWindow,
     QPushButton,
     QVBoxLayout,
@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QSizePolicy,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from badger.gui.components.analysis_extensions import (
     AnalysisExtension,
     ParetoFrontViewer,

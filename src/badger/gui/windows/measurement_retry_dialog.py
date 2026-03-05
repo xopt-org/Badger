@@ -1,7 +1,7 @@
 """Error dialog that allows users to retry measurements after errors in setting variable
 values / getting observables from the environment. Based on the ExpandableMessageBox dialog."""
 
-from PyQt5.QtWidgets import QDialogButtonBox, QMessageBox
+from qtpy.QtWidgets import QDialogButtonBox, QMessageBox
 
 from .expandable_message_box import ExpandableMessageBox
 

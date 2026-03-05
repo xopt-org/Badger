@@ -1,7 +1,7 @@
 """Creates a compact label + QLineEdit pair used throughout the GUI for
 key-value fields."""
 
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 
 def labeled_lineedit(name, text, width_name=64, placeholder=None, readonly=True):

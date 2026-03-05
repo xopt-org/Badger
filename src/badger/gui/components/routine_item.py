@@ -2,10 +2,10 @@
 and environment with hover/selection styling and a delete button."""
 
 from datetime import datetime
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
-from PyQt5.QtWidgets import QSizePolicy, QMessageBox
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont
+from qtpy.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
+from qtpy.QtWidgets import QSizePolicy, QMessageBox
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QFont
 from badger.gui.components.eliding_label import ElidingLabel
 from badger.gui.utils import create_button
 
@@ -65,7 +65,7 @@ QPushButton
 
 class BadgerRoutineItem(QWidget):
     # sig_del carries an id
-    sig_del = pyqtSignal(str)
+    sig_del = Signal(str)
 
     def __init__(
         self, id, name, timestamp, environment, env_dict, description="", parent=None

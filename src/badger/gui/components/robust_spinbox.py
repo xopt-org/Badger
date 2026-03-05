@@ -2,8 +2,8 @@
 and optional read-only mode. Used for variable bounds and constraint
 thresholds."""
 
-from PyQt5.QtWidgets import QDoubleSpinBox, QAbstractSpinBox
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QDoubleSpinBox, QAbstractSpinBox
+from qtpy.QtCore import Qt
 from badger.gui.utils import MouseWheelWidgetAdjustmentGuard
 
 

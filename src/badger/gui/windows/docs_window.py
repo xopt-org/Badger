@@ -2,7 +2,7 @@
 environments, and general Badger guides in a QTextBrowser with
 clickable navigation links."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QCheckBox,
@@ -14,7 +14,7 @@ from badger.factory import load_badger_docs, load_plugin_docs, list_generators
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PyQt5.QtCore import QUrl
+    from qtpy.QtCore import QUrl
 
 
 class BadgerDocsWindow(QMainWindow):

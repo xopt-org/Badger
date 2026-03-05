@@ -15,7 +15,7 @@ from typing import Iterable, Optional, Any
 import yaml
 
 from badger.errors import BadgerLoadConfigError
-from PyQt5.QtWidgets import QWidget, QLayout
+from qtpy.QtWidgets import QWidget, QLayout
 
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 

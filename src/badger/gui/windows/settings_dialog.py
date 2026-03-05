@@ -5,9 +5,7 @@ changes applied immediately to the running application."""
 import logging
 import os
 
-# from PyQt5.QtCore import QRegExp
-# from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QComboBox,
     QGridLayout,
     QVBoxLayout,
@@ -15,12 +13,12 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QApplication,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
 from badger.settings import init_settings
 from badger.log import get_logging_manager
@@ -57,8 +55,6 @@ class BadgerSettingsDialog(QDialog):
         self.setMinimumWidth(480)
 
         vbox = QVBoxLayout(self)
-
-        # validator = QRegExpValidator(QRegExp(r"^[0-9]\d*(\.\d+)?$"))
 
         widget_settings = QWidget(self)
         grid = QGridLayout(widget_settings)
