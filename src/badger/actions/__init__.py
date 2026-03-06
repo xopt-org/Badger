@@ -1,6 +1,8 @@
+import os
 from importlib import metadata
 from badger.actions.doctor import check_n_config_paths
 from badger.utils import yprint
+from badger.settings import init_settings, get_user_config_folder
 
 
 def show_info(args):
@@ -20,7 +22,8 @@ def show_info(args):
     if not check_n_config_paths():
         return
 
-    from badger.settings import init_settings
+    config_path = get_user_config_folder()
+    configfile_path = os.path.join(config_path, "config.yaml")
 
     config_singleton = init_settings()
     BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
@@ -29,17 +32,21 @@ def show_info(args):
     BADGER_ARCHIVE_ROOT = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
     BADGER_LOG_DIRECTORY = config_singleton.read_value("BADGER_LOG_DIRECTORY")
     BADGER_LOG_LEVEL = config_singleton.read_value("BADGER_LOG_LEVEL")
-
+    BADGER_TENSOR_STRATEGY = config_singleton.read_value(
+        "BADGER_PYTORCH_TENSOR_SHARING_STRATEGY"
+    )
     info = {
         "name": "Badger the optimizer",
         "version": metadata.version("badger-opt"),
         "xopt version": metadata.version("xopt"),
+        "config-file path": configfile_path,
         "plugin root": BADGER_PLUGIN_ROOT,
         "template root": BADGER_TEMPLATE_ROOT,
         "logbook root": BADGER_LOGBOOK_ROOT,
         "archive root": BADGER_ARCHIVE_ROOT,
         "logging directory": BADGER_LOG_DIRECTORY,
         "logging level": BADGER_LOG_LEVEL,
+        "pytorch tensor sharing strategy": BADGER_TENSOR_STRATEGY,
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
     }
 

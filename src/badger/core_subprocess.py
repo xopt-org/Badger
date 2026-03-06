@@ -7,7 +7,10 @@ from pandas import DataFrame
 import multiprocessing as mp
 import os
 
-from badger.settings import init_settings
+from badger.settings import (
+    init_settings,
+    apply_pytorch_multiprocess_tensor_sharing_setting,
+)
 from badger.errors import BadgerRunTerminated, BadgerEnvObsError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
@@ -108,7 +111,11 @@ def run_routine_subprocess(
 
     # Initialize the settings singleton with the provided config path
     logger.info(f"Initializing settings with config path: {config_path}")
-    init_settings(config_path)
+    config_values = init_settings(config_path)
+    # Applying this setting is quick, so let's just set b4 each run incase later we want to expose it
+    # in the settings window (meaning user can change setting without reloading Badger).
+    apply_pytorch_multiprocess_tensor_sharing_setting(config_values)
+
     # Now load the archive would use the correct config
     from badger.archive import load_run, archive_run
 
