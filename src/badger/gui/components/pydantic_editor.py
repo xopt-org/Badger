@@ -560,7 +560,7 @@ class BadgerListEditor(QWidget):
 
 
 class BadgerPydanticEditor(QTreeWidget):
-    vocs: VOCS = VOCS()
+    vocs: VOCS = VOCS(variables={})
     defaults: dict[str, Any] = {}
     generator_name: str = ""
     model_class: type[BaseModel] | None = None
@@ -687,7 +687,7 @@ class BadgerPydanticEditor(QTreeWidget):
     ):
         logger.debug(f"vocs: {vocs}")
         logger.debug(f"defaults: {defaults}")
-        self.vocs = vocs or VOCS()
+        self.vocs = vocs or VOCS(variables={})
         self.generator_name = generator_name
         self.defaults = defaults
 

@@ -31,6 +31,8 @@ from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
 
+from gest_api.vocs import ContinuousVariable
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -309,7 +311,9 @@ class VariableTable(QTableWidget):
         return {k: (v[0], v[1]) for k, v in bounds.items()}
 
     def update_variables(
-        self, variables: list[dict[str, tuple[float, float]]], filtered: int = 0
+        self,
+        variables: list[dict[str, tuple[float, float] | ContinuousVariable]],
+        filtered: int = 0,
     ):
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
@@ -364,12 +368,22 @@ class VariableTable(QTableWidget):
             self.setItem(i, 1, item)
 
             _bounds = self.bounds[name]
+            default_val = (
+                _bounds.domain[0]
+                if isinstance(_bounds, ContinuousVariable)
+                else _bounds[0]
+            )
             sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=default_val, lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_lower.valueChanged.connect(self.update_bounds)
+            default_val = (
+                _bounds.domain[1]
+                if isinstance(_bounds, ContinuousVariable)
+                else _bounds[0]
+            )
             sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=default_val, lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(i, 2, sb_lower)

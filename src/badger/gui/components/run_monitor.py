@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt import VOCS
+from xopt.vocs import VOCS, normalize_inputs, select_best
 
 from badger.archive import archive_run, BADGER_ARCHIVE_ROOT
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
@@ -532,7 +532,7 @@ class BadgerOptMonitor(QWidget):
 
     def update_curves(self, results=None):
         use_time_axis = self.plot_x_axis == 1
-        normalize_inputs = self.x_plot_y_axis == 1
+        norm_inputs = self.x_plot_y_axis == 1
 
         if results is not None:
             self.routine.data = results
@@ -552,8 +552,8 @@ class BadgerOptMonitor(QWidget):
         variable_names = self.vocs.variable_names
 
         # if normalize x, normalize using vocs
-        if normalize_inputs:
-            input_data = self.vocs.normalize_inputs(data_copy)
+        if norm_inputs:
+            input_data = normalize_inputs(self.vocs, data_copy)
         else:
             input_data = data_copy[variable_names]
 
@@ -905,8 +905,8 @@ class BadgerOptMonitor(QWidget):
 
     def jump_to_optimal(self):
         try:
-            best_idx, _, _ = self.routine.vocs.select_best(
-                self.routine.sorted_data, n=1
+            best_idx, _, _ = select_best(
+                self.routine.vocs, self.routine.sorted_data, n=1
             )
             # print(best_idx, _)
             best_idx = int(best_idx[0])

@@ -56,25 +56,34 @@ class Routine(Xopt):
         if isinstance(data, dict):
             logger.debug(f"Routine data dict received: {list(data.keys())}")
             # validate vocs
-            if isinstance(data["vocs"], dict):
-                logger.debug("Validating VOCS from dict.")
-                data["vocs"] = VOCS(**data["vocs"])
+            vocs_data = None
+            if "vocs" in data:
+                vocs_data = data.pop("vocs")
+                if isinstance(vocs_data, dict):
+                    logger.debug("Validating VOCS from dict.")
+                    # Xopt 3.0 VOCS validation fails if empty dicts are passed for certain fields
+                    vocs_data = {k: v for k, v in vocs_data.items() if v}
+                    vocs_data = VOCS(**vocs_data)
+            elif "generator" in data and hasattr(data["generator"], "vocs"):
+                vocs_data = data["generator"].vocs
 
             # validate generator
             if isinstance(data["generator"], dict):
                 name = data["generator"].pop("name")
                 logger.debug(f"Validating generator: {name}")
                 generator_class = get_generator(name)
-                data["generator"] = generator_class.model_validate(
-                    {**data["generator"], "vocs": data["vocs"]}
-                )
+                gen_kwargs = {**data["generator"]}
+                if vocs_data is not None:
+                    gen_kwargs["vocs"] = vocs_data
+                data["generator"] = generator_class.model_validate(gen_kwargs)
 
             elif isinstance(data["generator"], str):
                 logger.debug(f"Validating generator from string: {data['generator']}")
                 generator_class = get_generator(data["generator"])
-                data["generator"] = generator_class.model_validate(
-                    {"vocs": data["vocs"]}
-                )
+                gen_kwargs = {}
+                if vocs_data is not None:
+                    gen_kwargs["vocs"] = vocs_data
+                data["generator"] = generator_class.model_validate(gen_kwargs)
 
             if isinstance(data["generator"], SequentialGenerator):
                 logger.debug("Setting SequentialGenerator is_active to False.")
@@ -120,7 +129,7 @@ class Routine(Xopt):
                 logger.debug(f"Evaluating point: {point}")
                 point = pd.Series(point).explode().to_dict()
                 env.set_variables(point)
-                obs = env.get_observables(data["vocs"].output_names)
+                obs = env.get_observables(data["generator"].vocs.output_names)
                 ts = curr_ts()
                 obs["timestamp"] = ts.timestamp()
                 obs["live"] = 1

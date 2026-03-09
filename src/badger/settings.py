@@ -165,7 +165,11 @@ class ConfigSingleton:
 
             # Convert each entry in config_data to an instance of Setting
             for key, value in config_data.items():
-                if isinstance(value, dict) and "value" in value:
+                if isinstance(value, dict):
+                    value_arg = None
+                    if "value" in value:
+                        value_arg = value["value"]
+
                     # Convert to Setting instance
                     config_data[key] = Setting(
                         display_name=value.get("display_name", key),
@@ -173,7 +177,7 @@ class ConfigSingleton:
                             "description",
                             f"Setting for {key.replace('_', ' ').lower()}",
                         ),
-                        value=value["value"],
+                        value=value_arg,
                         is_path=value.get("is_path", key),
                     )
                 else:

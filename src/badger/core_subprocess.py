@@ -17,6 +17,8 @@ from badger.logger.event import Events
 from badger.routine import Routine
 from badger.log import configure_process_logging
 from xopt.errors import FeasibilityError, XoptError
+from xopt.vocs import select_best
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     """
     vocs = routine.vocs
     try:
-        best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
+        best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         logger.debug(f"Selected best index: {best_idx}")
         if best_idx.size > 0:
             if best_idx[0] != len(routine.data) - 1:

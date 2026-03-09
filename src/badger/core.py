@@ -9,6 +9,8 @@ from badger.logger.event import Events
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
 
+from xopt.vocs import select_best
+
 
 def check_run_status(active_callback):
     while True:
@@ -25,7 +27,7 @@ def check_run_status(active_callback):
 def convert_to_solution(result: DataFrame, routine: Routine):
     vocs = routine.vocs
     try:
-        best_idx, _, _ = vocs.select_best(routine.sorted_data, n=1)
+        best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         if best_idx.size > 0:
             best_idx = int(best_idx[0])  # convert numpy array to int
             if best_idx != len(routine.data) - 1:

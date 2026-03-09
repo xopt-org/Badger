@@ -31,7 +31,10 @@ dependencies = [
     "pillow",
     "requests",
     "xopt>=2.6.11",
+    "xopt @ git+https://github.com/xopt-org/Xopt.git@v3.0",
 ]
+# ^ temporarily point to xopt 3.0 brach for testing (revert b4 this patch gets merged to main)
+
 dynamic = ["version"]
 [tool.setuptools_scm]
 version_file = "src/badger/_version.py"
