@@ -1,9 +1,9 @@
 from copy import deepcopy
 
-from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QStackedWidget
-from PyQt5.QtWidgets import QVBoxLayout, QSpinBox, QPushButton
-from PyQt5.QtWidgets import QGroupBox, QLabel, QComboBox, QStyledItemDelegate
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QDialog, QWidget, QHBoxLayout, QStackedWidget
+from qtpy.QtWidgets import QVBoxLayout, QSpinBox, QPushButton
+from qtpy.QtWidgets import QGroupBox, QLabel, QComboBox, QStyledItemDelegate
+from qtpy.QtCore import Qt
 from badger.gui.components.robust_spinbox import RobustSpinBox
 
 

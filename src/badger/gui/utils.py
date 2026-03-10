@@ -1,9 +1,9 @@
 from importlib import resources
 from typing import Any
-from PyQt5.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox, QToolButton
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
-from PyQt5.QtCore import Qt, QObject, QEvent, QSize
-from PyQt5.QtGui import QIcon
+from qtpy.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox, QToolButton
+from qtpy.QtWidgets import QDialog, QVBoxLayout, QLabel
+from qtpy.QtCore import Qt, QObject, QEvent, QSize
+from qtpy.QtGui import QIcon
 import copy
 
 

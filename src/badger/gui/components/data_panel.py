@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 import pandas as pd
-from PyQt5.QtWidgets import QGroupBox, QCheckBox, QLabel
-from PyQt5.QtCore import Qt
+from qtpy.QtWidgets import QGroupBox, QCheckBox, QLabel
+from qtpy.QtCore import Qt
 from badger.gui.components.data_table import (
     TableWithCopy,
 )

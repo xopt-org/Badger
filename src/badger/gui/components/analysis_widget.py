@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any, Optional
 
-from PyQt5.QtWidgets import QDialog
+from qtpy.QtWidgets import QDialog
 from badger.gui.components.extension_utilities import HandledException
 from badger.routine import Routine
 from xopt import Generator

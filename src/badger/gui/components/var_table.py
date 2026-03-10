@@ -1,7 +1,7 @@
 from importlib import resources
 import traceback
 from typing import Any, cast
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
@@ -16,8 +16,8 @@ from PyQt5.QtWidgets import (
     QLabel,
     QDialog,
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
-from PyQt5.QtGui import (
+from qtpy.QtCore import Signal, Qt, QSize, QPoint
+from qtpy.QtGui import (
     QColor,
     QIcon,
     QGuiApplication,
@@ -37,10 +37,10 @@ logger = logging.getLogger(__name__)
 
 
 class VariableTable(QTableWidget):
-    sig_sel_changed = pyqtSignal()
-    sig_pv_added = pyqtSignal()
-    sig_var_config = pyqtSignal(str)
-    data_changed = pyqtSignal()
+    sig_sel_changed = Signal()
+    sig_pv_added = Signal()
+    sig_var_config = Signal(str)
+    data_changed = Signal()
 
     PLACEHOLDER_TEXT = "Enter new variable here...."
 

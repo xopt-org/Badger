@@ -4,10 +4,10 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from PyQt5.QtCore import QEventLoop, QPointF, Qt, QTimer
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtTest import QSignalSpy
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from qtpy.QtCore import QEventLoop, QPointF, Qt, QTimer
+from qtpy.QtGui import QMouseEvent
+from qtpy.QtTest import QSignalSpy
+from qtpy.QtWidgets import QApplication, QMessageBox
 
 
 class TestRunMonitor:
@@ -372,10 +372,8 @@ class TestRunMonitor:
 
         monitor.inspector_objective.setValue(9)
 
-        with patch(
-            "PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes
-        ):
-            # with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
+        with patch("qtpy.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
+            # with patch("qtpy.QtWidgets.QMessageBox.information") as mock_info:
             qtbot.mouseClick(action_bar.btn_set, Qt.MouseButton.LeftButton)
             # mock_info.assert_called_once()
 
@@ -388,10 +386,8 @@ class TestRunMonitor:
         # Reset env and confirm
         spy = QSignalSpy(action_bar.btn_reset.clicked)
 
-        with patch(
-            "PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes
-        ):
-            # with patch("PyQt5.QtWidgets.QMessageBox.information") as mock_info:
+        with patch("qtpy.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
+            # with patch("qtpy.QtWidgets.QMessageBox.information") as mock_info:
             qtbot.mouseClick(action_bar.btn_reset, Qt.MouseButton.LeftButton)
             # mock_info.assert_called_once()
 
@@ -421,9 +417,7 @@ class TestRunMonitor:
         monitor.inspector_objective.setValue(2)
 
         spy = QSignalSpy(action_bar.btn_set.clicked)
-        with patch(
-            "PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes
-        ):
+        with patch("qtpy.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
             qtbot.mouseClick(action_bar.btn_set, Qt.MouseButton.LeftButton)
         assert len(spy) == 1
 
@@ -438,7 +432,7 @@ class TestRunMonitor:
 
         # monitor.plot_x_axis = False
 
-        # with patch("PyQt5.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
+        # with patch("qtpy.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes):
         #     qtbot.mouseClick(monitor.btn_set, Qt.MouseButton.LeftButton)
 
         # not_time_x_view_range = monitor.plot_var.getViewBox().viewRange()[0]
@@ -527,7 +521,7 @@ class TestRunMonitor:
         action_bar.run_until_action.trigger()
 
         # Check if critical violation alert being triggered
-        with patch("PyQt5.QtWidgets.QMessageBox.warning", return_value=QMessageBox.Yes):
+        with patch("qtpy.QtWidgets.QMessageBox.warning", return_value=QMessageBox.Yes):
             while monitor.running:
                 qtbot.wait(100)
 

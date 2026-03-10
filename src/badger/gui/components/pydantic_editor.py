@@ -16,8 +16,8 @@ from inspect import isclass
 
 from pydantic_core import PydanticUndefined
 import yaml
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
     QSpinBox,
@@ -471,7 +471,7 @@ class BadgerListItem(QWidget):
 
 
 class BadgerListEditor(QWidget):
-    listChanged = pyqtSignal()
+    listChanged = Signal()
 
     def __init__(
         self,
