@@ -8,6 +8,10 @@ sidebar_position: 3
 
 If there is already a template for the optimization you’d like to run, click the **Load Template** button at the upper left of the **Environment + VOCS** tab, and select the appropriate template. Make sure to check the environment parameters, variables and variable ranges, objectives, constraints/observables, and selected algorithm before running the optimization.
 
+### Note
+Users might run into VariableRangeError notification if the limits of the process variables (PVs) in the template differ from the limits of the PVs in the Badger environment.
+
+
 ## Defining Template Files
 
 To save the current scan parameters as a template from the GUI, navigate to the **Metadata** tab. Click **Save as Template**, and enter an appropriate filename ending in “.yaml”. This will save the Environment, VOCS, Algorithm, and Metadata currently displayed on the GUI to a YAML file, including environment and algorithm parameters and relative variable ranges, and the configuration of initial points.
