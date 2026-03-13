@@ -22,6 +22,14 @@ The location where Badger run logs are stored. In some environments (e.g. LCLS/L
 
 The location where old runs are archived. Runs stored here will appear in the History Navigator panel in the GUI.
 
+#### Log Directory
+
+The location where logs will be saved.
+
+#### Logging Level
+
+The level at which logs are captured - Debug, Info, Warning, Error and Critical.
+
 ---
 
 ## CLI
@@ -46,4 +54,16 @@ Where `KEY` is one of the keys in the configuration property list.
 
 The GUI includes a configuration panel as well, which may be more straightforward to use. Note that if some of these configuration properties are missing, the GUI will not launch, and you will need to set the missing property through the CLI interface.
 
-![Badger GUI settings popup](/img/gui/settings.png)
+![Badger GUI settings popup](/img/gui/setting2.png)
+
+## Configuration file
+
+Badger can also be called with a config file that lists all of the configuration settings like so -
+
+```bash
+badger -g -cf config.yaml
+```
+
+This is what the config yaml looks like -
+
+![Badger Configuration](/img/gui/cfyaml.png)

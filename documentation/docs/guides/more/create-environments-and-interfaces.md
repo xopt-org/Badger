@@ -273,17 +273,6 @@ Please be sure to use Badger v1.0+
 :::
 
 Now you can take `myenv` for a spin -- just write some routine configs and run some algorithm (say, `silly` the random sampler) on our newly created env, to see if everything works as expected.
-
-### Advanced topics
-
-#### Specify variable range
-
-#### Incorperate hyper-parameters
-
-#### Check variable readout
-
-#### Delayed observation
-
 <!-- ```python
 from badger import environment
 from badger.interface import Interface
