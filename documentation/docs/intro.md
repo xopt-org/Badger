@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # Introduction
 
-Badger is a graphical user interface for production-level optimization in accelerator control rooms. 
+Badger is a graphical user interface for production-level optimization in accelerator control rooms.
 
-Built on top of the [Xopt](https://github.com/xopt-org/Xopt) optimization toolkit, Badger makes advanced optimization algorithms accessible to operators and physicists without requiring programming expertise. 
+Built on top of the [Xopt](https://github.com/xopt-org/Xopt) optimization toolkit, Badger makes advanced optimization algorithms accessible to operators and physicists without requiring programming expertise.
 
 ![Badger architecture](/img/intro/Badger-routine.png)
 

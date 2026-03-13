@@ -4,14 +4,14 @@ sidebar_position: 4
 
 # Important concepts
 
-Badger abstracts an optimization run as an optimization algorithm interacts with an environment, by following some pre-defined rules.[^vocs] As visualized in the picture below, the environment is controlled by the algorithm and tunes/observes the control system/machine through an interface, while the users control/monitor the optimization flow through a graphical user interface (GUI), command line interface (CLI) or application programming interface (API). Configuration settings tell Badger where plugin files are located and where optimization data should be saved. 
+Badger abstracts an optimization run as an optimization algorithm interacts with an environment, by following some pre-defined rules.[^vocs] As visualized in the picture below, the environment is controlled by the algorithm and tunes/observes the control system/machine through an interface, while the users control/monitor the optimization flow through a graphical user interface (GUI), command line interface (CLI) or application programming interface (API). Configuration settings tell Badger where plugin files are located and where optimization data should be saved.
 
 ![Badger Environment and Interface](/img/intro/Badger-GUI.png)
 
-Environments and interfaces in Badger are managed through a plugin system that implement how Badger interacts with the optimization probem and physical machine. Environment plugins define what parameters can be tuned and what metrics should be optimized, while interface plugins handle protocol-specific communication with hardware (EPICS, Tango, custom APIs). 
-These plugins can be developed and maintained separately. 
+Environments and interfaces in Badger are managed through a plugin system that implement how Badger interacts with the optimization probem and physical machine. Environment plugins define what parameters can be tuned and what metrics should be optimized, while interface plugins handle protocol-specific communication with hardware (EPICS, Tango, custom APIs).
+These plugins can be developed and maintained separately.
 
-The algorithms are provided by the Xopt package. The application interfaces (API) for creating the plugins are very straightforward and simple, yet abstractive enough to handle various situations. 
+The algorithms are provided by the Xopt package. The application interfaces (API) for creating the plugins are very straightforward and simple, yet abstractive enough to handle various situations.
 
 Badger offers 3 modes to satisfy different user groups:
 

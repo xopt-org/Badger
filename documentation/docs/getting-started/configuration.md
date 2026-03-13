@@ -58,12 +58,12 @@ The GUI includes a configuration panel as well, which may be more straightforwar
 
 ## Configuration file
 
-Badger can also be called with a config file that lists all of the configuration settings like so - 
+Badger can also be called with a config file that lists all of the configuration settings like so -
 
 ```bash
 badger -g -cf config.yaml
 ```
 
-This is what the config yaml looks like - 
+This is what the config yaml looks like -
 
 ![Badger Configuration](/img/gui/cfyaml.png)

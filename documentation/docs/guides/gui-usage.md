@@ -113,7 +113,7 @@ While the optimization is running, the values of the variables, objectives, and 
 ### Advanced topics
 
 #### Specify variable range
-Each optimzation variable must have defined bounds that specify the valid search space. These ranges serve dual purposes: they constrain the optimization algorithm to explore only physically meaningful parameter values, and they enforce safety limits to prevent damage to the equipment. Variable ranges are defined in the Environment + VOCS section. 
+Each optimzation variable must have defined bounds that specify the valid search space. These ranges serve dual purposes: they constrain the optimization algorithm to explore only physically meaningful parameter values, and they enforce safety limits to prevent damage to the equipment. Variable ranges are defined in the Environment + VOCS section.
 ![Variable Range](/img/gui/variablerange.png)
 
 #### Incorporate algorithm parameters
@@ -133,4 +133,3 @@ Badger provides trim delay settings to specify wait times between applying new v
 Because on real machine almost all changes to variables will take time to reach stable state, users can add wait time with trim delay under Environment and VOCS.
 
 ![Trimdelay](/img/gui/trimdelay.png)
-
