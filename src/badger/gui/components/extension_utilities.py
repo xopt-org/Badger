@@ -3,7 +3,7 @@ from functools import wraps
 import traceback
 from typing import Any, Callable, Optional, ParamSpec
 from types import TracebackType
-from PyQt5.QtWidgets import QLayout, QTabWidget
+from qtpy.QtWidgets import QLayout, QTabWidget
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure

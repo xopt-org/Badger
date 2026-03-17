@@ -16,7 +16,7 @@ from matplotlib.backends.backend_qt import (
 )
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 from badger.utils import BlockSignalsContext
 from xopt.generators.bayesian.visualize import (
     visualize_generator_model,

@@ -1,21 +1,21 @@
 from importlib import resources
 from typing import Any
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
     QWidget,
     QLineEdit,
 )
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QCheckBox,
     QStyledItemDelegate,
     QLabel,
     QSizePolicy,
 )
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import QRegExp, QPropertyAnimation, pyqtSignal
+from qtpy.QtGui import QIcon, QFont
+from qtpy.QtCore import QRegularExpression, QPropertyAnimation, Signal
 from pydantic_core import ValidationError
 
 from badger.errors import BadgerRoutineError
@@ -128,7 +128,7 @@ def format_validation_error(e: ValidationError) -> str:
 
 
 class BadgerEnvBox(QWidget):
-    vocs_updated = pyqtSignal(object)  # or use a more specific type if you want
+    vocs_updated = Signal(object)  # or use a more specific type if you want
 
     def __init__(
         self,
@@ -547,12 +547,12 @@ class BadgerEnvBox(QWidget):
 
     def filter_var(self):
         keyword = self.edit_var.text()
-        rx = QRegExp(keyword)
+        rx = QRegularExpression(keyword)
 
         _variables = []
         for var in self.var_table.all_variables:
             vname = next(iter(var))
-            if rx.indexIn(vname, 0) != -1:
+            if rx.match(vname).hasMatch():
                 _variables.append(var)
 
         self.var_table.update_variables(_variables, 1)

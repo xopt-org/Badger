@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QRadioButton,
     QComboBox,
     QVBoxLayout,

@@ -2,8 +2,10 @@ import logging
 import os
 from importlib import metadata
 from typing import Dict
-from PyQt5.QtCore import QThread
-from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWidget
+
+from qtpy.QtCore import QThread
+from qtpy.QtGui import QGuiApplication
+from qtpy.QtWidgets import QMainWindow, QMessageBox, QStackedWidget
 from badger.gui.components.create_process import CreateProcess
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.pages.home_page import BadgerHomePage
@@ -93,7 +95,7 @@ class BadgerMainWindow(QMainWindow):
     def center(self) -> None:
         logger.info("Centering main window.")
         qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
+        cp = QGuiApplication.primaryScreen().availableGeometry().center()
 
         qr.moveCenter(cp)
         self.move(qr.topLeft())

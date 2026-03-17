@@ -11,7 +11,7 @@ from typing import Iterable, Optional
 import yaml
 
 from badger.errors import BadgerLoadConfigError
-from PyQt5.QtWidgets import QWidget, QLayout
+from qtpy.QtWidgets import QWidget, QLayout
 
 logger = logging.getLogger(__name__)
 

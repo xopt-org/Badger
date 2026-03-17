@@ -5,7 +5,7 @@
 # https://creativecommons.org/publicdomain/zero/1.0/
 # https://creativecommons.org/publicdomain/zero/1.0/legalcode
 
-from PyQt5 import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui
 
 
 class MyModel(QtGui.QStandardItemModel):

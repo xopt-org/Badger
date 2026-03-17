@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
+from qtpy.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
 
 from badger.routine import Routine
 from badger.utils import get_yaml_string

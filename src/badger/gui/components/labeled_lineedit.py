@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 
 def labeled_lineedit(name, text, width_name=64, placeholder=None, readonly=True):

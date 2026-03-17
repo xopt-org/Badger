@@ -8,11 +8,11 @@ import yaml
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+from qtpy.QtCore import Qt, Signal, QTimer
+from qtpy.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
+from qtpy.QtWidgets import QMessageBox, QWidget, QTabWidget
+from qtpy.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
+from qtpy.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
 from xopt import VOCS
 from xopt.generators import (
@@ -93,9 +93,9 @@ def format_validation_error(e: ValidationError) -> str:
 
 
 class BadgerRoutinePage(QWidget):
-    sig_updated = pyqtSignal(str, str)  # routine name, routine description
-    sig_load_template = pyqtSignal(str)  # template path
-    sig_save_template = pyqtSignal(str)  # template path
+    sig_updated = Signal(str, str)  # routine name, routine description
+    sig_load_template = Signal(str)  # template path
+    sig_save_template = Signal(str)  # template path
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")

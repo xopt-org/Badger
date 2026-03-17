@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from qtpy import QtCore, QtGui
 
 
 def format(color, style=""):
@@ -117,8 +117,8 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         super().__init__(parent)
 
         # Multi-line strings (expression, flag, style)
-        self.tri_single = (QtCore.QRegExp("'''"), 1, STYLES["string2"])
-        self.tri_double = (QtCore.QRegExp('"""'), 2, STYLES["string2"])
+        self.tri_single = (QtCore.QRegularExpression("'''"), 1, STYLES["string2"])
+        self.tri_double = (QtCore.QRegularExpression('"""'), 2, STYLES["string2"])
 
         rules = []
 
@@ -151,15 +151,17 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             (r"#[^\n]*", 0, STYLES["comment"]),
         ]
 
-        # Build a QRegExp for each pattern
-        self.rules = [(QtCore.QRegExp(pat), index, fmt) for (pat, index, fmt) in rules]
+        # Build a QRegularExpression for each pattern
+        self.rules = [
+            (QtCore.QRegularExpression(pat), index, fmt) for (pat, index, fmt) in rules
+        ]
 
     def highlightBlock(self, text):
         """Apply syntax highlighting to the given block of text."""
         self.tripleQuoutesWithinStrings = []
         # Do other syntax formatting
         for expression, nth, format in self.rules:
-            index = expression.indexIn(text, 0)
+            index = expression.match(text).capturedStart()
             if index >= 0:
                 # if there is a string we check
                 # if there are some triple quotes within the string
@@ -168,26 +170,33 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
                     r'"[^"\\]*(\\.[^"\\]*)*"',
                     r"'[^'\\]*(\\.[^'\\]*)*'",
                 ]:
-                    innerIndex = self.tri_single[0].indexIn(text, index + 1)
+                    innerIndex = (
+                        self.tri_single[0].match(text, index + 1).capturedStart()
+                    )
                     if innerIndex == -1:
-                        innerIndex = self.tri_double[0].indexIn(text, index + 1)
+                        innerIndex = (
+                            self.tri_double[0].match(text, index + 1).capturedStart()
+                        )
 
                     if innerIndex != -1:
                         tripleQuoteIndexes = range(innerIndex, innerIndex + 3)
                         self.tripleQuoutesWithinStrings.extend(tripleQuoteIndexes)
 
+            match = None
             while index >= 0:
                 # skipping triple quotes within strings
                 if index in self.tripleQuoutesWithinStrings:
                     index += 1
-                    expression.indexIn(text, index)
+                    match = expression.match(text, index)
+                    index = match.capturedStart()
                     continue
 
                 # We actually want the index of the nth match
-                index = expression.pos(nth)
-                length = len(expression.cap(nth))
-                self.setFormat(index, length, format)
-                index = expression.indexIn(text, index + length)
+                if match is not None:
+                    index = match.capturedStart(nth)
+                    length = match.capturedLength(nth)
+                    self.setFormat(index, length, format)
+                    index = match.capturedEnd()
 
         self.setCurrentBlockState(0)
 
@@ -198,8 +207,8 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
 
     def match_multiline(self, text, delimiter, in_state, style):
         """Do highlighting of multi-line strings. ``delimiter`` should be a
-        ``QRegExp`` for triple-single-quotes or triple-double-quotes, and
-        ``in_state`` should be a unique integer to represent the corresponding
+        ``QRegularExpression`` for triple-single-quotes or triple-double-quotes,
+        and ``in_state`` should be a unique integer to represent the corresponding
         state changes when inside those strings. Returns True if we're still
         inside a multi-line string when this function is finished.
         """

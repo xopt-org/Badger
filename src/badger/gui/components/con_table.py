@@ -1,5 +1,5 @@
 from typing import Any
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
     QStyledItemDelegate,

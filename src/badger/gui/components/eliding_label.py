@@ -1,5 +1,5 @@
 # https://stackoverflow.com/a/67628976/4263605
-from PyQt5 import QtCore, QtWidgets, QtGui
+from qtpy import QtCore, QtWidgets, QtGui
 
 
 class ElidingLabel(QtWidgets.QLabel):
@@ -36,7 +36,7 @@ class ElidingLabel(QtWidgets.QLabel):
 
     """
 
-    elision_changed = QtCore.pyqtSignal(bool)
+    elision_changed = QtCore.Signal(bool)
 
     def __init__(self, text="", mode=QtCore.Qt.ElideMiddle, **kwargs):
         super().__init__(**kwargs)
