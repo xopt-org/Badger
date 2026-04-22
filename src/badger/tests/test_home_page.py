@@ -17,7 +17,7 @@ def init_multiprocessing():
 
 def test_home_page_run_routine(qtbot, init_multiprocessing):
     from badger.archive import save_tmp_run
-    from badger.gui.acr.windows.main_window import BadgerMainWindow
+    from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import (
         create_multiobjective_routine,
         create_routine,

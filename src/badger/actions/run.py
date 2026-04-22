@@ -169,13 +169,13 @@ def run_routine(args):
 
 def run_routine_gui(routine, auto_run=False):
     """
-    Launch ACR GUI with pre-loaded routine.
+    Launch Badger GUI with pre-loaded routine.
 
     Args:
         routine: Routine object to load
         auto_run: If True, automatically start optimization after loading
     """
-    from badger.gui.acr import launch_gui
+    from badger.gui import launch_gui
     launch_gui(routine=routine, auto_run=auto_run)
 
 

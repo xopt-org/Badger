@@ -10,15 +10,15 @@ app = QApplication(sys.argv)
 
 @pytest.fixture
 def process_creator():
-    from badger.gui.default.components.create_process import CreateProcess
+    from badger.gui.components.create_process import CreateProcess
 
     return CreateProcess()
 
 
 def test_create_subprocess_emits_signals(qtbot, process_creator):
     with (
-        patch("badger.gui.default.components.create_process.Process") as mock_process,
-        patch("badger.gui.default.components.create_process.run_routine_subprocess"),
+        patch("badger.gui.components.create_process.Process") as mock_process,
+        patch("badger.gui.components.create_process.run_routine_subprocess"),
     ):
         mock_process.return_value = MagicMock()
 

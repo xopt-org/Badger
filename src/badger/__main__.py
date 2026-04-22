@@ -1,36 +1,40 @@
 import argparse
+import logging
 
-from badger.log import config_log
+from badger.actions import show_info
+from badger.actions.doctor import self_check
+from badger.actions.routine import show_routine
+from badger.actions.generator import show_generator
+from badger.actions.env import show_env
+from badger.actions.install import plugin_install
+from badger.actions.uninstall import plugin_remove
+from badger.actions.intf import show_intf
+from badger.actions.run import run_routine_cli
+from badger.actions.config import config_settings
+from badger.log import setup_logging
 
-config_log()
-from badger.actions import show_info  # noqa: E402
-from badger.actions.doctor import self_check  # noqa: E402
-from badger.actions.routine import show_routine  # noqa: E402
-from badger.actions.generator import show_generator  # noqa: E402
-from badger.actions.env import show_env  # noqa: E402
-from badger.actions.install import plugin_install  # noqa: E402
-from badger.actions.uninstall import plugin_remove  # noqa: E402
-from badger.actions.intf import show_intf  # noqa: E402
-from badger.actions.run import run_routine, run_routine_cli  # noqa: E402
-from badger.actions.config import config_settings  # noqa: E402
+logger = logging.getLogger("badger")
 
 
 def main():
     # Create the top-level parser
     parser = argparse.ArgumentParser(description="Badger the optimizer")
     parser.add_argument("-g", "--gui", action="store_true", help="launch the GUI")
+    # Deprecated: since acr gui and default gui have been consolidated, using this flag is same as `--gui`` flag.
+    # Keep here for now to avoid breaking any scripts that call badger with `--gui-acr` arg.
     parser.add_argument(
         "-ga", "--gui-acr", action="store_true", help="launch the GUI for ACR"
     )
     parser.add_argument(
         "-l",
-        "--log",
-        choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"],
+        "--log_level",
+        choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"],
         default="WARNING",
         const="WARNING",
         nargs="?",
-        help="change the log level",
+        help="Set the logging level",
     )
+
     parser.add_argument(
         "-cf",
         "--config_filepath",
@@ -126,6 +130,9 @@ def main():
     parser_config.set_defaults(func=config_settings)
 
     args = parser.parse_args()
+
+    setup_logging(args)
+
     args.func(args)
 
 

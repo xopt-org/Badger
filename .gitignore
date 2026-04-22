@@ -16,3 +16,10 @@ src/badger/_version.py
 .coverage*
 .venv/
 .python-version
+*.log
+logs/
+
+# build artifacts from building docs
+documentation/.docusaurus/
+documentation/build/
+documentation/node_modules/

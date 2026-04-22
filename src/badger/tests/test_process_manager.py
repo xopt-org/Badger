@@ -3,7 +3,7 @@ import pytest
 
 @pytest.fixture
 def process_manager():
-    from badger.gui.default.components.process_manager import ProcessManager
+    from badger.gui.components.process_manager import ProcessManager
 
     return ProcessManager()
 

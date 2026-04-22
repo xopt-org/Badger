@@ -7,6 +7,9 @@ from badger.utils import get_datadir
 from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
 from badger.errors import BadgerLoadConfigError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Setting(BaseModel):
@@ -46,12 +49,18 @@ class BadgerConfig(BaseModel):
         Setting for the logbook root directory.
     BADGER_ARCHIVE_ROOT : Setting
         Setting for the archive root directory.
+    BADGER_LOG_LEVEL : Setting
+        Setting for the logging level.
+    BADGER_LOG_DIRECTORY : Setting
+        Setting for the location of logfile.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
         Setting for the GUI theme.
     BADGER_ENABLE_ADVANCED : Setting
         Setting to enable advanced features in the GUI.
+    BADGER_PYTORCH_TENSOR_SHARING_STRATEGY: Setting
+        Setting for strategy pytorch will use when passing tensors to subprocesses.
     """
 
     BADGER_PLUGIN_ROOT: Setting = Setting(
@@ -78,6 +87,18 @@ class BadgerConfig(BaseModel):
         value=None,
         is_path=True,
     )
+    BADGER_LOG_LEVEL: Setting = Setting(
+        display_name="logging level",
+        description="Logging level for the Badger logger",
+        value="WARNING",
+        is_path=False,
+    )
+    BADGER_LOG_DIRECTORY: Setting = Setting(
+        display_name="log directory",
+        description="Directory where daily log files will be stored",
+        value="logs",
+        is_path=True,
+    )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
         display_name="data dump period",
         description="Minimum time interval between data dumps, unit is second",
@@ -94,6 +115,12 @@ class BadgerConfig(BaseModel):
         display_name="enable advanced features",
         description="Enable advanced features on the GUI",
         value=False,
+        is_path=False,
+    )
+    BADGER_PYTORCH_TENSOR_SHARING_STRATEGY: Setting = Setting(
+        display_name="torch tensor sharing strategy",
+        description="Setting for which strategy pytorch will use when passing tensors to subprocesses. Valid options are 'file_system' (default) or 'file_descriptor'",
+        value="file_system",
         is_path=False,
     )
     AUTO_REFRESH: Setting = Setting(
@@ -368,6 +395,7 @@ class ConfigSingleton:
             sub_dict = sub_dict.setdefault(key, {})
         sub_dict[keys[-1]] = value
 
+        logger.info(f"writing to config file, setting: {key} = {value}")
         self.update_and_save_config(updates)
 
     def reset_settings(self) -> None:
@@ -379,13 +407,13 @@ class ConfigSingleton:
         )
 
 
-def init_settings(config_arg: bool = None) -> ConfigSingleton:
+def init_settings(config_arg: str = None) -> ConfigSingleton:
     """
     Builds and returns an instance of the ConfigSingleton class.
 
     Parameters
     ----------
-    config_arg: bool
+    config_arg: str
         a path to a config file passed through the --config__filepath argument
 
     Returns
@@ -405,6 +433,49 @@ def init_settings(config_arg: bool = None) -> ConfigSingleton:
 
     config_singleton = ConfigSingleton(file_path, user_flag)
     return config_singleton
+
+
+def apply_pytorch_multiprocess_tensor_sharing_setting(
+    config_singleton: ConfigSingleton,
+) -> None:
+    # The pytorch sharing strategy 'file_descriptor' (which linux often defaults to) can hit os file descriptor limits.
+    # Hitting this limit causes error to occur: 'OSError: [Errno 24] Too many open files'.
+    # (File descriptor limit is set for each shell process and see it with 'ulimit -n')
+    # Switching to the 'file_system' strategy makes this error impossible to hit, since pytorch will instead use temporary files for
+    # passing tensors to subprocesses instead of file descriptors.
+    # We provide a way to configure this setting since there can be some downsides to using "file_system",
+    # these being a potential small performance hit, and needing to use up some temp location disk space (exact location is os dependant).
+    try:
+        strategy = config_singleton.read_value("BADGER_PYTORCH_TENSOR_SHARING_STRATEGY")
+    except KeyError:  # default to using temp files instead of the descriptors
+        strategy = "file_system"
+
+    strategy = str(strategy).strip().lower()
+    if strategy != "file_system" and strategy != "file_descriptor":
+        logger.exception(
+            f"Invalid pytorch multiprocess tensor-sharing strategy '{strategy}', please use either 'file_system' or 'file_descriptor'. "
+            "Defaulting to using strategy 'file_system'"
+        )
+        return
+
+    try:
+        import torch
+    except ImportError:
+        logger.warning(
+            "Pytorch not available to import, can't apply multiprocess tensor-sharing strategy '%s'",
+            strategy,
+        )
+        return
+
+    try:
+        torch.multiprocessing.set_sharing_strategy(strategy)
+    except Exception:
+        logger.exception(
+            "Can't set pytorch multiprocess tensor-sharing strategy to '%s'", strategy
+        )
+        return
+
+    logger.info("Set pytorch multiprocess tensor-sharing strategy to '%s'", strategy)
 
 
 def mock_settings():
