@@ -274,6 +274,8 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
         "termination_condition": None,
         "start_time": start_time,
         "testing": False,
+        "run_data": False,
+        "init_points": True,
     }
 
     # NOW put data in queue (subprocess is already running and waiting)
