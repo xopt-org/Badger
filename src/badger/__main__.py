@@ -122,6 +122,18 @@ def main():
         action="store_true",
         help="Auto-start optimization without confirmation",
     )
+    parser_run.add_argument(
+        "--watch-routine",
+        type=str,
+        default=None,
+        help=(
+            "Path to a routine YAML the GUI should watch for changes. "
+            "When the file is modified (e.g. by an external agent "
+            "supplying the next routine in a campaign), the GUI stops "
+            "any active run, reloads the routine, and (if --auto-run "
+            "was set) restarts. GUI mode only."
+        ),
+    )
     parser_run.set_defaults(func=run_routine_cli)
 
     # Parser for the 'config' command

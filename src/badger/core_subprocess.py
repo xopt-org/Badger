@@ -1,4 +1,5 @@
 from copy import deepcopy
+import json
 import logging
 import signal
 import time
@@ -20,6 +21,29 @@ from badger.log import configure_process_logging
 from xopt.errors import FeasibilityError, XoptError
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_live_log(routine: "Routine", is_optimal: bool) -> None:
+    """
+    If BADGER_LIVE_LOG_PATH is set in the environment, append a JSONL
+    record describing the most-recent evaluation. Used by external
+    agents (e.g. Otter's auto-tune skill) to monitor a running Badger
+    optimization without screen-scraping the GUI or tailing the run
+    archive YAML.
+
+    Side-effect-free when the env var is unset. Never raises.
+    """
+    live_log = os.environ.get("BADGER_LIVE_LOG_PATH")
+    if not live_log:
+        return
+    try:
+        last = routine.data.iloc[-1].to_dict()
+        last["iteration"] = len(routine.data) - 1
+        last["is_optimal"] = bool(is_optimal)
+        with open(live_log, "a") as f:
+            f.write(json.dumps(last, default=str) + "\n")
+    except Exception as exc:  # never let logging crash the optimizer
+        logger.debug("BADGER_LIVE_LOG_PATH write failed: %s", exc)
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
@@ -226,6 +250,7 @@ def run_routine_subprocess(
                 if evaluate:
                     time.sleep(0.1)  # give it some break tp catch up
                     evaluate_queue[0].send((routine.data, routine.generator))
+                _emit_live_log(routine, solution[4])
 
         logger.info("Starting optimization loop...")
         while True:
@@ -292,6 +317,7 @@ def run_routine_subprocess(
             if evaluate:
                 logger.debug("Sending evaluation data to evaluate_queue.")
                 evaluate_queue[0].send((routine.data, generator_copy))
+            _emit_live_log(routine, solution[4])
 
             if archive:
                 if not testing:

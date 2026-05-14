@@ -167,16 +167,19 @@ def run_routine(args):
     # run_n_archive(routine, args.yes, args.save, args.verbose)
 
 
-def run_routine_gui(routine, auto_run=False):
+def run_routine_gui(routine, auto_run=False, watch_routine=None):
     """
     Launch Badger GUI with pre-loaded routine.
 
     Args:
         routine: Routine object to load
         auto_run: If True, automatically start optimization after loading
+        watch_routine: Optional path to a YAML file the GUI should watch
+            for changes; on file modification the GUI stops any active
+            run, reloads, and re-starts (auto_run=True only).
     """
     from badger.gui import launch_gui
-    launch_gui(routine=routine, auto_run=auto_run)
+    launch_gui(routine=routine, auto_run=auto_run, watch_routine=watch_routine)
 
 
 def run_routine_headless(routine, auto_run=False, verbose=2):
@@ -394,7 +397,12 @@ def run_routine_cli(args):
             run_routine_headless(routine, auto_run=args.auto_run)
         else:
             # GUI mode (default)
-            run_routine_gui(routine, auto_run=args.auto_run)
+            watch_routine = getattr(args, "watch_routine", None)
+            run_routine_gui(
+                routine,
+                auto_run=args.auto_run,
+                watch_routine=watch_routine,
+            )
 
     except Exception as e:
         logger.error(f"Error running routine: {e}")
