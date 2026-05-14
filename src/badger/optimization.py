@@ -1,15 +1,39 @@
+from typing import TYPE_CHECKING
+
 from pandas import DataFrame
 from xopt.errors import FeasibilityError
 from xopt.vocs import select_best
 
-from badger.routine import Routine
+if TYPE_CHECKING:
+    from badger.routine import Routine
 
 
-def convert_to_solution(result: DataFrame, routine: Routine):
+def convert_to_solution(result: DataFrame, routine: "Routine"):
+    """
+    Convert a single-row evaluation result into the tuple format expected by
+    Badger's terminal/logger output.
+
+    Parameters
+    ----------
+    result : DataFrame
+        A single evaluated candidate row.
+    routine : Routine
+        Routine object containing current VOCS and accumulated data.
+
+    Returns
+    -------
+    tuple
+        (variables, objectives, constraints, observables, is_optimal,
+        variable_names, objective_names, constraint_names, observable_names)
+    """
     vocs = routine.vocs
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
-        is_optimal = bool(best_idx.size > 0 and best_idx[0] == len(routine.data) - 1)
+        # Highlight this point only when the latest row is also the current best.
+        latest_index_is_best = (
+            best_idx.size > 0 and best_idx[0] == len(routine.data) - 1
+        )
+        is_optimal = bool(latest_index_is_best)
     except (NotImplementedError, FeasibilityError, IndexError):
         is_optimal = False
 
