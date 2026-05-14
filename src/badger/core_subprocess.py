@@ -3,6 +3,7 @@ import logging
 import time
 import traceback
 from typing import Any
+from queue import Empty
 from pandas import DataFrame
 import multiprocessing as mp
 import os
@@ -21,6 +22,53 @@ from xopt.vocs import select_best
 
 
 logger = logging.getLogger(__name__)
+
+MEASUREMENT_ERROR_TYPE = "measurement_error"
+MEASUREMENT_ACTION_TYPE = "measurement_action"
+MEASUREMENT_ACTION_RETRY = "retry"
+MEASUREMENT_ACTION_ABORT = "abort"
+
+
+def evaluate_measurement_with_retry(
+    routine: Routine,
+    point: Any,
+    queue: mp.Queue,
+    stop_process: mp.Event,
+) -> DataFrame:
+    while True:
+        try:
+            return routine.evaluate_data(point)
+        except Exception as e:
+            error_title = f"{type(e).__name__}: {e}"
+            error_traceback = traceback.format_exc()
+            logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
+            queue.put(
+                {
+                    "type": MEASUREMENT_ERROR_TYPE,
+                    "title": error_title,
+                    "traceback": error_traceback,
+                }
+            )
+
+            while True:
+                if stop_process.is_set():
+                    raise BadgerRunTerminated
+                try:
+                    msg = queue.get(timeout=0.1)
+                except Empty:
+                    continue
+
+                if (
+                    isinstance(msg, dict)
+                    and msg.get("type") == MEASUREMENT_ACTION_TYPE
+                    and msg.get("action")
+                    in [MEASUREMENT_ACTION_RETRY, MEASUREMENT_ACTION_ABORT]
+                ):
+                    if msg["action"] == MEASUREMENT_ACTION_RETRY:
+                        break
+                    raise BadgerRunTerminated(
+                        "Run terminated after measurement error."
+                    )
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
@@ -217,7 +265,9 @@ def run_routine_subprocess(
             logger.info("Evaluating initial points...")
             for _, ele in initial_points.iterrows():
                 logger.debug(f"Evaluating initial point: {ele.to_dict()}")
-                result = routine.evaluate_data(ele.to_dict())
+                result = evaluate_measurement_with_retry(
+                    routine, ele.to_dict(), queue, stop_process
+                )
                 solution = convert_to_solution(result, routine)
                 opt_logger.update(Events.OPTIMIZATION_STEP, solution)
                 if evaluate:
@@ -280,7 +330,9 @@ def run_routine_subprocess(
                 )
                 pause_process.wait()
 
-            result = routine.evaluate_data(candidates)
+            result = evaluate_measurement_with_retry(
+                routine, candidates, queue, stop_process
+            )
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
 
