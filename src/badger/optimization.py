@@ -30,6 +30,8 @@ def convert_to_solution(result: DataFrame, routine: "Routine"):
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         # Highlight this point only when the latest row is also the current best.
+        # `select_best` indexes into `routine.sorted_data`; this check ensures the
+        # best point corresponds to the latest row in underlying routine data.
         is_latest_best = best_idx.size > 0 and best_idx[0] == len(routine.data) - 1
         is_optimal = bool(is_latest_best)
     except (NotImplementedError, FeasibilityError, IndexError):

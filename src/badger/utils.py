@@ -255,6 +255,8 @@ def convert_str_to_value(value):
 
     if isinstance(value, str):
         lowered = value.strip().lower()
+        if lowered == "":
+            return value
         if lowered in {"true", "false"}:
             return lowered == "true"
 
