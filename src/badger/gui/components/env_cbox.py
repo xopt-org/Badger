@@ -518,35 +518,35 @@ class BadgerEnvBox(QWidget):
         self.load_template_button.clicked.connect(self.sig_load_template_requested.emit)
         self.cb.currentIndexChanged.connect(self.sig_environment_selected.emit)
         self.btn_env_play.clicked.connect(
-            lambda _checked=False: self.sig_open_playground_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_open_playground_requested)
         )
         self.btn_pv.clicked.connect(
-            lambda _checked=False: self.sig_open_archive_search_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_open_archive_search_requested)
         )
         self.btn_docs.clicked.connect(
-            lambda _checked=False: self.sig_open_docs_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_open_docs_requested)
         )
         self.btn_add_var.clicked.connect(
-            lambda _checked=False: self.sig_add_var_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_add_var_requested)
         )
         self.btn_lim_vrange.clicked.connect(
-            lambda _checked=False: self.sig_limit_variable_ranges_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_limit_variable_ranges_requested)
         )
         self.btn_add_curr.clicked.connect(
-            lambda _checked=False: self.sig_add_current_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_add_current_requested)
         )
         self.btn_add_rand.clicked.connect(
-            lambda _checked=False: self.sig_add_random_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_add_random_requested)
         )
         self.btn_clear.clicked.connect(
-            lambda _checked=False: self.sig_clear_initial_points_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_clear_initial_points_requested)
         )
         self.btn_add_row.clicked.connect(
-            lambda _checked=False: self.sig_add_initial_row_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_add_initial_row_requested)
         )
         self.relative_to_curr.stateChanged.connect(self.sig_auto_mode_toggled.emit)
         self.btn_refresh.clicked.connect(
-            lambda _checked=False: self.sig_refresh_requested.emit()
+            lambda *_args: self._emit_signal(self.sig_refresh_requested)
         )
 
         self.edit_var.textChanged.connect(self.filter_var)
@@ -564,6 +564,9 @@ class BadgerEnvBox(QWidget):
         self.con_table.data_changed.connect(lambda: self.update_vocs("con_table"))
         self.sta_table.data_changed.connect(lambda: self.update_vocs("sta_table"))
         self.var_table.data_changed.connect(lambda: self.update_vocs("var_table"))
+
+    def _emit_signal(self, signal):
+        signal.emit()
 
     def update_vocs(self, origin: str):
         logger.debug(f"Emitting vocs_updated signal from env_cbox: {origin}")
