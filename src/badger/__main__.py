@@ -99,36 +99,6 @@ def main():
     parser_remove.add_argument("plugin_specific", nargs="?", type=str, default=None)
     parser_remove.set_defaults(func=plugin_remove)
 
-    # Parser for the 'run' command
-    parser_run = subparsers.add_parser("run", help="run routines")
-    parser_run.add_argument("-a", "--generator", required=True, help="generator to use")
-    parser_run.add_argument(
-        "-ap", "--generator_params", help="parameters for the generator"
-    )
-    parser_run.add_argument("-e", "--env", required=True, help="environment to use")
-    parser_run.add_argument(
-        "-ep", "--env_params", help="parameters for the environment"
-    )
-    parser_run.add_argument(
-        "-c", "--config", required=True, help="config for the routine"
-    )
-    parser_run.add_argument(
-        "-s", "--save", nargs="?", const="", help="the routine name to be saved"
-    )
-    parser_run.add_argument(
-        "-y", "--yes", action="store_true", help="run the routine without confirmation"
-    )
-    parser_run.add_argument(
-        "-v",
-        "--verbose",
-        type=int,
-        choices=[0, 1, 2],
-        default=2,
-        const=2,
-        nargs="?",
-        help="verbose level of optimization progress",
-    )
-
     # Parser for the 'config' command
     parser_config = subparsers.add_parser("config", help="Badger configurations")
     parser_config.add_argument("key", nargs="?", type=str, default=None)
