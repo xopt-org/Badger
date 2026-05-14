@@ -66,7 +66,9 @@ def evaluate_measurement_with_retry(
                 ):
                     if msg["action"] == MEASUREMENT_ACTION_RETRY:
                         break
-                    raise BadgerRunTerminated("Run terminated after measurement error.")
+                    raise BadgerRunTerminated(
+                        f"Run terminated after measurement error: {error_title}"
+                    )
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):

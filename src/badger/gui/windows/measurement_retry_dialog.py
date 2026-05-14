@@ -18,17 +18,17 @@ class BadgerMeasurementRetryDialog(QDialog):
 
         mainLayout = QVBoxLayout(self)
 
-        textLabel = QLabel(
+        self.textLabel = QLabel(
             text
             + "\n\nThere was an error setting variables or getting observables."
             + "\nRetry this measurement?"
         )
-        textLabel.setMinimumWidth(320)
-        textLabel.setWordWrap(True)
+        self.textLabel.setMinimumWidth(320)
+        self.textLabel.setWordWrap(True)
         font = QFont()
         font.setBold(True)
-        textLabel.setFont(font)
-        mainLayout.addWidget(textLabel)
+        self.textLabel.setFont(font)
+        mainLayout.addWidget(self.textLabel)
 
         scrollArea = QScrollArea()
         scrollArea.setWidgetResizable(True)
