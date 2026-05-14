@@ -242,10 +242,7 @@ class BadgerRoutineSubprocess:
         if not self.data_and_error_queue.empty():
             try:
                 msg = self.data_and_error_queue.get()
-                if (
-                    isinstance(msg, dict)
-                    and msg.get("type") == MEASUREMENT_ERROR_TYPE
-                ):
+                if isinstance(msg, dict) and msg.get("type") == MEASUREMENT_ERROR_TYPE:
                     action = self.handle_measurement_error(msg)
                     self.data_and_error_queue.put(
                         {
