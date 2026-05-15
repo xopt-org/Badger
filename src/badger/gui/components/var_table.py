@@ -1,3 +1,4 @@
+from functools import partial
 from importlib import resources
 import traceback
 from typing import Any, cast
@@ -404,7 +405,7 @@ class VariableTable(QTableWidget):
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
             self.setCellWidget(i, 4, button_container)
 
-            config_button.clicked.connect(lambda: self.handle_config_button(name))
+            config_button.clicked.connect(partial(self.handle_config_button, name))
 
             if self.bounds_locked:
                 sb_lower.setEnabled(False)
