@@ -79,6 +79,7 @@ class BadgerHomePage(QWidget):
         routine=None,
         auto_run=False,
         watch_routine=None,
+        watch_stop=None,
     ):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
@@ -90,8 +91,10 @@ class BadgerHomePage(QWidget):
         self.go_run_failed = False  # flag to indicate go_run failed
         # Watch-routine state (campaign-mode reload trigger)
         self._watch_routine_path = watch_routine
+        self._watch_stop_path = watch_stop
         self._watch_auto_run = auto_run
         self._watch_fs_watcher = None
+        self._watch_stop_fs_watcher = None
         self.init_ui()
         self.config_logic()
 
@@ -107,6 +110,11 @@ class BadgerHomePage(QWidget):
         if self._watch_routine_path:
             from PyQt5.QtCore import QTimer
             QTimer.singleShot(200, self._install_routine_watcher)
+
+        # Install file-system watcher for campaign-mode stop sentinel
+        if self._watch_stop_path:
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(250, self._install_stop_watcher)
 
     def _install_routine_watcher(self):
         """
@@ -180,6 +188,39 @@ class BadgerHomePage(QWidget):
             except Exception as exc:
                 logger.warning("watch-routine: stop emit failed: %s", exc)
 
+            # Defensive cleanup of leftover state from the prior run.
+            # `routine_finished` does NOT reset routine_runner — its call
+            # is intentionally commented out in run_monitor.py — so when
+            # we reload mid-session, the old subprocess wrapper lingers.
+            # Disconnect its signals and drop the reference so the next
+            # `run_monitor.start()` can wire fresh signal connections
+            # without colliding with the dead routine_runner's slots.
+            try:
+                rm = self.run_monitor
+                if rm is not None and getattr(rm, "routine_runner", None) is not None:
+                    for sig in (getattr(rm, "sig_pause", None),
+                                getattr(rm, "sig_stop", None)):
+                        if sig is not None:
+                            try:
+                                sig.disconnect()
+                            except Exception:
+                                pass  # already disconnected
+                    rm.routine_runner = None
+                    rm.running = False
+            except Exception as exc:
+                logger.warning("watch-routine: stale runner cleanup failed: %s", exc)
+
+            # Make sure the watcher is still watching `path` — Qt sometimes
+            # drops files from QFileSystemWatcher after one event when the
+            # inode briefly disappeared during a write.
+            try:
+                if (self._watch_fs_watcher is not None
+                        and path not in self._watch_fs_watcher.files()
+                        and os.path.isfile(path)):
+                    self._watch_fs_watcher.addPath(path)
+            except Exception:
+                pass
+
             # Load the new routine
             from badger.utils import load_template_smart
             from badger.routine import Routine
@@ -191,6 +232,65 @@ class BadgerHomePage(QWidget):
             self.load_routine_from_cli(routine, self._watch_auto_run)
         except Exception as exc:
             logger.error("watch-routine: reload failed: %s", exc, exc_info=True)
+
+    def _install_stop_watcher(self):
+        """
+        Install a QFileSystemWatcher on `self._watch_stop_path`. When the
+        sentinel file appears (or is modified), emit sig_stop — which is
+        exactly what clicking the Stop button does. This stops the
+        optimization subprocess via the multiprocessing stop_event, lets
+        the run_monitor handle its normal `finished` signal flow (so the
+        UI updates to "Stopped"), and keeps the GUI window open ready
+        for the next routine.
+        """
+        from PyQt5.QtCore import QFileSystemWatcher
+        path = self._watch_stop_path
+        parent = os.path.dirname(path) or "."
+        # Watch the parent dir so the sentinel can appear from nothing
+        # and we still notice (QFileSystemWatcher can't watch a path
+        # that doesn't exist yet).
+        self._watch_stop_fs_watcher = QFileSystemWatcher([], self)
+        # Connect handlers ONCE; addPath later as needed.
+        self._watch_stop_fs_watcher.fileChanged.connect(self._on_stop_signal)
+        self._watch_stop_fs_watcher.directoryChanged.connect(self._on_stop_dir_changed)
+        if os.path.isfile(path):
+            self._watch_stop_fs_watcher.addPath(path)
+        if os.path.isdir(parent):
+            self._watch_stop_fs_watcher.addPath(parent)
+        logger.info("watch-stop: sentinel = %s", path)
+
+    def _on_stop_dir_changed(self, _changed_dir):
+        path = self._watch_stop_path
+        if path and os.path.isfile(path):
+            if path not in self._watch_stop_fs_watcher.files():
+                self._watch_stop_fs_watcher.addPath(path)
+            # Sentinel appeared — fire the stop handler.
+            self._on_stop_signal(path)
+
+    def _on_stop_signal(self, path):
+        """Sentinel file detected: emit sig_stop, then delete the file."""
+        try:
+            if not os.path.isfile(path):
+                return  # already cleaned up by a parallel event
+            try:
+                if (
+                    self.run_monitor is not None
+                    and getattr(self.run_monitor, "running", False)
+                ):
+                    logger.info("watch-stop: gracefully stopping current run")
+                    self.run_monitor.sig_stop.emit()
+                else:
+                    logger.info("watch-stop: no active run; nothing to stop")
+            except Exception as exc:
+                logger.warning("watch-stop: stop emit failed: %s", exc)
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            except Exception as exc:
+                logger.warning("watch-stop: sentinel delete failed: %s", exc)
+        except Exception as exc:
+            logger.error("watch-stop: handler error: %s", exc, exc_info=True)
 
     def init_ui(self):
         logger.info("Initializing UI for BadgerHomePage.")

@@ -81,7 +81,13 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui(config_path=None, routine=None, auto_run=False, watch_routine=None):
+def launch_gui(
+    config_path=None,
+    routine=None,
+    auto_run=False,
+    watch_routine=None,
+    watch_stop=None,
+):
     """
     Launch the Badger GUI.
 
@@ -93,6 +99,9 @@ def launch_gui(config_path=None, routine=None, auto_run=False, watch_routine=Non
             watch; on file modification, the GUI stops any active run
             and reloads + (auto-)restarts. Used by external agents
             running a multi-stage tuning campaign.
+        watch_stop: Optional path to a sentinel file the GUI should
+            watch; when present, the GUI gracefully stops the active
+            run (window stays open) and deletes the sentinel.
     """
     sys.excepthook = error_handler
 
@@ -125,7 +134,10 @@ def launch_gui(config_path=None, routine=None, auto_run=False, watch_routine=Non
 
     # Show the main window
     window = BadgerMainWindow(
-        routine=routine, auto_run=auto_run, watch_routine=watch_routine
+        routine=routine,
+        auto_run=auto_run,
+        watch_routine=watch_routine,
+        watch_stop=watch_stop,
     )
 
     # Enable Ctrl + C quit

@@ -134,6 +134,19 @@ def main():
             "was set) restarts. GUI mode only."
         ),
     )
+    parser_run.add_argument(
+        "--watch-stop",
+        type=str,
+        default=None,
+        help=(
+            "Path to a sentinel file the GUI should watch. When the "
+            "file appears (or is touched), the GUI gracefully stops "
+            "the currently-running routine WITHOUT closing the window, "
+            "then deletes the sentinel. Pair with --watch-routine so an "
+            "external agent can stop runs and swap routines without "
+            "respawning the GUI. GUI mode only."
+        ),
+    )
     parser_run.set_defaults(func=run_routine_cli)
 
     # Parser for the 'config' command
