@@ -22,7 +22,14 @@ from xopt.generators import (
     get_generator_dynamic,
 )
 from xopt.utils import get_local_region
-from gest_api.vocs import GreaterThanConstraint, LessThanConstraint
+from gest_api.vocs import (
+    BaseConstraint,
+    BaseObjective,
+    GreaterThanConstraint,
+    LessThanConstraint,
+    MinimizeObjective,
+    MaximizeObjective,
+)
 from pydantic import ValidationError
 
 from badger.gui.components.generator_cbox import BadgerAlgoBox
@@ -86,13 +93,29 @@ def format_validation_error(e: ValidationError) -> str:
     return "\n".join(messages)
 
 
-def extract_constraint_symbol_and_value(constraint):
+def extract_constraint_symbol_and_value(constraint: BaseConstraint) -> str:
+    """
+    Extract symbol and value from gest-api constraint objects
+    generator standard library [gest-api](https://github.com/campa-consortium/gest-api)
+    """
     if isinstance(constraint, GreaterThanConstraint):
         return ">", constraint.value
     if isinstance(constraint, LessThanConstraint):
         return "<", constraint.value
     else:  # Expand for other constraints if needed
         return "", 0
+
+
+def extract_objective_symbol(objective: BaseObjective) -> str:
+    """
+    Extract text from gest-api objective objects
+    """
+    if isinstance(objective, MinimizeObjective):
+        return "MINIMIZE"
+    if isinstance(objective, MaximizeObjective):
+        return "MAXIMIZE"
+    else:
+        raise ValueError(f"Unknown objective type: {objective}")
 
 
 class BadgerRoutinePage(QWidget):
@@ -492,7 +515,7 @@ class BadgerRoutinePage(QWidget):
             status[name] = False  # selected
             objectives.append(obj)
         for name, val in vocs.objectives.items():
-            rule = val
+            rule = extract_objective_symbol(val)
 
             idx = objectives_names_full.index(name)
             if idx == -1:
@@ -841,7 +864,7 @@ class BadgerRoutinePage(QWidget):
             status[name] = False  # selected
             objectives.append(obj)
         for name, val in routine.vocs.objectives.items():
-            rule = val
+            rule = extract_objective_symbol(val)
 
             idx = objectives_names_full.index(name)
             if idx == -1:
