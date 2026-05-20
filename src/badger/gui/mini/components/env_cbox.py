@@ -286,6 +286,8 @@ class BadgerEnvBox(QWidget):
         self.var_table.verticalHeader().setVisible(False)
         vbox_var_edit.addWidget(self.var_table)
 
+        self.var_table.verticalHeader().setDefaultSectionSize(28)
+
         # Initial Points
         collapsiblebox_init = CollapsibleBox(
             self,

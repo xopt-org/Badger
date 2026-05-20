@@ -1494,7 +1494,6 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
 
     def set_ind_vrange(self, vname, config):
-        print(f"set_ind_vrange: {vname}")
         # MOVE TO ENV_CBOX
         logger.info(
             f"Setting individual variable range for {vname} with config: {config}"
@@ -1713,7 +1712,6 @@ class BadgerRoutinePage(QWidget):
             self.set_vrange()
 
     def handle_var_config(self, vname):
-        print(f"handle_var_config: {vname}")
         # MOVE TO ENV_CBOX
         env = self.create_env()
         curr = env.get_variables([vname])[vname]
@@ -1770,8 +1768,6 @@ class BadgerRoutinePage(QWidget):
         generator_params = load_config(
             self.env_box.edit_algo_params.get_parameters_yaml()
         )
-        print("generator params")
-        print(generator_params)
         logger.debug(
             f"Generator selected: {generator_name}, params: {generator_params}"
         )
