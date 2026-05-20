@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
 from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+from badger.gui.components.navigators import HistoryNavigator
 from coolname import generate_slug
 from xopt import VOCS
 from xopt.vocs import random_inputs
@@ -118,6 +119,7 @@ class BadgerRoutinePage(QWidget):
     sig_updated = pyqtSignal(str, str)  # routine name, routine description
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
+    sig_go_run = pyqtSignal()
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")
@@ -174,6 +176,9 @@ class BadgerRoutinePage(QWidget):
 
         self.tabs = tabs = QTabWidget()
         vbox.addWidget(tabs)
+
+        self.history_browser = HistoryNavigator()
+        tabs.addTab(self.history_browser, "History")
 
         # Meta group
         self.group_meta = group_meta = QWidget()
@@ -280,7 +285,7 @@ class BadgerRoutinePage(QWidget):
         self.data_panel = BadgerDataPanel(self)
         # tabs.addTab(self.data_panel, "Data")
 
-        tabs.setCurrentIndex(0)  # Show the env box by default
+        tabs.setCurrentIndex(1)  # Show the env box by default
 
         # vbox.addStretch()
 
@@ -327,6 +332,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
+
+        # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+        #    self.sig_go_run.emit() # signal for home_page to select run
+        # )
 
         # self.env_box.var_table.sig_sel_changed.connect(
         #     lambda: logger.debug("Selection changed")

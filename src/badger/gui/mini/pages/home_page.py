@@ -31,7 +31,6 @@ from badger.gui.components.data_table import (
 )
 from badger.gui.mini.pages.routine_page import BadgerRoutinePage
 
-from badger.gui.components.navigators import HistoryNavigator
 from badger.gui.components.navigators import TemplateNavigator
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
@@ -107,8 +106,8 @@ class BadgerHomePage(QWidget):
         vbox.setSpacing(0)
 
         # History run browser
-        self.history_browser = history_browser = HistoryNavigator()
-        history_browser.setFixedWidth(360)
+        # self.history_browser = history_browser = HistoryNavigator()
+        # history_browser.setFixedWidth(360)
 
         # Template browser
         self.template_browser = template_browser = TemplateNavigator()
@@ -163,6 +162,8 @@ class BadgerHomePage(QWidget):
 
         self.data_panel = self.routine_editor.data_panel
         self.run_table_2 = self.routine_editor.data_panel.data_table
+
+        self.history_browser = self.routine_editor.history_browser
 
         # Add action bar
         self.run_action_bar = run_action_bar = BadgerActionBar()
@@ -229,6 +230,7 @@ class BadgerHomePage(QWidget):
 
         self.routine_editor.sig_load_template.connect(self.update_status)
         self.routine_editor.sig_save_template.connect(self.update_status)
+        self.routine_editor.sig_go_run.connect(self.go_run)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
