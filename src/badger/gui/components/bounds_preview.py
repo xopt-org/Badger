@@ -56,7 +56,7 @@ class BoundsPreviewBar(QWidget):
         track_margin = 5
         left = float(rect.left() + track_margin)
         right = float(rect.right())
-        track_y = float(rect.center().y())
+        track_y = float(rect.center().y() - 5)
         track_h = 10  # height
         track_w = max(1.0, right - left)
         track_top = track_y - track_h / 2.0
@@ -88,10 +88,10 @@ class BoundsPreviewBar(QWidget):
         font.setPointSizeF(10.0)
         painter.setFont(font)
         painter.setPen(QPen(QColor(190, 190, 190), 1))
-        label_y = int(round(track_top + track_h + 10))
+        label_y = int(round(track_top + track_h + 12))
         painter.drawText(int(round(left)), label_y, f"{self.hard_lower:.2f}")
         painter.drawText(
-            int(round(max(left, right - 22))), label_y, f"{self.hard_upper:.2f}"
+            int(round(max(left, right - 28))), label_y, f"{self.hard_upper:.2f}"
         )
         painter.drawText(
             int(round(max(left, curr_x - 16))), label_y, f"{self.curr:.3f}"

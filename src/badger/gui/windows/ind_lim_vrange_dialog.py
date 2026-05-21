@@ -177,6 +177,7 @@ will be clipped by the variable range."""
         vbox_preview.addLayout(hbox_preview_lower)
         vbox_preview.addLayout(hbox_preview_upper)
         self.bounds_preview_bar = BoundsPreviewBar()
+        self.bounds_preview_bar.setToolTip("Displays a preview of the variable range.")
         vbox_preview.addWidget(self.bounds_preview_bar)
 
         # Button set

@@ -38,54 +38,6 @@ import logging
 
 LABEL_WIDTH = 96
 
-stylesheet_auto = """
-    #VarPanel {
-        border: 4px solid #FDD835;
-        border-radius: 4px;
-    }
-"""
-
-stylesheet_manual = """
-    #VarPanel {
-        border: 4px solid #60798B;
-        border-radius: 4px;
-    }
-"""
-
-stylesheet_auto_msg = """
-    QLabel {
-        background-color: #FDD835;
-        color: #19232D;
-        padding: 4px 4px 8px 4px;
-        border-radius: 0;
-    }
-"""
-
-stylesheet_manual_msg = """
-    QLabel {
-        background-color: #60798B;
-        color: #FFFFFF;
-        padding: 4px 4px 8px 4px;
-        border-radius: 0;
-    }
-"""
-
-stylesheet_load = """
-QPushButton:hover:pressed
-{
-    background-color: #4DB6AC;
-}
-QPushButton:hover
-{
-    background-color: #26A69A;
-}
-QPushButton
-{
-    color: #FFFFFF;
-    background-color: #00897B;
-}
-"""
-
 
 CONS_RELATION_DICT = {
     ">": "GREATER_THAN",
@@ -282,11 +234,11 @@ class BadgerEnvBox(QWidget):
         # var table
         self.var_table = VariableTable()
         # self.var_table.lock_bounds()
-        self.var_table.setMinimumHeight(200)
+        self.var_table.setMinimumHeight(220)
         self.var_table.verticalHeader().setVisible(False)
         vbox_var_edit.addWidget(self.var_table)
 
-        self.var_table.verticalHeader().setDefaultSectionSize(28)
+        self.var_table.verticalHeader().setDefaultSectionSize(27)
 
         # Initial Points
         collapsiblebox_init = CollapsibleBox(
@@ -353,6 +305,7 @@ class BadgerEnvBox(QWidget):
         hbox_action_obj.addWidget(check_only_obj)
 
         self.obj_table = ObjectiveTable()
+        self.obj_table.setMinimumHeight(120)
         vbox_obj_edit.addWidget(self.obj_table)
         hbox_obj.addWidget(edit_obj_col)
 
@@ -399,8 +352,6 @@ class BadgerEnvBox(QWidget):
         cbox_more.setContentLayout(vbox_more)
 
     def config_logic(self):
-        self.dict_con = {}
-
         self.edit_var.textChanged.connect(self.filter_var)
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
         self.edit_obj.textChanged.connect(self.filter_obj)
@@ -423,10 +374,10 @@ class BadgerEnvBox(QWidget):
     def toggle_env_params(self, checked: bool):
         if not checked:
             self.edit_env_params.hide()
+        else:
             self.edit_env_params.setMinimumHeight(
                 self._qtree_height_hint(self.edit_env_params)
             )
-        else:
             self.edit_env_params.show()
 
     def toggle_algorithm_params(self, checked: bool):

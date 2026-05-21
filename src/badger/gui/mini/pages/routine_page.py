@@ -1,3 +1,4 @@
+import sys
 from typing import Any
 import warnings
 import traceback
@@ -271,7 +272,13 @@ class BadgerRoutinePage(QWidget):
         )
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
-        scroll_layout_env.setContentsMargins(0, 0, 15, 0)
+        if sys.platform == "darwin":
+            # add extra right margin for macOS to prevent scrollbar overlap
+            scroll_layout_env.setContentsMargins(0, 0, 15, 0)
+            self.env_box.var_table.setColumnWidth(4, 44)
+        else:
+            scroll_layout_env.setContentsMargins(0, 0, 5, 0)
+            self.env_box.var_table.setColumnWidth(4, 30)
         scroll_layout_env.addWidget(self.env_box)
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(scroll_content_env)
@@ -565,10 +572,11 @@ class BadgerRoutinePage(QWidget):
             status[name] = True
 
         # Show selected constraints only
-        self.env_box.check_only_con.blockSignals(True)
-        self.env_box.check_only_con.setChecked(True)
-        self.env_box.check_only_con.blockSignals(False)
-        self.env_box.con_table.show_selected_only = True
+        if any(status.values()):
+            self.env_box.check_only_con.blockSignals(True)
+            self.env_box.check_only_con.setChecked(True)
+            self.env_box.check_only_con.blockSignals(False)
+            self.env_box.con_table.show_selected_only = True
 
         self.env_box.con_table.update_items(constraints, status, formulas)
 
@@ -921,9 +929,10 @@ class BadgerRoutinePage(QWidget):
             status[name] = True
 
         # Show selected constraints only
-        self.env_box.check_only_con.blockSignals(True)
-        self.env_box.check_only_con.setChecked(True)
-        self.env_box.check_only_con.blockSignals(False)
+        if any(status.values()):
+            self.env_box.check_only_con.blockSignals(True)
+            self.env_box.check_only_con.setChecked(True)
+            self.env_box.check_only_con.blockSignals(False)
         self.env_box.edit_con.blockSignals(True)
         self.env_box.edit_con.setText("")
         self.env_box.edit_con.blockSignals(False)

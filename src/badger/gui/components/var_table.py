@@ -313,11 +313,7 @@ class VariableTable(QTableWidget):
         """Set the style of a spinbox based on selection and error status."""
         color = "lightgray" if is_selected else "gray"
         border = "border: 1px solid red;" if has_error else ""
-        spinbox.setStyleSheet(
-            f"QDoubleSpinBox {{ color: {color}; {border} }}"
-            f"QDoubleSpinBox::up-button {{ {border} }}"
-            f"QDoubleSpinBox::down-button {{ {border} }}"
-        )
+        spinbox.setStyleSheet(f"QDoubleSpinBox {{ color: {color}; {border} }}")
 
     def _set_spinbox_text_color(self, row: int, is_selected: bool):
         """Set the text color of the spinboxes in a given row based on selection status."""
