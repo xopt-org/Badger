@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
     QLabel,
 )
 from PyQt5.QtCore import QRegExp, pyqtSignal
+from badger.gui.components.obs_table import ObservableTable
 from badger.settings import init_settings
 from pydantic_core import ValidationError
 
@@ -98,7 +99,7 @@ class BadgerEnvBox(QWidget):
         config_singleton = init_settings()
         template_dir = Path(config_singleton.read_value("BADGER_TEMPLATE_ROOT"))
         yaml_files = list(template_dir.glob("*.y*ml"))
-        self.template_cb.addItems([file.name for file in sorted(yaml_files)])
+        self.template_cb.addItems([file.stem for file in sorted(yaml_files)])
         self.template_cb.setCurrentIndex(-1)
 
         self.load_template_button = QPushButton("From file")
@@ -309,7 +310,7 @@ class BadgerEnvBox(QWidget):
         vbox_obj_edit.addWidget(self.obj_table)
         hbox_obj.addWidget(edit_obj_col)
 
-        cbox_more = CollapsibleBox(self, " Constraints")
+        cbox_more = CollapsibleBox(self, " Constraints + Observables")
         vbox.addWidget(cbox_more)
         vbox_more = QVBoxLayout()
 
@@ -349,6 +350,42 @@ class BadgerEnvBox(QWidget):
         vbox_con_edit.addWidget(self.con_table)
         hbox_con.addWidget(edit_con_col)
 
+        # States config
+        sta_panel = QWidget()
+        vbox_more.addWidget(sta_panel)
+        hbox_sta = QHBoxLayout(sta_panel)
+        hbox_sta.setContentsMargins(0, 0, 0, 0)
+        lbl_sta_col = QWidget()
+        vbox_lbl_sta = QVBoxLayout(lbl_sta_col)
+        vbox_lbl_sta.setContentsMargins(0, 0, 0, 0)
+        lbl_sta = QLabel("Observables")
+        lbl_sta.setFixedWidth(LABEL_WIDTH)
+        vbox_lbl_sta.addWidget(lbl_sta)
+        vbox_lbl_sta.addStretch(1)
+        hbox_sta.addWidget(lbl_sta_col)
+
+        edit_sta_col = QWidget()
+        vbox_sta_edit = QVBoxLayout(edit_sta_col)
+        vbox_sta_edit.setContentsMargins(0, 0, 0, 0)
+
+        action_sta = QWidget()
+        hbox_action_sta = QHBoxLayout(action_sta)
+        hbox_action_sta.setContentsMargins(0, 0, 0, 0)
+        vbox_sta_edit.addWidget(action_sta)
+        self.edit_sta = edit_sta = QLineEdit()
+        edit_sta.setPlaceholderText("Filter observables...")
+        edit_sta.setFixedWidth(192)
+        self.check_only_sta = check_only_sta = QCheckBox("Show Checked Only")
+        check_only_sta.setChecked(False)
+        hbox_action_sta.addWidget(edit_sta)
+        hbox_action_sta.addStretch()
+        hbox_action_sta.addWidget(check_only_sta)
+
+        self.sta_table = ObservableTable()
+        self.sta_table.setMinimumHeight(120)
+        vbox_sta_edit.addWidget(self.sta_table)
+        hbox_sta.addWidget(edit_sta_col)
+
         cbox_more.setContentLayout(vbox_more)
 
     def config_logic(self):
@@ -363,6 +400,7 @@ class BadgerEnvBox(QWidget):
 
         self.obj_table.data_changed.connect(lambda: self.update_vocs("obj_table"))
         self.con_table.data_changed.connect(lambda: self.update_vocs("con_table"))
+        self.sta_table.data_changed.connect(lambda: self.update_vocs("sta_table"))
         self.var_table.data_changed.connect(lambda: self.update_vocs("var_table"))
 
     def update_vocs(self, origin: str):
@@ -425,12 +463,20 @@ class BadgerEnvBox(QWidget):
     def filter_con(self):
         self.con_table.update_keyword(self.edit_con.text())
 
+    def toggle_sta_show_mode(self, _):
+        self.sta_table.update_show_selected_only(self.check_only_sta.isChecked())
+
+    def filter_sta(self):
+        self.sta_table.update_keyword(self.edit_sta.text())
+
     def update_template_cb(self, template_name):
         """
         Change the displayed template name without emitting signals to
         reload
         """
         template_cb = self.template_cb
+        if ".yaml" in template_name:
+            template_name = template_name.replace(".yaml", "")
         if template_cb is not None:
             index = template_cb.findText(template_name)
             template_cb.blockSignals(True)
@@ -461,6 +507,9 @@ class BadgerEnvBox(QWidget):
                 critical_constraints.append(con_name)
 
         observables: list[str] = []
+        for observable in self.sta_table.export_data():
+            obs_name = next(iter(observable))
+            observables.append(obs_name)
 
         try:
             # We want to ensure it's a dict of either lists or ContinuousVariables

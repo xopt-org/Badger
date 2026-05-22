@@ -311,9 +311,17 @@ class BadgerRoutinePage(QWidget):
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
         self.env_box.template_cb.currentTextChanged.connect(
-            lambda: self.load_template_yaml(
-                template_path=self.env_box.template_cb.currentText()
+            lambda: (
+                self.load_template_yaml(
+                    template_path=self.env_box.template_cb.currentText() + ".yaml"
+                )
+                if self.env_box.template_cb.currentIndex() != -1
+                else None
             )
+        )
+        # reset template selection on history change
+        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+            lambda: self.env_box.template_cb.setCurrentIndex(-1)
         )
         self.save_template_button.clicked.connect(self.save_template_yaml)
         self.env_box.algo_cb.currentIndexChanged.connect(self.select_generator)
@@ -615,7 +623,7 @@ class BadgerRoutinePage(QWidget):
         # self.env_box.check_only_sta.blockSignals(False)
         # self.env_box.sta_table.show_selected_only = True
 
-        # self.env_box.sta_table.update_items(observables, status, formulas)
+        self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
         logger.info("Generating template dictionary from GUI state.")
@@ -937,7 +945,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.edit_con.setText("")
         self.env_box.edit_con.blockSignals(False)
         self.env_box.con_table.keyword = ""
-        self.env_box.con_table.show_selected_only = True
+        # self.env_box.con_table.show_selected_only = False
 
         self.env_box.con_table.update_items(constraints, status, formulas)
 
@@ -1206,14 +1214,14 @@ class BadgerRoutinePage(QWidget):
             obs = {name: []}
             status[name] = False  # selected
             observables.append(obs)
-        # self.env_box.check_only_sta.blockSignals(True)
-        # self.env_box.check_only_sta.setChecked(False)
-        # self.env_box.check_only_sta.blockSignals(False)
-        # self.env_box.sta_table.show_selected_only = False
+        self.env_box.check_only_sta.blockSignals(True)
+        self.env_box.check_only_sta.setChecked(False)
+        self.env_box.check_only_sta.blockSignals(False)
+        self.env_box.sta_table.show_selected_only = False
         # with BlockSignalsContext(self.env_box.sta_table):
-        # self.env_box.sta_table.update_items(
-        #    observables, status, formulas={}, vocs_signal=False
-        # )
+        self.env_box.sta_table.update_items(
+            observables, status, formulas={}, vocs_signal=False
+        )
 
         # self.env_box.fit_content()
         # self.routine = None
@@ -1894,8 +1902,8 @@ class BadgerRoutinePage(QWidget):
                 initial_point_actions=initial_point_actions,
                 additional_variables=self.env_box.var_table.addtl_vars,
                 formulas=self.env_box.obj_table.formulas,
-                # constraint_formulas=self.env_box.con_table.formulas,
-                # observable_formulas=self.env_box.sta_table.formulas,
+                constraint_formulas=self.env_box.con_table.formulas,
+                observable_formulas=self.env_box.sta_table.formulas,
             )
 
             # Check if any user warnings were caught
