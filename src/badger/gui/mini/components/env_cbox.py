@@ -82,11 +82,12 @@ class BadgerEnvBox(QWidget):
         # vbox layout
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(8, 8, 8, 8)
+        vbox.setSpacing(8)
 
         template_widget = QWidget()
         hbox_template = QHBoxLayout(template_widget)
         hbox_template.setContentsMargins(0, 0, 0, 0)
-        template_lbl = QLabel("Load Template")  # label
+        template_lbl = QLabel("Template")  # label
         template_lbl.setFixedWidth(LABEL_WIDTH)
         self.template_cb = QComboBox()
         self.template_cb.setFixedWidth(LABEL_WIDTH * 2)
@@ -208,7 +209,7 @@ class BadgerEnvBox(QWidget):
         vbox_lbl_var.addStretch(1)
         hbox_var.addWidget(lbl_var_col)
 
-        vbox.addWidget(var_panel_origin)
+        vbox.addWidget(var_panel_origin, 1)
 
         # Edit variables (right side of hbox_var)
         edit_var_col = QWidget()
@@ -235,9 +236,9 @@ class BadgerEnvBox(QWidget):
         # var table
         self.var_table = VariableTable()
         # self.var_table.lock_bounds()
-        self.var_table.setMinimumHeight(220)
+        self.var_table.setMinimumHeight(240)
         self.var_table.verticalHeader().setVisible(False)
-        vbox_var_edit.addWidget(self.var_table)
+        vbox_var_edit.addWidget(self.var_table, 1)
 
         self.var_table.verticalHeader().setDefaultSectionSize(27)
 
@@ -276,7 +277,7 @@ class BadgerEnvBox(QWidget):
 
         # Objectives config (table style)
         obj_panel = QWidget()
-        vbox.addWidget(obj_panel, 1)
+        vbox.addWidget(obj_panel)
         hbox_obj = QHBoxLayout(obj_panel)
         hbox_obj.setContentsMargins(0, 0, 0, 0)
         lbl_obj_col = QWidget()

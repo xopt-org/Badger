@@ -173,7 +173,7 @@ class BadgerRoutinePage(QWidget):
 
         # Set up the layout
         vbox = QVBoxLayout(self)
-        vbox.setContentsMargins(8, 18, 8, 0)
+        vbox.setContentsMargins(8, 12, 8, 0)
 
         self.tabs = tabs = QTabWidget()
         vbox.addWidget(tabs)
@@ -325,6 +325,11 @@ class BadgerRoutinePage(QWidget):
         )
         self.save_template_button.clicked.connect(self.save_template_yaml)
         self.env_box.algo_cb.currentIndexChanged.connect(self.select_generator)
+        self.env_box.algo_cb.currentIndexChanged.connect(
+            lambda: self.env_box.edit_algo_params.setMinimumHeight(
+                self.env_box._qtree_height_hint(self.env_box.edit_algo_params)
+            )
+        )
         # self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         # self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
         # self.generator_box.btn_edit_script.clicked.connect(self.edit_script)

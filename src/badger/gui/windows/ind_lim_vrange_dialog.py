@@ -40,21 +40,27 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         vbox = QVBoxLayout(self)
 
         # Add the new rows above "Set range by"
-        info_group = QWidget()
+        info_group = QFrame()
         vbox_info = QVBoxLayout(info_group)
-        vbox_info.setContentsMargins(0, 0, 0, 0)
+        vbox_info.setContentsMargins(2, 2, 2, 2)
 
         # Current value row
         hbox_current = QHBoxLayout()
-        lbl_current = QLabel("Current value")
+        lbl_current = QLabel("Current value:")
         lbl_current.setFixedWidth(128)
-        self.lbl_current_value = lbl_current_value = QLineEdit(
+        self.lbl_current_value = lbl_current_value = QLabel(
             f"{self.configs.get('current_value', 0):.4f}"
         )
         self.lbl_current_value.setEnabled(False)
         self.lbl_current_value.setStyleSheet("Color: LightGray;")
         hbox_current.addWidget(lbl_current)
+        hbox_current.addStretch()
         hbox_current.addWidget(lbl_current_value)
+        hbox_current.addSpacing(8)
+        info_group.setFrameShape(QFrame.Box)
+        info_group.setFrameShadow(QFrame.Plain)
+        info_group.setLineWidth(1)
+        info_group.setStyleSheet("Background-Color: QColor(0,0,0,255);")
 
         # Add the rows to the info group
         vbox_info.addLayout(hbox_current)
