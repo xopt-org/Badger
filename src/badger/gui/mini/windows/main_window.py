@@ -69,7 +69,7 @@ class BadgerMiniWindow(QMainWindow):
         version_xopt = metadata.version("xopt")
         self.setWindowTitle(f"Badger mini v{version} (Xopt v{version_xopt})")
 
-        self.resize(1200, 790)
+        self.resize(1250, 790)
 
         self.center()
 

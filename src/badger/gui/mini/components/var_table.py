@@ -26,7 +26,6 @@ from PyQt5.QtGui import (
     QDragMoveEvent,
     QDragEnterEvent,
 )
-from badger.gui.components.robust_spinbox import RobustSpinBox
 
 from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
@@ -37,6 +36,68 @@ from gest_api.vocs import ContinuousVariable
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class ValueCell(QWidget):
+    UNSELECTED_COLOR = "gray"
+
+    def __init__(self, value: float | None, selected_color: str):
+        super().__init__()
+        self.selected_color = selected_color
+        self.setAutoFillBackground(False)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(4, 0, 4, 0)
+
+        self.label = QLabel(self._format(value))
+        self.label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        layout.addWidget(self.label)
+
+    @staticmethod
+    def _format(value: float | None) -> str:
+        if value is None:
+            return "N/A"
+        return f"{value:.4f}"
+
+    def set_state(self, is_selected: bool, has_alert: bool):
+        label_color = self.selected_color if is_selected else self.UNSELECTED_COLOR
+        self.label.setStyleSheet(
+            f"color: {label_color}; background-color: transparent; border: none;"
+        )
+        border = "1px solid orange" if has_alert else "1px solid transparent"
+        self.setStyleSheet(
+            f"background-color: transparent; border: {border}; border-radius: 2px;"
+        )
+
+
+class InitialValueCell(ValueCell):
+    def __init__(self, value: float | None):
+        super().__init__(value, "#AAAAAA")
+
+
+class CurrentValueCell(ValueCell):
+    def __init__(self, value: float | None):
+        super().__init__(value, "lightgray")
+
+
+class ScanRangeCell(QTableWidgetItem):
+    UNSELECTED_COLOR = "gray"
+    SELECTED_COLOR = "lightgray"
+
+    def __init__(self, bounds: tuple[float, float]):
+        if isinstance(bounds, ContinuousVariable):
+            lower, upper = bounds.domain
+        elif isinstance(bounds, (list, tuple)):
+            lower, upper = bounds
+        delta = 0.5 * abs(upper - lower)
+        super().__init__(f"±{delta:.3f}")
+        self.setFlags(self.flags() & ~Qt.ItemIsEditable)
+
+    def set_selected(self, is_selected: bool):
+        color = self.SELECTED_COLOR if is_selected else self.UNSELECTED_COLOR
+        self.setForeground(QColor(color))
 
 
 class VariableTable(QTableWidget):
@@ -50,7 +111,7 @@ class VariableTable(QTableWidget):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-        icon_ref = resources.files(__package__) / "../images/gear.png"
+        icon_ref = resources.files(__package__) / "../../images/gear.png"
         with resources.as_file(icon_ref) as icon_path:
             self.icon_settings = QIcon(str(icon_path))
 
@@ -68,7 +129,7 @@ class VariableTable(QTableWidget):
         # self.setDragDropOverwriteMode(False)
 
         self.setRowCount(0)
-        self.setColumnCount(5)
+        self.setColumnCount(6)
         self.setAlternatingRowColors(True)
         self.setStyleSheet("alternate-background-color: #262E38;")
         # self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -84,10 +145,13 @@ class VariableTable(QTableWidget):
             # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
             # header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.setColumnWidth(0, 20)
-        self.setColumnWidth(2, 96)
-        self.setColumnWidth(3, 96)
-        self.setColumnWidth(4, 44)
-        self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
+        self.setColumnWidth(2, 76)
+        self.setColumnWidth(3, 76)
+        self.setColumnWidth(4, 76)
+        self.setColumnWidth(5, 44)
+        self.setHorizontalHeaderLabels(
+            ["", "Name", "Initial", "Current", "Range (Δ)", ""]
+        )
 
         self.all_variables: list[
             dict[str, tuple[float, float]]
@@ -97,6 +161,8 @@ class VariableTable(QTableWidget):
         ] = []  # store variables to be displayed
         self.selected: dict[str, bool] = {}  # track var selected status
         self.bounds: dict[str, tuple[float, float]] = {}  # track var bounds
+        self.initial_values: dict[str, float] = {}
+        self.current_values: dict[str, float] = {}
         self.checked_only = False
         self.bounds_locked = False
         self.addtl_vars = []  # track variables added on the fly
@@ -162,45 +228,14 @@ class VariableTable(QTableWidget):
         self.update_selected()
 
     def update_bounds(self):
-        for i in range(self.rowCount() - 1):
-            widget = self.item(i, 1)
-            if not widget:
-                raise Exception("Variable name widget not found!")
-            name = widget.text()
-
-            sb_lower = self.cellWidget(i, 2)
-            if not sb_lower:
-                raise Exception("Variable bound spinbox widget not found!")
-            sb_upper = self.cellWidget(i, 3)
-            if not sb_upper:
-                raise Exception("Variable bound spinbox widget not found!")
-
-            sb_lower = cast(RobustSpinBox, sb_lower)
-            sb_upper = cast(RobustSpinBox, sb_upper)
-
-            self.bounds[name] = (sb_lower.value(), sb_upper.value())
-            self.validate_row(i)  # Validate the row after updating bounds
+        # Bounds are maintained through self.bounds (not table cells).
         self.data_changed.emit()
 
     def validate_row(self, row: int):
-        """
-        Validate the bounds for a given row. If invalid, apply a red border to the row.
-        """
-        sb_lower = self.cellWidget(row, 2)  # Min value spinbox
-        if not sb_lower:
-            raise Exception("Variable bound spinbox widget not found!")
-        sb_upper = self.cellWidget(row, 3)  # Max value spinbox
-        if not sb_upper:
-            raise Exception("Variable bound spinbox widget not found!")
-
-        sb_lower = cast(RobustSpinBox, sb_lower)
-        sb_upper = cast(RobustSpinBox, sb_upper)
-
+        """Apply value-cell styling for a row."""
         cb = self.cellWidget(row, 0)
         cb = cast(QCheckBox, cb)
-        is_selected = cb.isChecked()
-
-        self._set_spinbox_text_color(row, is_selected)
+        self._set_value_row_style(row, cb.isChecked())
 
     def set_bounds(
         self, variables: dict[str, tuple[float, float]], signal: bool = True
@@ -245,7 +280,7 @@ class VariableTable(QTableWidget):
             name = widget.text()
             is_selected = _cb.isChecked()
             widget.setForeground(QColor("lightgray" if is_selected else "gray"))
-            self._set_spinbox_text_color(i, is_selected)
+            self._set_value_row_style(i, is_selected)
             if name != self.PLACEHOLDER_TEXT:  # TODO: fix...
                 self.selected[name] = is_selected
 
@@ -307,27 +342,75 @@ class VariableTable(QTableWidget):
     def _convert_bounds_to_tuple(self, bounds: Any) -> dict[str, tuple[float, float]]:
         return {k: (v[0], v[1]) for k, v in bounds.items()}
 
-    def _set_spinbox_style(
-        self, spinbox: RobustSpinBox, is_selected: bool, has_error: bool = False
-    ):
-        """Set the style of a spinbox based on selection and error status."""
-        color = "lightgray" if is_selected else "gray"
-        border = "border: 1px solid red;" if has_error else ""
-        spinbox.setStyleSheet(f"QDoubleSpinBox {{ color: {color}; {border} }}")
+    def set_initial_values(self, values_by_name: dict[str, float]) -> None:
+        """Set displayed Initial values using a name->value mapping."""
+        if not values_by_name:
+            return
 
-    def _set_spinbox_text_color(self, row: int, is_selected: bool):
-        """Set the text color of the spinboxes in a given row based on selection status."""
-        sb_lower = self.cellWidget(row, 2)
-        sb_upper = self.cellWidget(row, 3)
+        for name, value in values_by_name.items():
+            if any(name in var for var in self.variables):
+                self.initial_values[name] = float(value)
 
-        sb_lower = cast(RobustSpinBox, sb_lower)
-        sb_upper = cast(RobustSpinBox, sb_upper)
-        has_error = sb_lower.value() >= sb_upper.value()
+        if self.variables:
+            self.update_variables(variables=self.variables, filtered=2)
 
-        for col in (2, 3):
-            spinbox = self.cellWidget(row, col)
-            spinbox = cast(RobustSpinBox, spinbox)
-            self._set_spinbox_style(spinbox, is_selected, has_error)
+    def _set_value_row_style(self, row: int, is_selected: bool):
+        """Update Initial/Current/Scan Range style for a row based on selection."""
+        name_item = self.item(row, 1)
+        if name_item is None:
+            return
+
+        has_alert = self._check_curr_vs_initial(name_item.text())
+        initial_cell = self.cellWidget(row, 2)
+        if isinstance(initial_cell, ValueCell):
+            initial_cell.set_state(is_selected, has_alert)
+
+        current_cell = self.cellWidget(row, 3)
+        if isinstance(current_cell, ValueCell):
+            current_cell.set_state(is_selected, has_alert)
+
+        scan_range_cell = self.item(row, 4)
+        if isinstance(scan_range_cell, ScanRangeCell):
+            scan_range_cell.set_selected(is_selected)
+
+    def _check_curr_vs_initial(self, name: str) -> bool:
+        saved = self.initial_values.get(name)
+        current = self.current_values.get(name)
+        if saved is None or current is None:
+            return False
+
+        denom = max(abs(saved), 1e-12)
+        rel_diff = abs(current - saved) / denom
+        return rel_diff > 0.005
+
+    def set_scan_range_options(self):
+        self.update_variables(self.variables, 2)
+
+    def _refresh_current_values(self, variable_names: list[str]):
+        if self.env_class is None:
+            return
+
+        try:
+            self.env = instantiate_env(self.env_class, self.configs)
+        except Exception:
+            logger.debug(
+                "Failed to instantiate environment for current values", exc_info=True
+            )
+            return
+
+        for name in variable_names:
+            try:
+                value = float(self.env.get_variable(name))
+            except Exception:
+                logger.debug(
+                    "Failed to fetch current value for %s", name, exc_info=True
+                )
+                continue
+
+            self.current_values[name] = value
+
+            if name not in self.initial_values:
+                self.initial_values[name] = value
 
     def update_variables(
         self,
@@ -348,6 +431,8 @@ class VariableTable(QTableWidget):
             self.variables = self.all_variables[:]  # make a copy
             self.selected = {}
             self.bounds = {}
+            self.initial_values = {}
+            self.current_values = {}
             self.addtl_vars: list[str] = []
             for var in self.variables:
                 name = next(iter(var))
@@ -359,6 +444,7 @@ class VariableTable(QTableWidget):
             return
 
         _variables = self.get_visible_variables(variables)
+        self._refresh_current_values([next(iter(var)) for var in _variables])
 
         n = len(_variables) + 1
         self.setRowCount(n)
@@ -366,7 +452,6 @@ class VariableTable(QTableWidget):
 
         for i, var in enumerate(_variables):
             name = next(iter(var))
-            vrange = var[name]
 
             self.setCellWidget(i, 0, QCheckBox())
 
@@ -387,29 +472,16 @@ class VariableTable(QTableWidget):
                 item.setForeground(QColor("lightgray" if _cb.isChecked() else "gray"))
             self.setItem(i, 1, item)
 
-            _bounds = self.bounds[name]
-            default_val = (
-                _bounds.domain[0]
-                if isinstance(_bounds, ContinuousVariable)
-                else _bounds[0]
-            )
-            sb_lower = RobustSpinBox(
-                default_value=default_val, lower_bound=vrange[0], upper_bound=vrange[1]
-            )
-            sb_lower.valueChanged.connect(self.update_bounds)
-            default_val = (
-                _bounds.domain[1]
-                if isinstance(_bounds, ContinuousVariable)
-                else _bounds[1]
-            )
-            sb_upper = RobustSpinBox(
-                default_value=default_val, lower_bound=vrange[0], upper_bound=vrange[1]
-            )
-            sb_upper.valueChanged.connect(self.update_bounds)
-            self.setCellWidget(i, 2, sb_lower)
-            self.setCellWidget(i, 3, sb_upper)
-            self._set_spinbox_text_color(i, _cb.isChecked())
-            self.validate_row(i)  # Validate the row after setting bounds
+            if name not in self.initial_values:
+                self.initial_values[name] = self.current_values.get(name, 0.0)
+
+            initial_cell = InitialValueCell(self.initial_values.get(name))
+            current_cell = CurrentValueCell(self.current_values.get(name))
+            scan_range_cell = ScanRangeCell(self.bounds.get(name, (0.0, 0.0)))
+            self.setCellWidget(i, 2, initial_cell)
+            self.setCellWidget(i, 3, current_cell)
+            self.setItem(i, 4, scan_range_cell)
+            self._set_value_row_style(i, _cb.isChecked())
 
             # Add the config button
             config_button = QPushButton()
@@ -423,16 +495,9 @@ class VariableTable(QTableWidget):
             layout.addWidget(config_button)
             layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
-            self.setCellWidget(i, 4, button_container)
+            self.setCellWidget(i, 5, button_container)
 
             config_button.clicked.connect(partial(self.handle_config_button, name))
-
-            if self.bounds_locked:
-                sb_lower.setEnabled(False)
-                sb_upper.setEnabled(False)
-            else:
-                sb_lower.setEnabled(True)
-                sb_upper.setEnabled(True)
 
         # Make extra editable row
         item = QTableWidgetItem(self.PLACEHOLDER_TEXT)
@@ -440,7 +505,9 @@ class VariableTable(QTableWidget):
         item.setForeground(QColor("gray"))
         self.setItem(n - 1, 1, item)
 
-        self.setHorizontalHeaderLabels(["", "Name", "Min", "Max", ""])
+        self.setHorizontalHeaderLabels(
+            ["", "Name", "Initial", "Current", "Range (Δ)", ""]
+        )
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
         if filtered not in [1, 3]:
@@ -489,9 +556,11 @@ class VariableTable(QTableWidget):
 
         # Get bounds from interface, if PV exists on interface
         _bounds = None
+        _current_value = 0.0
         if self.env_class is not None:
             try:
-                _, _bounds = self.get_bounds(name)
+                value, _bounds = self.get_bounds(name)
+                _current_value = float(value)
             except BadgerInterfaceChannelError:
                 # Raised when PV does not exist after attempting to call value
                 # Revert table to previous state
@@ -506,6 +575,7 @@ class VariableTable(QTableWidget):
                 # Raised when PV exists but value/hard limits cannot be found
                 # Set to some default values
                 _bounds = [0, 0]
+                _current_value = 0.0
                 detailed_text = (
                     "Encountered issues when tried to fetch bounds for"
                     f" variable {name}. Please manually set the bounds."
@@ -533,20 +603,9 @@ class VariableTable(QTableWidget):
         _cb.setChecked(True)
         self.selected[name] = True
 
-        _cb.stateChanged.connect(self.update_selected)
-
-        sb_lower = RobustSpinBox(
-            default_value=_bounds[0], lower_bound=_bounds[0], upper_bound=_bounds[1]
-        )
-        sb_lower.valueChanged.connect(self.update_bounds)
-        sb_upper = RobustSpinBox(
-            default_value=_bounds[1], lower_bound=_bounds[0], upper_bound=_bounds[1]
-        )
-        sb_upper.valueChanged.connect(self.update_bounds)
-        self.setCellWidget(idx, 2, sb_lower)
-        self.setCellWidget(idx, 3, sb_upper)
-
         self.add_variable(name, _bounds[0], _bounds[1])
+        self.current_values[name] = _current_value
+        self.initial_values.setdefault(name, _current_value)
         self.addtl_vars.append(name)
 
         self.update_variables(self.variables, 2)

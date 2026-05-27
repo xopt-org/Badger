@@ -24,7 +24,7 @@ from pydantic_core import ValidationError
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
-from badger.gui.components.var_table import VariableTable
+from badger.gui.mini.components.var_table import VariableTable
 from badger.gui.components.obj_table import ObjectiveTable
 from badger.gui.components.con_table import ConstraintTable
 from badger.gui.components.data_table import init_data_table
@@ -37,7 +37,7 @@ from gest_api.vocs import ContinuousVariable
 
 import logging
 
-LABEL_WIDTH = 96
+LABEL_WIDTH = 86
 
 
 CONS_RELATION_DICT = {

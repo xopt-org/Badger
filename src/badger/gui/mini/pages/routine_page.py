@@ -275,10 +275,10 @@ class BadgerRoutinePage(QWidget):
         if sys.platform == "darwin":
             # add extra right margin for macOS to prevent scrollbar overlap
             scroll_layout_env.setContentsMargins(0, 0, 15, 0)
-            self.env_box.var_table.setColumnWidth(4, 44)
+            self.env_box.var_table.setColumnWidth(5, 44)
         else:
             scroll_layout_env.setContentsMargins(0, 0, 5, 0)
-            self.env_box.var_table.setColumnWidth(4, 30)
+            self.env_box.var_table.setColumnWidth(5, 30)
         scroll_layout_env.addWidget(self.env_box)
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(scroll_content_env)
@@ -320,9 +320,9 @@ class BadgerRoutinePage(QWidget):
             )
         )
         # reset template selection on history change
-        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
-            lambda: self.env_box.template_cb.setCurrentIndex(-1)
-        )
+        # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+        #    lambda: self.env_box.template_cb.setCurrentIndex(-1)
+        # )
         self.save_template_button.clicked.connect(self.save_template_yaml)
         self.env_box.algo_cb.currentIndexChanged.connect(self.select_generator)
         self.env_box.algo_cb.currentIndexChanged.connect(
@@ -352,6 +352,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
+        self.env_box.var_table.set_scan_range_options()
 
         # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
         #    self.sig_go_run.emit() # signal for home_page to select run
@@ -360,6 +361,18 @@ class BadgerRoutinePage(QWidget):
         # self.env_box.var_table.sig_sel_changed.connect(
         #     lambda: logger.debug("Selection changed")
         # )  # for debugging
+
+    def set_initial_values_from_init_vars(
+        self, variable_names: list[str], init_vars: list[float]
+    ) -> None:
+        """Keep Initial column values aligned with run monitor reset targets."""
+        if not variable_names or not init_vars:
+            return
+
+        values_by_name = {
+            name: float(value) for name, value in zip(variable_names, init_vars)
+        }
+        self.env_box.var_table.set_initial_values(values_by_name)
 
     def load_template_yaml(
         self, checked_state=None, template_path: str | None = None
@@ -862,6 +875,8 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges = routine.vrange_limit_options
             self.init_table_actions = routine.initial_point_actions
 
+        self.env_box.var_table.set_scan_range_options()
+
         # self.env_box.relative_to_curr.setChecked(flag_relative)
 
         self.toggle_relative_to_curr(flag_relative, refresh=False)
@@ -1175,6 +1190,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.env_class, self.env_box.var_table.configs = (
             self.add_var()
         )
+        self.env_box.var_table.set_scan_range_options()
 
         objectives = []
         status = {}
@@ -1514,6 +1530,7 @@ class BadgerRoutinePage(QWidget):
         # Record the ratio var ranges
         for vname in vname_selected:
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
+        self.env_box.var_table.set_scan_range_options()
 
     def set_ind_vrange(self, vname, config):
         # MOVE TO ENV_CBOX
@@ -1564,11 +1581,13 @@ class BadgerRoutinePage(QWidget):
         self.var_hard_limit[vname] = hard_bounds
         # Record the ratio var ranges
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
+        self.env_box.var_table.set_scan_range_options()
 
     def save_limit_option(self, limit_option):
         # MOVE TO ENV_CBOX
         logger.info(f"Saving limit option: {limit_option}")
         self.limit_option = limit_option
+        self.env_box.var_table.set_scan_range_options()
 
     def add_var_to_list(self, name, lb, ub):
         logger.info(f"Adding variable to list: {name}, lb={lb}, ub={ub}")
