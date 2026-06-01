@@ -14,64 +14,12 @@ from badger.settings import (
 from badger.errors import BadgerRunTerminated, BadgerEnvObsError
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
-from badger.routine import Routine
+from badger.optimization import convert_to_solution
 from badger.log import configure_process_logging
-from xopt.errors import FeasibilityError, XoptError
-from xopt.vocs import select_best
+from xopt.errors import XoptError
 
 
 logger = logging.getLogger(__name__)
-
-
-def convert_to_solution(result: DataFrame, routine: Routine):
-    """
-    This method is passed the latest evaluated solution and converts that to a printable format for the terminal.
-    This method is for the GUI version of Badger.
-
-    Parameters
-    ----------
-    result : DataFrame
-    routine : Routine
-    """
-    vocs = routine.vocs
-    try:
-        best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
-        logger.debug(f"Selected best index: {best_idx}")
-        if best_idx.size > 0:
-            if best_idx[0] != len(routine.data) - 1:
-                is_optimal = False
-            else:
-                is_optimal = True
-        else:  # no feasible solution
-            is_optimal = False
-    except NotImplementedError:
-        logger.warning(
-            "select_best not implemented, disabling optimal highlight for MO problems"
-        )
-        is_optimal = False
-    except FeasibilityError:  # no feasible data
-        logger.info("no feasible solutions found")
-        is_optimal = False
-
-    vars = list(result[vocs.variable_names].to_numpy()[0])
-    objs = list(result[vocs.objective_names].to_numpy()[0])
-    cons = list(result[vocs.constraint_names].to_numpy()[0])
-    stas = list(result[vocs.observable_names].to_numpy()[0])
-
-    # TODO: This structure needs improvement
-    solution = (
-        vars,
-        objs,
-        cons,
-        stas,
-        is_optimal,
-        vocs.variable_names,
-        vocs.objective_names,
-        vocs.constraint_names,
-        vocs.observable_names,
-    )
-
-    return solution
 
 
 def run_routine_subprocess(

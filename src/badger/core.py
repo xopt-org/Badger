@@ -6,10 +6,9 @@ from pandas import concat, DataFrame
 from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
+from badger.optimization import convert_to_solution
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
-
-from xopt.vocs import select_best
 
 
 def check_run_status(active_callback):
@@ -22,43 +21,6 @@ def check_run_status(active_callback):
             continue
         else:
             break
-
-
-def convert_to_solution(result: DataFrame, routine: Routine):
-    vocs = routine.vocs
-    try:
-        best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
-        if best_idx.size > 0:
-            best_idx = int(best_idx[0])  # convert numpy array to int
-            if best_idx != len(routine.data) - 1:
-                is_optimal = False
-            else:
-                is_optimal = True
-        else:  # no feasible solution
-            is_optimal = False
-    except NotImplementedError:
-        is_optimal = False  # disable the optimal highlight for MO problems
-    except IndexError:  # no feasible solution
-        is_optimal = False
-
-    vars = list(result[vocs.variable_names].to_numpy()[0])
-    objs = list(result[vocs.objective_names].to_numpy()[0])
-    cons = list(result[vocs.constraint_names].to_numpy()[0])
-    stas = list(result[vocs.observable_names].to_numpy()[0])
-
-    solution = (
-        vars,
-        objs,
-        cons,
-        stas,
-        is_optimal,
-        vocs.variable_names,
-        vocs.objective_names,
-        vocs.constraint_names,
-        vocs.observable_names,
-    )
-
-    return solution
 
 
 def run_routine(

@@ -383,12 +383,6 @@ def get_plug(root: str, name: str, ptype: str):
     return plug
 
 
-def scan_extensions(root):
-    extensions = {}
-
-    return extensions
-
-
 def get_env_docs(name: str):
     return load_plugin_docs(name, "environment")
 
@@ -426,4 +420,3 @@ def list_env():
 
 
 BADGER_FACTORY = scan_plugins(BADGER_PLUGIN_ROOT)
-BADGER_EXTENSIONS = scan_extensions(BADGER_PLUGIN_ROOT)

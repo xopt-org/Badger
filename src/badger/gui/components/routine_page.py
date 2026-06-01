@@ -310,28 +310,30 @@ class BadgerRoutinePage(QWidget):
     def config_logic(self):
         logger.info("Configuring logic for BadgerRoutinePage.")
         self.btn_descr_update.clicked.connect(self.update_description)
-        self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
+        self.env_box.sig_load_template_requested.connect(self.load_template_yaml)
         self.save_template_button.clicked.connect(self.save_template_yaml)
         self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
         self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
         self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
-        self.env_box.cb.currentIndexChanged.connect(self.select_env)
-        self.env_box.btn_env_play.clicked.connect(self.open_playground)
-        self.env_box.btn_pv.clicked.connect(self.open_archive_search)
-        self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
-        self.env_box.btn_add_var.clicked.connect(self.add_var)
-        self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
-        self.env_box.btn_add_curr.clicked.connect(
+        self.env_box.sig_environment_selected.connect(self.select_env)
+        self.env_box.sig_open_playground_requested.connect(self.open_playground)
+        self.env_box.sig_open_archive_search_requested.connect(self.open_archive_search)
+        self.env_box.sig_open_docs_requested.connect(self.open_environment_docs)
+        self.env_box.sig_add_var_requested.connect(self.add_var)
+        self.env_box.sig_limit_variable_ranges_requested.connect(
+            self.limit_variable_ranges
+        )
+        self.env_box.sig_add_current_requested.connect(
             partial(self.fill_curr_in_init_table, record=True)
         )
-        self.env_box.btn_add_rand.clicked.connect(self.show_add_rand_dialog)
-        self.env_box.btn_clear.clicked.connect(
+        self.env_box.sig_add_random_requested.connect(self.show_add_rand_dialog)
+        self.env_box.sig_clear_initial_points_requested.connect(
             partial(self.clear_init_table, reset_actions=True)
         )
-        self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
-        self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
-        self.env_box.btn_refresh.clicked.connect(self.refresh_variables)
+        self.env_box.sig_add_initial_row_requested.connect(self.add_row_to_init_table)
+        self.env_box.sig_auto_mode_toggled.connect(self.toggle_relative_to_curr)
+        self.env_box.sig_refresh_requested.connect(self.refresh_variables)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)

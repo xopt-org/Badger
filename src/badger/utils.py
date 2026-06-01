@@ -239,23 +239,28 @@ def run_names_to_dict(run_names):
     return runs
 
 
-def convert_str_to_value(str):
+def convert_str_to_value(value):
+    if isinstance(value, bool):
+        return value
+
     try:
-        return int(str)
+        return int(value)
     except ValueError:
         pass
 
     try:
-        return float(str)
+        return float(value)
     except ValueError:
         pass
 
-    try:
-        return bool(str)
-    except ValueError:
-        pass
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered == "":
+            return value
+        if lowered in {"true", "false"}:
+            return lowered == "true"
 
-    return str
+    return value
 
 
 def parse_rule(rule):

@@ -131,6 +131,19 @@ def format_validation_error(e: ValidationError) -> str:
 
 class BadgerEnvBox(QWidget):
     vocs_updated = pyqtSignal(object)  # or use a more specific type if you want
+    sig_load_template_requested = pyqtSignal(bool)
+    sig_environment_selected = pyqtSignal(int)
+    sig_open_playground_requested = pyqtSignal()
+    sig_open_archive_search_requested = pyqtSignal()
+    sig_open_docs_requested = pyqtSignal()
+    sig_add_var_requested = pyqtSignal()
+    sig_limit_variable_ranges_requested = pyqtSignal()
+    sig_add_current_requested = pyqtSignal()
+    sig_add_random_requested = pyqtSignal()
+    sig_clear_initial_points_requested = pyqtSignal()
+    sig_add_initial_row_requested = pyqtSignal()
+    sig_auto_mode_toggled = pyqtSignal(int)
+    sig_refresh_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -501,6 +514,22 @@ class BadgerEnvBox(QWidget):
 
     def config_logic(self):
         self.dict_con = {}
+
+        self.load_template_button.clicked.connect(self.sig_load_template_requested.emit)
+        self.cb.currentIndexChanged.connect(self.sig_environment_selected.emit)
+        self.btn_env_play.clicked.connect(self.sig_open_playground_requested.emit)
+        self.btn_pv.clicked.connect(self.sig_open_archive_search_requested.emit)
+        self.btn_docs.clicked.connect(self.sig_open_docs_requested.emit)
+        self.btn_add_var.clicked.connect(self.sig_add_var_requested.emit)
+        self.btn_lim_vrange.clicked.connect(
+            self.sig_limit_variable_ranges_requested.emit
+        )
+        self.btn_add_curr.clicked.connect(self.sig_add_current_requested.emit)
+        self.btn_add_rand.clicked.connect(self.sig_add_random_requested.emit)
+        self.btn_clear.clicked.connect(self.sig_clear_initial_points_requested.emit)
+        self.btn_add_row.clicked.connect(self.sig_add_initial_row_requested.emit)
+        self.relative_to_curr.stateChanged.connect(self.sig_auto_mode_toggled.emit)
+        self.btn_refresh.clicked.connect(self.sig_refresh_requested.emit)
 
         self.edit_var.textChanged.connect(self.filter_var)
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
