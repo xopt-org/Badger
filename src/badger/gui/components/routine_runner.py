@@ -4,16 +4,23 @@ import traceback
 
 import pandas as pd
 from PyQt5.QtCore import pyqtSignal, QObject, QTimer
+from PyQt5.QtWidgets import QDialog
 
 from badger.errors import BadgerRunTerminated
 from badger.tests.utils import get_current_vars
 from badger.routine import calculate_variable_bounds, calculate_initial_points
 from badger.settings import init_settings
 from badger.gui.components.process_manager import ProcessManager
+from badger.gui.windows.measurement_retry_dialog import BadgerMeasurementRetryDialog
 from badger.routine import Routine
 from badger.errors import BadgerError
 
 logger = logging.getLogger(__name__)
+
+MEASUREMENT_ERROR_TYPE = "measurement_error"
+MEASUREMENT_ACTION_TYPE = "measurement_action"
+MEASUREMENT_ACTION_RETRY = "retry"
+MEASUREMENT_ACTION_ABORT = "abort"
 
 
 class BadgerRoutineSignals(QObject):
@@ -234,14 +241,34 @@ class BadgerRoutineSubprocess:
 
         if not self.data_and_error_queue.empty():
             try:
-                error_title, error_traceback = self.data_and_error_queue.get()
-                BadgerError(error_title, error_traceback)
+                msg = self.data_and_error_queue.get()
+                if isinstance(msg, dict) and msg.get("type") == MEASUREMENT_ERROR_TYPE:
+                    action = self.handle_measurement_error(msg)
+                    self.data_and_error_queue.put(
+                        {
+                            "type": MEASUREMENT_ACTION_TYPE,
+                            "action": action,
+                        }
+                    )
+                else:
+                    error_title, error_traceback = msg
+                    BadgerError(error_title, error_traceback)
             except ValueError:  # seems to only occur in tests
                 pass
 
         if not self.routine_process.is_alive():
             self.close()
             self.evaluate_queue[1].close()
+
+    def handle_measurement_error(self, msg: dict) -> str:
+        dialog = BadgerMeasurementRetryDialog(
+            text=msg.get("title", "Measurement failed."),
+            detailedText=msg.get("traceback", ""),
+        )
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            return MEASUREMENT_ACTION_RETRY
+        return MEASUREMENT_ACTION_ABORT
 
     def after_evaluate(self, results: pd.DataFrame) -> None:
         logger.debug("Received evaluation results from subprocess.")
