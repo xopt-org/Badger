@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 
+from gest_api.vocs import BaseVariable
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.components.extension_utilities import (
     HandledException,
@@ -132,14 +133,14 @@ class UIComponents:
     def initialize_variables(
         self,
         configurable_options: ConfigurableOptions,
-        vocs_variables: dict[str, tuple[float, float]],
+        vocs_variables: dict[str, BaseVariable],
     ):
         """Initialize the variable checkboxes with the provided variable names."""
         # Initialize the parameters with the routine's variables
         configurable_options["reference_points_range"] = vocs_variables
         configurable_options["reference_points"] = {
             var: to_precision_float(
-                (vocs_variables[var][1] - vocs_variables[var][0]) / 2.0
+                (vocs_variables[var].domain[1] - vocs_variables[var].domain[0]) / 2.0
             )
             for var in vocs_variables
         }
