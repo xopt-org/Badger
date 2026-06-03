@@ -34,7 +34,6 @@ from gest_api.vocs import (
 
 from pydantic import ValidationError
 
-from badger.gui.components.generator_cbox import BadgerAlgoBox
 from badger.gui.components.data_panel import BadgerDataPanel
 from badger.gui.components.data_table import (
     get_table_content_as_dict,
@@ -121,6 +120,7 @@ class BadgerRoutinePage(QWidget):
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
     sig_go_run = pyqtSignal()
+    sig_select_env = pyqtSignal(str)
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")
@@ -169,7 +169,7 @@ class BadgerRoutinePage(QWidget):
 
     def init_ui(self):
         logger.info("Initializing UI for BadgerRoutinePage.")
-        config_singleton = init_settings()
+        self.config_singleton = config_singleton = init_settings()
 
         # Set up the layout
         vbox = QVBoxLayout(self)
@@ -362,17 +362,17 @@ class BadgerRoutinePage(QWidget):
         #     lambda: logger.debug("Selection changed")
         # )  # for debugging
 
-    def set_initial_values_from_init_vars(
+    def set_saved_values_from_init_vars(
         self, variable_names: list[str], init_vars: list[float]
     ) -> None:
-        """Keep Initial column values aligned with run monitor reset targets."""
+        """Keep Saved column values aligned with run monitor reset targets."""
         if not variable_names or not init_vars:
             return
 
         values_by_name = {
             name: float(value) for name, value in zip(variable_names, init_vars)
         }
-        self.env_box.var_table.set_initial_values(values_by_name)
+        self.env_box.var_table.set_saved_values(values_by_name)
 
     def load_template_yaml(
         self, checked_state=None, template_path: str | None = None
@@ -1177,6 +1177,12 @@ class BadgerRoutinePage(QWidget):
         vars_env = self.vars_env = configs["variables"]
         vars_combine = [*vars_env]
 
+        # Needed for getting bounds and current values on the fly.
+        # Set this before update_variables(), since that call refreshes current values.
+        self.env_box.var_table.env_class, self.env_box.var_table.configs = (
+            self.add_var()
+        )
+
         self.env_box.check_only_var.blockSignals(True)
         self.env_box.check_only_var.setChecked(False)
         self.env_box.var_table.checked_only = False  # reset the checked only flag
@@ -1186,11 +1192,6 @@ class BadgerRoutinePage(QWidget):
         # Auto apply the limited variable ranges if the option is set
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange()
-
-        # Needed for getting bounds on the fly
-        self.env_box.var_table.env_class, self.env_box.var_table.configs = (
-            self.add_var()
-        )
         self.env_box.var_table.set_scan_range_options()
 
         objectives = []
@@ -1252,6 +1253,7 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
+        self.env_box.var_table.refresh_current_values(var_names)
 
     def get_init_table_header(self):
         table = self.env_box.init_table

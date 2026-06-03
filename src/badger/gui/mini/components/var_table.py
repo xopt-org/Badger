@@ -40,10 +40,10 @@ logger = logging.getLogger(__name__)
 
 class ValueCell(QWidget):
     UNSELECTED_COLOR = "gray"
+    ALERT_COLOR = "#CBC593"
 
-    def __init__(self, value: float | None, selected_color: str):
+    def __init__(self, value: float | None):
         super().__init__()
-        self.selected_color = selected_color
         self.setAutoFillBackground(False)
 
         layout = QHBoxLayout(self)
@@ -61,25 +61,44 @@ class ValueCell(QWidget):
             return "N/A"
         return f"{value:.4f}"
 
-    def set_state(self, is_selected: bool, has_alert: bool):
-        label_color = self.selected_color if is_selected else self.UNSELECTED_COLOR
+    def update_style(
+        self,
+        is_selected: bool,
+        alert_level: int,
+        selected_color: str,
+    ):
+        label_color = selected_color if is_selected else self.UNSELECTED_COLOR
+        if alert_level == 1:
+            label_color = self.ALERT_COLOR
         self.label.setStyleSheet(
             f"color: {label_color}; background-color: transparent; border: none;"
         )
-        border = "1px solid orange" if has_alert else "1px solid transparent"
+        border = "1px solid orange" if alert_level == 2 else "1px solid transparent"
         self.setStyleSheet(
             f"background-color: transparent; border: {border}; border-radius: 2px;"
         )
 
 
-class InitialValueCell(ValueCell):
+class SavedValueCell(ValueCell):
+    SELECTED_COLOR = "#AAAAAA"
+
     def __init__(self, value: float | None):
-        super().__init__(value, "#AAAAAA")
+        super().__init__(value)
+
+    def update_style(self, is_selected: bool, alert_level: int):
+        super().update_style(
+            is_selected, 0 if alert_level <= 1 else 2, self.SELECTED_COLOR
+        )
 
 
 class CurrentValueCell(ValueCell):
+    SELECTED_COLOR = "lightgray"
+
     def __init__(self, value: float | None):
-        super().__init__(value, "lightgray")
+        super().__init__(value)
+
+    def update_style(self, is_selected: bool, alert_level: int):
+        super().update_style(is_selected, alert_level, self.SELECTED_COLOR)
 
 
 class ScanRangeCell(QTableWidgetItem):
@@ -150,7 +169,7 @@ class VariableTable(QTableWidget):
         self.setColumnWidth(4, 76)
         self.setColumnWidth(5, 44)
         self.setHorizontalHeaderLabels(
-            ["", "Name", "Initial", "Current", "Range (Δ)", ""]
+            ["", "Name", "Saved", "Current", "Range (Δ)", ""]
         )
 
         self.all_variables: list[
@@ -161,7 +180,7 @@ class VariableTable(QTableWidget):
         ] = []  # store variables to be displayed
         self.selected: dict[str, bool] = {}  # track var selected status
         self.bounds: dict[str, tuple[float, float]] = {}  # track var bounds
-        self.initial_values: dict[str, float] = {}
+        self.saved_values: dict[str, float] = {}
         self.current_values: dict[str, float] = {}
         self.checked_only = False
         self.bounds_locked = False
@@ -235,7 +254,7 @@ class VariableTable(QTableWidget):
         """Apply value-cell styling for a row."""
         cb = self.cellWidget(row, 0)
         cb = cast(QCheckBox, cb)
-        self._set_value_row_style(row, cb.isChecked())
+        self._set_cell_value_style(row, cb.isChecked())
 
     def set_bounds(
         self, variables: dict[str, tuple[float, float]], signal: bool = True
@@ -280,7 +299,7 @@ class VariableTable(QTableWidget):
             name = widget.text()
             is_selected = _cb.isChecked()
             widget.setForeground(QColor("lightgray" if is_selected else "gray"))
-            self._set_value_row_style(i, is_selected)
+            self._set_cell_value_style(i, is_selected)
             if name != self.PLACEHOLDER_TEXT:  # TODO: fix...
                 self.selected[name] = is_selected
 
@@ -342,75 +361,76 @@ class VariableTable(QTableWidget):
     def _convert_bounds_to_tuple(self, bounds: Any) -> dict[str, tuple[float, float]]:
         return {k: (v[0], v[1]) for k, v in bounds.items()}
 
-    def set_initial_values(self, values_by_name: dict[str, float]) -> None:
-        """Set displayed Initial values using a name->value mapping."""
+    def set_saved_values(self, values_by_name: dict[str, float]) -> None:
+        """Set displayed saved values using a name->value mapping."""
         if not values_by_name:
             return
 
         for name, value in values_by_name.items():
             if any(name in var for var in self.variables):
-                self.initial_values[name] = float(value)
+                self.saved_values[name] = float(value)
 
         if self.variables:
             self.update_variables(variables=self.variables, filtered=2)
 
-    def _set_value_row_style(self, row: int, is_selected: bool):
-        """Update Initial/Current/Scan Range style for a row based on selection."""
+    def _set_cell_value_style(self, row: int, is_selected: bool):
+        """Update Saved/Current/Scan Range style for a row based on selection."""
         name_item = self.item(row, 1)
         if name_item is None:
             return
 
-        has_alert = self._check_curr_vs_initial(name_item.text())
-        initial_cell = self.cellWidget(row, 2)
-        if isinstance(initial_cell, ValueCell):
-            initial_cell.set_state(is_selected, has_alert)
-
+        alert_level = self._check_current_vs_saved(name_item.text())
+        saved_cell = self.cellWidget(row, 2)
         current_cell = self.cellWidget(row, 3)
-        if isinstance(current_cell, ValueCell):
-            current_cell.set_state(is_selected, has_alert)
+
+        try:
+            saved_cell.update_style(is_selected, alert_level)
+            current_cell.update_style(is_selected, alert_level)
+        except AttributeError as e:
+            logger.warning(
+                f"cellWidget at row {row} does not have update_style method: {e}"
+            )
 
         scan_range_cell = self.item(row, 4)
         if isinstance(scan_range_cell, ScanRangeCell):
             scan_range_cell.set_selected(is_selected)
 
-    def _check_curr_vs_initial(self, name: str) -> bool:
-        saved = self.initial_values.get(name)
+    def _check_current_vs_saved(self, name: str) -> int:
+        saved = self.saved_values.get(name)
         current = self.current_values.get(name)
         if saved is None or current is None:
-            return False
+            return 0
 
         denom = max(abs(saved), 1e-12)
         rel_diff = abs(current - saved) / denom
-        return rel_diff > 0.005
+        return 1 if rel_diff > 0.001 else 0  # alert if more than 0.1% change
 
     def set_scan_range_options(self):
         self.update_variables(self.variables, 2)
 
-    def _refresh_current_values(self, variable_names: list[str]):
+    def refresh_current_values(self, variable_names: list[str] | None = None):
         if self.env_class is None:
             return
 
-        try:
-            self.env = instantiate_env(self.env_class, self.configs)
-        except Exception:
-            logger.debug(
-                "Failed to instantiate environment for current values", exc_info=True
-            )
-            return
+        # If no variable names update all
+        if variable_names is None:
+            variable_names = [next(iter(var)) for var in self.variables]
+
+        self.env = instantiate_env(self.env_class, self.configs)
 
         for name in variable_names:
             try:
                 value = float(self.env.get_variable(name))
             except Exception:
-                logger.debug(
+                logger.warning(
                     "Failed to fetch current value for %s", name, exc_info=True
                 )
                 continue
 
             self.current_values[name] = value
 
-            if name not in self.initial_values:
-                self.initial_values[name] = value
+            if name not in self.saved_values:
+                self.saved_values[name] = value
 
     def update_variables(
         self,
@@ -431,7 +451,7 @@ class VariableTable(QTableWidget):
             self.variables = self.all_variables[:]  # make a copy
             self.selected = {}
             self.bounds = {}
-            self.initial_values = {}
+            self.saved_values = {}
             self.current_values = {}
             self.addtl_vars: list[str] = []
             for var in self.variables:
@@ -444,7 +464,7 @@ class VariableTable(QTableWidget):
             return
 
         _variables = self.get_visible_variables(variables)
-        self._refresh_current_values([next(iter(var)) for var in _variables])
+        self.refresh_current_values([next(iter(var)) for var in _variables])
 
         n = len(_variables) + 1
         self.setRowCount(n)
@@ -472,16 +492,16 @@ class VariableTable(QTableWidget):
                 item.setForeground(QColor("lightgray" if _cb.isChecked() else "gray"))
             self.setItem(i, 1, item)
 
-            if name not in self.initial_values:
-                self.initial_values[name] = self.current_values.get(name, 0.0)
+            if name not in self.saved_values:
+                self.saved_values[name] = self.current_values.get(name, 0.0)
 
-            initial_cell = InitialValueCell(self.initial_values.get(name))
+            saved_cell = SavedValueCell(self.saved_values.get(name))
             current_cell = CurrentValueCell(self.current_values.get(name))
             scan_range_cell = ScanRangeCell(self.bounds.get(name, (0.0, 0.0)))
-            self.setCellWidget(i, 2, initial_cell)
+            self.setCellWidget(i, 2, saved_cell)
             self.setCellWidget(i, 3, current_cell)
             self.setItem(i, 4, scan_range_cell)
-            self._set_value_row_style(i, _cb.isChecked())
+            self._set_cell_value_style(i, _cb.isChecked())
 
             # Add the config button
             config_button = QPushButton()
@@ -506,7 +526,7 @@ class VariableTable(QTableWidget):
         self.setItem(n - 1, 1, item)
 
         self.setHorizontalHeaderLabels(
-            ["", "Name", "Initial", "Current", "Range (Δ)", ""]
+            ["", "Name", "Saved", "Current", "Range (Δ)", ""]
         )
         self.setVerticalHeaderLabels([str(i) for i in range(n)])
 
@@ -605,7 +625,7 @@ class VariableTable(QTableWidget):
 
         self.add_variable(name, _bounds[0], _bounds[1])
         self.current_values[name] = _current_value
-        self.initial_values.setdefault(name, _current_value)
+        self.saved_values.setdefault(name, _current_value)
         self.addtl_vars.append(name)
 
         self.update_variables(self.variables, 2)

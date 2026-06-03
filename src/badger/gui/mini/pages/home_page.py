@@ -205,7 +205,7 @@ class BadgerHomePage(QWidget):
         # Set initial sizes (left fixed, middle and right equal)
         splitter.setSizes([1, 1])
         splitter_run.setSizes([1, 1])
-        splitter_data.setSizes([600, 180])
+        splitter_data.setSizes([600, 0])  # hide data table by default
 
         self.status_bar = status_bar = BadgerStatusBar()
         status_bar.set_summary("Badger is ready!")
@@ -250,7 +250,7 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_toggle_run.connect(self.run_action_bar.toggle_run)
         self.run_monitor.sig_toggle_other.connect(self.run_action_bar.toggle_other)
         self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
-        self.run_monitor.sig_env_ready.connect(self.sync_initial_values_from_monitor)
+        self.run_monitor.sig_env_ready.connect(self.update_saved_values_from_monitor)
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
@@ -286,16 +286,16 @@ class BadgerHomePage(QWidget):
         logger.info("Activating search bar.")
         self.sbar.setFocus()
 
-    def sync_initial_values_from_monitor(self):
-        """Sync Initial column values to match run monitor reset_env targets."""
-        try:
-            variable_names = list(self.run_monitor.vocs.variable_names)
-            init_vars = list(self.run_monitor.init_vars)
-        except Exception:
-            logger.debug("Unable to sync initial values from monitor")
-            return
+    def update_saved_values_from_monitor(self):
+        """
+        Sync Saved column values to match run monitor reset_env targets.
 
-        self.routine_editor.set_initial_values_from_init_vars(variable_names, init_vars)
+        Called from run_monitor.sig_env_ready
+        """
+        variable_names = list(self.run_monitor.vocs.variable_names)
+        init_vars = list(self.run_monitor.init_vars)
+
+        self.routine_editor.set_saved_values_from_init_vars(variable_names, init_vars)
 
     def load_all_runs(self):
         logger.info("Loading all runs into history browser.")
@@ -305,7 +305,8 @@ class BadgerHomePage(QWidget):
     def init_home_page(self):
         logger.info("Initializing home page.")
         # Load the default generator
-        self.routine_editor.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.env_box.algo_cb.setCurrentText("neldermead")
+        # self.routine_editor.generator_box.cb.setCurrentIndex(0)
 
     def go_run(self, i: int = None):
         logger.info(f"Activating run: {i}")
@@ -615,6 +616,10 @@ class BadgerHomePage(QWidget):
         stas = list(solution[vocs.observable_names].to_numpy()[0])
         add_row(self.run_table, objs + cons + vars + stas)
         self.data_panel.add_live_data(solution)
+        # update "current" values in var table
+        self.routine_editor.env_box.var_table.refresh_current_values(
+            vocs.variable_names
+        )
 
     def delete_run(self):
         logger.info("Deleting run.")

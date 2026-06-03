@@ -37,7 +37,7 @@ from gest_api.vocs import ContinuousVariable
 
 import logging
 
-LABEL_WIDTH = 86
+LABEL_WIDTH = 96
 
 
 CONS_RELATION_DICT = {
@@ -121,9 +121,12 @@ class BadgerEnvBox(QWidget):
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)  # Horizontal line
         separator.setFrameShadow(QFrame.Sunken)  # Sunken style
+        separator.setStyleSheet("background-color: #61748c;")
         vbox.addWidget(separator)
 
         # Environment
+        self.env_name = None
+
         env = QWidget()
         vbox_env = QVBoxLayout(env)
         vbox_env.setContentsMargins(0, 0, 0, 0)
