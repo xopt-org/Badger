@@ -151,6 +151,15 @@ The GUI is a single-window PyQt5 app (`BadgerMainWindow`) with:
 
 The `run_monitor.py` component handles live plotting via pyqtgraph. The `routine_runner.py` manages subprocess lifecycle. The `process_manager.py` maintains a queue of pre-spawned processes for faster run starts.
 
+## Module docstrings
+
+Every non-empty Python file under `src/badger/` (excluding `src/badger/tests/`) must have a module-level docstring. The docstring should:
+- Describe what the module contains and its role in the Badger system
+- Be 2–4 lines, focused and informative (no filler like "This module provides...")
+- Be updated when the module's primary responsibility changes (e.g., classes are moved in/out, the module is split)
+
+A pre-commit hook (`check-module-docstrings`) enforces presence. Empty `__init__.py` files are exempt.
+
 ## Common pitfalls
 
 1. **Don't import `badger.factory` in isolation tests** without ensuring config is set up — it will raise `BadgerConfigError` at import time.
