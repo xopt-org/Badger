@@ -285,7 +285,7 @@ class BadgerRoutinePage(QWidget):
         tabs.addTab(scroll_area, "Environment + VOCS")
 
         # Algo box
-        self.generator_box = BadgerAlgoBox(None, self.generators)
+        # self.generator_box = BadgerAlgoBox(None, self.generators)
         # tabs.addTab(self.generator_box, "Algorithm")
 
         # Data panel
@@ -297,7 +297,7 @@ class BadgerRoutinePage(QWidget):
         # vbox.addStretch()
 
         # Add connection to update vocs when env or generator changes for pydantic editor validation
-        self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
+        # self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
         self.env_box.vocs_updated.connect(self.data_panel.update_vocs)
 
         # Template path
@@ -469,7 +469,7 @@ class BadgerRoutinePage(QWidget):
             filtered_config = filter_generator_config(
                 generator_name, template_dict["generator"]
             )
-            self.generator_box.edit.set_params_from_generator(
+            self.env_box.edit_algo_params.set_params_from_generator(
                 generator_name, filtered_config, vocs
             )
 
@@ -1003,7 +1003,7 @@ class BadgerRoutinePage(QWidget):
         self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
 
-        self.generator_box.check_use_script.setChecked(not not self.script)
+        # self.generator_box.check_use_script.setChecked(not not self.script)
 
     def set_routine(self, routine: Routine, silent: bool = False):
         self.refresh_ui(routine, silent=silent)
@@ -1014,11 +1014,11 @@ class BadgerRoutinePage(QWidget):
         )
         # Reset the script
         self.script = ""
-        self.generator_box.check_use_script.setChecked(False)
+        # self.generator_box.check_use_script.setChecked(False)
 
         if i == -1:
             self.env_box.edit_algo_params.clear()
-            self.generator_box.cb_scaling.setCurrentIndex(-1)
+            # self.generator_box.cb_scaling.setCurrentIndex(-1)
             return
 
         name = self.generators[i]
@@ -1059,13 +1059,14 @@ class BadgerRoutinePage(QWidget):
                     pass
 
     def toggle_use_script(self):
-        if self.generator_box.check_use_script.isChecked():
-            self.generator_box.btn_edit_script.show()
-            self.env_box.edit_algo_params.setDisabled(True)
-            self.refresh_params_generator()
-        else:
-            self.generator_box.btn_edit_script.hide()
-            self.env_box.edit_algo_params.setDisabled(False)
+        pass
+        # .check_use_script.isChecked():
+        #    self.generator_box.btn_edit_script.show()
+        #    self.env_box.edit_algo_params.setDisabled(True)
+        #    self.refresh_params_generator()
+        # else:
+        #    self.generator_box.btn_edit_script.hide()
+        #    self.env_box.edit_algo_params.setDisabled(False)
 
     def edit_script(self):
         logger.info("Editing script for routine.")
@@ -1158,8 +1159,8 @@ class BadgerRoutinePage(QWidget):
             # self.env_box.btn_add_var.setDisabled(False)
             # self.env_box.btn_lim_vrange.setDisabled(False)
             # self.env_box.btn_refresh.setDisabled(False)
-            if self.generator_box.check_use_script.isChecked():
-                self.refresh_params_generator()
+            # if self.generator_box.check_use_script.isChecked():
+            #    self.refresh_params_generator()
         except Exception:
             self.configs = None
             self.env = None
@@ -1871,11 +1872,11 @@ class BadgerRoutinePage(QWidget):
             )
 
         # Script that generates generator params
-        if self.generator_box.check_use_script.isChecked():
-            script = self.script
-            logger.debug("Using custom script for generator params.")
-        else:
-            script = None
+        # if self.generator_box.check_use_script.isChecked():
+        #    script = self.script
+        #    logger.debug("Using custom script for generator params.")
+        # else:
+        #    script = None
 
         # Relative to current params
         if self.env_box.relative_to_curr.isChecked():
@@ -1919,7 +1920,7 @@ class BadgerRoutinePage(QWidget):
                 initial_points=init_points_df.astype("double"),
                 critical_constraint_names=critical_constraints,
                 tags=None,
-                script=script,
+                # script=script,
                 relative_to_current=relative_to_current,
                 vrange_limit_options=vrange_limit_options,
                 vrange_hard_limit=vrange_hard_limit,
