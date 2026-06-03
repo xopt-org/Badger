@@ -1,3 +1,7 @@
+"""Factory function for creating observable state row widgets. Produces a
+horizontal widget with a combo box for selecting an observable name and a
+remove button, used in the states/observables list of the routine editor."""
+
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from PyQt5.QtWidgets import QStyledItemDelegate
 from badger.gui.utils import NoHoverFocusComboBox

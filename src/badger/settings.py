@@ -1,3 +1,9 @@
+"""Configuration management for Badger. Defines the settings schema
+(BadgerConfig), a singleton accessor (ConfigSingleton), and helpers for
+reading, writing, and resetting configuration from a YAML file. Settings
+control plugin paths, archive locations, logging, GUI theme, and advanced
+feature flags used throughout the application."""
+
 import os
 import platform
 import yaml

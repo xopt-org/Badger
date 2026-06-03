@@ -1,3 +1,7 @@
+"""Type definitions for the BO visualizer extension. Defines TypedDict
+structures for plot options (grid resolution, display toggles) and
+configurable visualization parameters (variable selection, reference points)."""
+
 from typing import TypedDict
 
 

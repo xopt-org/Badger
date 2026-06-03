@@ -1,3 +1,8 @@
+"""Shared Qt widget utilities for the Badger GUI. Provides helper functions
+for creating styled buttons, preventing scroll-wheel spin box changes,
+managing deep copies of widget configurations, and custom combo box and
+dialog classes used across the GUI."""
+
 from importlib import resources
 from typing import Any
 from PyQt5.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox, QToolButton

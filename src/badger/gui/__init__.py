@@ -1,3 +1,8 @@
+"""Badger GUI application launcher. Initializes the PyQt5 QApplication with
+theming, DPI scaling, custom error handling, and the main window. Provides
+the ``launch_gui`` entry point called from the CLI when ``badger -g`` is
+invoked."""
+
 from importlib import resources
 import signal
 import sys

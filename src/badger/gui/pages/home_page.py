@@ -1,3 +1,8 @@
+"""Home page widget — the primary view of the Badger GUI. Integrates the
+routine editor (left panel), run monitor with live plots (right panel), history
+and template navigators (tabs), and coordinates data flow between routine
+configuration, execution, and result visualization."""
+
 import gc
 import os
 import traceback

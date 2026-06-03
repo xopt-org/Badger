@@ -1,3 +1,8 @@
+"""LCLS-style electronic logbook integration for Badger. Generates XML log
+entries summarizing optimization results (gain, duration, algorithm used) and
+captures GUI screenshots as PNG/PS attachments for archival in the facility
+logbook system."""
+
 import os
 from datetime import datetime
 import logging

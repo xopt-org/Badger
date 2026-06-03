@@ -1,3 +1,8 @@
+"""Archive search widget for the Badger GUI routine editor. Provides a
+searchable table of environment variables from the plugin registry, supporting
+drag-and-drop into the variable, observable, and constraint tables to
+configure a routine."""
+
 import logging
 from typing import List
 from PyQt5.QtGui import QDrag, QKeyEvent

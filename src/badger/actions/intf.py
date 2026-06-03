@@ -1,3 +1,7 @@
+"""CLI sub-command for listing and inspecting registered Badger interface
+plugins. Displays all available interfaces or the detailed configuration of a
+specific interface."""
+
 import logging
 
 from badger.utils import yprint

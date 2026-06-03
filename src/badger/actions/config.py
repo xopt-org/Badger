@@ -1,3 +1,8 @@
+"""CLI sub-command for interactively configuring Badger settings. Handles both
+path-based settings (plugin root, archive root, etc.) and non-path settings
+(theme, log level) via an interactive terminal prompt that guides the user
+through setting, skipping, or resetting each value."""
+
 from badger.settings import init_settings
 import os
 import logging

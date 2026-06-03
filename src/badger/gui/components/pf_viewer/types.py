@@ -1,3 +1,8 @@
+"""Type definitions for the Pareto front viewer extension. Defines TypedDict
+structures for plot options, configurable parameters (objective/variable
+selection, plot tab index), and UI widget references used internally by the
+ParetoFrontWidget."""
+
 from typing import TypedDict
 
 from PyQt5.QtWidgets import (

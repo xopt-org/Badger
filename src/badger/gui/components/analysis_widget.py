@@ -1,3 +1,8 @@
+"""Abstract base class for Badger analysis extension widgets. Defines the
+interface that all analysis visualizations (BO model plots, Pareto front
+displays) must implement to receive routine updates and render within the
+extensions framework."""
+
 from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any, Optional

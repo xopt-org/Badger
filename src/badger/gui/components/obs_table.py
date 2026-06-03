@@ -1,3 +1,8 @@
+"""Observable table widget for the Badger GUI routine editor. Displays
+observables (monitored quantities that are not optimized), supporting checkbox
+toggling, drag-and-drop reordering, and external text drops for adding new
+observables."""
+
 from typing import Any
 from PyQt5.QtWidgets import (
     QMessageBox,

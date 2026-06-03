@@ -1,3 +1,7 @@
+"""Status bar widget for the Badger GUI main window. Displays a summary label
+with run status information and provides a settings button that opens the
+application settings dialog."""
+
 from importlib import resources
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
 from PyQt5.QtGui import QIcon

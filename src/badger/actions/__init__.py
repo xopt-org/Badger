@@ -1,3 +1,8 @@
+"""CLI action handlers for the ``badger`` command. Implements the top-level
+``show_info`` action that either launches the GUI or prints configuration
+details, and re-exports sub-command handlers for doctor, routine, generator,
+environment, interface, install, uninstall, and config management."""
+
 import os
 from importlib import metadata
 from badger.actions.doctor import check_n_config_paths

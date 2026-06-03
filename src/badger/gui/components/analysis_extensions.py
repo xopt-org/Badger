@@ -1,3 +1,8 @@
+"""Analysis extension dialogs for the Badger GUI. Wraps analysis widgets
+(Bayesian Optimization visualizer, Pareto front viewer) in standalone dialog
+windows that receive live routine data updates during and after optimization
+runs."""
+
 from typing import Optional, cast
 import logging
 

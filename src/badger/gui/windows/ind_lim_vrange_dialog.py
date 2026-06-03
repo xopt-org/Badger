@@ -1,3 +1,8 @@
+"""Dialog for setting variable range limits on an individual variable. Allows
+the user to configure a per-variable range restriction (as a ratio of the full
+or current range) independently of the global limit settings, providing
+fine-grained control over the optimization search space."""
+
 from copy import deepcopy
 
 from PyQt5.QtWidgets import (

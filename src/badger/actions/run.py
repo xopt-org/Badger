@@ -1,3 +1,8 @@
+"""CLI routine execution and archiving. Provides ``run_n_archive`` which drives
+an optimization loop with pause/resume via SIGINT, periodic data archiving,
+and interface log dumping. The ``run_routine`` CLI entry point is deprecated
+in favor of the GUI."""
+
 import logging
 import os
 import sys

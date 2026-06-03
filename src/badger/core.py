@@ -1,3 +1,9 @@
+"""Core optimization loop for Badger's in-process (non-subprocess) execution
+mode. Drives the generate-evaluate cycle via Xopt, invoking user-supplied
+callbacks for status checks, candidate generation, evaluation, and state
+persistence. Used by the CLI runner and as the reference implementation for
+the subprocess variant."""
+
 import time
 from typing import Callable
 

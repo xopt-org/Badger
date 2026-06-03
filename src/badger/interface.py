@@ -1,3 +1,8 @@
+"""Defines the abstract Interface base class for Badger plugins. Interfaces
+provide the hardware or simulation communication layer that environments use
+to get/set channel values. Includes logging utilities for recording channel
+interactions to disk for post-run analysis."""
+
 import pickle
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Dict, List, TypedDict

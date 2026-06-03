@@ -1,3 +1,9 @@
+"""Defines the base environment classes and metaclass for Badger plugins.
+Environments expose machine variables and observables to the optimization loop.
+This module provides BaseEnvironment (standalone) and Environment (interface-
+backed), along with decorators for setpoint validation, bounds validation, and
+formula processing on observables."""
+
 from abc import abstractmethod
 from logging import warning
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional

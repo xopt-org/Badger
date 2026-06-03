@@ -1,3 +1,7 @@
+"""Factory function for creating individual constraint row widgets. Each row
+contains a combo box for observable selection, relation selector (>, <, =),
+threshold spin box, criticality checkbox, and a remove button."""
+
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QPushButton,

@@ -1,3 +1,8 @@
+"""Main application window for the Badger GUI. Houses the home page with its
+routine editor and run monitor, manages the subprocess process pool for
+optimization runs, and handles window lifecycle events including graceful
+shutdown of in-progress runs."""
+
 import logging
 import os
 from importlib import metadata
