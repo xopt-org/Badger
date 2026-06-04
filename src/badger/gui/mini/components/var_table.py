@@ -125,14 +125,28 @@ class ScanRangeCell(QTableWidgetItem):
     UNSELECTED_COLOR = "gray"
     SELECTED_COLOR = "lightgray"
 
-    def __init__(self, bounds: tuple[float, float]):
+    def __init__(
+        self,
+        value: float,
+        bounds: tuple[float, float] | list[float] | ContinuousVariable,
+        is_clipped: bool = False,
+    ):
         if isinstance(bounds, ContinuousVariable):
             lower, upper = bounds.domain
         elif isinstance(bounds, (list, tuple)):
             lower, upper = bounds
+
         delta = 0.5 * abs(upper - lower)
-        super().__init__(f"±{delta:.3f}")
+
+        if is_clipped:
+            lower_delta = abs(value - lower)
+            upper_delta = abs(upper - value)
+            delta = max(lower_delta, upper_delta)
+
+        super().__init__(f"±{delta:.3f}{'*' if is_clipped else ''}")
         self.setFlags(self.flags() & ~Qt.ItemIsEditable)
+        if is_clipped:
+            self.setToolTip("Requested bounds are clipped by hard variable limits")
 
     def set_selected(self, is_selected: bool):
         color = self.SELECTED_COLOR if is_selected else self.UNSELECTED_COLOR
@@ -200,6 +214,7 @@ class VariableTable(QTableWidget):
         ] = []  # store variables to be displayed
         self.selected: dict[str, bool] = {}  # track var selected status
         self.bounds: dict[str, tuple[float, float]] = {}  # track var bounds
+        self.clipped: dict[str, bool] = {}
         self.saved_values: dict[str, float] = {}
         self.current_values: dict[str, float] = {}
         self.checked_only = False
@@ -277,10 +292,17 @@ class VariableTable(QTableWidget):
         self._set_cell_value_style(row, cb.isChecked())
 
     def set_bounds(
-        self, variables: dict[str, tuple[float, float]], signal: bool = True
+        self,
+        variables: dict[str, tuple[float, float]],
+        signal: bool = True,
+        clipped: dict[str, bool] = {},
     ):
         for name in variables:
             self.bounds[name] = variables[name]
+            if name in clipped:
+                self.clipped[name] = clipped[name]
+            else:
+                self.clipped.pop(name, None)
 
         if signal:
             self.update_variables(self.variables, 2)
@@ -288,9 +310,14 @@ class VariableTable(QTableWidget):
             self.update_variables(self.variables, 3)
 
     def refresh_variable(
-        self, name: str, bounds: tuple[float, float], hard_bounds: tuple[float, float]
+        self,
+        name: str,
+        bounds: tuple[float, float],
+        hard_bounds: tuple[float, float],
+        is_clipped: bool = False,
     ):
         self.bounds[name] = bounds
+        self.clipped[name] = is_clipped
 
         # Update the variable in self.variables
         for var in self.variables:
@@ -484,6 +511,7 @@ class VariableTable(QTableWidget):
             self.variables = self.all_variables[:]  # make a copy
             self.selected = {}
             self.bounds = {}
+            self.clipped = {}
             self.saved_values = {}
             self.current_values = {}
             self.addtl_vars: list[str] = []
@@ -530,7 +558,11 @@ class VariableTable(QTableWidget):
 
             saved_cell = SavedValueCell(self.saved_values.get(name))
             current_cell = CurrentValueCell(self.current_values.get(name))
-            scan_range_cell = ScanRangeCell(self.bounds.get(name, (0.0, 0.0)))
+            scan_range_cell = ScanRangeCell(
+                self.current_values.get(name, 0.0),
+                self.bounds.get(name, (0.0, 0.0)),
+                self.clipped.get(name),
+            )
             self.setCellWidget(i, 2, saved_cell)
             self.setCellWidget(i, 3, current_cell)
             self.setItem(i, 4, scan_range_cell)
@@ -588,6 +620,7 @@ class VariableTable(QTableWidget):
                     var for var in self.variables if next(iter(var)) != prev_name
                 ]
                 del self.bounds[prev_name]
+                self.clipped.pop(prev_name, None)
                 del self.selected[prev_name]
 
                 self.update_variables(self.variables, 2)

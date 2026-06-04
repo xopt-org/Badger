@@ -526,8 +526,8 @@ class BadgerRoutinePage(QWidget):
 
         if env_name:
             if relative_to_current:
-                bounds = self.calc_auto_bounds()
-                self.env_box.var_table.set_bounds(bounds, signal=False)
+                bounds, clipped = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds, signal=False, clipped=clipped)
             else:
                 self.env_box.var_table.set_bounds(vocs.variables, signal=False)
             # Populate the initial table anyways, auto mode or not
@@ -1124,9 +1124,7 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     def select_env(self, i: int):
-        logger.info(
-            f"Environment selected: {self.env_box.env_name} (index={i})"
-        )
+        logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1493,6 +1491,7 @@ class BadgerRoutinePage(QWidget):
             )
 
         option_idx = self.limit_option["limit_option_idx"]
+        clipped = {}
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
         if option_idx == 1:
             ratio = self.limit_option["ratio_full"]
@@ -1500,15 +1499,17 @@ class BadgerRoutinePage(QWidget):
                 hard_bounds = vrange[name]
                 delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
         elif option_idx == 2:
             delta = self.limit_option["delta"]
             for i, name in enumerate(vname_selected):
                 hard_bounds = vrange[name]
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
         else:
             ratio = self.limit_option["ratio_curr"]
             for i, name in enumerate(vname_selected):
@@ -1518,11 +1519,12 @@ class BadgerRoutinePage(QWidget):
                     var_curr[name] * (1 - 0.5 * sign * ratio),
                     var_curr[name] * (1 + 0.5 * sign * ratio),
                 ]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
 
         with BlockSignalsContext(self.env_box.var_table):
-            self.env_box.var_table.set_bounds(vrange)
+            self.env_box.var_table.set_bounds(vrange, clipped=clipped)
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 
@@ -1560,11 +1562,11 @@ class BadgerRoutinePage(QWidget):
             ratio = option["ratio_full"]
             delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
             bounds = [curr - delta, curr + delta]
-            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         elif option_idx == 2:
             delta = option["delta"]
             bounds = [curr - delta, curr + delta]
-            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         else:
             ratio = option["ratio_curr"]
             sign = np.sign(curr)
@@ -1572,13 +1574,19 @@ class BadgerRoutinePage(QWidget):
                 curr * (1 - 0.5 * sign * ratio),
                 curr * (1 + 0.5 * sign * ratio),
             ]
-            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+
+        # check if bounds have been clipped, then overwrite
+        is_clipped = bounds != new_bounds
+        bounds = new_bounds
 
         logger.info(
             f"Setting bounds for {vname}: {bounds} (hard bounds: {hard_bounds})"
         )
         # Set the bounds in the table
-        self.env_box.var_table.refresh_variable(vname, bounds, hard_bounds)
+        self.env_box.var_table.refresh_variable(
+            vname, bounds, hard_bounds, is_clipped=is_clipped
+        )
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 
@@ -1648,6 +1656,7 @@ class BadgerRoutinePage(QWidget):
 
         env = self.create_env()
         var_curr = env.get_variables(vname_selected)
+        clipped = {}
 
         for name in vname_selected:
             try:
@@ -1662,16 +1671,18 @@ class BadgerRoutinePage(QWidget):
                 hard_bounds = vrange[name]
                 delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
-                logger.info(f"Auto bounds for {name} (full range): {bounds}")
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (full range): {new_bounds}")
             elif option_idx == 2:
                 delta = limit_option["delta"]
                 hard_bounds = vrange[name]
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
-                logger.info(f"Auto bounds for {name} (delta): {bounds}")
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (delta): {new_bounds}")
             else:
                 ratio = limit_option["ratio_curr"]
                 hard_bounds = vrange[name]
@@ -1680,11 +1691,12 @@ class BadgerRoutinePage(QWidget):
                     var_curr[name] * (1 - 0.5 * sign * ratio),
                     var_curr[name] * (1 + 0.5 * sign * ratio),
                 ]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
-                logger.info(f"Auto bounds for {name} (current ratio): {bounds}")
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (current ratio): {new_bounds}")
 
-        return vrange
+        return vrange, clipped
 
     def toggle_relative_to_curr(self, checked, refresh=True):
         # MOVE TO ENV_CBOX
@@ -1708,8 +1720,8 @@ class BadgerRoutinePage(QWidget):
 
             if refresh and self.env_box.var_table.selected:
                 logger.info("Refreshing auto bounds and initial table.")
-                bounds = self.calc_auto_bounds()
-                self.env_box.var_table.set_bounds(bounds)
+                bounds, clipped = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds, clipped=clipped)
                 self.clear_init_table(reset_actions=False)
                 self.try_populate_init_table()
 
@@ -1726,7 +1738,7 @@ class BadgerRoutinePage(QWidget):
         # MOVE TO ENV_CBOX
         logger.info("Refreshing variables and bounds.")
         variables = self.env_box.var_table.export_variables()
-        bounds = self.calc_auto_bounds()
+        bounds, clipped = self.calc_auto_bounds()
 
         no_need_to_update = True
         for vname in variables:
@@ -1738,7 +1750,7 @@ class BadgerRoutinePage(QWidget):
             return
 
         logger.info("Updating variable bounds and initial table.")
-        self.env_box.var_table.set_bounds(bounds)
+        self.env_box.var_table.set_bounds(bounds, clipped=clipped)
         self.clear_init_table(reset_actions=False)
         self.try_populate_init_table()
 
