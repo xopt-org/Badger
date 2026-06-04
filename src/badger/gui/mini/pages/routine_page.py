@@ -333,7 +333,7 @@ class BadgerRoutinePage(QWidget):
         # self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         # self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
         # self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
-        self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
+        # self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
         # self.env_box.btn_env_play.clicked.connect(self.open_playground)
         # self.env_box.btn_pv.clicked.connect(self.open_archive_search)
         # self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
@@ -476,8 +476,9 @@ class BadgerRoutinePage(QWidget):
         # set environment
         if env_name in self.envs:
             i = self.envs.index(env_name)
-            self.env_box.env_cb.setCurrentIndex(i)
+            self.env_box.set_selected_env_name(env_name)
             self.env_box.edit_env_params.set_params_from_dict(env_params)
+            self.select_env(i)
         else:
             raise BadgerEnvNotFoundError(
                 f"Template environment {env_name} not found in Badger environments"
@@ -670,7 +671,7 @@ class BadgerRoutinePage(QWidget):
             }
             | generator_config,
             "environment": {
-                "name": self.env_box.env_cb.currentText(),
+                "name": self.env_box.env_name,
                 "params": load_config(
                     self.env_box.edit_env_params.get_parameters_yaml()
                 ),
@@ -765,7 +766,7 @@ class BadgerRoutinePage(QWidget):
         if routine is None:
             # Reset the generator and env configs
             self.env_box.algo_cb.setCurrentIndex(-1)
-            self.env_box.env_cb.setCurrentIndex(-1)
+            self.env_box.clear_selected_env()
             init_table = self.env_box.init_table
             init_table.clear()
             hh = init_table.horizontalHeader()
@@ -828,8 +829,7 @@ class BadgerRoutinePage(QWidget):
         self.script = routine.script
 
         name_env = routine.environment.name
-        idx_env = self.envs.index(name_env)
-        self.env_box.env_cb.setCurrentIndex(idx_env)
+        self.env_box.set_selected_env_name(name_env)
         env_params = routine.environment.model_dump()
         del env_params["interface"]
         self.env_box.edit_env_params.set_params_from_dict(env_params)
@@ -1125,7 +1125,7 @@ class BadgerRoutinePage(QWidget):
 
     def select_env(self, i: int):
         logger.info(
-            f"Environment selected: {self.env_box.env_cb.itemText(i)} (index={i})"
+            f"Environment selected: {self.env_box.env_name} (index={i})"
         )
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
@@ -1136,6 +1136,7 @@ class BadgerRoutinePage(QWidget):
             self.archive_search.close()
 
         if i == -1:
+            self.env_box.clear_selected_env()
             self.env_box.edit_env_params.clear()
             self.env_box.edit_var.clear()
             self.env_box.var_table.update_variables(None)
@@ -1164,13 +1165,14 @@ class BadgerRoutinePage(QWidget):
         except Exception:
             self.configs = None
             self.env = None
-            self.env_box.env_cb.setCurrentIndex(-1)
+            self.env_box.clear_selected_env()
             # self.env_box.btn_add_con.setDisabled(True)
             # self.env_box.btn_add_var.setDisabled(True)
             # self.env_box.btn_lim_vrange.setDisabled(True)
             self.routine = None
             return QMessageBox.critical(self, "Error!", traceback.format_exc())
 
+        self.env_box.set_selected_env_name(name)
         self.env_box.edit_env_params.set_params_from_dict(configs["params"])
 
         # Get and save vars to combine with additional vars added on the fly
@@ -1802,13 +1804,16 @@ class BadgerRoutinePage(QWidget):
         if self.env_box.algo_cb.currentIndex() == -1:
             logger.error("No generator selected.")
             raise BadgerRoutineError("no generator selected")
-        if self.env_box.env_cb.currentIndex() == -1:
+        env_name = self.env_box.get_selected_env_name()
+        if not env_name:
             logger.error("No environment selected.")
             raise BadgerRoutineError("no environment selected")
+        if env_name not in self.envs:
+            logger.error(f"Environment not found: {env_name}")
+            raise BadgerRoutineError(f"environment not found: {env_name}")
 
         # Generator
         generator_name = self.generators[self.env_box.algo_cb.currentIndex()]
-        env_name = self.envs[self.env_box.env_cb.currentIndex()]
         generator_params = load_config(
             self.env_box.edit_algo_params.get_parameters_yaml()
         )

@@ -188,8 +188,32 @@ class BadgerEnvBox(QWidget):
         self.envs = envs
         self.generators = generators
 
+        # selected environment
+        self.env_name = None
+
         self.init_ui()
         self.config_logic()
+
+    def get_selected_env_name(self) -> str | None:
+        """Return self.env_name"""
+        return self.env_name
+
+    def set_selected_env_name(self, env_name: str | None) -> None:
+        """Set selected environment name and update UI accordingly."""
+        self.env_name = env_name
+
+        if env_name is None:
+            # self.env_cb.setCurrentIndex(-1)
+            self.env_cb.setText("none")
+            return
+
+        # idx = self.env_cb.findText(env_name)
+        # self.env_cb.setCurrentIndex(idx if idx >= 0 else -1)
+        self.env_cb.setText(env_name)
+
+    def clear_selected_env(self) -> None:
+        """Clear selected environment."""
+        self.set_selected_env_name(None)
 
     def init_ui(self):
         self.setObjectName("EnvBox")  # this is for stylesheet?
@@ -219,25 +243,24 @@ class BadgerEnvBox(QWidget):
         vbox.addWidget(separator)
 
         # Environment
-        self.env_name = None
-
         env = QWidget()
         vbox_env = QVBoxLayout(env)
         vbox_env.setContentsMargins(0, 0, 0, 0)
         select_env = QWidget()
         hbox_select_env = QHBoxLayout(select_env)
         hbox_select_env.setContentsMargins(0, 0, 0, 0)
-        env_lbl = QLabel("Environment")  # label
-        env_lbl.setFixedWidth(LABEL_WIDTH)
-        self.env_cb = env_cb = NoHoverFocusComboBox()  # comboBox
-        self.env_cb.setFixedWidth(LABEL_WIDTH * 2)
-        env_cb.setItemDelegate(QStyledItemDelegate())
-        env_cb.addItems(self.envs)
-        env_cb.setCurrentIndex(-1)
-        env_cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(env_cb))
+        env_lbl = QLabel("Badger Environment: ")  # label
+        env_lbl.setFixedWidth(196)
+        self.env_cb = env_cb = QLabel("")  # comboBox
+        self.env_cb.setFixedWidth(LABEL_WIDTH)
+        # env_cb.setItemDelegate(QStyledItemDelegate())
+        # env_cb.addItems(self.envs)
+        # env_cb.setCurrentIndex(-1)
+        # env_cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(env_cb))
         self.btn_env_params = QPushButton("Parameters")  # params btn
         self.btn_env_params.setFixedSize(96, 24)
         self.btn_env_params.setCheckable(True)
+        self.set_selected_env_name(None)
 
         env_params = QWidget()
         hbox_env_params = QHBoxLayout(env_params)
