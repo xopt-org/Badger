@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class ValueCell(QWidget):
     UNSELECTED_COLOR = "gray"
-    ALERT_COLOR = "#CBC593"
+    ALERT_COLOR = "#EE982F"
 
     def __init__(self, value: float | None):
         super().__init__()
@@ -73,10 +73,13 @@ class ValueCell(QWidget):
         self.label.setStyleSheet(
             f"color: {label_color}; background-color: transparent; border: none;"
         )
-        border = "1px solid orange" if alert_level == 2 else "1px solid transparent"
+        border = "1px solid red" if alert_level == 2 else "1px solid transparent"
         self.setStyleSheet(
             f"background-color: transparent; border: {border}; border-radius: 2px;"
         )
+
+    def set_value(self, value: float | None) -> None:
+        self.label.setText(self._format(value))
 
 
 class SavedValueCell(ValueCell):
@@ -379,7 +382,7 @@ class VariableTable(QTableWidget):
         if name_item is None:
             return
 
-        alert_level = self._check_current_vs_saved(name_item.text())
+        alert_level = 0  # self._check_current_vs_saved(name_item.text())
         saved_cell = self.cellWidget(row, 2)
         current_cell = self.cellWidget(row, 3)
 
@@ -431,6 +434,19 @@ class VariableTable(QTableWidget):
 
             if name not in self.saved_values:
                 self.saved_values[name] = value
+
+        for row in range(self.rowCount() - 1):
+            name_item = self.item(row, 1)
+            if name_item is None:
+                continue
+
+            name = name_item.text()
+
+            current_cell = self.cellWidget(row, 3)
+            if isinstance(current_cell, CurrentValueCell):
+                current_cell.set_value(self.current_values.get(name))
+                alert_level = 0  # self._check_current_vs_saved(name)
+                current_cell.update_style(self.is_checked(name), alert_level)
 
     def update_variables(
         self,
