@@ -465,17 +465,10 @@ class VariableTable(QTableWidget):
 
         self.env = instantiate_env(self.env_class, self.configs)
 
-        for name in variable_names:
-            try:
-                value = float(self.env.get_variable(name))
-            except Exception:
-                logger.warning(
-                    "Failed to fetch current value for %s", name, exc_info=True
-                )
-                continue
-
-            self.current_values[name] = value
-
+        # get current values
+        value_dict = self.env.get_variables(variable_names)
+        self.current_values.update(value_dict)
+        for name, value in value_dict.items():
             if name not in self.saved_values:
                 self.saved_values[name] = value
 

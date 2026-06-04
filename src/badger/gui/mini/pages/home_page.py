@@ -258,6 +258,9 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
         self.run_action_bar.sig_reset_env.connect(self.run_monitor.reset_env)
+        self.run_action_bar.sig_reset_env.connect(
+            self.routine_editor.env_box.var_table.refresh_current_values
+        )
         self.run_action_bar.sig_save_checkpoint.connect(
             self.run_monitor.save_checkpoint
         )
@@ -271,6 +274,9 @@ class BadgerHomePage(QWidget):
             self.run_monitor.jump_to_optimal
         )
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
+        self.run_action_bar.sig_dial_in.connect(
+            self.routine_editor.env_box.var_table.refresh_current_values
+        )
         self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
