@@ -333,7 +333,7 @@ class BadgerRoutinePage(QWidget):
         # self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         # self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
         # self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
-        # self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
+        self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
         # self.env_box.btn_env_play.clicked.connect(self.open_playground)
         # self.env_box.btn_pv.clicked.connect(self.open_archive_search)
         # self.env_box.btn_docs.clicked.connect(self.open_environment_docs)

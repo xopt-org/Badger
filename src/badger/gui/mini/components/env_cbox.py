@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
+    QStyle,
+    QStyleOptionComboBox,
     QWidget,
     QLineEdit,
     QTreeWidget,
@@ -46,6 +48,46 @@ CONS_RELATION_DICT = {
 
 
 logger = logging.getLogger(__name__)
+
+
+class ArrowOnlyPopupComboBox(NoHoverFocusComboBox):
+    """Open popup only when the dropdown arrow is clicked."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setStyleSheet(
+            """
+            QComboBox {
+                color: darkGray;
+                background-color: transparent;
+                border: none;
+                padding: 0px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 14px;
+            }
+            """
+        )
+        self.setItemDelegate(QStyledItemDelegate())
+        self.installEventFilter(MouseWheelWidgetAdjustmentGuard(self))
+
+    def mousePressEvent(self, event):
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        arrow_rect = self.style().subControlRect(
+            QStyle.CC_ComboBox,
+            option,
+            QStyle.SC_ComboBoxArrow,
+            self,
+        )
+
+        if arrow_rect.contains(event.pos()):
+            super().mousePressEvent(event)
+            return
+
+        event.ignore()
 
 
 def format_validation_error(e: ValidationError) -> str:
@@ -203,13 +245,11 @@ class BadgerEnvBox(QWidget):
         self.env_name = env_name
 
         if env_name is None:
-            # self.env_cb.setCurrentIndex(-1)
-            self.env_cb.setText("none")
+            self.env_cb.setCurrentIndex(-1)
             return
 
-        # idx = self.env_cb.findText(env_name)
-        # self.env_cb.setCurrentIndex(idx if idx >= 0 else -1)
-        self.env_cb.setText(env_name)
+        idx = self.env_cb.findText(env_name)
+        self.env_cb.setCurrentIndex(idx)
 
     def clear_selected_env(self) -> None:
         """Clear selected environment."""
@@ -249,25 +289,34 @@ class BadgerEnvBox(QWidget):
         select_env = QWidget()
         hbox_select_env = QHBoxLayout(select_env)
         hbox_select_env.setContentsMargins(0, 0, 0, 0)
-        env_lbl = QLabel("Badger Environment: ")  # label
-        env_lbl.setFixedWidth(196)
-        self.env_cb = env_cb = QLabel("")  # comboBox
-        self.env_cb.setFixedWidth(LABEL_WIDTH)
-        # env_cb.setItemDelegate(QStyledItemDelegate())
-        # env_cb.addItems(self.envs)
-        # env_cb.setCurrentIndex(-1)
-        # env_cb.installEventFilter(MouseWheelWidgetAdjustmentGuard(env_cb))
+        hbox_select_env.setSpacing(6)
+        env_lbl = QLabel("Badger Environment:")  # label
+        env_lbl.setFixedWidth(LABEL_WIDTH + 36)
+        env_lbl.setStyleSheet("color: darkGray;")
+
+        self.env_cb = env_cb = ArrowOnlyPopupComboBox()
+        self.env_cb.setFixedWidth(LABEL_WIDTH + 62)
+        env_cb.addItems(self.envs)
+        env_cb.setCurrentIndex(-1)
+        env_cb.setPlaceholderText("None")
+
         self.btn_env_params = QPushButton("Parameters")  # params btn
         self.btn_env_params.setFixedSize(96, 24)
         self.btn_env_params.setCheckable(True)
+        self.btn_env_params.setStyleSheet("""
+            QPushButton {
+                background-color: #374250;
+            }
+            QPushButton:hover {
+                color: #dfe1e2;
+                background-color: #455364;
+            }
+        """)
         self.set_selected_env_name(None)
-
-        env_params = QWidget()
-        hbox_env_params = QHBoxLayout(env_params)
-        hbox_env_params.addSpacing(LABEL_WIDTH)
 
         hbox_select_env.addWidget(env_lbl)
         hbox_select_env.addWidget(env_cb)
+        hbox_select_env.addSpacing(8)
         hbox_select_env.addWidget(self.btn_env_params)
         hbox_select_env.addStretch()
 
@@ -334,7 +383,8 @@ class BadgerEnvBox(QWidget):
         # Edit variables (right side of hbox_var)
         edit_var_col = QWidget()
         vbox_var_edit = QVBoxLayout(edit_var_col)
-        vbox_var_edit.setContentsMargins(0, 0, 0, 0)
+        vbox_var_edit.setContentsMargins(0, 2, 0, 2)
+        vbox_var_edit.setSpacing(6)
 
         # variables menu bar
         action_var = QWidget()
@@ -367,6 +417,7 @@ class BadgerEnvBox(QWidget):
             self,
             " Initial Points",
         )
+        collapsiblebox_init.toggle_button.setFixedHeight(24)
         vbox_var_edit.addWidget(collapsiblebox_init)
         vbox_init = QVBoxLayout()
         vbox_init.setContentsMargins(8, 8, 8, 8)
@@ -523,6 +574,11 @@ class BadgerEnvBox(QWidget):
         self.con_table.data_changed.connect(lambda: self.update_vocs("con_table"))
         self.sta_table.data_changed.connect(lambda: self.update_vocs("sta_table"))
         self.var_table.data_changed.connect(lambda: self.update_vocs("var_table"))
+
+        self.env_cb.currentTextChanged.connect(self._on_env_selection_changed)
+
+    def _on_env_selection_changed(self, env_name: str):
+        self.env_name = env_name if env_name else None
 
     def update_vocs(self, origin: str):
         logger.debug(f"Emitting vocs_updated signal from env_cbox: {origin}")
