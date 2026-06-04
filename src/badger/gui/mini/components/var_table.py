@@ -67,6 +67,23 @@ class ValueCell(QWidget):
         alert_level: int,
         selected_color: str,
     ):
+        """
+        Update the value cell visual style.
+
+        Parameters
+        ----------
+        is_selected : bool
+            Whether the parent row is selected.
+        alert_level : int
+            Alert severity, 0 is no alert, severity increases with higher integers
+        selected_color : str
+            Text color to use for is_selected
+
+        Notes
+        -----
+        The current code path always passes 0 for alert_level. This
+        behavior can be modified in the future if desired.
+        """
         label_color = selected_color if is_selected else self.UNSELECTED_COLOR
         if alert_level == 1:
             label_color = self.ALERT_COLOR
