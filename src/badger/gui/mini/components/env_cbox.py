@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Any
 
 from PyQt5.QtWidgets import (
-    QComboBox,
     QFrame,
     QVBoxLayout,
     QHBoxLayout,
@@ -59,6 +58,122 @@ def format_validation_error(e: ValidationError) -> str:
     return "\n".join(messages)
 
 
+class TemplateSelectorRow(QFrame):
+    """
+    Row widget for template selection in the routine editor.
+    This class contains specific stylesheets to make the template row
+    stand out on the GUI.
+    """
+
+    def __init__(self, label_width: int, parent: QWidget | None = None):
+        super().__init__(parent)
+
+        self.setObjectName("TemplateSelectorRow")
+
+        self.unselected_stylesheet = """
+            QFrame#TemplateSelectorRow {
+                background-color: #4E6788;
+                border: 1px solid #96B5D8;
+                border-radius: 10px;
+            }
+            QLabel#TemplateSelectorLabel {
+                background-color: transparent;
+                border: none;
+                color: #EEF6FF;
+                font-weight: 700;
+            }
+            QComboBox#TemplateSelectorCombo {
+                background-color: #2A3748;
+                color: #E6EEFA;
+                border: 1px solid #89A6CA;
+                selection-background-color: #6F95C5;
+                selection-color: #F6FAFF;
+            }
+            QPushButton#TemplateSelectorButton {
+                border: 1px solid #8CA5C4;
+                border-radius: 4px;
+            }
+            QPushButton#TemplateSelectorButton:hover {
+                border: 1px solid #A9C3E6;
+            }
+            QPushButton#TemplateSelectorButton:hover:pressed {
+                border: 1px solid #C0DDFF;
+            }
+        """
+
+        self.selected_stylesheet = """
+            QFrame#TemplateSelectorRow {
+                background-color: #3D4754;
+                border: 1px solid #96B5D8;
+                border-radius: 10px;
+            }
+            QLabel#TemplateSelectorLabel {
+                background-color: transparent;
+                border: none;
+                color: #EEF6FF;
+                font-weight: 700;
+            }
+            QComboBox#TemplateSelectorCombo {
+                background-color: #2A3748;
+                color: #E6EEFA;
+                border: 1px solid #89A6CA;
+                selection-background-color: #6F95C5;
+                selection-color: #F6FAFF;
+            }
+            QPushButton#TemplateSelectorButton {
+                border: 1px solid #8CA5C4;
+                border-radius: 4px;
+            }
+            QPushButton#TemplateSelectorButton:hover {
+                border: 1px solid #A9C3E6;
+            }
+            QPushButton#TemplateSelectorButton:hover:pressed {
+                border: 1px solid #C0DDFF;
+            }
+        """
+
+        self.setStyleSheet(self.unselected_stylesheet)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 6, 0, 6)
+        layout.setSpacing(0)
+
+        self.label = QLabel("Template")
+        self.label.setObjectName("TemplateSelectorLabel")
+        self.label.setFixedWidth(label_width)
+
+        self.template_cb = NoHoverFocusComboBox()
+        self.template_cb.setObjectName("TemplateSelectorCombo")
+        self.template_cb.setFixedWidth(label_width * 2)
+        self.template_cb.setItemDelegate(QStyledItemDelegate())
+        self.template_cb.setCurrentIndex(-1)
+        self.template_cb.installEventFilter(
+            MouseWheelWidgetAdjustmentGuard(self.template_cb)
+        )
+
+        self.load_template_button = QPushButton("From file")
+        self.load_template_button.setObjectName("TemplateSelectorButton")
+        self.load_template_button.setFixedSize(96, 24)
+        self.load_template_button.setFixedHeight(24)
+
+        layout.addWidget(self.label)
+        layout.addSpacing(6)
+        layout.addWidget(self.template_cb)
+        layout.addSpacing(14)
+        layout.addWidget(self.load_template_button)
+        layout.addStretch()
+
+        self.template_cb.currentIndexChanged.connect(self.sync_selection_state)
+        self.sync_selection_state()
+
+    def sync_selection_state(self):
+        has_selection = self.template_cb.currentIndex() != -1
+        self.setStyleSheet(
+            self.selected_stylesheet if has_selection else self.unselected_stylesheet
+        )
+        self.update()
+
+
 class BadgerEnvBox(QWidget):
     vocs_updated = pyqtSignal(object)  # or use a more specific type if you want
 
@@ -84,18 +199,9 @@ class BadgerEnvBox(QWidget):
         vbox.setContentsMargins(8, 8, 8, 8)
         vbox.setSpacing(8)
 
-        template_widget = QWidget()
-        hbox_template = QHBoxLayout(template_widget)
-        hbox_template.setContentsMargins(0, 0, 0, 0)
-        template_lbl = QLabel("Template")  # label
-        template_lbl.setFixedWidth(LABEL_WIDTH)
-        self.template_cb = QComboBox()
-        self.template_cb.setFixedWidth(LABEL_WIDTH * 2)
-        self.template_cb.setItemDelegate(QStyledItemDelegate())
-        self.template_cb.setCurrentIndex(-1)
-        self.template_cb.installEventFilter(
-            MouseWheelWidgetAdjustmentGuard(self.template_cb)
-        )
+        self.template_row = TemplateSelectorRow(LABEL_WIDTH, self)
+        self.template_cb = self.template_row.template_cb
+        self.load_template_button = self.template_row.load_template_button
 
         config_singleton = init_settings()
         template_dir = Path(config_singleton.read_value("BADGER_TEMPLATE_ROOT"))
@@ -103,19 +209,7 @@ class BadgerEnvBox(QWidget):
         self.template_cb.addItems([file.stem for file in sorted(yaml_files)])
         self.template_cb.setCurrentIndex(-1)
 
-        self.load_template_button = QPushButton("From file")
-        self.load_template_button.setFixedSize(96, 24)
-        self.load_template_button.setFixedHeight(24)
-        # self.load_template_button.setSizePolicy(
-        #    QSizePolicy.Expanding, QSizePolicy.Fixed
-        # )
-
-        hbox_template.addWidget(template_lbl)
-        hbox_template.addWidget(self.template_cb)
-        hbox_template.addWidget(self.load_template_button)
-        hbox_template.addStretch()
-
-        vbox.addWidget(template_widget)
+        vbox.addWidget(self.template_row)
 
         # Add a horizontal separator
         separator = QFrame()
@@ -490,6 +584,7 @@ class BadgerEnvBox(QWidget):
                 template_cb.addItem(template_name)
                 template_cb.setCurrentIndex(template_cb.count() - 1)
             template_cb.blockSignals(False)
+            self.template_row.sync_selection_state()
 
     def compose_vocs(self) -> tuple[VOCS, list[str]]:
         # Compose the VOCS settings
