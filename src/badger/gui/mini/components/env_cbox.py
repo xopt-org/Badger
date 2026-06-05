@@ -298,20 +298,11 @@ class BadgerEnvBox(QWidget):
         self.env_cb.setFixedWidth(LABEL_WIDTH + 62)
         env_cb.addItems(self.envs)
         env_cb.setCurrentIndex(-1)
-        env_cb.setPlaceholderText("None")
+        env_cb.setPlaceholderText("")
 
         self.btn_env_params = QPushButton("Parameters")  # params btn
         self.btn_env_params.setFixedSize(96, 24)
         self.btn_env_params.setCheckable(True)
-        self.btn_env_params.setStyleSheet("""
-            QPushButton {
-                background-color: #374250;
-            }
-            QPushButton:hover {
-                color: #dfe1e2;
-                background-color: #455364;
-            }
-        """)
         self.set_selected_env_name(None)
 
         hbox_select_env.addWidget(env_lbl)
