@@ -527,7 +527,7 @@ class VariableTable(QTableWidget):
             return
 
         # If no variable names update all
-        if variable_names is None:
+        if not variable_names:
             variable_names = [next(iter(var)) for var in self.variables]
 
         self.env = instantiate_env(self.env_class, self.configs)
@@ -585,7 +585,8 @@ class VariableTable(QTableWidget):
             return
 
         _variables = self.get_visible_variables(variables)
-        self.refresh_current_values([next(iter(var)) for var in _variables])
+        if filtered == 0:
+            self.refresh_current_values([next(iter(var)) for var in _variables])
 
         n = len(_variables) + 1
         self.setRowCount(n)

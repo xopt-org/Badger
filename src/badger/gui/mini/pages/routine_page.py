@@ -1,4 +1,3 @@
-import sys
 from typing import Any
 import warnings
 import traceback
@@ -272,13 +271,10 @@ class BadgerRoutinePage(QWidget):
         )
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
-        if sys.platform == "darwin":
-            # add extra right margin for macOS to prevent scrollbar overlap
-            scroll_layout_env.setContentsMargins(0, 0, 15, 0)
-            self.env_box.var_table.setColumnWidth(5, 44)
-        else:
-            scroll_layout_env.setContentsMargins(0, 0, 5, 0)
-            self.env_box.var_table.setColumnWidth(5, 30)
+        # add extra right margin for macOS to prevent scrollbar overlap
+        scroll_layout_env.setContentsMargins(0, 0, 5, 0)
+        self.env_box.var_table.setColumnWidth(5, 44)
+
         scroll_layout_env.addWidget(self.env_box)
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(scroll_content_env)
@@ -1256,7 +1252,6 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
-        self.env_box.var_table.refresh_current_values(var_names)
 
     def get_init_table_header(self):
         table = self.env_box.init_table
