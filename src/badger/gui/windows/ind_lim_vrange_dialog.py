@@ -118,7 +118,7 @@ will be clipped by the variable range."""
         lbl = QLabel("Ratio")
         self.sb_ratio_curr = sb_ratio_curr = QDoubleSpinBox()
         sb_ratio_curr.setMinimum(0)
-        sb_ratio_curr.setMaximum(1)
+        # sb_ratio_curr.setMaximum(1)
         sb_ratio_curr.setValue(self.configs.get("ratio_curr", 0.1))
         sb_ratio_curr.setDecimals(2)
         sb_ratio_curr.setSingleStep(0.01)
