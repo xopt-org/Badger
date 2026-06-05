@@ -334,6 +334,9 @@ class BadgerRoutinePage(QWidget):
         # self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
         # self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
+        self.env_box.var_table.sig_change_bounds.connect(
+            self.adjust_variable_range_options
+        )
         # self.env_box.btn_env_play.clicked.connect(self.open_playground)
         # self.env_box.btn_pv.clicked.connect(self.open_archive_search)
         # self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
@@ -1594,6 +1597,58 @@ class BadgerRoutinePage(QWidget):
         self.var_hard_limit[vname] = hard_bounds
         # Record the ratio var ranges
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
+        self.env_box.var_table.set_scan_range_options()
+
+    def adjust_variable_range_options(self, ratio: float, var_name: str = None):
+        """
+        Scale variable ranges by ratio and recalculate bounds
+
+        Parameters
+        ----------
+        ratio : float
+            Ratio applied to each variable's selected range option.
+            Values > 1.0 will increase the range, values < 1.0 will decrease the range
+        var_name: str (optional)
+            If given a variable name, will update only that variable. Otherwise if None updates
+            all selected variables
+        """
+        logger.info(f"Adjusting variable range options by ratio={ratio}")
+
+        variable_names = []
+
+        if var_name:
+            variable_names = [var_name]
+        else:
+            variable_names = [
+                name
+                for name, is_selected in self.env_box.var_table.selected.items()
+                if is_selected
+            ]
+
+        for vname in variable_names:
+            # get copy of selected vrange option
+            option = copy.copy(self.ratio_var_ranges.get(vname, self.limit_option))
+            option_idx = option["limit_option_idx"]
+
+            if option_idx == 1:
+                key = "ratio_full"
+            elif option_idx == 2:
+                key = "delta"
+            else:
+                key = "ratio_curr"
+
+            # update selected option with multiplication by ratio
+            option[key] = option[key] * ratio
+            self.ratio_var_ranges[vname] = option
+
+        # recalculate bounds
+        bounds, clipped = self.calc_auto_bounds()
+        with BlockSignalsContext(self.env_box.var_table):
+            self.env_box.var_table.set_bounds(bounds, clipped=clipped)
+
+        # recalculate initial points
+        self.clear_init_table(reset_actions=False)
+        self.update_init_table()
         self.env_box.var_table.set_scan_range_options()
 
     def save_limit_option(self, limit_option):

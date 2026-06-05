@@ -158,6 +158,7 @@ class VariableTable(QTableWidget):
     sig_pv_added = pyqtSignal()
     sig_var_config = pyqtSignal(str)
     data_changed = pyqtSignal()
+    sig_change_bounds = pyqtSignal(float, str)
 
     PLACEHOLDER_TEXT = "Enter new variable here...."
 
@@ -206,6 +207,8 @@ class VariableTable(QTableWidget):
             ["", "Name", "Saved", "Current", "Range (Δ)", ""]
         )
 
+        self._init_range_header_controls()
+
         self.all_variables: list[
             dict[str, tuple[float, float]]
         ] = []  # store all variables
@@ -231,6 +234,66 @@ class VariableTable(QTableWidget):
         self.config_logic()
         self.customContextMenuRequested.connect(self.display_context_menu)
 
+    def _init_range_header_controls(self) -> None:
+        header = self.horizontalHeader()
+
+        self._range_header_widget = QWidget(header.viewport())
+        self._range_header_widget.setObjectName("RangeHeaderWidget")
+        self._range_header_widget.setStyleSheet("""
+            QWidget#RangeHeaderWidget { background-color: transparent; }
+            """)
+        layout = QHBoxLayout(self._range_header_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        range_btn_style = """
+            QPushButton {
+                background-color: #37414F;
+            }
+            QPushButton:hover {
+                background-color: #54687A;
+            }
+        """
+
+        decrease_bounds_btn = QPushButton("<")
+        decrease_bounds_btn.setFixedSize(18, 18)
+        decrease_bounds_btn.setStyleSheet(range_btn_style)
+        decrease_bounds_btn.setToolTip("Decrease ranges by 10%")
+        decrease_bounds_btn.clicked.connect(
+            lambda: self.sig_change_bounds.emit(0.9, None)
+        )
+
+        increase_bounds_btn = QPushButton(">")
+        increase_bounds_btn.setFixedSize(18, 18)
+        increase_bounds_btn.setStyleSheet(range_btn_style)
+        increase_bounds_btn.setToolTip("Increase ranges by 11.1%")
+        increase_bounds_btn.clicked.connect(
+            lambda: self.sig_change_bounds.emit(1.11111, None)
+        )
+
+        layout.addWidget(decrease_bounds_btn)
+        layout.addWidget(increase_bounds_btn)
+
+        header.sectionResized.connect(self._position_range_header_controls)
+        header.sectionMoved.connect(self._position_range_header_controls)
+        header.geometriesChanged.connect(self._position_range_header_controls)
+        self._position_range_header_controls()
+
+    def _position_range_header_controls(self, *_args) -> None:
+        header = self.horizontalHeader()
+
+        last_col = self.columnCount() - 1
+        if last_col < 0:
+            self._range_header_widget.hide()
+            return
+
+        section_width = header.sectionSize(last_col)
+        x = header.sectionViewportPosition(last_col)
+        y = 0
+        height = header.height()
+        self._range_header_widget.setGeometry(x, y, section_width, height)
+        self._range_header_widget.show()
+
     def update_vocs(self):
         """
         Emit the data_changed signal to notify that the VOCS has been updated.
@@ -252,6 +315,10 @@ class VariableTable(QTableWidget):
             if text != self.PLACEHOLDER_TEXT:
                 self.previous_values[(row, column)] = item.text()
         super().setItem(row, column, item)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._position_range_header_controls()
 
     def is_all_checked(self):
         for i in range(self.rowCount() - 1):
@@ -563,13 +630,32 @@ class VariableTable(QTableWidget):
 
             # Add the config button
             config_button = QPushButton()
-            config_button.setFixedSize(24, 24)
+            config_button.setFixedSize(18, 18)
             config_button.setIcon(self.icon_settings)
             config_button.setIconSize(QSize(12, 12))
+
+            decrease_bounds_btn = QPushButton("<")
+            decrease_bounds_btn.setFixedSize(9, 18)
+            decrease_bounds_btn.setToolTip("Decrease ranges by 10%")
+            decrease_bounds_btn.clicked.connect(
+                partial(self.sig_change_bounds.emit, 0.9, name)
+            )
+            decrease_bounds_btn.setStyleSheet("border-radius: 2px")
+
+            increase_bounds_btn = QPushButton(">")
+            increase_bounds_btn.setFixedSize(9, 18)
+            increase_bounds_btn.setToolTip("Increase ranges by 11.1%")
+            increase_bounds_btn.clicked.connect(
+                partial(self.sig_change_bounds.emit, 1.11111, name)
+            )
+            increase_bounds_btn.setStyleSheet("border-radius: 2px")
 
             # Center-align the button in the cell
             button_container = QWidget()
             layout = QHBoxLayout(button_container)
+            layout.setSpacing(2)
+            layout.addWidget(decrease_bounds_btn)
+            layout.addWidget(increase_bounds_btn)
             layout.addWidget(config_button)
             layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
