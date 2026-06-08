@@ -12,6 +12,8 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QWidget,
     QHBoxLayout,
+    QVBoxLayout,
+    QLineEdit,
     QMenu,
     QGridLayout,
     QLabel,
@@ -121,9 +123,62 @@ class CurrentValueCell(ValueCell):
         super().update_style(is_selected, alert_level, self.SELECTED_COLOR)
 
 
-class ScanRangeCell(QTableWidgetItem):
+class RangeAdjustButtonStack(QWidget):
+    """Compact up/down buttons for range adjustments."""
+
+    BUTTON_STYLE = """
+        QPushButton {
+            border: 1px solid #4A5666;
+            border-radius: 1px;
+            background: transparent;
+            color: #C4CCD4;
+            font-size: 7px;
+            padding: 0;
+        }
+        QPushButton:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        QPushButton:pressed {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    """
+
+    def __init__(
+        self,
+        on_increase=None,
+        on_decrease=None,
+        parent: QWidget | None = None,
+        button_size: QSize = QSize(12, 10),
+    ):
+        super().__init__(parent)
+
+        self.up_btn = QPushButton("▲")
+        self.down_btn = QPushButton("▼")
+
+        for btn in (self.up_btn, self.down_btn):
+            btn.setFixedSize(button_size)
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            btn.setStyleSheet(self.BUTTON_STYLE)
+            btn.setToolTip("Scale range by 1.111 (up) / 0.9 (down)")
+
+        if on_increase is not None:
+            self.up_btn.clicked.connect(on_increase)
+        if on_decrease is not None:
+            self.down_btn.clicked.connect(on_decrease)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.up_btn)
+        layout.addWidget(self.down_btn)
+
+
+class ScanRangeCell(QWidget):
     UNSELECTED_COLOR = "gray"
     SELECTED_COLOR = "lightgray"
+
+    sig_increase = pyqtSignal()
+    sig_decrease = pyqtSignal()
 
     def __init__(
         self,
@@ -131,9 +186,11 @@ class ScanRangeCell(QTableWidgetItem):
         bounds: tuple[float, float] | list[float] | ContinuousVariable,
         is_clipped: bool = False,
     ):
+        super().__init__()
+
         if isinstance(bounds, ContinuousVariable):
             lower, upper = bounds.domain
-        elif isinstance(bounds, (list, tuple)):
+        else:
             lower, upper = bounds
 
         delta = 0.5 * abs(upper - lower)
@@ -143,14 +200,42 @@ class ScanRangeCell(QTableWidgetItem):
             upper_delta = abs(upper - value)
             delta = max(lower_delta, upper_delta)
 
-        super().__init__(f"±{delta:.3f}{'*' if is_clipped else ''}")
-        self.setFlags(self.flags() & ~Qt.ItemIsEditable)
+        self.line_edit = QLineEdit(f"±{delta:.3f}{'*' if is_clipped else ''}")
+        self.line_edit.setReadOnly(True)
+        self.line_edit.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.line_edit.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.line_edit.setStyleSheet("""
+            QLineEdit {
+                background-color: transparent;
+                border: none;
+                color: gray;
+                padding-left: 4px;
+            }
+        """)
+
+        self._button_stack = RangeAdjustButtonStack(
+            on_increase=lambda: self.sig_increase.emit(),
+            on_decrease=lambda: self.sig_decrease.emit(),
+            parent=self,
+            button_size=QSize(12, 10),
+        )
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        layout.addWidget(self.line_edit)
+        layout.addWidget(self._button_stack)
+
         if is_clipped:
             self.setToolTip("Requested bounds are clipped by hard variable limits")
 
     def set_selected(self, is_selected: bool):
         color = self.SELECTED_COLOR if is_selected else self.UNSELECTED_COLOR
-        self.setForeground(QColor(color))
+        self.line_edit.setStyleSheet(
+            f"QLineEdit {{ background-color: transparent; border: none; color: {color}; padding-left: 4px; }}"
+        )
 
 
 class VariableTable(QTableWidget):
@@ -246,33 +331,37 @@ class VariableTable(QTableWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        range_btn_style = """
+        self._header_button_stack = RangeAdjustButtonStack(
+            on_increase=lambda: self.sig_change_bounds.emit(1.11111, None),
+            on_decrease=lambda: self.sig_change_bounds.emit(0.9, None),
+            parent=self._range_header_widget,
+            button_size=QSize(36, 11),
+        )
+        header_button_style = """
             QPushButton {
                 background-color: #37414F;
+                color: #C4CCD4;
+                border: 1px solid #54687A;
+                border-radius: 1px;
+                font-size: 6px;
+                padding: 0;
             }
             QPushButton:hover {
                 background-color: #54687A;
             }
         """
-
-        decrease_bounds_btn = QPushButton("<")
-        decrease_bounds_btn.setFixedSize(18, 18)
-        decrease_bounds_btn.setStyleSheet(range_btn_style)
-        decrease_bounds_btn.setToolTip("Decrease ranges by 10%")
-        decrease_bounds_btn.clicked.connect(
-            lambda: self.sig_change_bounds.emit(0.9, None)
+        self._header_button_stack.up_btn.setStyleSheet(header_button_style)
+        self._header_button_stack.down_btn.setStyleSheet(header_button_style)
+        self._header_button_stack.up_btn.setToolTip(
+            "Scale all selected ranges by * 1.111"
+        )
+        self._header_button_stack.down_btn.setToolTip(
+            "Scale all selected ranges by * 0.9"
         )
 
-        increase_bounds_btn = QPushButton(">")
-        increase_bounds_btn.setFixedSize(18, 18)
-        increase_bounds_btn.setStyleSheet(range_btn_style)
-        increase_bounds_btn.setToolTip("Increase ranges by 11.1%")
-        increase_bounds_btn.clicked.connect(
-            lambda: self.sig_change_bounds.emit(1.11111, None)
+        layout.addWidget(
+            self._header_button_stack, alignment=Qt.AlignmentFlag.AlignCenter
         )
-
-        layout.addWidget(decrease_bounds_btn)
-        layout.addWidget(increase_bounds_btn)
 
         header.sectionResized.connect(self._position_range_header_controls)
         header.sectionMoved.connect(self._position_range_header_controls)
@@ -505,7 +594,7 @@ class VariableTable(QTableWidget):
                 f"cellWidget at row {row} does not have update_style method: {e}"
             )
 
-        scan_range_cell = self.item(row, 4)
+        scan_range_cell = self.cellWidget(row, 4)
         if isinstance(scan_range_cell, ScanRangeCell):
             scan_range_cell.set_selected(is_selected)
 
@@ -624,9 +713,15 @@ class VariableTable(QTableWidget):
                 self.bounds.get(name, (0.0, 0.0)),
                 self.clipped.get(name),
             )
+            scan_range_cell.sig_increase.connect(
+                lambda var_name=name: self.sig_change_bounds.emit(1.11111, var_name)
+            )
+            scan_range_cell.sig_decrease.connect(
+                lambda var_name=name: self.sig_change_bounds.emit(0.9, var_name)
+            )
             self.setCellWidget(i, 2, saved_cell)
             self.setCellWidget(i, 3, current_cell)
-            self.setItem(i, 4, scan_range_cell)
+            self.setCellWidget(i, 4, scan_range_cell)
             self._set_cell_value_style(i, _cb.isChecked())
 
             # Add the config button
@@ -635,28 +730,10 @@ class VariableTable(QTableWidget):
             config_button.setIcon(self.icon_settings)
             config_button.setIconSize(QSize(12, 12))
 
-            decrease_bounds_btn = QPushButton("<")
-            decrease_bounds_btn.setFixedSize(9, 18)
-            decrease_bounds_btn.setToolTip("Decrease ranges by 10%")
-            decrease_bounds_btn.clicked.connect(
-                partial(self.sig_change_bounds.emit, 0.9, name)
-            )
-            decrease_bounds_btn.setStyleSheet("border-radius: 2px")
-
-            increase_bounds_btn = QPushButton(">")
-            increase_bounds_btn.setFixedSize(9, 18)
-            increase_bounds_btn.setToolTip("Increase ranges by 11.1%")
-            increase_bounds_btn.clicked.connect(
-                partial(self.sig_change_bounds.emit, 1.11111, name)
-            )
-            increase_bounds_btn.setStyleSheet("border-radius: 2px")
-
             # Center-align the button in the cell
             button_container = QWidget()
             layout = QHBoxLayout(button_container)
             layout.setSpacing(2)
-            layout.addWidget(decrease_bounds_btn)
-            layout.addWidget(increase_bounds_btn)
             layout.addWidget(config_button)
             layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
