@@ -1,3 +1,7 @@
+"""Routine list item widget for the Badger GUI. Renders a single routine entry
+in the routine navigator list, displaying the routine name, timestamp, and
+environment with hover/selection styling and a delete button."""
+
 from datetime import datetime
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
 from PyQt5.QtWidgets import QSizePolicy, QMessageBox

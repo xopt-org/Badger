@@ -1,3 +1,8 @@
+"""Pareto front viewer widget for the Badger GUI. Visualizes the trade-off
+surface for multi-objective optimization routines (MOBO), plotting objective
+pairs with color-mapped iteration progress and optional Pareto-only
+filtering, updating live as new solutions are evaluated."""
+
 import time
 from typing import Optional
 

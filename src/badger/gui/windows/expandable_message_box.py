@@ -1,3 +1,7 @@
+"""Expandable error dialog for the Badger GUI. Displays a compact error
+message with an optional expandable section showing the full traceback,
+used by BadgerError to surface exception details to the user."""
+
 from PyQt5.QtWidgets import (
     QDialog,
     QMessageBox,

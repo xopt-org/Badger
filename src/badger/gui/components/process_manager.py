@@ -1,3 +1,7 @@
+"""Process pool manager for the Badger GUI. Maintains a queue of pre-spawned
+optimization subprocesses ready to execute routines, signaling when new
+processes are needed to replenish the pool after one is consumed by a run."""
+
 from typing import Dict, Optional
 
 from PyQt5.QtCore import pyqtSignal, QObject

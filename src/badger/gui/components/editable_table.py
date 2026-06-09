@@ -1,3 +1,8 @@
+"""Base editable table widget for the Badger GUI. Provides a reusable
+QTableWidget subclass with checkbox toggling, drag-and-drop reordering,
+external text drop support, and batch operations — used as the foundation for
+the variable, objective, constraint, and observable tables."""
+
 from typing import Any, Callable, List, Dict, ParamSpec, cast
 from functools import partial, wraps
 from PyQt5.QtWidgets import (

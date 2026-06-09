@@ -1,3 +1,8 @@
+"""SQLite-backed persistence layer for Badger routines and run metadata.
+Provides CRUD operations for saving, loading, listing, and removing routine
+configurations and their associated run records. Also supports import/export
+of routine databases for sharing between Badger installations."""
+
 import os
 import warnings
 from datetime import datetime

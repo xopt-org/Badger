@@ -1,3 +1,8 @@
+"""Constraint table widget for the Badger GUI routine editor. Displays
+optimization constraints with configurable relations (>, <, =), threshold
+values, and criticality flags, supporting drag-and-drop reordering and
+batch toggle operations."""
+
 from typing import Any
 from PyQt5.QtWidgets import (
     QCheckBox,

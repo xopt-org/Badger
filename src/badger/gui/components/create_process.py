@@ -1,3 +1,8 @@
+"""Worker object for pre-creating optimization subprocesses. Runs on a
+QThread to initialize multiprocessing primitives (queues, pipes, events) and
+spawn a subprocess ready to execute an optimization routine without blocking
+the GUI thread."""
+
 from multiprocessing import Event, Pipe, Process, Queue
 
 from PyQt5.QtCore import pyqtSignal, QObject

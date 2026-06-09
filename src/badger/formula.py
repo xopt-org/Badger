@@ -1,3 +1,8 @@
+"""Formula interpreter for Badger observable expressions. Allows users to
+define computed observables using inline mathematical expressions with
+backtick-quoted variable references and numpy functions. Provides safe
+evaluation with name validation, typo suggestions, and sandboxed execution."""
+
 import numpy as np
 import re
 import ast

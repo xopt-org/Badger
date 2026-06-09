@@ -1,3 +1,7 @@
+"""Reorderable table view widget for the Badger GUI. Provides a QTableView
+with drag-and-drop row reordering using a custom model and proxy style that
+draws a full-width drop indicator line."""
+
 # PyQt Functionality Snippet by Apocalyptech
 # "Licensed" in the Public Domain under CC0 1.0 Universal (CC0 1.0)
 # Public Domain Dedication.  Use it however you like!

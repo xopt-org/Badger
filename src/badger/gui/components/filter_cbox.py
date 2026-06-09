@@ -1,3 +1,7 @@
+"""Filter box widget for the Badger GUI. Provides collapsible combo-box
+filters for narrowing routine lists by objective or region, used in the
+routine navigator sidebar."""
+
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget
 from PyQt5.QtWidgets import QComboBox, QStyledItemDelegate, QLabel
 from badger.gui.components.collapsible_box import CollapsibleBox

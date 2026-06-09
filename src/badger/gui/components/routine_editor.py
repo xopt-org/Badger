@@ -1,3 +1,7 @@
+"""Routine editor container for the Badger GUI. Wraps the routine page in a
+scrollable stacked widget with save/cancel/delete controls, coordinating
+between routine creation, editing, and deletion workflows."""
+
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
 from PyQt5.QtWidgets import QTextEdit, QStackedWidget, QScrollArea
 from PyQt5.QtCore import pyqtSignal

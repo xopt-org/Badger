@@ -1,3 +1,8 @@
+"""File-system archive for completed optimization runs. Stores run data as
+YAML files in a date-based directory hierarchy (year/month/day) and provides
+functions to archive, list, load, and delete runs. Also manages temporary
+run files used during in-progress optimizations."""
+
 import os
 import time
 import warnings

@@ -1,3 +1,7 @@
+"""Documentation browser window for the Badger GUI. Displays formatted
+Markdown documentation for generators, environments, and general Badger guides
+using a QTextBrowser, with navigation links between guide pages."""
+
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,

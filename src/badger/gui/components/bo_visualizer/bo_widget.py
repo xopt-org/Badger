@@ -1,3 +1,8 @@
+"""Bayesian Optimization visualizer widget for the Badger GUI. Displays
+interactive 1D/2D surrogate model plots, acquisition function overlays,
+feasibility regions, and sample points for BayesianGenerator-based routines,
+updating live as optimization progresses."""
+
 from typing import Optional, cast
 from PyQt5.QtWidgets import (
     QHBoxLayout,

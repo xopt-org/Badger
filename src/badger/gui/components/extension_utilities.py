@@ -1,3 +1,8 @@
+"""Utility functions and decorators for Badger analysis extension widgets.
+Provides matplotlib figure context managers, layout clearing helpers, update
+throttling decorators, error handling wrappers, and numeric formatting used
+by the BO visualizer and Pareto front viewer."""
+
 import time
 from functools import wraps
 import traceback

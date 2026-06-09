@@ -1,3 +1,8 @@
+"""Custom exception hierarchy for Badger. The base BadgerError displays a Qt
+message box with the traceback for GUI-facing errors. Specialized exceptions
+cover configuration problems, database issues, plugin loading failures,
+environment/interface errors, and optimization termination signals."""
+
 from PyQt5.QtWidgets import QMessageBox
 import traceback
 import sys

@@ -1,3 +1,9 @@
+"""Defines the Routine model — the central configuration object that binds
+together a generator (optimization algorithm), environment, VOCS (variables,
+objectives, constraints, observables), and initial points into a single
+runnable unit. Also provides helpers for computing variable bounds relative
+to current machine state and for calculating initial sampling points."""
+
 import logging
 import json
 from copy import deepcopy

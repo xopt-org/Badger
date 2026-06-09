@@ -1,3 +1,9 @@
+"""Plugin discovery, loading, and documentation system for Badger. Scans the
+configured plugin root for environment, interface, and generator plugins,
+lazily loads them on demand, and provides accessors used by both the CLI and
+the GUI. Also loads and formats Markdown-based documentation for display in
+the Badger docs browser window."""
+
 from typing import Any, TypedDict, cast, TYPE_CHECKING
 from badger.settings import init_settings
 from badger.utils import get_value_or_none

@@ -1,3 +1,8 @@
+"""Objective table widget for the Badger GUI routine editor. Displays
+optimization objectives with configurable rules (MINIMIZE/MAXIMIZE),
+supporting checkbox toggling, drag-and-drop reordering, and external text
+drops for adding new objectives."""
+
 from typing import Any
 from PyQt5.QtWidgets import (
     QComboBox,

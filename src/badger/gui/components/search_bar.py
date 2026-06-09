@@ -1,3 +1,7 @@
+"""Search bar factory for the Badger GUI. Creates a simple QLineEdit with
+placeholder text for filtering routine lists and other searchable collections
+in the interface."""
+
 from PyQt5.QtWidgets import QLineEdit
 
 

@@ -1,3 +1,8 @@
+"""Robust double spin box widget for the Badger GUI. Extends QDoubleSpinBox
+with configurable decimal precision, bounds, scroll-wheel protection, and
+optional read-only mode — used in variable range tables and constraint
+threshold editors."""
+
 from PyQt5.QtWidgets import QDoubleSpinBox, QAbstractSpinBox
 from PyQt5.QtCore import Qt
 from badger.gui.utils import MouseWheelWidgetAdjustmentGuard

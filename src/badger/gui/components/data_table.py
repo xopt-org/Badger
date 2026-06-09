@@ -1,3 +1,8 @@
+"""Data table utilities for the Badger GUI. Provides factory functions and
+helpers for creating, populating, and reading back QTableWidget instances that
+display optimization data (variables, objectives, constraints) with
+clipboard-copy support and alternating-row styling."""
+
 from pandas import DataFrame
 from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
 from PyQt5.QtCore import Qt

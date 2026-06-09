@@ -1,3 +1,8 @@
+"""Statistical reducer functions for Badger objective evaluation. These
+functions aggregate array-valued observations into scalar metrics (median,
+mean, percentiles, etc.) used by the optimization loop to assess solution
+quality."""
+
 import numpy as np
 
 
