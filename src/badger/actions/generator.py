@@ -1,11 +1,12 @@
 import logging
+from typing import Any
 
 from badger.utils import yprint
 
 logger = logging.getLogger(__name__)
 
 
-def show_generator(args):
+def show_generator(args: Any) -> None:
     try:
         from badger.factory import list_generators, get_generator
     except Exception as e:
@@ -23,7 +24,7 @@ def show_generator(args):
         logger.error(e)
         try:
             # The exception could carry the configs information
-            configs = e.configs
+            configs = e.configs  # type: ignore[attr-defined]
             yprint(configs)
         except:
             pass

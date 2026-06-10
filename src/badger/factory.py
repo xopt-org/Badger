@@ -64,7 +64,7 @@ else:
 sys.path.append(BADGER_PLUGIN_ROOT)
 
 
-def scan_plugins(root: str):
+def scan_plugins(root: str) -> dict[str, Any]:
     factory: dict[str, Any] = {}
 
     # Do not scan local generators if option disabled
@@ -128,7 +128,7 @@ def load_plugin(
         _e = BadgerInvalidPluginError(
             f"{ptype} {pname} is not available due to missing dependencies: {e}"
         )
-        _e.configs = configs  # attach information to the exception
+        _e.configs = configs  # type: ignore[attr-defined]  # attach information to the exception
         raise _e
 
     if ptype == "generator":
@@ -185,7 +185,7 @@ def load_plugin(
     return plugin
 
 
-def load_badger_docs(name: str, ptype: str = None) -> str:
+def load_badger_docs(name: str, ptype: str | None = None) -> str:
     """
     Load general Badger documentation from Badger/documentation/docs/guides.
 
@@ -231,7 +231,7 @@ def load_badger_docs(name: str, ptype: str = None) -> str:
         if ptype == "generator":
             docstring = generators[name].__doc__
 
-        help_md = _format_docs_str(readme, docstring, ptype)
+        help_md = _format_docs_str(readme, docstring or "", ptype or "")
 
         return f"{header}<br /> {help_md}"
     except FileNotFoundError:
@@ -283,7 +283,7 @@ def load_plugin_docs(pname: str, ptype: str) -> str:
         if ptype == "environment":
             docstring = module.Environment.__doc__
 
-        return _format_docs_str(readme, docstring, ptype)
+        return _format_docs_str(readme, docstring or "", ptype)
     except:
         raise BadgerInvalidDocsError(
             f"Error loading docs for {ptype} {pname}: docs not found"
@@ -312,7 +312,7 @@ def _format_docs_str(readme: str, docstring: str, ptype: str) -> str:
     return help_md
 
 
-def _format_md_docs(text: str):
+def _format_md_docs(text: str) -> str:
     """
     Helper function to format markdown docs for display in QTextBrowser.
     Removes the first '---' section and replaces double newlines with <br /> for better rendering.
@@ -345,7 +345,7 @@ _MD_IMG = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 
 def _md_images_to_html(
     text: str,
-    base_prefix: str = None,
+    base_prefix: str | Path | None = None,
     width: int = 575,
 ) -> str:
     """
@@ -357,15 +357,15 @@ def _md_images_to_html(
         # Get absolute path to image folder relative to this module
         base_prefix = Path(__file__).parent.parent.parent / "documentation" / "static"
 
-    def repl(m: re.Match) -> str:
-        url = m.group(1).strip().strip("'\"").lstrip("./")
-        url = Path(base_prefix / url)
+    def repl(m: re.Match[str]) -> str:
+        url_str = m.group(1).strip().strip("'\"").lstrip("./")
+        url = Path(base_prefix / url_str)  # type: ignore[arg-type,operator]
         return f'<img src="{url.as_posix()}" width={width}></img>'
 
     return _MD_IMG.sub(repl, text)
 
 
-def get_plug(root: str, name: str, ptype: str):
+def get_plug(root: str, name: str, ptype: str) -> tuple[Any, Any]:
     try:
         plug = BADGER_FACTORY[ptype][name]
         if plug is None:  # lazy loading
@@ -383,25 +383,25 @@ def get_plug(root: str, name: str, ptype: str):
     return plug
 
 
-def scan_extensions(root):
-    extensions = {}
+def scan_extensions(root: str) -> dict[str, Any]:
+    extensions: dict[str, Any] = {}
 
     return extensions
 
 
-def get_env_docs(name: str):
+def get_env_docs(name: str) -> str:
     return load_plugin_docs(name, "environment")
 
 
-def get_intf(name: str):
+def get_intf(name: str) -> tuple[Any, Any]:
     return get_plug(BADGER_PLUGIN_ROOT, name, "interface")
 
 
-def get_env(name: str):
+def get_env(name: str) -> tuple[Any, Any]:
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 
-def list_generators():
+def list_generators() -> list[str]:
     try:
         from xopt.generators import try_load_all_generators
 
@@ -417,11 +417,11 @@ def list_generators():
 get_generator = get_generator_defaults
 
 
-def list_intf():
+def list_intf() -> list[str]:
     return sorted(BADGER_FACTORY["interface"])
 
 
-def list_env():
+def list_env() -> list[str]:
     return sorted(BADGER_FACTORY["environment"])
 
 

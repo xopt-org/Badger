@@ -4,6 +4,7 @@ import tarfile
 import shutil
 import os
 from os.path import exists
+from typing import Any
 
 import yaml
 from tqdm.auto import tqdm
@@ -13,7 +14,7 @@ from badger.settings import init_settings
 logger = logging.getLogger(__name__)
 
 
-def plugin_install(args):
+def plugin_install(args: Any) -> None:
     print(
         "This command is currently disabled.\n"
         "Please refer to the Badger documentation for plugin management.\n\n"

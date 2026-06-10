@@ -6,9 +6,10 @@ import sys
 import pathlib
 from datetime import datetime
 from types import TracebackType
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import yaml
+from pandas import DataFrame
 
 from badger.errors import BadgerLoadConfigError
 from PyQt5.QtWidgets import QWidget, QLayout
@@ -19,13 +20,15 @@ logger = logging.getLogger(__name__)
 class BlockSignalsContext:
     widgets: Iterable[QWidget | QLayout]
 
-    def __init__(self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]):
+    def __init__(
+        self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]
+    ) -> None:
         if isinstance(widgets, Iterable):
             self.widgets = widgets
         else:
             self.widgets = [widgets]
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         for widget in self.widgets:
             if widget.signalsBlocked():
                 logger.warning(
@@ -38,7 +41,7 @@ class BlockSignalsContext:
         exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         exc_traceback: Optional[TracebackType],
-    ):
+    ) -> None:
         for widget in self.widgets:
             if not widget.signalsBlocked():
                 logger.warning(
@@ -50,34 +53,34 @@ class BlockSignalsContext:
 # https://stackoverflow.com/a/39681672/4263605
 # https://github.com/yaml/pyyaml/issues/234#issuecomment-765894586
 class Dumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> Any:
         return super(Dumper, self).increase_indent(flow, False)
 
 
-def get_yaml_string(content):
+def get_yaml_string(content: Any) -> str:
     if content is None:
         return ""
 
     return yaml.dump(content, Dumper=Dumper, default_flow_style=False, sort_keys=False)
 
 
-def yprint(content):
+def yprint(content: Any) -> None:
     print(get_yaml_string(content), end="")
 
 
-def norm(x, lb, ub):
+def norm(x: Any, lb: Any, ub: Any) -> Any:
     return (x - lb) / (ub - lb)
 
 
-def denorm(x, lb, ub):
+def denorm(x: Any, lb: Any, ub: Any) -> Any:
     return (1 - x) * lb + x * ub
 
 
-def config_list_to_dict(config_list):
+def config_list_to_dict(config_list: list[dict[str, Any]] | None) -> dict[str, Any]:
     if not config_list:
         return {}
 
-    book = {}
+    book: dict[str, Any] = {}
     for config in config_list:
         for k, v in config.items():
             book[k] = v
@@ -85,7 +88,7 @@ def config_list_to_dict(config_list):
     return book
 
 
-def load_config(fname):
+def load_config(fname: str | None) -> Any:
     configs = None
 
     if fname is None:
@@ -115,7 +118,9 @@ def load_config(fname):
     return configs
 
 
-def merge_params(default_params, params):
+def merge_params(
+    default_params: dict[str, Any] | None, params: dict[str, Any] | None
+) -> dict[str, Any] | None:
     merged_params = None
 
     if params is None:
@@ -128,9 +133,9 @@ def merge_params(default_params, params):
     return merged_params
 
 
-def range_to_str(vranges):
+def range_to_str(vranges: list[dict[str, Any]]) -> list[dict[str, str]]:
     # Transfer the range list to a string for better printing
-    vranges_str = []
+    vranges_str: list[dict[str, str]] = []
     for var_dict in vranges:
         var = next(iter(var_dict))
         vrange = var_dict[var]
@@ -140,7 +145,7 @@ def range_to_str(vranges):
     return vranges_str
 
 
-def ts_to_str(ts, format="lcls-log"):
+def ts_to_str(ts: datetime, format: str = "lcls-log") -> str:
     if format == "lcls-log":
         return ts.strftime("%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -151,7 +156,7 @@ def ts_to_str(ts, format="lcls-log"):
         return ts.isoformat()
 
 
-def str_to_ts(timestr, format="lcls-log"):
+def str_to_ts(timestr: str, format: str = "lcls-log") -> datetime:
     if format == "lcls-log":
         return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -162,20 +167,20 @@ def str_to_ts(timestr, format="lcls-log"):
         return datetime.fromisoformat(timestr)
 
 
-def ts_float_to_str(ts_float, format="lcls-log"):
+def ts_float_to_str(ts_float: float, format: str = "lcls-log") -> str:
     ts = datetime.fromtimestamp(ts_float)
     return ts_to_str(ts, format)
 
 
-def curr_ts():
+def curr_ts() -> datetime:
     return datetime.now()
 
 
-def curr_ts_to_str(format="lcls-log"):
+def curr_ts_to_str(format: str = "lcls-log") -> str:
     return ts_to_str(datetime.now(), format)
 
 
-def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
+def create_archive_run_filename(routine: Any, format: str = "lcls-fname") -> str:
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")
@@ -185,7 +190,7 @@ def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
     return fname
 
 
-def get_header(routine):
+def get_header(routine: Any) -> list[str]:
     try:
         obj_names = routine.vocs.objective_names
     except Exception:
@@ -206,8 +211,8 @@ def get_header(routine):
     return obj_names + con_names + var_names + sta_names
 
 
-def run_names_to_dict(run_names):
-    runs = {}
+def run_names_to_dict(run_names: list[str]) -> dict[str, Any]:
+    runs: dict[str, Any] = {}
     for name in run_names:
         name = os.path.basename(
             name
@@ -239,7 +244,7 @@ def run_names_to_dict(run_names):
     return runs
 
 
-def convert_str_to_value(str):
+def convert_str_to_value(str: str) -> Any:
     try:
         return int(str)
     except ValueError:
@@ -258,7 +263,7 @@ def convert_str_to_value(str):
     return str
 
 
-def parse_rule(rule):
+def parse_rule(rule: str | dict[str, Any]) -> dict[str, str]:
     if type(rule) is str:
         return {
             "direction": rule,
@@ -287,7 +292,7 @@ def parse_rule(rule):
     }
 
 
-def get_value_or_none(book, key):
+def get_value_or_none(book: dict[Any, Any], key: Any) -> Any:
     try:
         value = book[key]
     except KeyError:
@@ -296,7 +301,7 @@ def get_value_or_none(book, key):
     return value
 
 
-def dump_state(dump_file, generator, data):
+def dump_state(dump_file: str | None, generator: Any, data: DataFrame) -> None:
     """dump data to file"""
     if dump_file is not None:
         output = state_to_dict(generator, data)
@@ -305,7 +310,9 @@ def dump_state(dump_file, generator, data):
         logger.debug(f"Dumped state to YAML file: {dump_file}")
 
 
-def state_to_dict(generator, data, include_data=True):
+def state_to_dict(
+    generator: Any, data: DataFrame, include_data: bool = True
+) -> dict[str, Any]:
     # dump data to dict with config metadata
     output = {
         "generator": {
@@ -321,7 +328,7 @@ def state_to_dict(generator, data, include_data=True):
 
 
 # https://stackoverflow.com/a/18472142
-def strtobool(val):
+def strtobool(val: Any) -> Any:
     """Convert a string representation of truth to true (1) or false (0).
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
     are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
@@ -359,11 +366,12 @@ def get_datadir() -> pathlib.Path:
         return home / ".local/share"
     elif sys.platform == "darwin":
         return home / "Library/Application Support"
+    return home
 
 
-def get_badger_version():
+def get_badger_version() -> str:
     return metadata.version("badger-opt")
 
 
-def get_xopt_version():
+def get_xopt_version() -> str:
     return metadata.version("xopt")

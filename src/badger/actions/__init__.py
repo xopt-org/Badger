@@ -1,11 +1,12 @@
 import os
 from importlib import metadata
+from typing import Any
 from badger.actions.doctor import check_n_config_paths
 from badger.utils import yprint
 from badger.settings import init_settings, get_user_config_folder
 
 
-def show_info(args):
+def show_info(args: Any) -> None:
     config_path = None
 
     if args.config_filepath:

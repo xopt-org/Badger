@@ -4,7 +4,7 @@ import sys
 
 
 class BadgerError(Exception):
-    def __init__(self, message="", detailed_text=None):
+    def __init__(self, message: str = "", detailed_text: str | None = None) -> None:
         if detailed_text is None:
             detailed_text = self.capture_traceback_or_stack()
 
@@ -12,7 +12,7 @@ class BadgerError(Exception):
         self.detailed_text = detailed_text
         self.show_message_box()
 
-    def show_message_box(self):
+    def show_message_box(self) -> None:
         """
         Method to create and display a popup window with the error message.
         """
@@ -27,7 +27,7 @@ class BadgerError(Exception):
         dialog.setIcon(QMessageBox.Critical)
         dialog.exec_()
 
-    def capture_traceback_or_stack(self):
+    def capture_traceback_or_stack(self) -> str:
         """
         Captures the current traceback if an exception is active, otherwise captures the call stack.
         """
@@ -73,7 +73,7 @@ class BadgerEnvObsError(Exception):
 
 
 class BadgerNoInterfaceError(Exception):
-    def __init__(self, message="Must provide an interface!"):
+    def __init__(self, message: str = "Must provide an interface!") -> None:
         super().__init__(message)
 
 
@@ -98,7 +98,7 @@ class BadgerLogbookError(Exception):
 
 
 class BadgerLoadConfigError(Exception):
-    def __init__(self, message="Config Error!"):
+    def __init__(self, message: str = "Config Error!") -> None:
         super().__init__(message)
 
 
@@ -107,7 +107,7 @@ class BadgerRoutineError(Exception):
 
 
 class BadgerRunTerminated(Exception):
-    def __init__(self, message="Optimization run has been terminated!"):
+    def __init__(self, message: str = "Optimization run has been terminated!") -> None:
         super().__init__(message)
 
 

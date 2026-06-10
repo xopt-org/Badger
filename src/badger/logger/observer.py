@@ -3,26 +3,28 @@ observers...
 """
 
 from datetime import datetime
+from typing import Any
+
 from badger.logger.event import Events
 
 
 class Observer:
-    def update(self, event, solution):
+    def update(self, event: Any, solution: Any) -> None:
         raise NotImplementedError
 
 
 class _Tracker(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self._iterations = 0
 
-        self._start_time = None
-        self._previous_time = None
+        self._start_time: datetime | None = None
+        self._previous_time: datetime | None = None
 
-    def _update_tracker(self, event, solution):
+    def _update_tracker(self, event: Any, solution: Any) -> None:
         if event == Events.OPTIMIZATION_STEP:
             self._iterations += 1
 
-    def _time_metrics(self):
+    def _time_metrics(self) -> tuple[str, float, float]:
         now = datetime.now()
         if self._start_time is None:
             self._start_time = now

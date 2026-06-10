@@ -40,7 +40,9 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-qt",
-    "pytest-mock"
+    "pytest-mock",
+    "PyQt5-stubs",
+    "mypy",
 ]
 
 [project.urls]

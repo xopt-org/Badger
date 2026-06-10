@@ -1,11 +1,12 @@
 import shutil
 from os.path import exists
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def plugin_remove(args):
+def plugin_remove(args: Any) -> None:
     print(
         "This command is currently disabled.\n"
         "Please refer to the Badger documentation for plugin management.\n\n"

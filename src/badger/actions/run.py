@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import signal
+from typing import Any
 
 from pandas import DataFrame
 
@@ -16,8 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 def run_n_archive(
-    routine: Routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
-):
+    routine: Routine,
+    yes: bool = False,
+    save: bool = False,
+    verbose: int = 2,
+    sleep: float = 0,
+    flush_prompt: bool = False,
+) -> None:
     try:
         from badger.archive import archive_run
     except Exception as e:
@@ -25,13 +31,13 @@ def run_n_archive(
         return
 
     # Store system states and other stuff
-    storage = {
+    storage: dict[str, Any] = {
         "states": None,
         "ts_last_dump": None,
         "paused": False,
     }
 
-    def handler(*args):
+    def handler(*args: Any) -> None:
         if storage["paused"]:
             print("")  # start a new line
             if flush_prompt:  # erase the last prompt
@@ -41,10 +47,10 @@ def run_n_archive(
 
     signal.signal(signal.SIGINT, handler)
 
-    def check_run_status():
+    def check_run_status() -> int:
         return 0
 
-    def before_evaluate(candidates: DataFrame):
+    def before_evaluate(candidates: DataFrame) -> None:
         if storage["paused"]:
             res = input(
                 "Optimization paused. Press Enter to resume or Ctrl/Cmd + C to terminate: "
@@ -59,7 +65,7 @@ def run_n_archive(
                 sys.stdout.write("\033[F")
         storage["paused"] = False
 
-    def after_evaluate(data: DataFrame):
+    def after_evaluate(data: DataFrame) -> None:
         # vars: ndarray
         # obses: ndarray
         # cons: ndarray
@@ -86,7 +92,7 @@ def run_n_archive(
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
 
-    def states_ready(states):
+    def states_ready(states: Any) -> None:
         storage["states"] = states
 
     try:
@@ -114,7 +120,7 @@ def run_n_archive(
             pass
 
 
-def run_routine(args):
+def run_routine(args: Any) -> None:
     print(
         "This command is deprecated.\n"
         "Please use 'badger -g' to launch the Badger GUI "

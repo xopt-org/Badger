@@ -1,11 +1,12 @@
 import logging
+from typing import Any
 
 from badger.utils import range_to_str, yprint
 
 logger = logging.getLogger(__name__)
 
 
-def show_env(args):
+def show_env(args: Any) -> None:
     try:
         from badger.factory import list_env, get_env
     except Exception as e:
@@ -22,7 +23,7 @@ def show_env(args):
         logger.error(e)
         try:
             # The exception could carry the configs information
-            configs = e.configs
+            configs = e.configs  # type: ignore[attr-defined]
         except:
             return
 

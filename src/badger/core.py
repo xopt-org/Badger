@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from typing import Any, Callable
 
 from pandas import concat, DataFrame
 
@@ -12,7 +12,7 @@ from badger.utils import curr_ts_to_str, dump_state
 from xopt.vocs import select_best
 
 
-def check_run_status(active_callback):
+def check_run_status(active_callback: Callable[[], int]) -> None:
     while True:
         status = active_callback()
         if status == 2:
@@ -24,7 +24,19 @@ def check_run_status(active_callback):
             break
 
 
-def convert_to_solution(result: DataFrame, routine: Routine):
+def convert_to_solution(
+    result: DataFrame, routine: Routine
+) -> tuple[
+    list[Any],
+    list[Any],
+    list[Any],
+    list[Any],
+    bool,
+    list[str],
+    list[str],
+    list[str],
+    list[str],
+]:
     vocs = routine.vocs
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
@@ -63,11 +75,11 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
 def run_routine(
     routine: Routine,
-    active_callback: Callable,
-    generate_callback: Callable,
-    evaluate_callback: Callable,
-    states_callback: Callable,
-    dump_file_callback: Callable = None,
+    active_callback: Callable[..., Any],
+    generate_callback: Callable[..., Any],
+    evaluate_callback: Callable[..., Any],
+    states_callback: Callable[..., Any],
+    dump_file_callback: Callable[..., Any] | None = None,
     verbose: int = 2,
 ) -> None:
     """

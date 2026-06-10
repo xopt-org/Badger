@@ -1,8 +1,10 @@
+from typing import Any
+
 from badger.settings import init_settings, mock_settings
 from badger.actions.config import _config_path_var
 
 
-def self_check(args):
+def self_check(args: Any) -> None:
     config = init_settings()
     # Reset Badger
 
@@ -31,7 +33,7 @@ def self_check(args):
         print("Badger is healthy!")
 
 
-def check_n_config_paths(config_filepath=None):
+def check_n_config_paths(config_filepath: str | None = None) -> bool:
     if config_filepath is not None:
         config = init_settings(config_filepath)
     else:

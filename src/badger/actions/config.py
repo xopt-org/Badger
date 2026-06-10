@@ -1,13 +1,14 @@
 from badger.settings import init_settings
 import os
 import logging
+from typing import Any
 
 from badger.utils import yprint, convert_str_to_value
 
 logger = logging.getLogger(__name__)
 
 
-def config_settings(args):
+def config_settings(args: Any) -> Any:
     config_singleton = init_settings()
     key = args.key
 
@@ -30,7 +31,7 @@ def config_settings(args):
     logger.error(f"{key} is not a valid Badger config key!")
 
 
-def _config_path_var(var_name):
+def _config_path_var(var_name: str) -> bool:
     config_singleton = init_settings()
 
     is_path = config_singleton.read_is_path(var_name)
@@ -96,7 +97,7 @@ def _config_path_var(var_name):
         return False
 
 
-def _config_core_var(var_name):
+def _config_core_var(var_name: str) -> None:
     config_singleton = init_settings()
 
     display_name = config_singleton.read_display_name(var_name)

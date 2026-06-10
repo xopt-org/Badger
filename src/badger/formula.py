@@ -1,18 +1,20 @@
+from typing import Any, Iterable
+
 import numpy as np
 import re
 import ast
 import difflib
 
 
-def safe_var_name(var_name):
+def safe_var_name(var_name: str) -> str:
     return re.sub(r"[^0-9a-zA-Z_]", "_", var_name)
 
 
-def extract_variable_keys(expr):
+def extract_variable_keys(expr: str) -> list[str]:
     return re.findall(r"`([^`]+)`", expr)
 
 
-def find_used_names(expr):
+def find_used_names(expr: str) -> set[str]:
     try:
         tree = ast.parse(expr, mode="eval")
         return {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
@@ -20,16 +22,16 @@ def find_used_names(expr):
         raise SyntaxError(f"Invalid syntax in expression: {e}")
 
 
-def suggest_name(unknown, known_names):
-    suggestions = {}
+def suggest_name(unknown: Iterable[str], known_names: Iterable[str]) -> dict[str, str]:
+    suggestions: dict[str, str] = {}
     for name in unknown:
-        matches = difflib.get_close_matches(name, known_names, n=1, cutoff=0.7)
+        matches = difflib.get_close_matches(name, list(known_names), n=1, cutoff=0.7)
         if matches:
             suggestions[name] = matches[0]
     return suggestions
 
 
-def interpret_expression(expr, variables):
+def interpret_expression(expr: str, variables: dict[str, Any]) -> Any:
     """
     Interpret a mathematical expression with variables and functions.
     The expression can contain variables in single or double quotes,
@@ -49,7 +51,7 @@ def interpret_expression(expr, variables):
     """
 
     quoted_vars = extract_variable_keys(expr)
-    missing_vars = quoted_vars - variables.keys()
+    missing_vars = set(quoted_vars) - variables.keys()
     if missing_vars:
         raise KeyError(f"Missing variables for expression: {sorted(missing_vars)}")
 
@@ -78,7 +80,7 @@ def interpret_expression(expr, variables):
                 msg += f"  - {bad} → {good}\n"
         raise NameError(msg.strip())
 
-    safe_namespace = {name: getattr(np, name) for name in np_funcs}
+    safe_namespace: dict[str, Any] = {name: getattr(np, name) for name in np_funcs}
     safe_namespace["percentile"] = np.percentile
     # Add common built-in functions
     for func_name in builtin_funcs:

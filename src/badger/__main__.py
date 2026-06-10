@@ -15,7 +15,7 @@ from badger.log import setup_logging
 logger = logging.getLogger("badger")
 
 
-def main():
+def main() -> None:
     # Create the top-level parser
     parser = argparse.ArgumentParser(description="Badger the optimizer")
     parser.add_argument("-g", "--gui", action="store_true", help="launch the GUI")
