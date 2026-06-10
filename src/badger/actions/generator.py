@@ -1,3 +1,4 @@
+from argparse import Namespace
 import logging
 
 from badger.utils import yprint
@@ -5,7 +6,7 @@ from badger.utils import yprint
 logger = logging.getLogger(__name__)
 
 
-def show_generator(args):
+def show_generator(args: Namespace) -> None:
     try:
         from badger.factory import list_generators, get_generator
     except Exception as e:

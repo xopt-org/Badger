@@ -1,4 +1,4 @@
-from typing import Any, TypedDict, cast, TYPE_CHECKING
+from typing import Any, Literal, TypedDict, cast, TYPE_CHECKING
 from badger.settings import init_settings
 from badger.utils import get_value_or_none
 from badger.errors import (
@@ -13,6 +13,7 @@ import sys
 import os
 import importlib
 import yaml
+from xopt.generator import Generator
 from xopt.generators import generators, get_generator_defaults
 
 import logging
@@ -34,7 +35,7 @@ ALGO_EXCLUDED = [
 ]
 
 
-class BadgerPluginConfig(TypedDict):
+class BadgerPluginConfig(TypedDict, total=False):
     name: str
     description: str
     version: str
@@ -62,10 +63,21 @@ else:
 sys.path.append(BADGER_PLUGIN_ROOT)
 
 
-def scan_plugins(root: str):
-    factory: dict[str, Any] = {}
+class BadgerFactoryType(TypedDict):
+    generator: dict[str, dict[str, tuple[type[Generator], BadgerPluginConfig | None]]]
+    interface: dict[
+        str, dict[str, tuple[type["BadgerInterface"], BadgerPluginConfig | None]]
+    ]
+    environment: dict[
+        str, dict[str, tuple[type["BadgerEnvironment"], BadgerPluginConfig | None]]
+    ]
+
+
+def scan_plugins(root: str) -> BadgerFactoryType:
+    factory: BadgerFactoryType = {"environment": {}, "interface": {}, "generator": {}}
 
     # Do not scan local generators if option disabled
+    ptype_list: list[Literal["generator", "interface", "environment"]]
     if LOAD_LOCAL_ALGO:
         ptype_list = ["generator", "interface", "environment"]
     else:
@@ -73,7 +85,7 @@ def scan_plugins(root: str):
         factory["generator"] = {}
 
     for ptype in ptype_list:
-        factory[ptype] = {}
+        factory[ptype] = {}  # type: ignore
 
         proot = os.path.join(root, f"{ptype}s")
 
@@ -89,14 +101,14 @@ def scan_plugins(root: str):
         for pname in plugins:
             # TODO: Also load the configs here
             # So that list plugins can access the metadata of the plugins
-            factory[ptype][pname] = None
+            factory[ptype][pname] = None  # type: ignore
 
     return factory
 
 
 def load_plugin(
-    root: str, pname: str, ptype: str
-) -> tuple[Any | None, BadgerPluginConfig | None]:
+    root: str, pname: str, ptype: Literal["environment", "interface", "generator"]
+) -> "tuple[type[BadgerEnvironment] | type[BadgerInterface] | type[Generator] | None, BadgerPluginConfig | None]":
     assert ptype in [
         "generator",
         "interface",
@@ -183,7 +195,7 @@ def load_plugin(
     return plugin
 
 
-def load_docs(root, pname, ptype):
+def load_docs(root: str, pname: str, ptype: str) -> str:
     assert ptype in [
         "generator",
         "interface",
@@ -215,7 +227,9 @@ def load_docs(root, pname, ptype):
         )
 
 
-def get_plug(root: str, name: str, ptype: str):
+def get_plug(
+    root: str, name: str, ptype: Literal["environment", "interface", "generator"]
+) -> "tuple[type[BadgerEnvironment] | type[BadgerInterface] | type[Generator] | None, BadgerPluginConfig | None]":
     try:
         plug = BADGER_FACTORY[ptype][name]
         if plug is None:  # lazy loading

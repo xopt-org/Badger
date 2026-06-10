@@ -1,4 +1,5 @@
 import os
+from typing import Any, Callable, ParamSpec, TypeVar, cast
 import warnings
 from datetime import datetime
 import logging
@@ -16,26 +17,35 @@ logger = logging.getLogger(__name__)
 
 # Check badger database root
 flag_use_db = True
+
 config_singleton = init_settings()
 try:
-    BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
+    badger_db_root = cast(str, config_singleton.read_value("BADGER_DB_ROOT"))
 except KeyError:
+    badger_db_root = ""
     flag_use_db = False
 
+BADGER_DB_ROOT = badger_db_root
+
 if flag_use_db:
-    if BADGER_DB_ROOT is None:
+    if BADGER_DB_ROOT == "":
         raise BadgerConfigError("Please set the BADGER_DB_ROOT env var!")
     elif not os.path.exists(BADGER_DB_ROOT):
         os.makedirs(BADGER_DB_ROOT)
         logger.info(f"Badger database root {BADGER_DB_ROOT} created")
 
+T = TypeVar("T")
+P = ParamSpec("P")
 
-def ensure_routines_db_exists(func):
+
+def ensure_routines_db_exists(
+    func: Callable[P, T],
+) -> Callable[P, T]:
     """
     Create the routines database (a SQL table) if it does not already exist.
     """
 
-    def func_safe(*args, **kwargs):
+    def func_safe(*args: P.args, **kwargs: P.kwargs) -> T:
         db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
         con = sqlite3.connect(db_routine)
@@ -53,12 +63,12 @@ def ensure_routines_db_exists(func):
     return func_safe
 
 
-def ensure_runs_db_exists(func):
+def ensure_runs_db_exists(func: Callable[P, T]) -> Callable[P, T]:
     """
     Create the runs database (a SQL table) if it does not already exist.
     """
 
-    def func_safe(*args, **kwargs):
+    def func_safe(*args: P.args, **kwargs: P.kwargs) -> T:
         db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
         con = sqlite3.connect(db_run)
@@ -107,7 +117,7 @@ def extract_metadata(records):
 
 
 @ensure_routines_db_exists
-def save_routine(routine: Routine):
+def save_routine(routine: Routine) -> None:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
     con = sqlite3.connect(db_routine)
@@ -126,7 +136,7 @@ def save_routine(routine: Routine):
 
 # This function is not safe and might break database! Use with caution!
 @ensure_routines_db_exists
-def update_routine(routine: Routine):
+def update_routine(routine: Routine) -> None:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
     con = sqlite3.connect(db_routine)
@@ -147,7 +157,7 @@ def update_routine(routine: Routine):
 
 @ensure_routines_db_exists
 @ensure_runs_db_exists
-def remove_routine(id: str, remove_runs=True):
+def remove_routine(id: str, remove_runs: bool = True) -> None:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
     con = sqlite3.connect(db_routine)
@@ -172,7 +182,7 @@ def remove_routine(id: str, remove_runs=True):
 
 
 @ensure_routines_db_exists
-def load_routine(id: str):
+def load_routine(id: str) -> tuple[Routine, Any]:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
@@ -207,7 +217,7 @@ def load_routine(id: str):
 
 
 @ensure_routines_db_exists
-def list_routine(keyword="", tags={}):
+def list_routine(keyword: str = "", tags: dict[str, str] = {}) -> list[Routine]:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
@@ -300,7 +310,7 @@ def list_routine(keyword="", tags={}):
 
 
 @ensure_runs_db_exists
-def save_run(run):
+def save_run(run: dict[str, Any]) -> int:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run, timeout=30.0)

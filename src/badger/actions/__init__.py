@@ -4,7 +4,7 @@ from badger.actions.doctor import check_n_config_paths
 from badger.utils import yprint
 
 
-def show_info(args: Namespace):
+def show_info(args: Namespace) -> None:
     config_path = None
 
     if args.config_filepath:

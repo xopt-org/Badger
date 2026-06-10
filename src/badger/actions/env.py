@@ -1,3 +1,4 @@
+from argparse import Namespace
 import logging
 
 from badger.utils import range_to_str, yprint
@@ -5,7 +6,7 @@ from badger.utils import range_to_str, yprint
 logger = logging.getLogger(__name__)
 
 
-def show_env(args):
+def show_env(args: Namespace) -> None:
     try:
         from badger.factory import list_env, get_env
     except Exception as e:

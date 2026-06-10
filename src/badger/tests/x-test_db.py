@@ -1,5 +1,5 @@
 class TestDB:
-    def test_save_routine(self):
+    def test_save_routine(self) -> None:
         from badger.db import save_routine, remove_routine
         from badger.tests.utils import create_routine, fix_db_path_issue
 

@@ -1,3 +1,4 @@
+from argparse import Namespace
 import logging
 
 import pandas as pd
@@ -8,7 +9,7 @@ from badger.utils import yprint
 logger = logging.getLogger(__name__)
 
 
-def show_routine(args):
+def show_routine(args: Namespace) -> None:
     print(
         "This command is deprecated.\n"
         "Please use 'badger -g' to launch the Badger GUI "
