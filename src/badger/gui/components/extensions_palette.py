@@ -1,21 +1,27 @@
 import traceback
+from typing import TYPE_CHECKING
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
+    QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
-    QLabel,
-    QMessageBox,
-    QSizePolicy,
 )
-from PyQt5.QtCore import Qt
+
 from badger.gui.components.analysis_extensions import (
     AnalysisExtension,
-    ParetoFrontViewer,
+    BaxVisualizer,
     BOVisualizer,
+    ParetoFrontViewer,
 )
 from badger.gui.components.extension_utilities import HandledException
+
+if TYPE_CHECKING:
+    from badger.gui.components.run_monitor import BadgerOptMonitor
 
 
 class ExtensionsPalette(QMainWindow):
@@ -24,7 +30,7 @@ class ExtensionsPalette(QMainWindow):
 
     Parameters
     ----------
-    run_monitor : RunMonitor
+    run_monitor : BadgerOptMonitor
         The run monitor associated with the palette.
 
     Attributes
@@ -49,13 +55,13 @@ class ExtensionsPalette(QMainWindow):
 
     """
 
-    def __init__(self, run_monitor):
+    def __init__(self, run_monitor: "BadgerOptMonitor") -> None:
         """
         Initialize the ExtensionsPalette.
 
         Parameters
         ----------
-        run_monitor : RunMonitor
+        run_monitor : BadgerOptMonitor
             The run monitor associated with the palette.
 
         """
@@ -78,9 +84,11 @@ class ExtensionsPalette(QMainWindow):
 
         self.btn_data_viewer = QPushButton("Pareto Front Viewer")
         self.btn_bo_visualizer = QPushButton("Bayesian Optimization Visualizer")
+        self.btn_bax_visualizer = QPushButton("Bax Visualizer")
 
         layout.addWidget(self.btn_data_viewer)
         layout.addWidget(self.btn_bo_visualizer)
+        layout.addWidget(self.btn_bax_visualizer)
         layout.addStretch()
         layout.addWidget(self.text_box)
 
@@ -88,9 +96,10 @@ class ExtensionsPalette(QMainWindow):
 
         self.btn_data_viewer.clicked.connect(self.add_pf_viewer)
         self.btn_bo_visualizer.clicked.connect(self.add_bo_visualizer)
+        self.btn_bax_visualizer.clicked.connect(self.add_bax_visualizer)
 
     @property
-    def n_active_extensions(self):
+    def n_active_extensions(self) -> int:
         """
         Property to get the number of active extensions.
 
@@ -102,26 +111,59 @@ class ExtensionsPalette(QMainWindow):
         """
         return len(self.run_monitor.active_extensions)
 
-    def update_palette(self):
+    def update_palette(self) -> None:
         self.text_box.setText(self.base_text + str(self.n_active_extensions))
 
-    def add_pf_viewer(self):
+    def add_pf_viewer(self) -> None:
         """
         Open the ParetoFrontViewer extension.
 
         """
+        if self.run_monitor.routine is None:
+            QMessageBox.warning(
+                self,
+                "No Routine Error",
+                "Please start a routine before opening the Pareto Front Viewer.",
+            )
+            return
+
         self.add_child_window_to_monitor(
             ParetoFrontViewer(routine=self.run_monitor.routine)
         )
 
-    def add_bo_visualizer(self):
+    def add_bo_visualizer(self) -> None:
         """
         Open the BOVisualizer extension.
 
         """
+        if self.run_monitor.routine is None:
+            QMessageBox.warning(
+                self,
+                "No Routine Error",
+                "Please start a routine before opening the BO Visualizer.",
+            )
+            return
+
         self.add_child_window_to_monitor(BOVisualizer(routine=self.run_monitor.routine))
 
-    def add_child_window_to_monitor(self, child_window: AnalysisExtension):
+    def add_bax_visualizer(self) -> None:
+        """
+        Open the BaxVisualizer extension.
+
+        """
+        if self.run_monitor.routine is None:
+            QMessageBox.warning(
+                self,
+                "No Routine Error",
+                "Please start a routine before opening the Bax Visualizer.",
+            )
+            return
+
+        self.add_child_window_to_monitor(
+            BaxVisualizer(routine=self.run_monitor.routine)
+        )
+
+    def add_child_window_to_monitor(self, child_window: AnalysisExtension) -> None:
         """
         Add a child window to the run monitor.
 

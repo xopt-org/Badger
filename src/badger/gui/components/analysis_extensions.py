@@ -1,27 +1,28 @@
-from typing import Optional, cast
 import logging
+from typing import Optional, cast
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
 from PyQt5.QtGui import QCloseEvent
+from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from xopt import Generator
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
+from xopt.generators.bayesian.mobo import MOBOGenerator
+
 from badger.gui.components.analysis_widget import AnalysisWidget
+from badger.gui.components.bax_visualizer.bax_widget import BaxWidget
 from badger.gui.components.bo_visualizer.bo_widget import BOPlotWidget
 from badger.gui.components.pf_viewer.pf_widget import ParetoFrontWidget
 from badger.routine import Routine
 
-from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
-from xopt.generators.bayesian.mobo import MOBOGenerator
-from xopt import Generator
-
 logger = logging.getLogger(__name__)
 
 
-class AnalysisExtension(QDialog):
+class AnalysisExtension(QWidget):
     window_closed = pyqtSignal(object)
-    generator_type = Generator
-    widget = AnalysisWidget
+    generator_type: type[Generator]
+    widget: AnalysisWidget
 
-    def __init__(self, parent: Optional[QDialog] = None):
+    def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
 
     def update_window(self, routine: Routine) -> None:
@@ -59,8 +60,6 @@ class AnalysisExtension(QDialog):
         This method should be implemented to handle the update logic for the extension.
         """
 
-        self.widget = cast(AnalysisWidget, self.widget)
-
         self.widget.isValidRoutine(routine)
 
         self.widget.update_routine(routine, self.generator_type)
@@ -70,7 +69,7 @@ class AnalysisExtension(QDialog):
 
         self.widget.update_plots(requires_rebuild, interval=self.widget.update_interval)
 
-    def closeEvent(self, a0: Optional[QCloseEvent]) -> None:
+    def closeEvent(self, a0: QCloseEvent) -> None:
         self.window_closed.emit(self)
         super().closeEvent(a0)
 
@@ -79,7 +78,7 @@ class ParetoFrontViewer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QDialog] = None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent=parent)
 
@@ -94,12 +93,27 @@ class BOVisualizer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QDialog] = None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent=parent)
 
         self.initialize_extension(
             extension_widget=BOPlotWidget(routine=routine),
             extension_name="Bayesian Optimization Visualizer",
-            generator_type=BayesianGenerator,
+            generator_type=cast(type[Generator], BayesianGenerator),
+        )
+
+
+class BaxVisualizer(AnalysisExtension):
+    def __init__(
+        self,
+        routine: Routine,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent=parent)
+
+        self.initialize_extension(
+            extension_widget=BaxWidget(routine=routine),
+            extension_name="Bax Visualizer",
+            generator_type=cast(type[Generator], BayesianGenerator),
         )

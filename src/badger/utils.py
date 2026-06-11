@@ -1,17 +1,20 @@
-from importlib import metadata
 import json
 import logging
 import os
-import sys
 import pathlib
+import sys
 from datetime import datetime
+from importlib import metadata
 from types import TracebackType
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 import yaml
+from PyQt5.QtWidgets import QLayout, QWidget
 
 from badger.errors import BadgerLoadConfigError
-from PyQt5.QtWidgets import QWidget, QLayout
+
+if TYPE_CHECKING:
+    from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +178,7 @@ def curr_ts_to_str(format="lcls-log"):
     return ts_to_str(datetime.now(), format)
 
 
-def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
+def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") -> str:
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")

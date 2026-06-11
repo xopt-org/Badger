@@ -1,5 +1,7 @@
 from typing import TypedDict
 
+from gest_api.vocs import ContinuousVariable
+
 
 class PlotOptions(TypedDict):
     n_grid: int
@@ -16,5 +18,5 @@ class ConfigurableOptions(TypedDict):
     variable_2: int
     variables: list[str]
     reference_points: dict[str, float]
-    reference_points_range: dict[str, tuple[float, float]]
+    reference_points_range: dict[str, ContinuousVariable]
     include_variable_2: bool
