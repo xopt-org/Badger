@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QDialog,
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
+from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint, QTimer
 from PyQt5.QtGui import (
     QColor,
     QIcon,
@@ -259,6 +259,7 @@ class VariableTable(QTableWidget):
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setAutoScroll(False)
 
         # Reorder the rows by dragging around
         # self.setSelectionBehavior(self.SelectRows)
@@ -512,6 +513,18 @@ class VariableTable(QTableWidget):
         if self.checked_only:
             self.show_checked_only()
 
+    def _scroll_to_first_checked_row(self) -> None:
+        for row in range(self.rowCount() - 1):
+            cb = self.cellWidget(row, 0)
+            if not cb:
+                continue
+            cb = cast(QCheckBox, cb)
+            if cb.isChecked():
+                item = self.item(row, 1)
+                if item is not None:
+                    self.scrollToItem(item, QAbstractItemView.ScrollHint.PositionAtTop)
+                return
+
     def set_selected(self, variable_names: list[str]):
         self.selected: dict[str, bool] = {}
         for vname in variable_names:
@@ -525,6 +538,7 @@ class VariableTable(QTableWidget):
             self.show_checked_only()
         else:
             self.show_all()
+            QTimer.singleShot(0, self._scroll_to_first_checked_row)
 
     def show_checked_only(self):
         checked_variables: list[dict[str, tuple[float, float]]] = []
@@ -726,7 +740,7 @@ class VariableTable(QTableWidget):
 
             # Add the config button
             config_button = QPushButton()
-            config_button.setFixedSize(18, 18)
+            config_button.setFixedSize(20, 20)
             config_button.setIcon(self.icon_settings)
             config_button.setIconSize(QSize(12, 12))
 
