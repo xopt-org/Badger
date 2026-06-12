@@ -1,14 +1,23 @@
+import logging
 from typing import Optional, cast
+
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QHBoxLayout,
-    QWidget,
-    QVBoxLayout,
     QMessageBox,
+    QSizePolicy,
     QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtWidgets import QSizePolicy
+from xopt.generator import Generator
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
+from xopt.vocs import select_best
 
+from badger.gui.components.analysis_widget import AnalysisWidget
+from badger.gui.components.bo_visualizer.plotting_area import PlottingArea
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions
+from badger.gui.components.bo_visualizer.ui_components import UIComponents
 from badger.gui.components.extension_utilities import (
     HandledException,
     signal_logger,
@@ -16,15 +25,6 @@ from badger.gui.components.extension_utilities import (
 )
 from badger.routine import Routine
 from badger.utils import BlockSignalsContext, create_archive_run_filename
-
-from xopt.generator import Generator
-from badger.gui.components.bo_visualizer.ui_components import UIComponents
-from badger.gui.components.bo_visualizer.plotting_area import PlottingArea
-from PyQt5.QtCore import Qt
-from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
-from badger.gui.components.analysis_widget import AnalysisWidget
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,11 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 }
 
 
-class BOPlotWidget(AnalysisWidget):
-    generator: BayesianGenerator  # type: ignore
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()  # type: ignore
+class BOPlotWidget(AnalysisWidget):  # type: ignore[misc]
+    generator: BayesianGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
+    df_length: float = float("inf")
+    initialized: bool = False
 
     def __init__(
         self,
@@ -115,19 +117,12 @@ class BOPlotWidget(AnalysisWidget):
             self.parameters["include_variable_2"] = False
             self.parameters["variable_2"] = -1
 
-        vocs_variables = cast(
-            dict[str, tuple[float, float]],
-            self.routine.vocs.variables,  # type: ignore
-        )
+        vocs_variables = self.routine.vocs.variables
 
         self.ui_components.initialize_variables(self.parameters, vocs_variables)
 
         self.ui_components.update_variables(self.parameters)
 
-        vocs_variables = cast(
-            dict[str, tuple[float, float]],
-            self.routine.vocs.variables,  # type: ignore
-        )
         # Initialize UI Components
         self.ui_components.initialize_ui_components(
             self.parameters,
@@ -189,12 +184,11 @@ class BOPlotWidget(AnalysisWidget):
 
         # Reference inputs
 
-        if self.ui_components.reference_table is not None:
-            self.ui_components.reference_table.cellChanged.connect(
-                lambda: signal_logger("Updated 'reference_table'")(
-                    lambda: self.on_reference_points_changed()
-                )()
-            )
+        self.ui_components.reference_table.cellChanged.connect(
+            lambda: signal_logger("Updated 'reference_table'")(
+                lambda: self.on_reference_points_changed()
+            )()
+        )
 
         self.ui_components.set_best_reference_point_button.clicked.connect(
             lambda: signal_logger("Set best reference points clicked")(
@@ -238,7 +232,9 @@ class BOPlotWidget(AnalysisWidget):
         """
         logger.debug("Resetting components of BOPlotWidget")
         self.ui_components.best_point_display.setText("")
-        self.parameters = DEFAULT_PARAMETERS.copy()  # type: ignore
+        self.parameters = (  # pyright: ignore[reportIncompatibleVariableOverride]
+            DEFAULT_PARAMETERS.copy()
+        )
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -279,7 +275,7 @@ class BOPlotWidget(AnalysisWidget):
 
         return False
 
-    def on_axis_selection_changed(self):
+    def on_axis_selection_changed(self) -> None:
         logger.debug("Axis selection changed")
 
         selected_variables: list[str] = []
@@ -354,15 +350,14 @@ class BOPlotWidget(AnalysisWidget):
         if previous_selected_options != current_selected_options:
             logger.debug(f"Selected variables for plotting: {self.selected_variables}")
             # Update the reference point table based on the selected variables
-            if self.ui_components.reference_table is not None:
-                with BlockSignalsContext(
-                    self.ui_components.reference_table,
-                ):
-                    self.update_reference_point_table(self.selected_variables)
+            with BlockSignalsContext(
+                self.ui_components.reference_table,
+            ):
+                self.update_reference_point_table(self.selected_variables)
             # Only update plot if the selection has changed
             self.update_plots()
 
-    def update_reference_point_table(self, selected_variables: list[str]):
+    def update_reference_point_table(self, selected_variables: list[str]) -> None:
         """Disable and gray out reference points for selected variables."""
 
         for i, var_name in enumerate(self.parameters["variables"]):
@@ -387,14 +382,12 @@ class BOPlotWidget(AnalysisWidget):
                 ref_item.setForeground(black)
 
         # Force the table to refresh and update its view
-        if self.ui_components.reference_table is not None:
-            viewport = self.ui_components.reference_table.viewport()
-            if viewport is not None:
-                viewport.update()
+        viewport = self.ui_components.reference_table.viewport()
+        viewport.update()
 
     def get_reference_points(
         self, ref_inputs: list[QTableWidgetItem], variable_names: list[str]
-    ):
+    ) -> dict[str, float]:
         reference_points: dict[str, float] = {}
 
         # Create a mapping from variable names to ref_inputs
@@ -472,12 +465,11 @@ class BOPlotWidget(AnalysisWidget):
         self.ui_components.update_variables(self.parameters)
 
         # Disable signals for the reference table to prevent updating the plot multiple times
-        if self.ui_components.reference_table is not None:
-            with BlockSignalsContext(
-                self.ui_components.reference_table,
-            ):
-                # Disable and gray out the reference points for selected variables
-                self.update_reference_point_table(selected_variables)
+        with BlockSignalsContext(
+            self.ui_components.reference_table,
+        ):
+            # Disable and gray out the reference points for selected variables
+            self.update_reference_point_table(selected_variables)
 
         # Get reference points for non-selected variables
 
@@ -530,15 +522,15 @@ class BOPlotWidget(AnalysisWidget):
 
     def set_best_reference_points(
         self,
-    ):
+    ) -> None:
         if self.generator.data is None:
             raise HandledException(
                 ValueError,
                 "No data available in generator for selecting best reference points",
             )
 
-        index_arr, value_arr, input_params = self.routine.vocs.select_best(
-            self.generator.data
+        index_arr, value_arr, input_params = select_best(
+            self.routine.vocs, self.generator.data
         )
 
         if not index_arr or not value_arr:

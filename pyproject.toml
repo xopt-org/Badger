@@ -6,9 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "badger-opt"
 description = "Interface for optimization of arbitrary problems in Python."
 readme = "README.md"
-authors = [
-  { name = "Zhe Zhang", email = "zhezhang@slac.stanford.edu" },
-]
+authors = [{ name = "Zhe Zhang", email = "zhezhang@slac.stanford.edu" }]
 keywords = ["optimization", "machine learning", "GUI"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -41,7 +39,7 @@ dev = [
     "pytest-cov",
     "pytest-qt",
     "pytest-mock",
-    "PyQt5-stubs",
+    "pyqt5-stubs",
     "mypy",
 ]
 
@@ -62,12 +60,12 @@ include_package_data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = [ "badger", ]
+include = ["badger"]
 namespaces = false
 
 [tool.ruff.lint]
 extend-select = ["TID252"] # Defaults + check imports
-ignore = ["E722"] # Until bare except blocks get fixed
+ignore = ["E722"]          # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
 addopts = "--cov=badger/"

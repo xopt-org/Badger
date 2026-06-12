@@ -1,19 +1,18 @@
+import logging
 from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any, Optional
 
-from PyQt5.QtWidgets import QDialog
-from badger.gui.components.extension_utilities import HandledException
-from badger.routine import Routine
+from PyQt5.QtWidgets import QWidget
 from xopt import Generator
 
-import logging
-
+from badger.gui.components.extension_utilities import HandledException
+from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
 
 
-class AnalysisWidget(QDialog):
+class AnalysisWidget(QWidget):
     routine: Routine
     generator: Generator
     parameters: dict[str, Any] = {}
@@ -27,7 +26,7 @@ class AnalysisWidget(QDialog):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QDialog] = None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent=parent)
         self.routine = routine

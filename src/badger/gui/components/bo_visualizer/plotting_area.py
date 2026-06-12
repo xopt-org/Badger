@@ -1,5 +1,18 @@
+import logging
+import time
 from collections.abc import Callable
 from typing import Optional, cast
+
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
+from xopt.generators.bayesian.visualize import (
+    visualize_generator_model,
+)
+
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.components.extension_utilities import (
     HandledException,
@@ -7,29 +20,11 @@ from badger.gui.components.extension_utilities import (
     clear_layout,
     requires_update,
 )
-from badger.routine import Routine
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvasQTAgg as FigureCanvas,
-)
-from matplotlib.backends.backend_qt import (
-    NavigationToolbar2QT as NavigationToolbar,
-)
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
-from badger.utils import BlockSignalsContext
-from xopt.generators.bayesian.visualize import (
-    visualize_generator_model,
-)
-from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
-
-import time
 from badger.gui.components.plot_event_handlers import (
     MatplotlibInteractionHandler,
 )
-
-
-import logging
+from badger.routine import Routine
+from badger.utils import BlockSignalsContext
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +54,7 @@ class PlottingArea(QWidget):
         n_grid: int,
         requires_rebuild: bool = False,
         interval: int = 500,  # Interval in milliseconds
-    ):
+    ) -> None:
         logger.debug("Updating plot in PlottingArea")
 
         # Check if the plot was updated recently
@@ -90,28 +85,29 @@ class PlottingArea(QWidget):
 
             layout = self.layout()
 
-            if layout is not None:
-                with BlockSignalsContext(layout):
-                    # Clear the existing layout (remove previous plot if any)
-                    clear_layout(layout)
+            with BlockSignalsContext(layout):
+                # Clear the existing layout (remove previous plot if any)
+                clear_layout(layout)
 
-                    with MatplotlibFigureContext(fig, ax) as (fig, ax):
-                        # Create a new figure and canvas
-                        canvas = FigureCanvas(fig)
-                        toolbar = NavigationToolbar(canvas, self)
+                with MatplotlibFigureContext(fig, ax) as (fig, ax):
+                    # Create a new figure and canvas
+                    canvas = FigureCanvas(fig)
+                    toolbar = NavigationToolbar(canvas, self)
 
-                        variables = parameters["variables"]
+                    variables = parameters["variables"]
 
-                        handler = MatplotlibInteractionHandler(
-                            canvas, parameters, routine, variables, update_extension
-                        )
-                        handler.connect_events()
+                    handler = MatplotlibInteractionHandler(
+                        canvas,
+                        parameters,  # pyright: ignore[reportArgumentType]
+                        routine,
+                        variables,
+                        update_extension,
+                    )
+                    handler.connect_events()
 
-                        # Add the new canvas to the layout
-                        layout.addWidget(canvas)
-                        layout.addWidget(toolbar)
-            else:
-                raise HandledException(ValueError, "Layout is None and is not updated")
+                    # Add the new canvas to the layout
+                    layout.addWidget(canvas)
+                    layout.addWidget(toolbar)
         except HandledException as he:
             raise he
         except Exception as e:
