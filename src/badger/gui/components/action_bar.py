@@ -1,8 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout
-from PyQt5.QtWidgets import QToolButton, QMenu, QAction
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import pyqtSignal, QSize
 from importlib import resources
+
+from PyQt5.QtCore import QSize, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtWidgets import QAction, QHBoxLayout, QMenu, QToolButton, QWidget
+
 from badger.gui.utils import create_button
 from badger.gui.windows.docs_window import BadgerDocsWindow
 
@@ -101,12 +102,12 @@ class BadgerActionBar(QWidget):
     sig_edit_checkpoint = pyqtSignal()
     sig_load_checkpoint = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         def load_internal_icon(name: str) -> QIcon:
             icon_ref = resources.files(__package__) / f"../images/{name}"
             with resources.as_file(icon_ref) as icon_path:

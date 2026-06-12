@@ -361,7 +361,7 @@ class BadgerHomePage(QWidget):
             return
 
         # otherwise, open the template
-        self.routine_editor.load_template_yaml(False, template_path=path)
+        self.routine_editor.load_template_yaml(template_path=path)
         self.status_bar.set_summary(f"Current template {path}")
         return
 

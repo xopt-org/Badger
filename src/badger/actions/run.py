@@ -1,19 +1,25 @@
 import logging
 import os
+import signal
 import sys
 import time
-import signal
-from typing import Any
+from typing import Any, TypedDict
 
 from pandas import DataFrame
 
-from badger.utils import curr_ts
 from badger.core import run_routine as run
+from badger.errors import BadgerRunTerminated
 from badger.routine import Routine
 from badger.settings import init_settings
-from badger.errors import BadgerRunTerminated
+from badger.utils import curr_ts
 
 logger = logging.getLogger(__name__)
+
+
+class Storage(TypedDict):
+    states: Any
+    ts_last_dump: float | None
+    paused: bool
 
 
 def run_n_archive(
@@ -31,7 +37,7 @@ def run_n_archive(
         return
 
     # Store system states and other stuff
-    storage: dict[str, Any] = {
+    storage: Storage = {
         "states": None,
         "ts_last_dump": None,
         "paused": False,
@@ -92,7 +98,7 @@ def run_n_archive(
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
 
-    def states_ready(states: Any) -> None:
+    def states_ready(states) -> None:
         storage["states"] = states
 
     try:

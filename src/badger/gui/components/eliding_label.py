@@ -1,8 +1,12 @@
 # https://stackoverflow.com/a/67628976/4263605
-from PyQt5 import QtCore, QtWidgets, QtGui
+from typing import Any
+
+from PyQt5.QtCore import QPoint, Qt, pyqtSignal
+from PyQt5.QtGui import QFontMetrics, QPainter, QPaintEvent, QResizeEvent, QTextLayout
+from PyQt5.QtWidgets import QLabel, QSizePolicy, QWidget
 
 
-class ElidingLabel(QtWidgets.QLabel):
+class ElidingLabel(QLabel):
     """Label with text elision.
 
     QLabel which will elide text too long to fit the widget.  Based on:
@@ -36,19 +40,22 @@ class ElidingLabel(QtWidgets.QLabel):
 
     """
 
-    elision_changed = QtCore.pyqtSignal(bool)
+    elision_changed = pyqtSignal(bool)
 
-    def __init__(self, text="", mode=QtCore.Qt.ElideMiddle, **kwargs):
+    def __init__(
+        self,
+        text: str = "",
+        mode: Qt.TextElideMode = Qt.ElideMiddle,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
 
         self._mode = mode
         self.is_elided = False
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
-        )
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.setText(text)
 
-    def setText(self, text):
+    def setText(self, text: str) -> None:
         self._contents = text
 
         # This line set for testing.  Its value is the return value of
@@ -59,20 +66,20 @@ class ElidingLabel(QtWidgets.QLabel):
 
         self.update()
 
-    def text(self):
+    def text(self) -> str:
         return self._contents
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         super().paintEvent(event)
 
         did_elide = False
 
-        painter = QtGui.QPainter(self)
+        painter = QPainter(self)
         font_metrics = painter.fontMetrics()
         text_width = font_metrics.horizontalAdvance(self.text())
 
         # layout phase
-        text_layout = QtGui.QTextLayout(self._contents, painter.font())
+        text_layout = QTextLayout(self._contents, painter.font())
         text_layout.beginLayout()
 
         while True:
@@ -87,13 +94,11 @@ class ElidingLabel(QtWidgets.QLabel):
                 self._elided_line = font_metrics.elidedText(
                     self._contents, self._mode, self.width()
                 )
-                painter.drawText(
-                    QtCore.QPoint(0, font_metrics.ascent()), self._elided_line
-                )
+                painter.drawText(QPoint(0, font_metrics.ascent()), self._elided_line)
                 did_elide = line.isValid()
                 break
             else:
-                line.draw(painter, QtCore.QPoint(0, 0))
+                line.draw(painter, QPoint(0, 0))
 
         text_layout.endLayout()
 
@@ -102,20 +107,20 @@ class ElidingLabel(QtWidgets.QLabel):
             self.elision_changed.emit(did_elide)
 
 
-class SimpleElidedLabel(QtWidgets.QLabel):
-    def __init__(self, text="", parent=None):
+class SimpleElidedLabel(QLabel):
+    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
         super(SimpleElidedLabel, self).__init__(parent)
         self._text = text
 
-    def setText(self, text):
+    def setText(self, text: str) -> None:
         self._text = text
         super(SimpleElidedLabel, self).setText(self.elidedText())
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super(SimpleElidedLabel, self).setText(self.elidedText())
         super(SimpleElidedLabel, self).resizeEvent(event)
 
-    def elidedText(self):
-        metrics = QtGui.QFontMetrics(self.font())
-        elided = metrics.elidedText(self._text, QtCore.Qt.ElideRight, self.width())
+    def elidedText(self) -> str:
+        metrics = QFontMetrics(self.font())
+        elided = metrics.elidedText(self._text, Qt.ElideRight, self.width())
         return elided

@@ -1,34 +1,32 @@
 from __future__ import print_function
-import os
+
 import json
+import os
+from typing import Callable
 
+from badger.logger.event import Events, Solution
 from badger.logger.observer import _Tracker
-from badger.logger.event import Events
 from badger.logger.util import Colours
-
-
-def _get_default_logger(verbose):
-    return ScreenLogger(verbose=verbose)
 
 
 class ScreenLogger(_Tracker):
     _default_cell_size = 10
     _default_precision = 4
 
-    def __init__(self, verbose=2):
+    def __init__(self, verbose: int = 2) -> None:
         self._verbose = verbose
-        self._header_length = None
-        super(ScreenLogger, self).__init__()
+        self._header_length: int | None = None
+        super().__init__()
 
     @property
-    def verbose(self):
+    def verbose(self) -> int:
         return self._verbose
 
     @verbose.setter
-    def verbose(self, v):
+    def verbose(self, v: int) -> None:
         self._verbose = v
 
-    def _format_number(self, x):
+    def _format_number(self, x: int | float) -> str:
         if isinstance(x, int):
             s = "{x:< {s}}".format(
                 x=x,
@@ -48,16 +46,20 @@ class ScreenLogger(_Tracker):
                 return s[: self._default_cell_size - 3] + "..."
         return s
 
-    def _format_key(self, key):
+    def _format_key(self, key: str) -> str:
         s = "{key:^{s}}".format(key=key, s=self._default_cell_size)
         if len(s) > self._default_cell_size:
             return s[: self._default_cell_size - 3] + "..."
         return s
 
-    def _step(self, solution, colour=Colours.black):
+    def _step(
+        self,
+        solution: Solution,
+        colour: Callable[[str], str] = Colours.black,
+    ) -> str:
         # solution: (x: 1d array, y: 1d array, c: 1d array, s: 1d array, is_optimal: bool,
         #            vars: str list, obses: str list, cons: str list, stas: str list)
-        cells = []
+        cells: list[str] = []
 
         cells.append(self._format_number(self._iterations + 1))
 
@@ -75,7 +77,10 @@ class ScreenLogger(_Tracker):
 
         return "| " + " | ".join(map(colour, cells)) + " |"
 
-    def _header(self, solution):
+    def _header(
+        self,
+        solution: Solution,
+    ) -> str:
         cells = []
         cells.append(self._format_key("iter"))
 
@@ -91,14 +96,21 @@ class ScreenLogger(_Tracker):
         for sta in solution[8]:
             cells.append(self._format_key(sta))
 
-        line = "| " + " | ".join(cells) + " |"
+        line: str = "| " + " | ".join(cells) + " |"
         self._header_length = len(line)
         return line + "\n" + ("-" * self._header_length)
 
-    def _is_new_max(self, solution):
+    def _is_new_max(
+        self,
+        solution: Solution,
+    ) -> bool:
         return solution[4]
 
-    def update(self, event, solution):
+    def update(
+        self,
+        event: Events,
+        solution: Solution,
+    ) -> None:
         if event == Events.OPTIMIZATION_START:
             line = self._header(solution) + "\n"
         elif event == Events.OPTIMIZATION_STEP:
@@ -109,15 +121,19 @@ class ScreenLogger(_Tracker):
                 colour = Colours.purple if is_new_max else Colours.black
                 line = self._step(solution, colour=colour) + "\n"
         elif event == Events.OPTIMIZATION_END:
-            line = "=" * self._header_length + "\n"
+            line = "=" * (self._header_length or 0) + "\n"
 
         if self._verbose:
             print(line, end="")
         self._update_tracker(event, solution)
 
 
+def _get_default_logger(verbose: int) -> ScreenLogger:
+    return ScreenLogger(verbose=verbose)
+
+
 class JSONLogger(_Tracker):
-    def __init__(self, path, reset=True):
+    def __init__(self, path: str, reset: bool = True) -> None:
         self._path = path if path[-5:] == ".json" else path + ".json"
         if reset:
             try:
@@ -126,7 +142,7 @@ class JSONLogger(_Tracker):
                 pass
         super(JSONLogger, self).__init__()
 
-    def update(self, event, solution):
+    def update(self, event: Events, solution: Solution) -> None:
         if event == Events.OPTIMIZATION_STEP:
             data = {
                 "x": solution[0],

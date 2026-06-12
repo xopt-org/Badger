@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QMessageBox
-import traceback
 import sys
+import traceback
+
+from PyQt5.QtWidgets import QMessageBox
 
 
 class BadgerError(Exception):

@@ -91,8 +91,8 @@ class PlottingArea(QWidget):
 
                 with MatplotlibFigureContext(fig, ax) as (fig, ax):
                     # Create a new figure and canvas
-                    canvas = FigureCanvas(fig)
-                    toolbar = NavigationToolbar(canvas, self)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
+                    toolbar = NavigationToolbar(canvas, self)  # type: ignore[no-untyped-call]
 
                     variables = parameters["variables"]
 

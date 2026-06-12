@@ -1,59 +1,52 @@
+import logging
 import time
 from typing import Optional
 
-from PyQt5.QtWidgets import (
-    QWidget,
-    QSizePolicy,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QPushButton,
-    QComboBox,
-    QCheckBox,
-    QLabel,
-    QGroupBox,
-    QTabWidget,
-)
-
-from PyQt5.QtCore import Qt
-from badger.gui.components.plot_event_handlers import (
-    MatplotlibInteractionHandler,
-)
-from badger.gui.components.pf_viewer.types import PFUI, ConfigurableOptions
-from badger.routine import Routine
-
-from badger.utils import BlockSignalsContext, create_archive_run_filename
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.ticker import MaxNLocator
-from matplotlib.backends.backend_qt import (
-    NavigationToolbar2QT as NavigationToolbar,
-)
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.colors import Normalize
+from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 from torch import Tensor
-
 from xopt.generators.bayesian.mobo import MOBOGenerator
 
-from badger.gui.components.pf_viewer.types import (
-    PFUIWidgets,
-    PFUILayouts,
-)
-
 from badger.gui.components.analysis_widget import AnalysisWidget
-
 from badger.gui.components.extension_utilities import (
     HandledException,
     MatplotlibFigureContext,
-    signal_logger,
-    requires_update,
-    clear_tabs,
     clear_layout,
+    clear_tabs,
+    requires_update,
+    signal_logger,
 )
-
-import logging
+from badger.gui.components.pf_viewer.types import (
+    PFUI,
+    ConfigurableOptions,
+    PFUILayouts,
+    PFUIWidgets,
+)
+from badger.gui.components.plot_event_handlers import (
+    MatplotlibInteractionHandler,
+)
+from badger.routine import Routine
+from badger.utils import BlockSignalsContext, create_archive_run_filename
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +66,8 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 
 
 class ParetoFrontWidget(AnalysisWidget):
-    generator: MOBOGenerator  # type: ignore
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS  # type: ignore
+    generator: MOBOGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
 
     hypervolume_history: pd.DataFrame = pd.DataFrame()
     pf_1: Optional[Tensor] = None
@@ -164,7 +157,7 @@ class ParetoFrontWidget(AnalysisWidget):
         # Update the last updated time
         self.last_updated = time.time()
 
-    def setup_connections(self):
+    def setup_connections(self) -> None:
         self.ui["components"]["update"].clicked.connect(
             lambda: signal_logger("Update button clicked")(
                 lambda: self.on_button_click()
@@ -190,7 +183,7 @@ class ParetoFrontWidget(AnalysisWidget):
             lambda: signal_logger("Sample checkbox changed")(lambda: self.update_ui())()
         )
 
-    def create_ui(self):
+    def create_ui(self) -> None:
         update_button = QPushButton("Update")
         variable_1_combo = QComboBox()
         variable_1_combo.setMinimumWidth(100)
@@ -324,7 +317,7 @@ class ParetoFrontWidget(AnalysisWidget):
             variable_1_combo.setCurrentIndex(self.parameters["variable_1"])
             variable_2_combo.setCurrentIndex(self.parameters["variable_2"])
 
-    def on_tab_change(self):
+    def on_tab_change(self) -> None:
         self.parameters["plot_tab"] = self.ui["components"]["plot"][
             "pareto"
         ].currentIndex()
@@ -358,7 +351,7 @@ class ParetoFrontWidget(AnalysisWidget):
         # Update the plot
         self.update_pareto_front_plot()
 
-    def on_variable_change(self):
+    def on_variable_change(self) -> None:
         plot_tab = self.parameters["plot_tab"]
         if plot_tab == 0:
             self.parameters["variable_1"] = self.ui["components"]["variables"][
@@ -379,15 +372,15 @@ class ParetoFrontWidget(AnalysisWidget):
 
         self.update_pareto_front_plot()
 
-    def on_button_click(self):
+    def on_button_click(self) -> None:
         self.update_extension(self.routine, True)
 
-    def update_ui(self):
+    def update_ui(self) -> None:
         self.update_plots(requires_rebuild=True)
 
     def update_pareto_front_plot(
         self,
-    ):
+    ) -> None:
         self.update_pareto_front()
 
         plot_tab_widget = self.ui["components"]["plot"]["pareto"]
@@ -399,8 +392,8 @@ class ParetoFrontWidget(AnalysisWidget):
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
-                    canvas = FigureCanvas(fig)
-                    toolbar = NavigationToolbar(canvas, self)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
+                    toolbar = NavigationToolbar(canvas, self)  # type: ignore[no-untyped-call]
 
                     variables = self.parameters["variables"]
 
@@ -425,14 +418,14 @@ class ParetoFrontWidget(AnalysisWidget):
                     plot_tab_widget.addTab(widget, "Variable Space")
                 except ValueError:
                     logger.error("No data points available for Variable Space")
-                    blank_canvas = FigureCanvas(fig)
+                    blank_canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_tab_widget.addTab(blank_canvas, "Variable Space")
 
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
-                    canvas = FigureCanvas(fig)
-                    toolbar = NavigationToolbar(canvas, self)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
+                    toolbar = NavigationToolbar(canvas, self)  # type: ignore[no-untyped-call]
 
                     variables = self.parameters["objectives"]
 
@@ -457,7 +450,7 @@ class ParetoFrontWidget(AnalysisWidget):
                     plot_tab_widget.addTab(widget, "Objective Space")
                 except ValueError:
                     logger.error("No data points available for Objective Space")
-                    blank_canvas = FigureCanvas(fig)
+                    blank_canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_tab_widget.addTab(blank_canvas, "Objective Space")
 
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
@@ -467,7 +460,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
     def update_hypervolume_plot(
         self,
-    ):
+    ) -> None:
         self.update_hypervolume()
 
         plot_hypervolume = self.ui["components"]["plot"]["hypervolume"]
@@ -478,14 +471,14 @@ class ParetoFrontWidget(AnalysisWidget):
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_hypervolume_plot(fig, ax)
-                    canvas = FigureCanvas(fig)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_hypervolume.addWidget(canvas)
                 except ValueError:
                     logger.error("No data points available for Hypervolume")
-                    blank_canvas = FigureCanvas(fig)
+                    blank_canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_hypervolume.addWidget(blank_canvas)
 
-    def create_pareto_plot(self, fig: Figure, ax: Axes):
+    def create_pareto_plot(self, fig: Figure, ax: Axes) -> tuple[Figure, Axes]:
         current_tab = self.parameters["plot_tab"]
         show_only_pareto_front = self.ui["components"]["options"][
             "show_only_pareto_front"
@@ -590,15 +583,15 @@ class ParetoFrontWidget(AnalysisWidget):
 
         return fig, ax
 
-    def create_hypervolume_plot(self, fig: Figure, ax: Axes):
+    def create_hypervolume_plot(self, fig: Figure, ax: Axes) -> tuple[Figure, Axes]:
         data_points = self.hypervolume_history
         if len(data_points) == 0:
             raise HandledException(
                 ValueError, "No data points available for Hypervolume"
             )
         # Extract the x and y coordinates from the data points
-        x = data_points["iteration"].values
-        y = data_points["hypervolume"].values
+        x = data_points["iteration"].values.astype(float)
+        y = data_points["hypervolume"].values.astype(float)
         # Create a scatter plot
         ax.plot(
             x,
@@ -616,7 +609,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
         return fig, ax
 
-    def update_hypervolume(self):
+    def update_hypervolume(self) -> None:
         # Get the hypervolume from the generator
         self.generator.update_pareto_front_history()
         pareto_front_history_df = self.generator.pareto_front_history
@@ -626,7 +619,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
         self.hypervolume_history = pareto_front_history_df
 
-    def update_pareto_front(self):
+    def update_pareto_front(self) -> None:
         pf_1, pf_2, pf_mask, _ = self.generator.get_pareto_front_and_hypervolume()
 
         if pf_mask is None or pf_1 is None or pf_2 is None:

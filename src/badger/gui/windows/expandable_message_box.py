@@ -1,20 +1,25 @@
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QFontDatabase, QTextOption
 from PyQt5.QtWidgets import (
     QDialog,
-    QMessageBox,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QTextEdit,
+    QVBoxLayout,
 )
-from PyQt5.QtGui import QTextOption, QFont, QFontDatabase
-from PyQt5.QtCore import Qt
 
 
 class ExpandableMessageBox(QDialog):
     def __init__(
-        self, icon=None, title="Message", text="", detailedText="", parent=None
-    ):
+        self,
+        icon: QMessageBox.Icon | None = None,
+        title: str = "Message",
+        text: str = "",
+        detailedText: str = "",
+        parent: QDialog | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
 
@@ -71,7 +76,7 @@ class ExpandableMessageBox(QDialog):
         self.setWindowTitle(title)
         self.resize(420, 250)
 
-    def toggle_details(self):
+    def toggle_details(self) -> None:
         if self.detailedTextWidget.isVisible():
             self.detailedTextWidget.setVisible(False)
             self.toggleButton.setText("Show Details")
@@ -79,13 +84,13 @@ class ExpandableMessageBox(QDialog):
             self.detailedTextWidget.setVisible(True)
             self.toggleButton.setText("Hide Details")
 
-    def setText(self, text):
+    def setText(self, text: str) -> None:
         self.textLabel.setText(text)
 
-    def setDetailedText(self, detailedText):
+    def setDetailedText(self, detailedText: str) -> None:
         self.detailedTextWidget.setText(detailedText)
 
-    def setIcon(self, icon: QMessageBox.Icon):
+    def setIcon(self, icon: QMessageBox.Icon) -> None:
         # This maps the QMessageBox icons to the QDialog
         iconMap = {
             QMessageBox.Icon.Information: QMessageBox.standardIcon(

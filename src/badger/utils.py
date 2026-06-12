@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from importlib import metadata
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional, TypedDict
 
 import yaml
 from pandas import DataFrame
@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import QLayout, QWidget
 from badger.errors import BadgerLoadConfigError
 
 if TYPE_CHECKING:
+    from xopt.generators import Generator
+
     from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
@@ -55,31 +57,33 @@ class BlockSignalsContext:
 
 # https://stackoverflow.com/a/39681672/4263605
 # https://github.com/yaml/pyyaml/issues/234#issuecomment-765894586
-class Dumper(yaml.Dumper):
-    def increase_indent(self, flow: bool = False, indentless: bool = False) -> Any:
-        return super(Dumper, self).increase_indent(flow, False)
+class Dumper(yaml.Dumper):  # type: ignore[misc]
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+        super(Dumper, self).increase_indent(flow, False)
 
 
 def get_yaml_string(content: Any) -> str:
     if content is None:
         return ""
 
-    return yaml.dump(content, Dumper=Dumper, default_flow_style=False, sort_keys=False)
+    return str(
+        yaml.dump(content, Dumper=Dumper, default_flow_style=False, sort_keys=False)
+    )
 
 
 def yprint(content: Any) -> None:
     print(get_yaml_string(content), end="")
 
 
-def norm(x: Any, lb: Any, ub: Any) -> Any:
+def norm(x: float, lb: float, ub: float) -> float:
     return (x - lb) / (ub - lb)
 
 
-def denorm(x: Any, lb: Any, ub: Any) -> Any:
+def denorm(x: float, lb: float, ub: float) -> float:
     return (1 - x) * lb + x * ub
 
 
-def config_list_to_dict(config_list: list[dict[str, Any]] | None) -> dict[str, Any]:
+def config_list_to_dict(config_list: list[dict[str, Any]]) -> dict[str, Any]:
     if not config_list:
         return {}
 
@@ -91,8 +95,8 @@ def config_list_to_dict(config_list: list[dict[str, Any]] | None) -> dict[str, A
     return book
 
 
-def load_config(fname: str | None) -> Any:
-    configs = None
+def load_config(fname: str | None) -> dict[str, Any] | None:
+    configs: dict[str, Any] | None = None
 
     if fname is None:
         return configs
@@ -136,7 +140,7 @@ def merge_params(
     return merged_params
 
 
-def range_to_str(vranges: list[dict[str, Any]]) -> list[dict[str, str]]:
+def range_to_str(vranges: list[dict[str, tuple[float, float]]]) -> list[dict[str, str]]:
     # Transfer the range list to a string for better printing
     vranges_str: list[dict[str, str]] = []
     for var_dict in vranges:
@@ -193,7 +197,12 @@ def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") 
     return fname
 
 
-def get_header(routine: Any) -> list[str]:
+def get_header(routine: "Routine") -> list[str]:
+    obj_names: list[str] = []
+    var_names: list[str] = []
+    con_names: list[str] = []
+    sta_names: list[str] = []
+
     try:
         obj_names = routine.vocs.objective_names
     except Exception:
@@ -214,8 +223,10 @@ def get_header(routine: Any) -> list[str]:
     return obj_names + con_names + var_names + sta_names
 
 
-def run_names_to_dict(run_names: list[str]) -> dict[str, Any]:
-    runs: dict[str, Any] = {}
+def run_names_to_dict(
+    run_names: list[str],
+) -> dict[str, dict[str, dict[str, list[str]]]]:
+    runs: dict[str, dict[str, dict[str, list[str]]]] = {}
     for name in run_names:
         name = os.path.basename(
             name
@@ -266,8 +277,14 @@ def convert_str_to_value(str: str) -> Any:
     return str
 
 
-def parse_rule(rule: str | dict[str, Any]) -> dict[str, str]:
-    if type(rule) is str:
+class Rule(TypedDict):
+    direction: str
+    filter: str
+    reducer: str
+
+
+def parse_rule(rule: Rule | str) -> Rule:
+    if isinstance(rule, str):
         return {
             "direction": rule,
             "filter": "ignore_nan",
@@ -288,14 +305,10 @@ def parse_rule(rule: str | dict[str, Any]) -> dict[str, str]:
     except Exception:
         reducer = "percentile_80"
 
-    return {
-        "direction": direction,
-        "filter": filter,
-        "reducer": reducer,
-    }
+    return Rule(direction=direction, filter=filter, reducer=reducer)
 
 
-def get_value_or_none(book: dict[Any, Any], key: Any) -> Any:
+def get_value_or_none(book: dict[str, Any], key: str) -> Any:
     try:
         value = book[key]
     except KeyError:
@@ -304,7 +317,7 @@ def get_value_or_none(book: dict[Any, Any], key: Any) -> Any:
     return value
 
 
-def dump_state(dump_file: str | None, generator: Any, data: DataFrame) -> None:
+def dump_state(dump_file: str | None, generator: "Generator", data: DataFrame) -> None:
     """dump data to file"""
     if dump_file is not None:
         output = state_to_dict(generator, data)
@@ -314,7 +327,7 @@ def dump_state(dump_file: str | None, generator: Any, data: DataFrame) -> None:
 
 
 def state_to_dict(
-    generator: Any, data: DataFrame, include_data: bool = True
+    generator: "Generator", data: DataFrame, include_data: bool = True
 ) -> dict[str, Any]:
     # dump data to dict with config metadata
     output = {
@@ -331,7 +344,7 @@ def state_to_dict(
 
 
 # https://stackoverflow.com/a/18472142
-def strtobool(val: Any) -> Any:
+def strtobool(val: str) -> bool:
     """Convert a string representation of truth to true (1) or false (0).
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
     are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
@@ -340,7 +353,7 @@ def strtobool(val: Any) -> Any:
     try:
         val = val.lower()
     except AttributeError:
-        return val
+        return bool(val)
 
     if val in ("y", "yes", "t", "true", "on", "1"):
         return True

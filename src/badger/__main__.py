@@ -2,14 +2,14 @@ import argparse
 import logging
 
 from badger.actions import show_info
-from badger.actions.doctor import self_check
-from badger.actions.routine import show_routine
-from badger.actions.generator import show_generator
-from badger.actions.env import show_env
-from badger.actions.install import plugin_install
-from badger.actions.uninstall import plugin_remove
-from badger.actions.intf import show_intf
 from badger.actions.config import config_settings
+from badger.actions.doctor import self_check
+from badger.actions.env import show_env
+from badger.actions.generator import show_generator
+from badger.actions.install import plugin_install
+from badger.actions.intf import show_intf
+from badger.actions.routine import show_routine
+from badger.actions.uninstall import plugin_remove
 from badger.log import setup_logging
 
 logger = logging.getLogger("badger")

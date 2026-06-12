@@ -3,13 +3,12 @@ observers...
 """
 
 from datetime import datetime
-from typing import Any
 
-from badger.logger.event import Events
+from badger.logger.event import Events, Solution
 
 
 class Observer:
-    def update(self, event: Any, solution: Any) -> None:
+    def update(self, event: Events, solution: Solution) -> None:
         raise NotImplementedError
 
 
@@ -20,7 +19,7 @@ class _Tracker(object):
         self._start_time: datetime | None = None
         self._previous_time: datetime | None = None
 
-    def _update_tracker(self, event: Any, solution: Any) -> None:
+    def _update_tracker(self, event: Events, solution: Solution) -> None:
         if event == Events.OPTIMIZATION_STEP:
             self._iterations += 1
 

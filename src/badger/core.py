@@ -1,15 +1,14 @@
 import time
 from typing import Any, Callable
 
-from pandas import concat, DataFrame
+from pandas import DataFrame, concat
+from xopt.vocs import select_best
 
 from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
-from badger.logger.event import Events
+from badger.logger.event import Events, Solution
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
-
-from xopt.vocs import select_best
 
 
 def check_run_status(active_callback: Callable[[], int]) -> None:
@@ -24,25 +23,16 @@ def check_run_status(active_callback: Callable[[], int]) -> None:
             break
 
 
-def convert_to_solution(
-    result: DataFrame, routine: Routine
-) -> tuple[
-    list[Any],
-    list[Any],
-    list[Any],
-    list[Any],
-    bool,
-    list[str],
-    list[str],
-    list[str],
-    list[str],
-]:
+def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
     vocs = routine.vocs
+
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         if best_idx.size > 0:
             best_idx = int(best_idx[0])  # convert numpy array to int
-            if best_idx != len(routine.data) - 1:
+            if routine.data is None:
+                is_optimal = False
+            elif best_idx != len(routine.data) - 1:
                 is_optimal = False
             else:
                 is_optimal = True
@@ -58,7 +48,7 @@ def convert_to_solution(
     cons = list(result[vocs.constraint_names].to_numpy()[0])
     stas = list(result[vocs.observable_names].to_numpy()[0])
 
-    solution = (
+    solution = Solution(
         vars,
         objs,
         cons,
@@ -132,6 +122,7 @@ def run_routine(
         routine.vocs.constraint_names,
         routine.vocs.observable_names,
     )
+    solution_meta = Solution(*solution_meta)
     opt_logger.update(Events.OPTIMIZATION_START, solution_meta)
 
     # evaluate initial points:

@@ -40,6 +40,8 @@ dev = [
     "pytest-qt",
     "pytest-mock",
     "pyqt5-stubs",
+    "pandas-stubs",
+    "types-requests",
     "mypy",
 ]
 
@@ -51,12 +53,13 @@ Documentation = "https://xopt-org.github.io/Badger/"
 [project.scripts]
 badger = "badger.__main__:main"
 
-[project.license]
-file = "LICENSE"
 
-[options]
-zip_safe = false
-include_package_data = true
+[project.license]
+file = "LICENSE" # Deprecated as per PEP 639
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

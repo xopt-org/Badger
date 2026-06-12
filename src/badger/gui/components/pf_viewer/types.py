@@ -1,12 +1,13 @@
 from typing import TypedDict
 
 from PyQt5.QtWidgets import (
-    QRadioButton,
+    QCheckBox,
     QComboBox,
-    QVBoxLayout,
-    QHBoxLayout,
     QGridLayout,
+    QHBoxLayout,
+    QPushButton,
     QTabWidget,
+    QVBoxLayout,
 )
 
 
@@ -26,7 +27,7 @@ class ConfigurableOptions(TypedDict):
 
 
 class PFOptionsUIWidgets(TypedDict):
-    show_only_pareto_front: QRadioButton
+    show_only_pareto_front: QCheckBox
 
 
 class PFVariablesUIWidgets(TypedDict):
@@ -42,7 +43,7 @@ class PFPlotUIWidgets(TypedDict):
 class PFUIWidgets(TypedDict):
     variables: PFVariablesUIWidgets
     options: PFOptionsUIWidgets
-    update: QRadioButton
+    update: QPushButton
     plot: PFPlotUIWidgets
 
 

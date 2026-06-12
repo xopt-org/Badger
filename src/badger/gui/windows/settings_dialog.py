@@ -1,26 +1,26 @@
 import logging
 import os
+from typing import cast
+
+from PyQt5.QtCore import Qt
 
 # from PyQt5.QtCore import QRegExp
 # from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import (
+    QApplication,
     QComboBox,
-    QGridLayout,
-    QVBoxLayout,
-    QWidget,
-    QLabel,
-    QLineEdit,
-)
-from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QApplication,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import Qt
-from qdarkstyle import load_stylesheet, DarkPalette, LightPalette
-from badger.settings import init_settings
-from badger.log import get_logging_manager
+from qdarkstyle import DarkPalette, LightPalette, load_stylesheet
 
+from badger.log import get_logging_manager
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class BadgerSettingsDialog(QDialog):
         "dark": 2,
     }
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None = None) -> None:
         logger.info("Initializing BadgerSettingsDialog.")
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
@@ -47,7 +47,7 @@ class BadgerSettingsDialog(QDialog):
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         logger.info("Initializing settings dialog UI.")
         self.setWindowTitle("Badger settings")
         self.setMinimumWidth(480)
@@ -178,20 +178,24 @@ class BadgerSettingsDialog(QDialog):
 
         vbox.addWidget(widget_settings)
 
-        self.btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)  # type: ignore
+        self.btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
         vbox.addStretch(1)
         vbox.addWidget(self.btns)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         logger.info("Configuring logic for settings dialog.")
         # self.cb_theme.currentIndexChanged.connect(self.select_theme)
         self.btns.accepted.connect(self.apply_settings)
         self.btns.rejected.connect(self.restore_settings)
 
-    def set_theme(self, theme):
+    def set_theme(self, theme: str) -> None:
         logger.info(f"Setting theme: {theme}")
         app = QApplication.instance()
+        if app is None:
+            logger.warning("No QApplication instance found. Cannot set theme.")
+            return
+        app = cast(QApplication, app)
         if theme == "dark":
             app.setStyleSheet(load_stylesheet(palette=DarkPalette))
         elif theme == "light":
@@ -199,14 +203,14 @@ class BadgerSettingsDialog(QDialog):
         else:
             app.setStyleSheet("")
 
-    def select_theme(self, i):
+    def select_theme(self, i: int) -> None:
         logger.info(f"Theme selected: {self.theme_list[i]}")
         theme = self.theme_list[i]
         self.set_theme(theme)
         # Update the internal settings
         self.config_singleton.write_value("BADGER_THEME", theme)
 
-    def apply_settings(self):
+    def apply_settings(self) -> None:
         logger.info("Applying settings.")
         self.accept()
         self.config_singleton.write_value(
@@ -251,7 +255,7 @@ class BadgerSettingsDialog(QDialog):
             logging_manager.update_logfile_path(new_logfile_path)
             logger.info(f"Runtime: Logs now writing to {new_logfile_path}")
 
-    def restore_settings(self):
+    def restore_settings(self) -> None:
         logger.info("Restoring previous settings.")
         # Reset theme if needed
         theme_curr = self.config_singleton.read_value("BADGER_THEME")

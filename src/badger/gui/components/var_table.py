@@ -1,40 +1,39 @@
+import logging
+import traceback
 from functools import partial
 from importlib import resources
-import traceback
 from typing import Any, cast
-from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QCheckBox,
-    QMessageBox,
-    QAbstractItemView,
-    QPushButton,
-    QWidget,
-    QHBoxLayout,
-    QMenu,
-    QGridLayout,
-    QLabel,
-    QDialog,
-)
-from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
+
+from gest_api.vocs import ContinuousVariable
+from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
 from PyQt5.QtGui import (
     QColor,
-    QIcon,
-    QGuiApplication,
-    QDropEvent,
-    QDragMoveEvent,
     QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QGuiApplication,
+    QIcon,
 )
-from badger.gui.components.robust_spinbox import RobustSpinBox
+from PyQt5.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QWidget,
+)
 
 from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
+from badger.gui.components.robust_spinbox import RobustSpinBox
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
-
-from gest_api.vocs import ContinuousVariable
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -111,14 +110,14 @@ class VariableTable(QTableWidget):
         self.config_logic()
         self.customContextMenuRequested.connect(self.display_context_menu)
 
-    def update_vocs(self):
+    def update_vocs(self) -> None:
         """
         Emit the data_changed signal to notify that the VOCS has been updated.
         """
         logging.debug("Emitting data_changed signal from VariableTable")
         self.data_changed.emit()
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         hheader = self.horizontalHeader()
         if hheader:
             hheader.sectionClicked.connect(self.header_clicked)
@@ -133,7 +132,7 @@ class VariableTable(QTableWidget):
                 self.previous_values[(row, column)] = item.text()
         super().setItem(row, column, item)
 
-    def is_all_checked(self):
+    def is_all_checked(self) -> bool:
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item:
@@ -144,7 +143,7 @@ class VariableTable(QTableWidget):
 
         return True
 
-    def header_clicked(self, idx: int):
+    def header_clicked(self, idx: int) -> None:
         if idx:
             return
 
@@ -161,7 +160,7 @@ class VariableTable(QTableWidget):
             item.blockSignals(False)
         self.update_selected()
 
-    def update_bounds(self):
+    def update_bounds(self) -> None:
         for i in range(self.rowCount() - 1):
             widget = self.item(i, 1)
             if not widget:
@@ -182,7 +181,7 @@ class VariableTable(QTableWidget):
             self.validate_row(i)  # Validate the row after updating bounds
         self.data_changed.emit()
 
-    def validate_row(self, row: int):
+    def validate_row(self, row: int) -> None:
         """
         Validate the bounds for a given row. If invalid, apply a red border to the row.
         """
@@ -211,7 +210,7 @@ class VariableTable(QTableWidget):
 
     def set_bounds(
         self, variables: dict[str, tuple[float, float]], signal: bool = True
-    ):
+    ) -> None:
         for name in variables:
             self.bounds[name] = variables[name]
 
@@ -222,7 +221,7 @@ class VariableTable(QTableWidget):
 
     def refresh_variable(
         self, name: str, bounds: tuple[float, float], hard_bounds: tuple[float, float]
-    ):
+    ) -> None:
         self.bounds[name] = bounds
 
         # Update the variable in self.variables
@@ -239,7 +238,7 @@ class VariableTable(QTableWidget):
 
         self.update_variables(self.variables, 2)
 
-    def update_selected(self):
+    def update_selected(self) -> None:
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             if not _cb:
@@ -259,21 +258,21 @@ class VariableTable(QTableWidget):
         if self.checked_only:
             self.show_checked_only()
 
-    def set_selected(self, variable_names: list[str]):
+    def set_selected(self, variable_names: list[str]) -> None:
         self.selected: dict[str, bool] = {}
         for vname in variable_names:
             self.selected[vname] = True
 
         self.update_variables(self.variables, 3)
 
-    def toggle_show_mode(self, checked_only: bool):
+    def toggle_show_mode(self, checked_only: bool) -> None:
         self.checked_only = checked_only
         if checked_only:
             self.show_checked_only()
         else:
             self.show_all()
 
-    def show_checked_only(self):
+    def show_checked_only(self) -> None:
         checked_variables: list[dict[str, tuple[float, float]]] = []
         for var in self.variables:
             name = next(iter(var))
@@ -281,7 +280,7 @@ class VariableTable(QTableWidget):
                 checked_variables.append(var)
         self.update_variables(checked_variables, 3)
 
-    def show_all(self):
+    def show_all(self) -> None:
         self.update_variables(self.variables, 3)
 
     def is_checked(self, name: str) -> bool:
@@ -315,7 +314,7 @@ class VariableTable(QTableWidget):
         self,
         variables: list[dict[str, tuple[float, float] | ContinuousVariable]],
         filtered: int = 0,
-    ):
+    ) -> None:
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
         # filtered = 2: just rerender based on check status
@@ -427,10 +426,10 @@ class VariableTable(QTableWidget):
             self.sig_sel_changed.emit()
             self.data_changed.emit()
 
-    def handle_config_button(self, var_name: str):
+    def handle_config_button(self, var_name: str) -> None:
         self.sig_var_config.emit(var_name)
 
-    def add_additional_variable(self, item: QTableWidgetItem):
+    def add_additional_variable(self, item: QTableWidgetItem) -> None:
         row = item.row()
         column = item.column()
         name = item.text()
@@ -456,7 +455,7 @@ class VariableTable(QTableWidget):
         if row == self.rowCount() - 1 and column == 1 and name != self.PLACEHOLDER_TEXT:
             self.try_insert_variable(name)
 
-    def try_insert_variable(self, name: str):
+    def try_insert_variable(self, name: str) -> None:
         idx = self.rowCount() - 1
 
         # Check that variables doesn't already exist in table
@@ -541,7 +540,7 @@ class VariableTable(QTableWidget):
         bound = self.env.get_bounds([name])[name]
         return value, bound
 
-    def add_variable(self, name: str, lb: float, ub: float):
+    def add_variable(self, name: str, lb: float, ub: float) -> None:
         var = {name: (lb, ub)}
 
         self.all_variables.append(var)
@@ -557,15 +556,15 @@ class VariableTable(QTableWidget):
 
         return variables_exported
 
-    def lock_bounds(self):
+    def lock_bounds(self) -> None:
         self.bounds_locked = True
         self.toggle_show_mode(self.checked_only)
 
-    def unlock_bounds(self):
+    def unlock_bounds(self) -> None:
         self.bounds_locked = False
         self.toggle_show_mode(self.checked_only)
 
-    def dragEnterEvent(self, e: QDragEnterEvent | None):
+    def dragEnterEvent(self, e: QDragEnterEvent | None) -> None:
         if e is None:
             return
 
@@ -579,7 +578,7 @@ class VariableTable(QTableWidget):
         else:
             e.ignore()
 
-    def dragMoveEvent(self, e: QDragMoveEvent | None):
+    def dragMoveEvent(self, e: QDragMoveEvent | None) -> None:
         if e is None:
             return
 
@@ -593,7 +592,7 @@ class VariableTable(QTableWidget):
         else:
             e.ignore()
 
-    def dropEvent(self, event: QDropEvent | None):
+    def dropEvent(self, event: QDropEvent | None) -> None:
         if event is None:
             return
 
@@ -619,7 +618,7 @@ class VariableTable(QTableWidget):
         else:
             event.ignore()
 
-    def flags(self, index):
+    def flags(self, index) -> Qt.ItemFlags:
         if not index.isValid():
             return Qt.ItemIsEnabled
         flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
@@ -627,7 +626,7 @@ class VariableTable(QTableWidget):
             flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
         return flags
 
-    def display_info(self, item: QTableWidgetItem | None):
+    def display_info(self, item: QTableWidgetItem | None) -> None:
         """
         Opens a message box displaying status info from the underlying interface about a variable.
         """
@@ -656,17 +655,17 @@ class VariableTable(QTableWidget):
         mb.exec()
 
     @staticmethod
-    def _handle_close(widget: QPushButton):
+    def _handle_close(widget: QPushButton) -> None:
         widget.close()
 
-    def copy_name(self, item: QTableWidgetItem | None):
+    def copy_name(self, item: QTableWidgetItem | None) -> None:
         if item is None:
             return
         clipboard = QGuiApplication.clipboard()
         if clipboard is not None:
             clipboard.setText(item.text())
 
-    def display_context_menu(self, pt: QPoint):
+    def display_context_menu(self, pt: QPoint) -> None:
         menu = QMenu(self)
         item = self.itemAt(pt)
         if item is None or item.text() == self.PLACEHOLDER_TEXT or item.column() != 1:
