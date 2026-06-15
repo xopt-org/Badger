@@ -476,8 +476,9 @@ class BadgerRoutinePage(QWidget):
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.set_selected_env_name(env_name)
-            self.env_box.edit_env_params.set_params_from_dict(env_params)
             self.select_env(i)
+            self.env_box.edit_env_params.set_params_from_dict(env_params)
+
         else:
             raise BadgerEnvNotFoundError(
                 f"Template environment {env_name} not found in Badger environments"
@@ -546,7 +547,9 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
         objectives = []
         status = {}
-        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        objectives_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in objectives_names_full:
             obj = {name: ["MINIMIZE"]}
             status[name] = False  # selected
@@ -579,7 +582,9 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
         constraints = []
         status = {}
-        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        constraints_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in constraints_names_full:
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
@@ -619,7 +624,7 @@ class BadgerRoutinePage(QWidget):
         observables = []
         status = {}
         observables_names_full = (
-            var_names + self.configs["observations"] + list(formulas.keys())
+            var_names + list(self.configs["observations"]) + list(formulas.keys())
         )
         for name in observables_names_full:
             obs = {name: []}
@@ -901,7 +906,9 @@ class BadgerRoutinePage(QWidget):
 
         objectives = []
         status = {}
-        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        objectives_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in objectives_names_full:
             obj = {name: ["MINIMIZE"]}
             status[name] = False  # selected
@@ -937,7 +944,9 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
         constraints = []
         status = {}
-        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        constraints_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in constraints_names_full:
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
@@ -981,7 +990,7 @@ class BadgerRoutinePage(QWidget):
         observables = []
         status = {}
         observables_names_full = (
-            var_names + self.configs["observations"] + list(formulas.keys())
+            var_names + list(self.configs["observations"]) + list(formulas.keys())
         )
         for name in observables_names_full:
             obs = {name: []}
@@ -1232,7 +1241,7 @@ class BadgerRoutinePage(QWidget):
             var_names = []  # do not show var names in observables until we have a fix to get_observables
         else:
             var_names = []
-        for name in var_names + self.configs["observations"]:
+        for name in var_names + list(self.configs["observations"]):
             obs = {name: []}
             status[name] = False  # selected
             observables.append(obs)
@@ -1269,6 +1278,9 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
+
+        if not vname_selected:
+            return
 
         try:
             # Get the current variables from the environment
@@ -1307,6 +1319,10 @@ class BadgerRoutinePage(QWidget):
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
+
+        if not vname_selected:
+            return
+
         var_curr = env.get_variables(vname_selected)
 
         # get small region around current point to sample
