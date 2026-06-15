@@ -311,7 +311,10 @@ class BadgerHomePage(QWidget):
     def init_home_page(self):
         logger.info("Initializing home page.")
         # Load the default generator
-        self.routine_editor.env_box.algo_cb.setCurrentIndex(-1)
+        # self.routine_editor.env_box.algo_cb.setCurrentIndex(-1)
+        idx = self.routine_editor.env_box.algo_cb.findText("neldermead")
+        self.routine_editor.env_box.algo_cb.setCurrentIndex(idx)
+        self.routine_editor.select_generator(idx)
 
     def go_run(self, i: int = None):
         logger.info(f"Activating run: {i}")
