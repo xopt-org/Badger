@@ -256,7 +256,7 @@ class BadgerEnvBox(QWidget):
         self.set_selected_env_name(None)
 
     def init_ui(self):
-        self.setObjectName("EnvBox")  # this is for stylesheet?
+        self.setObjectName("EnvBox")
 
         # vbox layout
         vbox = QVBoxLayout(self)
@@ -277,8 +277,8 @@ class BadgerEnvBox(QWidget):
 
         # Add a horizontal separator
         separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)  # Horizontal line
-        separator.setFrameShadow(QFrame.Sunken)  # Sunken style
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
         separator.setStyleSheet("background-color: #61748c;")
         vbox.addWidget(separator)
 
@@ -291,11 +291,11 @@ class BadgerEnvBox(QWidget):
         hbox_select_env.setContentsMargins(0, 0, 0, 0)
         hbox_select_env.setSpacing(6)
         env_lbl = QLabel("Badger Environment:")  # label
-        env_lbl.setFixedWidth(LABEL_WIDTH + 36)
+        env_lbl.setFixedWidth(LABEL_WIDTH + 52)
         env_lbl.setStyleSheet("color: darkGray;")
 
         self.env_cb = env_cb = ArrowOnlyPopupComboBox()
-        self.env_cb.setFixedWidth(LABEL_WIDTH + 62)
+        self.env_cb.setFixedWidth(LABEL_WIDTH + 44)
         env_cb.addItems(self.envs)
         env_cb.setCurrentIndex(-1)
         env_cb.setPlaceholderText("")
@@ -338,6 +338,7 @@ class BadgerEnvBox(QWidget):
 
         hbox_algo.addWidget(algo_lbl)
         hbox_algo.addWidget(algo_cb)
+        hbox_algo.addSpacing(8)
         hbox_algo.addWidget(self.btn_algo_parans)
 
         hbox_algo.addStretch()
