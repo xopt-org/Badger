@@ -172,6 +172,9 @@ class BadgerRoutinePage(QWidget):
         self.tabs = tabs = QTabWidget()
         vbox.addWidget(tabs)
 
+        tabs.tabBar().setExpanding(False)  # keep tabs at content width
+        tabs.setStyleSheet("QTabWidget::tab-bar { alignment: center; }")
+
         self.history_browser = HistoryNavigator()
         tabs.addTab(self.history_browser, "History")
 
