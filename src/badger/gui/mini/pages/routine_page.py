@@ -180,76 +180,10 @@ class BadgerRoutinePage(QWidget):
         self.history_browser = HistoryNavigator()
         tabs.addTab(self.history_browser, "History")
 
-        # Meta group
-        self.group_meta = group_meta = QWidget()
-        vbox_meta = QVBoxLayout(group_meta)
-        vbox_meta.setContentsMargins(8, 8, 8, 8)
-        # tabs.addTab(group_meta, "Metadata")
+        self.edit_save = QLineEdit()
+        self.edit_save.setPlaceholderText(generate_slug(2))
 
-        # Name
-        name = QWidget()
-        hbox_name = QHBoxLayout(name)
-        hbox_name.setContentsMargins(0, 0, 0, 0)
-        label = QLabel("Name")
-        label.setFixedWidth(LABEL_WIDTH)
-        self.edit_save = edit_save = QLineEdit()
-        edit_save.setPlaceholderText(generate_slug(2))
-        hbox_name.addWidget(label)
-        hbox_name.addWidget(edit_save, 1)
-        vbox_meta.addWidget(name, alignment=Qt.AlignTop)
-
-        # Description
-        descr = QWidget()
-        hbox_descr = QHBoxLayout(descr)
-        hbox_descr.setContentsMargins(0, 0, 0, 0)
-        lbl_descr_col = QWidget()
-        vbox_lbl_descr = QVBoxLayout(lbl_descr_col)
-        vbox_lbl_descr.setContentsMargins(0, 0, 0, 0)
-        lbl_descr = QLabel("Description")
-        lbl_descr.setFixedWidth(LABEL_WIDTH)
-        vbox_lbl_descr.addWidget(lbl_descr)
-        vbox_lbl_descr.addStretch(1)
-        hbox_descr.addWidget(lbl_descr_col)
-
-        edit_descr_col = QWidget()
-        vbox_descr_edit = QVBoxLayout(edit_descr_col)
-        vbox_descr_edit.setContentsMargins(0, 0, 0, 0)
-        self.edit_descr = edit_descr = QPlainTextEdit()
-        edit_descr.setMinimumHeight(80)
-        vbox_descr_edit.addWidget(edit_descr)
-        descr_bar = QWidget()
-        hbox_descr_bar = QHBoxLayout(descr_bar)
-        hbox_descr_bar.setContentsMargins(0, 0, 0, 0)
-        self.btn_descr_update = btn_update = QPushButton("Update Description")
-        btn_update.setDisabled(True)
-        btn_update.setFixedSize(128, 24)
-        hbox_descr_bar.addStretch(1)
-        hbox_descr_bar.addWidget(btn_update)
-        vbox_descr_edit.addWidget(descr_bar)
-        hbox_descr.addWidget(edit_descr_col)
-        vbox_meta.addWidget(descr)
-        descr_bar.hide()
-
-        # Save Template Button
-        template_button = QWidget()
-        hbox_name = QHBoxLayout(template_button)
-        hbox_name.setContentsMargins(0, 0, 0, 0)
-        self.save_template_button = save_template_button = QPushButton(
-            "Save as Template"
-        )
-        save_template_button.setFixedSize(128, 24)
-        hbox_name.addWidget(save_template_button, alignment=Qt.AlignRight)
-        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
-        template_button.show()
-
-        # Tags
-        self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
-        if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
-            cbox_tags.hide()
-        vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
-        # vbox_meta.addStretch()
-
-        # vbox.addWidget(group_meta)
+        self.edit_descr = QPlainTextEdit()
 
         # Env box
         self.BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
@@ -280,10 +214,6 @@ class BadgerRoutinePage(QWidget):
         scroll_area.setWidget(scroll_content_env)
         tabs.addTab(scroll_area, "Environment + VOCS")
 
-        # Algo box
-        # self.generator_box = BadgerAlgoBox(None, self.generators)
-        # tabs.addTab(self.generator_box, "Algorithm")
-
         # Data panel
         self.data_panel = BadgerDataPanel(self)
         # tabs.addTab(self.data_panel, "Data")
@@ -304,7 +234,7 @@ class BadgerRoutinePage(QWidget):
 
     def config_logic(self):
         logger.info("Configuring logic for BadgerRoutinePage.")
-        self.btn_descr_update.clicked.connect(self.update_description)
+        # self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
         self.env_box.template_cb.currentTextChanged.connect(
             lambda: (
@@ -319,7 +249,7 @@ class BadgerRoutinePage(QWidget):
         # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
         #    lambda: self.env_box.template_cb.setCurrentIndex(-1)
         # )
-        self.save_template_button.clicked.connect(self.save_template_yaml)
+        # self.save_template_button.clicked.connect(self.save_template_yaml)
         self.env_box.algo_cb.currentIndexChanged.connect(self.select_generator)
         self.env_box.algo_cb.currentIndexChanged.connect(
             lambda: self.env_box.edit_algo_params.setMinimumHeight(
@@ -327,16 +257,11 @@ class BadgerRoutinePage(QWidget):
             )
         )
         # self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
-        # self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
-        # self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
         self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
         self.env_box.var_table.sig_change_bounds.connect(
             self.adjust_variable_range_options
         )
-        # self.env_box.btn_env_play.clicked.connect(self.open_playground)
-        # self.env_box.btn_pv.clicked.connect(self.open_archive_search)
         # self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
-        # self.env_box.btn_add_var.clicked.connect(self.add_var)
         # self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
@@ -346,20 +271,10 @@ class BadgerRoutinePage(QWidget):
             partial(self.clear_init_table, reset_actions=True)
         )
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
-        # self.env_box.relative_to_curr.stateChanged.connect(self.set_relative_to_curr)
-        # self.env_box.btn_refresh.clicked.connect(self.refresh_variables)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
         self.env_box.var_table.set_scan_range_options()
-
-        # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
-        #    self.sig_go_run.emit() # signal for home_page to select run
-        # )
-
-        # self.env_box.var_table.sig_sel_changed.connect(
-        #     lambda: logger.debug("Selection changed")
-        # )  # for debugging
 
     def set_saved_values_from_init_vars(
         self, variable_names: list[str], init_vars: list[float]
@@ -640,12 +555,6 @@ class BadgerRoutinePage(QWidget):
                 observables[idx] = {name: []}
             status[name] = True
 
-        # Show selected observables only
-        # .blockSignals(True)
-        # self.env_box.check_only_sta.setChecked(True)
-        # self.env_box.check_only_sta.blockSignals(False)
-        # self.env_box.sta_table.show_selected_only = True
-
         self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
@@ -790,14 +699,11 @@ class BadgerRoutinePage(QWidget):
             self.edit_save.setText("")
             self.edit_save.setPlaceholderText(name)
             self.edit_descr.setPlainText("")
-            self.btn_descr_update.setDisabled(True)
 
             return
 
         self.routine = routine  # save routine for future reference
 
-        # Enable description edition
-        self.btn_descr_update.setDisabled(False)
         # Fill in the generator and env configs
         name_generator = routine.generator.name
         try:
@@ -1066,22 +972,6 @@ class BadgerRoutinePage(QWidget):
                 except IndexError:  # lower bound is the same as upper bound
                     pass
 
-    def toggle_use_script(self):
-        pass
-        # .check_use_script.isChecked():
-        #    self.generator_box.btn_edit_script.show()
-        #    self.env_box.edit_algo_params.setDisabled(True)
-        #    self.refresh_params_generator()
-        # else:
-        #    self.generator_box.btn_edit_script.hide()
-        #    self.env_box.edit_algo_params.setDisabled(False)
-
-    def edit_script(self):
-        logger.info("Editing script for routine.")
-        generator = self.env_box.algo_cb.currentText()
-        dlg = BadgerEditScriptDialog(self, generator, self.script, self.script_updated)
-        dlg.exec()
-
     def script_updated(self, text):
         logger.info("Script updated.")
         self.script = text
@@ -1148,11 +1038,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.var_table.update_variables(None)
             self.configs = None
             self.env = None
-            # self.env_box.btn_add_var.setDisabled(True)
-            # self.env_box.btn_lim_vrange.setDisabled(True)
-            # self.env_box.btn_refresh.setDisabled(True)
             self.routine = None
-            # self.env_box.update_stylesheets()
             return
 
         name: str = self.envs[i]
@@ -1162,19 +1048,10 @@ class BadgerRoutinePage(QWidget):
             self.env = env
             self.env_box.edit_var.clear()
             self.env_box.edit_obj.clear()
-            # self.env_box.btn_add_con.setDisabled(False)
-            # self.env_box.btn_add_var.setDisabled(False)
-            # self.env_box.btn_lim_vrange.setDisabled(False)
-            # self.env_box.btn_refresh.setDisabled(False)
-            # if self.generator_box.check_use_script.isChecked():
-            #    self.refresh_params_generator()
         except Exception:
             self.configs = None
             self.env = None
             self.env_box.clear_selected_env()
-            # self.env_box.btn_add_con.setDisabled(True)
-            # self.env_box.btn_add_var.setDisabled(True)
-            # self.env_box.btn_lim_vrange.setDisabled(True)
             self.routine = None
             return QMessageBox.critical(self, "Error!", traceback.format_exc())
 
@@ -1254,11 +1131,6 @@ class BadgerRoutinePage(QWidget):
             observables, status, formulas={}, vocs_signal=False
         )
 
-        # self.env_box.fit_content()
-        # self.routine = None
-
-        # self.env_box.update_stylesheets(env.name)
-
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
 
@@ -1326,16 +1198,7 @@ class BadgerRoutinePage(QWidget):
         var_curr = env.get_variables(vname_selected)
 
         # get small region around current point to sample
-        # try:
         vocs, _ = self.env_box.compose_vocs()
-        # except Exception:
-        #    # Switch to manual mode to allow the user fixing the vocs issue
-        #    QMessageBox.warning(
-        ##        self,
-        #        "Variable range is not valid!",
-        #        "Auto mode disabled due to invalid variable range. Please fix it before enabling auto mode.",
-        #    )
-        #    return self.env_box.relative_to_curr.isChecked()
 
         n_point = add_rand_config["n_points"]
         fraction = add_rand_config["fraction"]
@@ -1397,7 +1260,6 @@ class BadgerRoutinePage(QWidget):
             self.rc_dialog = None
 
     def clear_init_table(self, reset_actions=True):
-        # MOVE TO ENV_CBOX
         logger.info(f"Clearing init table (reset_actions={reset_actions})")
         table = self.env_box.init_table
         for row in range(table.rowCount()):
@@ -1410,7 +1272,6 @@ class BadgerRoutinePage(QWidget):
             self.init_table_actions = []  # reset the recorded actions
 
     def add_row_to_init_table(self):
-        # MOVE TO ENV_CBOX
         logger.info("Adding row to init table.")
         table = self.env_box.init_table
         row_position = table.rowCount()
@@ -1420,9 +1281,6 @@ class BadgerRoutinePage(QWidget):
             item = QTableWidgetItem("")
             table.setItem(row_position, col, item)
 
-    def open_playground(self):
-        pass
-
     def open_generator_docs(self):
         name = self.env_box.algo_cb.currentText()
         self.window_docs.update_docs(name, "generator")
@@ -1430,19 +1288,6 @@ class BadgerRoutinePage(QWidget):
 
     def open_environment_docs(self):
         self.window_env_docs.show()
-
-    def open_archive_search(self):
-        if not hasattr(self, "archive_search") or not self.archive_search.isVisible():
-            try:
-                env = self.create_env()
-            except AttributeError:
-                raise BadgerRoutineError("No environment selected!")
-
-            self.archive_search = ArchiveSearchWidget(environment=env)
-            self.archive_search.show()
-        else:
-            self.archive_search.raise_()
-            self.archive_search.activateWindow()
 
     def add_var(self):
         # TODO: Use a cached env
@@ -1458,7 +1303,6 @@ class BadgerRoutinePage(QWidget):
         # dlg.exec()
 
     def limit_variable_ranges(self):
-        # MOVE TO ENV_CBOX
         if self.lim_apply_to_vars == 2:
             # Initialize the lim_apply_to_vars to 0 (set only visible vars)
             self.lim_apply_to_vars = 0
@@ -1473,7 +1317,6 @@ class BadgerRoutinePage(QWidget):
         dlg.exec()
 
     def set_vrange(self, set_all=True):
-        # MOVE TO ENV_CBOX
         # By default update all variables no matter if selected or not
         vname_selected = []
         vrange = {}
@@ -1554,7 +1397,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.set_scan_range_options()
 
     def set_ind_vrange(self, vname, config):
-        # MOVE TO ENV_CBOX
         logger.info(
             f"Setting individual variable range for {vname} with config: {config}"
         )
@@ -1663,7 +1505,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.set_scan_range_options()
 
     def save_limit_option(self, limit_option):
-        # MOVE TO ENV_CBOX
         logger.info(f"Saving limit option: {limit_option}")
         self.limit_option = limit_option
         self.env_box.var_table.set_scan_range_options()
@@ -1687,7 +1528,6 @@ class BadgerRoutinePage(QWidget):
         return 0
 
     def update_init_table(self, force=False):
-        # MOVE TO ENV_CBOX
         logger.info(f"Updating init table (force={force})")
         selected = self.env_box.var_table.selected
         variable_names = [v for v in selected if selected[v]]
@@ -1707,7 +1547,6 @@ class BadgerRoutinePage(QWidget):
         self._fill_init_table()
 
     def calc_auto_bounds(self):
-        # MOVE TO ENV_CBOX
         logger.info("Calculating auto bounds for selected variables.")
         vname_selected = []
         vrange = {}
@@ -1765,7 +1604,6 @@ class BadgerRoutinePage(QWidget):
         return vrange, clipped
 
     def toggle_relative_to_curr(self, checked, refresh=True):
-        # MOVE TO ENV_CBOX
         logger.info(f"Toggling relative_to_curr: checked={checked}, refresh={refresh}")
         if checked:
             try:
@@ -1801,7 +1639,6 @@ class BadgerRoutinePage(QWidget):
             self.env_box.init_table.set_editable()
 
     def refresh_variables(self):
-        # MOVE TO ENV_CBOX
         logger.info("Refreshing variables and bounds.")
         variables = self.env_box.var_table.export_variables()
         bounds, clipped = self.calc_auto_bounds()
@@ -1821,7 +1658,6 @@ class BadgerRoutinePage(QWidget):
         self.try_populate_init_table()
 
     def try_populate_init_table(self):
-        # MOVE TO ENV_CBOX
         logger.info("Trying to auto-populate initial table.")
         if (
             self.env_box.relative_to_curr.isChecked()
@@ -1830,13 +1666,11 @@ class BadgerRoutinePage(QWidget):
             self.update_init_table()
 
     def handle_pv_added(self):
-        # MOVE TO ENV_CBOX
         logger.info("Handling PV added event.")
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange()
 
     def handle_var_config(self, vname):
-        # MOVE TO ENV_CBOX
         env = self.create_env()
         curr = env.get_variables([vname])[vname]
 
@@ -2041,18 +1875,3 @@ class BadgerRoutinePage(QWidget):
 
         dlg = BadgerReviewDialog(self, routine)
         dlg.exec()
-
-    def update_description(self):
-        routine = self.routine
-        routine.description = self.edit_descr.toPlainText()
-        try:
-            update_run(routine)
-            # Notify routine list to update
-            self.sig_updated.emit(routine.name, routine.description)
-            QMessageBox.information(
-                self,
-                "Update success!",
-                f"Routine {self.routine.name} description was updated!",
-            )
-        except Exception:
-            return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
