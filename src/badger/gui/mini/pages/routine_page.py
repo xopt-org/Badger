@@ -8,10 +8,10 @@ import yaml
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
+from PyQt5.QtCore import pyqtSignal, QTimer
+from PyQt5.QtWidgets import QLineEdit, QPushButton, QFileDialog
 from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
+from PyQt5.QtWidgets import QVBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from badger.gui.components.navigators import HistoryNavigator
 from coolname import generate_slug
@@ -40,9 +40,7 @@ from badger.gui.components.data_table import (
     update_init_data_table,
 )
 from badger.gui.mini.components.env_cbox import BadgerEnvBox
-from badger.gui.components.filter_cbox import BadgerFilterBox
 from badger.gui.windows.docs_window import BadgerDocsWindow
-from badger.gui.windows.edit_script_dialog import BadgerEditScriptDialog
 from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.ind_lim_vrange_dialog import (
     BadgerIndividualLimitVariableRangeDialog,
@@ -51,8 +49,6 @@ from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.utils import filter_generator_config
-from badger.gui.components.archive_search import ArchiveSearchWidget
-from badger.archive import update_run
 from badger.environment import instantiate_env
 from badger.errors import (
     BadgerEnvNotFoundError,
@@ -68,7 +64,6 @@ from datetime import datetime
 from badger.utils import (
     BlockSignalsContext,
     load_config,
-    strtobool,
     get_badger_version,
     get_xopt_version,
     ts_float_to_str,
