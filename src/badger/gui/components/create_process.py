@@ -1,12 +1,13 @@
-from multiprocessing import Event, Pipe, Process, Queue
-
-from PyQt5.QtCore import pyqtSignal, QObject
-
-from badger.settings import init_settings
-from badger.core_subprocess import run_routine_subprocess
-
 import logging
+from multiprocessing import Event, Pipe, Process, Queue
+from multiprocessing.connection import Connection
+from typing import Any
+
+from PyQt5.QtCore import QObject, pyqtSignal
+
+from badger.core_subprocess import run_routine_subprocess
 from badger.log import get_logging_manager
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +31,13 @@ class CreateProcess(QObject):
         """
         self.stop_event = Event()
         self.pause_event = Event()
-        self.data_queue = Queue()
-        self.evaluate_queue = Pipe()
+        self.data_queue: "Queue[Any]" = Queue()
+        self.evaluate_queue: "tuple[Connection, Connection]" = Pipe()
         self.wait_event = Event()
-        self.dialog_action_queue = Queue()
-        config_path = init_settings()._instance.config_path
+        self.dialog_action_queue: "Queue[Any]" = Queue()
+
+        config_instance = init_settings()._instance
+        config_path = config_instance.config_path if config_instance else None
 
         # Get the logging queue from the centralized manager
         logging_manager = get_logging_manager()
@@ -49,9 +52,9 @@ class CreateProcess(QObject):
                 self.stop_event,
                 self.pause_event,
                 self.wait_event,
+                self.dialog_action_queue,
                 config_path,
                 log_queue,
-                self.dialog_action_queue,
             ),
         )
         new_process.start()

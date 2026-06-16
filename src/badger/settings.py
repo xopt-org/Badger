@@ -1,13 +1,15 @@
+import logging
 import os
 import platform
-import yaml
 import shutil
 from importlib import resources
-from badger.utils import get_datadir
+from typing import Any, Optional, Union
+
+import yaml
 from pydantic import BaseModel, Field, ValidationError
-from typing import Any, Dict, Optional, Union
+
 from badger.errors import BadgerLoadConfigError
-import logging
+from badger.utils import get_datadir
 
 logger = logging.getLogger(__name__)
 
@@ -132,9 +134,14 @@ class BadgerConfig(BaseModel):
 
 
 class ConfigSingleton:
-    _instance = None
+    _instance: "Optional[ConfigSingleton]" = None
+    user_flag: bool
+    _config: BadgerConfig
+    config_path: str | None
 
-    def __new__(cls, config_path: str = None, user_flag: bool = False):
+    def __new__(
+        cls, config_path: str | None = None, user_flag: bool = False
+    ) -> "ConfigSingleton":
         if cls._instance is None:
             cls._instance = super(ConfigSingleton, cls).__new__(cls)
             cls._instance.user_flag = user_flag
@@ -143,14 +150,14 @@ class ConfigSingleton:
         return cls._instance
 
     @classmethod
-    def load_or_create_config(cls, config_path: str) -> BadgerConfig:
+    def load_or_create_config(cls, config_path: str | None) -> BadgerConfig:
         """
         Loads the config file from a given yaml file if it exists,
         otherwise creates an instance of BadgerConfig with default settings.
 
         Parameters
         ----------
-        config_path: str
+        config_path: str | None
             Path to the user config file.
 
         Returns
@@ -159,7 +166,7 @@ class ConfigSingleton:
             An instance of BadgerConfig populated with the data from the config file,
             or with default settings if the file does not exist.
         """
-        if os.path.exists(config_path):
+        if config_path is not None and os.path.exists(config_path):
             with open(config_path, "r") as config_file:
                 config_data = yaml.safe_load(config_file)
 
@@ -191,7 +198,7 @@ class ConfigSingleton:
                 print(f"Error validating config file: {e}")
                 raise
         else:
-            if cls._instance.user_flag:
+            if cls._instance and cls._instance.user_flag:
                 err_msg = f"Error loading config {config_path}: invalid path."
                 raise BadgerLoadConfigError(err_msg)
 
@@ -201,7 +208,7 @@ class ConfigSingleton:
     def config(self) -> BadgerConfig:
         return self._config
 
-    def update_and_save_config(self, updates: Dict[str, Any]) -> None:
+    def update_and_save_config(self, updates: dict[str, Any]) -> None:
         """Saves changes to the config file.
 
         Parameters
@@ -216,13 +223,14 @@ class ConfigSingleton:
             self._update_config_by_dot_key(config_data, dot_key, value)
 
         # Save updated config to file
-        with open(self.config_path, "w") as file:
-            yaml.dump(config_data, file, default_flow_style=False)
+        if self.config_path is not None:
+            with open(self.config_path, "w") as file:
+                yaml.dump(config_data, file, default_flow_style=False)
 
         self._config = BadgerConfig(**config_data)
 
     def _update_config_by_dot_key(
-        self, config_data: Dict[str, Any], dot_key: str, value: Any
+        self, config_data: dict[str, Any], dot_key: str, value: Any
     ) -> None:
         """Update the config data with the provided value using dot-separated keys."""
         keys = dot_key.split(":")
@@ -235,23 +243,23 @@ class ConfigSingleton:
         else:
             d[last_key] = value
 
-    def list_settings(self) -> Dict[str, Any]:
+    def list_settings(self) -> dict[str, Any]:
         """List all the settings in Badger
 
         Returns
         -------
-        result: Dict
+        result: dict[str, Any]
             A dictionary containing the settings. Keys in the dict are fields of the
             settings, the value for each key is the current value for that setting.
         """
         return self._config.model_dump(by_alias=True)
 
-    def list_path_settings(self) -> Dict[str, Any]:
+    def list_path_settings(self) -> dict[str, Any]:
         """List all the path-related settings in Badger
 
         Returns
         -------
-        result: Dict
+        result: dict[str, Any]
             A dictionary containing the path-related settings.
             Keys in the dict are fields of the settings,
             the value for each key is the current value for that setting.
@@ -388,7 +396,7 @@ class ConfigSingleton:
             The value that is being saved.
         """
         keys = key.split(".")
-        updates = {}
+        updates: dict[str, Any] = {}
         sub_dict = updates
 
         for key in keys[:-1]:
@@ -407,13 +415,13 @@ class ConfigSingleton:
         )
 
 
-def init_settings(config_arg: str = None) -> ConfigSingleton:
+def init_settings(config_arg: str | None = None) -> ConfigSingleton:
     """
     Builds and returns an instance of the ConfigSingleton class.
 
     Parameters
     ----------
-    config_arg: str
+    config_arg: str | None
         a path to a config file passed through the --config__filepath argument
 
     Returns
@@ -468,7 +476,7 @@ def apply_pytorch_multiprocess_tensor_sharing_setting(
         return
 
     try:
-        torch.multiprocessing.set_sharing_strategy(strategy)
+        torch.multiprocessing.set_sharing_strategy(strategy)  # type: ignore[no-untyped-call]
     except Exception:
         logger.exception(
             "Can't set pytorch multiprocess tensor-sharing strategy to '%s'", strategy
@@ -478,7 +486,7 @@ def apply_pytorch_multiprocess_tensor_sharing_setting(
     logger.info("Set pytorch multiprocess tensor-sharing strategy to '%s'", strategy)
 
 
-def mock_settings():
+def mock_settings() -> None:
     """A method for setting up mock settings"""
     config_singleton = init_settings()
     app_data_dir = get_datadir() / "Badger"
@@ -488,7 +496,7 @@ def mock_settings():
     plugins_dir = str(app_data_dir / "plugins")
     os.makedirs(plugins_dir, exist_ok=True)
     config_singleton.write_value("BADGER_PLUGIN_ROOT", plugins_dir)
-    built_in_plugins_dir = resources.files(__package__) / "built_in_plugins"
+    built_in_plugins_dir = str(resources.files(__package__) / "built_in_plugins")
     shutil.copytree(built_in_plugins_dir, plugins_dir, dirs_exist_ok=True)
 
     logbook_dir = str(app_data_dir / "logbook")
@@ -528,9 +536,14 @@ def get_user_config_folder() -> str:
         If the operating system is not supported.
     """
     system = platform.system()
+    config_folder: str | None
 
     if system == "Windows":
         config_folder = os.getenv("APPDATA") or os.getenv("LOCALAPPDATA")
+        if config_folder is None:
+            raise OSError(
+                "Neither APPDATA nor LOCALAPPDATA environment variable is set on this Windows system."
+            )
     elif system == "Darwin":
         config_folder = os.path.expanduser("~/Library/Application Support/Badger")
     elif system == "Linux":

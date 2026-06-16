@@ -1,10 +1,13 @@
+import logging
 import os
 from datetime import datetime
-import logging
 
-from badger.settings import init_settings
+from PyQt5.QtWidgets import QWidget
+
 from badger.archive import BADGER_ARCHIVE_ROOT
 from badger.errors import BadgerConfigError, BadgerLogbookError
+from badger.routine import Routine
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +21,9 @@ elif not os.path.exists(BADGER_LOGBOOK_ROOT):
     logger.info(f"Badger logbook root {BADGER_LOGBOOK_ROOT} created")
 
 
-def send_to_logbook(routine, widget=None):
-    from xml.etree import ElementTree
+def send_to_logbook(routine: Routine, widget: QWidget | None = None) -> None:
     from re import sub
+    from xml.etree import ElementTree
 
     log_text = ""
     routine_name = routine.name
@@ -34,6 +37,8 @@ def send_to_logbook(routine, widget=None):
     obj_opt = obj_opt[0]
 
     data = routine.data
+    if data is None:
+        raise BadgerLogbookError("No data to log!")
     obj_start = data[obj_name].iloc[0]
     duration = data["timestamp"].iloc[-1] - data["timestamp"].iloc[0]
     n_point = len(data["timestamp"])
@@ -57,7 +62,7 @@ def send_to_logbook(routine, widget=None):
         timestr = curr_time.strftime("%Y-%m-%dT%H%M%S")
     else:
         timestr = curr_time.strftime("%Y-%m-%dT%H:%M:%S")
-    log_entry = ElementTree.Element(None)
+    log_entry = ElementTree.Element("logentry")
     severity = ElementTree.SubElement(log_entry, "severity")
     location = ElementTree.SubElement(log_entry, "location")
     keywords = ElementTree.SubElement(log_entry, "keywords")
@@ -98,22 +103,24 @@ def send_to_logbook(routine, widget=None):
     screenshot(widget, f"{fileName}.png")
 
 
-def screenshot(widget, filename):
+def screenshot(widget: QWidget | None, filename: str) -> None:
     """
     Takes a screenshot of the whole gui window, saves png and ps images to file
     """
     if widget is None:
         raise BadgerLogbookError("No widget to take screenshot on!")
 
-    from PIL import Image
+    from PIL import Image, ImageFile
 
     pic = widget.grab()
     pic.save(filename)
     img = Image.open(filename)
+    image_to_save: Image.Image | ImageFile.ImageFile = img
     if img.mode in ("RGBA", "LA"):
         # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=eps#eps
         # logger.warning(f'Current figure mode "{img.mode}" cannot be directly saved to .ps and will be converted to "RGB" mode')
-        img = img.convert("RGB")
+        converted_img = img.convert("RGB")
+        image_to_save = converted_img
     # img = img.scaled(400, 600)
     name = os.path.splitext(filename)[0]
-    img.save(f"{name}.ps")
+    image_to_save.save(f"{name}.ps")

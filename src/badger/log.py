@@ -167,7 +167,7 @@ class LoggingManager:
         log_filename = f"log_{today.year:04d}_{today.month:02d}_{today.day:02d}.log"
         return log_filename
 
-    def get_queue(self) -> Queue[logging.LogRecord] | None:
+    def get_queue(self) -> "Queue[logging.LogRecord] | None":
         """Get the logging queue for use by subprocesses."""
         return self.log_queue
 
@@ -201,7 +201,7 @@ class LoggingManager:
 
 
 def configure_process_logging(
-    log_queue: Queue[logging.LogRecord] | None = None,
+    log_queue: "Queue[logging.LogRecord] | None" = None,
     logger_name: str = "badger",
     log_level: str = "DEBUG",
     process_name: str | None = None,

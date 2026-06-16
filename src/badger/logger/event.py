@@ -1,12 +1,12 @@
 from enum import StrEnum
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 
 class Solution(NamedTuple):
-    variables: list[float]
-    objectives: list[float]
-    constraints: list[float]
-    states: list[float]
+    variables: Optional[list[float]]
+    objectives: Optional[list[float]]
+    constraints: Optional[list[float]]
+    states: Optional[list[float]]
     is_optimal: bool
     variable_names: list[str]
     objective_names: list[str]

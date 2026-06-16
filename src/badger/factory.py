@@ -1,23 +1,23 @@
-from typing import Any, TypedDict, cast, TYPE_CHECKING
-from badger.settings import init_settings
-from badger.utils import get_value_or_none
-from badger.errors import (
-    BadgerConfigError,
-    BadgerInvalidPluginError,
-    BadgerInvalidDocsError,
-    BadgerPluginNotFoundError,
-)
-
-from badger.interface import Interface as BadgerInterface
-import sys
-import os
 import importlib
-import yaml
+import logging
+import os
 import re
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+import yaml
 from xopt.generators import generators, get_generator_defaults
 
-import logging
+from badger.errors import (
+    BadgerConfigError,
+    BadgerInvalidDocsError,
+    BadgerInvalidPluginError,
+    BadgerPluginNotFoundError,
+)
+from badger.interface import Interface as BadgerInterface
+from badger.settings import init_settings
+from badger.utils import get_value_or_none
 
 if TYPE_CHECKING:
     from badger.environment import Environment as BadgerEnvironment
@@ -359,7 +359,7 @@ def _md_images_to_html(
 
     def repl(m: re.Match[str]) -> str:
         url_str = m.group(1).strip().strip("'\"").lstrip("./")
-        url = Path(base_prefix / url_str)  # type: ignore[arg-type,operator]
+        url = Path(base_prefix / url_str)  # type: ignore[operator]
         return f'<img src="{url.as_posix()}" width={width}></img>'
 
     return _MD_IMG.sub(repl, text)
@@ -405,7 +405,7 @@ def list_generators() -> list[str]:
     try:
         from xopt.generators import try_load_all_generators
 
-        try_load_all_generators()
+        try_load_all_generators()  # type: ignore[no-untyped-call]
     except ImportError:  # this API changed somehow
         pass  # there is nothing we can do...
     generator_names = list(generators.keys())

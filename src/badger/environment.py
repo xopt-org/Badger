@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from logging import warning
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from pydantic._internal._model_construction import ModelMetaclass
+
 from badger.errors import (
     BadgerEnvVarError,
     BadgerNoInterfaceError,
@@ -11,12 +12,15 @@ from badger.errors import (
 
 if TYPE_CHECKING:
     from badger.factory import BadgerPluginConfig
+
 from badger.formula import extract_variable_keys, interpret_expression
-from badger.interface import Interface
+from badger.interface import Interface, InterfaceInfo
 
 
-def validate_setpoints(func):
-    def validate(cls, variable_inputs: Dict[str, float]):
+def validate_setpoints(
+    func: Callable[[Any, dict[str, float]], Any],
+) -> Callable[[Any, dict[str, float]], Any]:
+    def validate(cls: Any, variable_inputs: dict[str, float]) -> Any:
         _bounds = cls.get_bounds(list(variable_inputs.keys()))
         for name, value in variable_inputs.items():
             lower = _bounds[name][0]
@@ -33,13 +37,15 @@ def validate_setpoints(func):
     return validate
 
 
-def process_formulas(func):
+def process_formulas(
+    func: Callable[[Any, list[str]], dict[str, float]],
+) -> Callable[[Any, list[str]], dict[str, float]]:
     """
     Decorator function that wraps get_observables method
     to process formulas if they exist in the observable names.
     """
 
-    def process(cls, observable_names: List[str]) -> Dict[str, float]:
+    def process(cls: Any, observable_names: list[str]) -> dict[str, float]:
         # get the list of observable names needed by themselves and any formulas
         formula_observables = []
         basic_observables = []
@@ -79,8 +85,10 @@ def process_formulas(func):
     return process
 
 
-def validate_bounds(func):
-    def validate(cls, variable_names: List[str]):
+def validate_bounds(
+    func: Callable[[Any, list[str]], dict[str, tuple[float, float]]],
+) -> Callable[[Any, list[str]], dict[str, tuple[float, float]]]:
+    def validate(cls: Any, variable_names: list[str]) -> dict[str, tuple[float, float]]:
         bounds = func(cls, variable_names)
 
         for name, bound in bounds.items():
@@ -104,7 +112,9 @@ def validate_bounds(func):
 
 
 class EnvMeta(ModelMetaclass):
-    def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]):
+    def __new__(
+        mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]
+    ) -> "EnvMeta":
         # Wrap get_bounds with validate_bounds if defined
         if "get_bounds" in namespace:
             namespace["get_bounds"] = validate_bounds(namespace["get_bounds"])
@@ -116,7 +126,7 @@ class EnvMeta(ModelMetaclass):
         # Wrap set_variables with validate_setpoints if defined
         if "set_variables" in namespace:
             namespace["set_variables"] = validate_setpoints(namespace["set_variables"])
-        return super().__new__(mcs, name, bases, namespace)
+        return super().__new__(mcs, name, bases, namespace)  # type: ignore[return-value]
 
 
 class BaseEnvironment(BaseModel, metaclass=EnvMeta):
@@ -130,11 +140,11 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         validate_assignment=True, use_enum_values=True, arbitrary_types_allowed=True
     )
     name: ClassVar[str] = Field(description="environment name")
-    variables: ClassVar[Dict[str, list[float]]]  # bounds list could be empty for var
+    variables: ClassVar[dict[str, list[float]]]  # bounds list could be empty for var
     observables: ClassVar[list[str]]
 
     @abstractmethod
-    def get_variables(self, variable_names: list[str]) -> Dict[str, float]:
+    def get_variables(self, variable_names: list[str]) -> dict[str, float]:
         """
         Get the values of the specified variables from the environment.
 
@@ -151,7 +161,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         pass
 
     @abstractmethod
-    def set_variables(self, variable_inputs: Dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]) -> None:
         """
         Set the values of the specified variables in the environment.
 
@@ -164,8 +174,8 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
 
     @abstractmethod
     def get_observables(
-        self, observable_names: List[str]
-    ) -> Dict[str, float | List[float]]:
+        self, observable_names: list[str]
+    ) -> dict[str, float | list[float]]:
         """
         Get the values of the specified observables from the environment.
 
@@ -174,32 +184,32 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
 
         Parameters
         ----------
-        observable_names : List[str]
+        observable_names : list[str]
             A list of observable names to retrieve from the environment.
 
         Returns
         -------
-        Dict[str, float | List[float]]
+        dict[str, float | list[float]]
             A dictionary mapping observable names to their values.
 
         """
         pass
 
-    def reset_environment(self):
+    def reset_environment(self) -> None:
         """
         Reset the environment to its initial state.
         This method is called at the start of each run.
         """
         pass
 
-    def get_system_states(self) -> Dict[str, Any]:
+    def get_system_states(self) -> dict[str, Any]:
         """
         Get the current system states from the environment.
         This method is called to retrieve the current state of the environment.
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             A dictionary containing the current system states.
         """
         return {}
@@ -220,7 +230,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         """
         return {name: self.variables[name] for name in variable_names}
 
-    def search(self, keyword: str, callback: callable):
+    def search(self, keyword: str, callback: Callable[[Any], None]) -> None:
         """
         Search for a keyword in the environment and call the callback function
         with the results.
@@ -255,7 +265,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         """
         return self.get_variables([variable_name])[variable_name]
 
-    def set_variable(self, variable_name: str, value: float):
+    def set_variable(self, variable_name: str, value: float) -> None:
         """
         Set the value of a single variable in the environment.
 
@@ -268,7 +278,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         """
         self.set_variables({variable_name: value})
 
-    def get_observable(self, observable_name: str) -> float:
+    def get_observable(self, observable_name: str) -> float | list[float]:
         """
         Get the value of a single observable from the environment.
 
@@ -295,41 +305,43 @@ class Environment(BaseEnvironment):
     # Optional methods to inherit
     ############################################################
 
-    def get_variables(self, variable_names: List[str]) -> Dict:
+    def get_variables(self, variable_names: list[str]) -> dict[str, float]:
         if not self.interface:
             raise BadgerNoInterfaceError
 
         return self.interface.get_values(variable_names)
 
-    def set_variables(self, variable_inputs: Dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]) -> None:
         if not self.interface:
             raise BadgerNoInterfaceError
 
         return self.interface.set_values(variable_inputs)
 
-    def get_observables(self, observable_names: List[str]) -> Dict:
+    def get_observables(
+        self, observable_names: list[str]
+    ) -> dict[str, float | list[float]]:
         if not self.interface:
             raise BadgerNoInterfaceError
 
         return self.interface.get_values(observable_names)
 
-    def reset_environment(self):
+    def reset_environment(self) -> None:
         if self.interface:
             return self.interface.reset_interface()
 
-    def get_info(self, variable_names: List[str]) -> Dict | None:
+    def get_info(self, variable_names: list[str]) -> InterfaceInfo | None:
         if not self.interface:
             return None
 
         return self.interface.get_info(variable_names)
 
     @property
-    def variable_names(self):
+    def variable_names(self) -> list[str]:
         return [k for k in self.variables]
 
 
 def instantiate_env(
-    env_class: type[Environment], configs: "BadgerPluginConfig", manager=None
+    env_class: type[Environment], configs: "BadgerPluginConfig", manager: Any = None
 ) -> Environment:
     # Configure interface
     # TODO: figure out the correct logic

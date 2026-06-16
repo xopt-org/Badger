@@ -1,21 +1,19 @@
-from badger.routine import Routine
-from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+import logging
+from typing import Callable, cast
 
-from badger.gui.components.types import ConfigurableOptions
+import numpy as np
+import pandas as pd
+from matplotlib.backend_bases import MouseButton, MouseEvent, PickEvent
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.collections import PathCollection
+from matplotlib.text import Annotation
+
 from badger.gui.components.extension_utilities import (
     HandledException,
     to_precision_float,
 )
-
-from typing import cast
-
-import logging
-
-from matplotlib.collections import PathCollection
-from matplotlib.text import Annotation
-import pandas as pd
-from pyparsing import Callable
+from badger.gui.components.types import ConfigurableOptions
+from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +52,7 @@ class MatplotlibInteractionHandler:
         self.canvas.mpl_connect(
             "button_press_event",
             lambda event: self.on_click(
-                event,  # type: ignore[call-arg]
+                cast(MouseEvent, event),
                 self.parameters,
                 self.routine,
                 self.callback,
@@ -73,12 +71,12 @@ class MatplotlibInteractionHandler:
 
         self.canvas.mpl_connect(
             "scroll_event",
-            lambda event: self.on_scroll(event),  # type: ignore[call-arg]
+            lambda event: self.on_scroll(cast(MouseEvent, event)),
         )
 
         self.canvas.mpl_connect(
             "pick_event",
-            lambda event: self.on_pick(event),  # type: ignore[call-arg]
+            lambda event: self.on_pick(cast(PickEvent, event)),
         )
 
     def update_reference_points(
@@ -286,18 +284,20 @@ class MatplotlibInteractionHandler:
         if isinstance(plot, PathCollection):
             data = plot.get_offsets()
 
-            indexes = cast(list[int], event.ind)
+            indexes = cast(list[int], getattr(event, "ind", []))
 
             if len(indexes) == 0:
                 logger.debug("No indices in pick event, ignoring")
                 return
             index = indexes[0]
 
-            if index < 0 or index >= len(data):
-                logger.debug(f"Index {index} out of bounds for data length {len(data)}")
+            if index < 0 or index >= len(np.asarray(data)):
+                logger.debug(
+                    f"Index {index} out of bounds for data length {len(np.asarray(data))}"
+                )
                 return
 
-            point = cast(tuple[float, float], data[index])
+            point = cast(tuple[float, float], np.asarray(data)[index])
             logger.debug(f"Picked point: {point} at index {index}")
 
             # Routine data
@@ -315,18 +315,17 @@ class MatplotlibInteractionHandler:
             if x_column and y_column:
                 # Find the true index in the routine data
                 # This is done by finding the row in the routine data that is closest to the picked point
-                searched_row = routine_data.loc[  # type: ignore
-                    (routine_data[x_column] - point[0]).abs().idxmin()  # type: ignore
-                    & (routine_data[y_column] - point[1]).abs().idxmin()
-                ]
+                x_idx = (routine_data[x_column] - point[0]).abs().idxmin()
+                y_idx = (routine_data[y_column] - point[1]).abs().idxmin()
+                searched_row = pd.Series(
+                    routine_data.loc[x_idx if x_idx == y_idx else x_idx]
+                )
             elif x_column:
-                searched_row = routine_data.loc[
-                    (routine_data[x_column] - point[0]).abs().idxmin()
-                ]
+                idx = (routine_data[x_column] - point[0]).abs().idxmin()
+                searched_row = pd.Series(routine_data.loc[idx])
             elif y_column:
-                searched_row = routine_data.loc[
-                    (routine_data[y_column] - point[1]).abs().idxmin()
-                ]
+                idx = (routine_data[y_column] - point[1]).abs().idxmin()
+                searched_row = pd.Series(routine_data.loc[idx])
 
             true_index = searched_row.name
 
@@ -374,7 +373,7 @@ class MatplotlibInteractionHandler:
             event.canvas.draw_idle()
         return
 
-    def clear_tooltips(self):
+    def clear_tooltips(self) -> None:
         """
         Clear all tooltips from the plot.
         This is useful to remove any existing tooltips before a new plot is drawn.
@@ -383,4 +382,4 @@ class MatplotlibInteractionHandler:
         for tooltip in self.tooltips:
             tooltip.remove()
         self.tooltips.clear()
-        self.canvas.draw_idle()
+        self.canvas.draw_idle()  # type: ignore[no-untyped-call]

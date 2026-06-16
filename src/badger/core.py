@@ -107,16 +107,16 @@ def run_routine(
 
     # Save system states if applicable
     states = environment.get_system_states()
-    if states_callback and (states is not None):
+    if states is not None:
         states_callback(states)
 
     # Optimization starts
-    solution_meta = (
+    solution_meta = Solution(
         None,
         None,
         None,
         None,
-        None,
+        False,  # TODO: was previously None, but type of is_optimal is bool, need to check if this causes any issue
         routine.vocs.variable_names,
         routine.vocs.objective_names,
         routine.vocs.constraint_names,
@@ -128,12 +128,11 @@ def run_routine(
     # evaluate initial points:
     # Nikita: more care about the setting var logic,
     # wait or consider timeout/retry
-    for _, ele in initial_points.iterrows():
-        result = routine.evaluate_data(ele.to_dict())
+    for _, ele in initial_points.iterrows() if initial_points is not None else []:
+        result = routine.evaluate_data(DataFrame([ele.to_dict()]))
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-        if evaluate_callback:
-            evaluate_callback(result)
+        evaluate_callback(result)
 
     # Prepare for dumping file
     if dump_file_callback:
@@ -165,8 +164,7 @@ def run_routine(
             result = routine.evaluate_data(candidates)
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate_callback:
-                evaluate_callback(result)
+            evaluate_callback(result)
 
             # Dump Xopt state after each step
             if dump_file_callback:

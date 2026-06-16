@@ -78,12 +78,12 @@ class Interface(BaseModel, ABC):
 
     # Environment should only call this method to get channels
     @abstractmethod
-    def get_values(self, channel_names: list[str]) -> dict[str, Any]:
+    def get_values(self, channel_names: list[str]) -> dict[str, float | list[float]]:
         pass
 
     # Environment should only call this method to set channels
     @abstractmethod
-    def set_values(self, channel_inputs: dict[str, Any]) -> Any:
+    def set_values(self, channel_inputs: dict[str, float | list[float]]) -> None:
         pass
 
     def reset_interface(self) -> None:
@@ -96,7 +96,7 @@ class Interface(BaseModel, ABC):
     def get_value(self, channel_name: str, **kwargs: Any) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]
 
-    def set_value(self, channel_name: str, channel_value: Any, **kwargs: Any) -> Any:
+    def set_value(self, channel_name: str, channel_value: Any, **kwargs: Any) -> None:
         return self.set_values({channel_name: channel_value}, **kwargs)
 
     def get_info(self, channels: list[str]) -> InterfaceInfo | None:

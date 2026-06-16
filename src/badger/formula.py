@@ -1,9 +1,9 @@
+import ast
+import difflib
+import re
 from typing import Any, Iterable
 
 import numpy as np
-import re
-import ast
-import difflib
 
 
 def safe_var_name(var_name: str) -> str:

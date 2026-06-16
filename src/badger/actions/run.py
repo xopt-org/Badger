@@ -89,16 +89,16 @@ def run_n_archive(
             try:
                 path = _run["path"]
                 filename = _run["filename"][:-4] + "pickle"
-                routine.environment.interface.dump_recording(
-                    os.path.join(path, filename)
-                )
+                interface = getattr(routine.environment, "interface", None)
+                if interface is not None:
+                    interface.dump_recording(os.path.join(path, filename))
             except Exception:
                 pass
 
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
 
-    def states_ready(states) -> None:
+    def states_ready(states: Any) -> None:
         storage["states"] = states
 
     try:
@@ -115,7 +115,7 @@ def run_n_archive(
         logger.error(e)
 
     # Save the run when at least one solution has been evaluated
-    if len(routine.data):
+    if routine.data and len(routine.data):
         _run = archive_run(routine, storage["states"])
         # Try dump the interface logs
         try:

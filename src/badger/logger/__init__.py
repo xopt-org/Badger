@@ -63,16 +63,16 @@ class ScreenLogger(_Tracker):
 
         cells.append(self._format_number(self._iterations + 1))
 
-        for o in solution[1]:
+        for o in solution.objectives or []:
             cells.append(self._format_number(o))
 
-        for c in solution[2]:
+        for c in solution.constraints or []:
             cells.append(self._format_number(c))
 
-        for v in solution[0]:
+        for v in solution.variables or []:
             cells.append(self._format_number(v))
 
-        for s in solution[3]:
+        for s in solution.states or []:
             cells.append(self._format_number(s))  # TODO: deal with the str case
 
         return "| " + " | ".join(map(colour, cells)) + " |"
@@ -84,17 +84,17 @@ class ScreenLogger(_Tracker):
         cells = []
         cells.append(self._format_key("iter"))
 
-        for obs in solution[6]:
-            cells.append(self._format_key(obs))
+        for obj in solution.objective_names:
+            cells.append(self._format_key(obj))
 
-        for con in solution[7]:
+        for con in solution.constraint_names:
             cells.append(self._format_key(con))
 
-        for var in solution[5]:
+        for var in solution.variable_names:
             cells.append(self._format_key(var))
 
-        for sta in solution[8]:
-            cells.append(self._format_key(sta))
+        for obs in solution.observable_names:
+            cells.append(self._format_key(obs))
 
         line: str = "| " + " | ".join(cells) + " |"
         self._header_length = len(line)
@@ -104,7 +104,7 @@ class ScreenLogger(_Tracker):
         self,
         solution: Solution,
     ) -> bool:
-        return solution[4]
+        return solution.is_optimal
 
     def update(
         self,
@@ -144,12 +144,12 @@ class JSONLogger(_Tracker):
 
     def update(self, event: Events, solution: Solution) -> None:
         if event == Events.OPTIMIZATION_STEP:
-            data = {
-                "x": solution[0],
-                "y": solution[1],
-                "c": solution[2],
-                "s": solution[3],
-                "is_optimal": solution[4],
+            data: dict[str, object] = {
+                "x": solution.variables,
+                "y": solution.objectives,
+                "c": solution.constraints,
+                "s": solution.states,
+                "is_optimal": solution.is_optimal,
             }
 
             now, time_elapsed, time_delta = self._time_metrics()

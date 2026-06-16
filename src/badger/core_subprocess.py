@@ -1,32 +1,34 @@
-from copy import deepcopy
 import logging
-import time
-import traceback
-from typing import Any
-from queue import Empty
-from pandas import DataFrame
 import multiprocessing as mp
 import os
+import time
+import traceback
+from copy import deepcopy
+from multiprocessing.connection import Connection
+from multiprocessing.synchronize import Event as EventType
+from queue import Empty
+from typing import Any, Optional
 
-from badger.settings import (
-    init_settings,
-    apply_pytorch_multiprocess_tensor_sharing_setting,
-)
-from badger.errors import (
-    BadgerRunTerminated,
-    BadgerEnvObsError,
-    MEASUREMENT_ERROR_TYPE,
-    MEASUREMENT_ACTION_TYPE,
-    MEASUREMENT_ACTION_RETRY,
-    MEASUREMENT_ACTION_ABORT,
-)
-from badger.logger import _get_default_logger
-from badger.logger.event import Events
-from badger.routine import Routine
-from badger.log import configure_process_logging
+from pandas import DataFrame
 from xopt.errors import FeasibilityError, XoptError
 from xopt.vocs import select_best
 
+from badger.errors import (
+    MEASUREMENT_ACTION_ABORT,
+    MEASUREMENT_ACTION_RETRY,
+    MEASUREMENT_ACTION_TYPE,
+    MEASUREMENT_ERROR_TYPE,
+    BadgerEnvObsError,
+    BadgerRunTerminated,
+)
+from badger.log import configure_process_logging
+from badger.logger import _get_default_logger
+from badger.logger.event import Events, Solution
+from badger.routine import Routine
+from badger.settings import (
+    apply_pytorch_multiprocess_tensor_sharing_setting,
+    init_settings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +36,9 @@ logger = logging.getLogger(__name__)
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
-    queue: mp.Queue,
-    stop_process: mp.Event,
-    dialog_action_queue: mp.Queue,
+    queue: "mp.Queue[Any]",
+    stop_process: EventType,
+    dialog_action_queue: "mp.Queue[Any]",
 ) -> DataFrame:
     while True:
         try:
@@ -77,7 +79,7 @@ def evaluate_measurement_with_retry(
                     )
 
 
-def convert_to_solution(result: DataFrame, routine: Routine):
+def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
     """
     This method is passed the latest evaluated solution and converts that to a printable format for the terminal.
     This method is for the GUI version of Badger.
@@ -91,7 +93,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         logger.debug(f"Selected best index: {best_idx}")
-        if best_idx.size > 0:
+        if best_idx.size > 0 and routine.data is not None:
             if best_idx[0] != len(routine.data) - 1:
                 is_optimal = False
             else:
@@ -113,7 +115,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     stas = list(result[vocs.observable_names].to_numpy()[0])
 
     # TODO: This structure needs improvement
-    solution = (
+    solution = Solution(
         vars,
         objs,
         cons,
@@ -129,14 +131,14 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
 
 def run_routine_subprocess(
-    queue: mp.Queue,
-    evaluate_queue: mp.Pipe,
-    stop_process: mp.Event,
-    pause_process: mp.Event,
-    wait_event: mp.Event,
-    config_path: str = None,
-    log_queue: mp.Queue = None,
-    dialog_action_queue: mp.Queue = None,
+    queue: "mp.Queue[Any]",
+    evaluate_queue: tuple[Connection, Connection],
+    stop_process: EventType,
+    pause_process: EventType,
+    wait_event: EventType,
+    dialog_action_queue: "mp.Queue[Any]",
+    config_path: Optional[str] = None,
+    log_queue: "Optional[mp.Queue[Any]]" = None,
 ) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
@@ -158,7 +160,7 @@ def run_routine_subprocess(
             logger_name=__name__,
             # Always make this level DEBUG so no logs are filtered out until get sent to main,
             # where logs from all sub-processes get filtered before written.
-            log_level=logging.DEBUG,
+            log_level="DEBUG",
             process_name=f"{os.path.basename(__name__)}-{mp.current_process().pid}",
         )
 
@@ -173,7 +175,7 @@ def run_routine_subprocess(
     apply_pytorch_multiprocess_tensor_sharing_setting(config_values)
 
     # Now load the archive would use the correct config
-    from badger.archive import load_run, archive_run
+    from badger.archive import archive_run, load_run
 
     logger.info("Waiting for wait_event to be set...")
     wait_event.wait()
@@ -249,12 +251,12 @@ def run_routine_subprocess(
 
     # Optimization starts
     # This is used by the logger to print to the terminal.
-    solution_meta = (
+    solution_meta = Solution(
         None,
         None,
         None,
         None,
-        None,
+        False,  # TODO: Was set to None before, but that doesn't make sense given the context. Need to verify this is correct.
         routine.vocs.variable_names,
         routine.vocs.objective_names,
         routine.vocs.constraint_names,

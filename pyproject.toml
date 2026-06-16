@@ -42,6 +42,7 @@ dev = [
     "pyqt5-stubs",
     "pandas-stubs",
     "types-requests",
+    "types-PyYAML",
     "mypy",
 ]
 
@@ -72,6 +73,6 @@ ignore = ["E722"]          # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
 addopts = "--cov=badger/"
-log_cli_level = "info"
-log_level = "debug"
+log_cli_level = "INFO"
+log_level = "DEBUG"
 testpaths = ["src/badger/tests"]
