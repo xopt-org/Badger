@@ -41,6 +41,10 @@ logger = logging.getLogger(__name__)
 
 
 class ValueCell(QWidget):
+    """
+    UI table element parent class for displaying variable values
+    """
+
     UNSELECTED_COLOR = "gray"
     ALERT_COLOR = "#EE982F"
 
@@ -102,6 +106,10 @@ class ValueCell(QWidget):
 
 
 class SavedValueCell(ValueCell):
+    """
+    UI table element for displaying saved variable values
+    """
+
     SELECTED_COLOR = "#AAAAAA"
 
     def __init__(self, value: float | None):
@@ -114,6 +122,10 @@ class SavedValueCell(ValueCell):
 
 
 class CurrentValueCell(ValueCell):
+    """
+    UI table element for displaying current variable values
+    """
+
     SELECTED_COLOR = "lightgray"
 
     def __init__(self, value: float | None):
@@ -174,6 +186,10 @@ class RangeAdjustButtonStack(QWidget):
 
 
 class ScanRangeCell(QWidget):
+    """
+    UI table element to display and adjust scan range delta
+    """
+
     UNSELECTED_COLOR = "gray"
     SELECTED_COLOR = "lightgray"
 
@@ -321,6 +337,9 @@ class VariableTable(QTableWidget):
         self.customContextMenuRequested.connect(self.display_context_menu)
 
     def _init_range_header_controls(self) -> None:
+        """
+        Header buttons for variable range adjustment
+        """
         header = self.horizontalHeader()
 
         self._range_header_widget = QWidget(header.viewport())
@@ -370,6 +389,9 @@ class VariableTable(QTableWidget):
         self._position_range_header_controls()
 
     def _position_range_header_controls(self, *_args) -> None:
+        """
+        Position range header controls in the last column of table header
+        """
         header = self.horizontalHeader()
 
         last_col = self.columnCount() - 1
@@ -613,6 +635,10 @@ class VariableTable(QTableWidget):
             scan_range_cell.set_selected(is_selected)
 
     def _check_current_vs_saved(self, name: str) -> int:
+        """
+        Returns 1 if the current value and saved value differ by more than
+        a rel_diff threshold of 0.001, otherwise returns 0.
+        """
         saved = self.saved_values.get(name)
         current = self.current_values.get(name)
         if saved is None or current is None:
@@ -626,6 +652,19 @@ class VariableTable(QTableWidget):
         self.update_variables(self.variables, 2)
 
     def refresh_current_values(self, variable_names: list[str] | None = None):
+        """
+        Refresh current values for variables displayed in the table.
+
+        Parameters
+        ----------
+        variable_names : list[str] | None
+            List of variable names to refresh. If ``None`` or empty,
+            updates all variables in ``self.variables``.
+
+        Returns
+        -------
+        None
+        """
         if self.env_class is None:
             return
 
