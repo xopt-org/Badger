@@ -33,6 +33,7 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "nsga2",
+    "BAX",
 ]
 
 
