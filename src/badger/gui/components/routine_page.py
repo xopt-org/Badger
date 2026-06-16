@@ -1,38 +1,60 @@
-from typing import Any
-import warnings
-import traceback
 import copy
-from functools import partial
+import logging
 import os
-import yaml
+import traceback
+import warnings
+from datetime import datetime
+from functools import partial
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+import yaml
 from coolname import generate_slug
-from xopt import VOCS
-from xopt.vocs import random_inputs
-from xopt.generators import (
-    get_generator_defaults,
-    all_generator_names,
-    get_generator_dynamic,
-)
-from xopt.utils import get_local_region
 from gest_api.vocs import (
     BaseConstraint,
     BaseObjective,
     GreaterThanConstraint,
     LessThanConstraint,
-    MinimizeObjective,
     MaximizeObjective,
+    MinimizeObjective,
 )
 from pydantic import ValidationError
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QScrollArea,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+from xopt import VOCS
+from xopt.generators import (
+    all_generator_names,
+    get_generator_defaults,
+    get_generator_dynamic,
+)
+from xopt.utils import get_local_region
+from xopt.vocs import random_inputs
 
-from badger.gui.components.generator_cbox import BadgerAlgoBox
+from badger.archive import update_run
+from badger.environment import instantiate_env
+from badger.errors import (
+    BadgerEnvInstantiationError,
+    BadgerEnvNotFoundError,
+    BadgerEnvVarError,
+    BadgerRoutineError,
+    VariableRangeError,
+)
+from badger.factory import get_env, list_env, list_generators
+from badger.gui.components.archive_search import ArchiveSearchWidget
 from badger.gui.components.data_panel import BadgerDataPanel
 from badger.gui.components.data_table import (
     get_table_content_as_dict,
@@ -41,41 +63,27 @@ from badger.gui.components.data_table import (
 )
 from badger.gui.components.env_cbox import BadgerEnvBox
 from badger.gui.components.filter_cbox import BadgerFilterBox
+from badger.gui.components.generator_cbox import BadgerAlgoBox
+from badger.gui.utils import filter_generator_config
+from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.docs_window import BadgerDocsWindow
 from badger.gui.windows.edit_script_dialog import BadgerEditScriptDialog
-from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.ind_lim_vrange_dialog import (
     BadgerIndividualLimitVariableRangeDialog,
 )
-from badger.gui.windows.review_dialog import BadgerReviewDialog
-from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
+from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.utils import filter_generator_config
-from badger.gui.components.archive_search import ArchiveSearchWidget
-from badger.archive import update_run
-from badger.environment import instantiate_env
-from badger.errors import (
-    BadgerEnvNotFoundError,
-    BadgerRoutineError,
-    BadgerEnvVarError,
-    BadgerEnvInstantiationError,
-    VariableRangeError,
-)
-from badger.factory import list_generators, list_env, get_env
+from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.routine import Routine
 from badger.settings import init_settings
-from datetime import datetime
 from badger.utils import (
     BlockSignalsContext,
-    load_config,
-    strtobool,
     get_badger_version,
     get_xopt_version,
+    load_config,
+    strtobool,
     ts_float_to_str,
 )
-
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -265,8 +273,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QScrollArea.NoFrame)
-        scroll_area.setStyleSheet(
-            """
+        scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;  /* Remove border */
                 margin: 0px;   /* Remove margin */
@@ -275,8 +282,7 @@ class BadgerRoutinePage(QWidget):
             QScrollArea > QWidget {
                 margin: 0px;   /* Remove margin inside */
             }
-        """
-        )
+        """)
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
         scroll_layout_env.setContentsMargins(0, 0, 15, 0)
@@ -1790,9 +1796,13 @@ class BadgerRoutinePage(QWidget):
         if not vocs.variables:
             logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
+
+        NO_OBJECTIVE_GENERATORS = ["bax"]
+
         if not vocs.objectives:
-            logger.error("No objectives selected.")
-            raise BadgerRoutineError("no objectives selected")
+            if generator_name not in NO_OBJECTIVE_GENERATORS:
+                logger.error("No objectives selected.")
+                raise BadgerRoutineError("no objectives selected")
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(

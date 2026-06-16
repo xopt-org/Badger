@@ -1,23 +1,23 @@
-from typing import Any, TypedDict, cast, TYPE_CHECKING
-from badger.settings import init_settings
-from badger.utils import get_value_or_none
-from badger.errors import (
-    BadgerConfigError,
-    BadgerInvalidPluginError,
-    BadgerInvalidDocsError,
-    BadgerPluginNotFoundError,
-)
-
-from badger.interface import Interface as BadgerInterface
-import sys
-import os
 import importlib
-import yaml
+import logging
+import os
 import re
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+import yaml
 from xopt.generators import generators, get_generator_defaults
 
-import logging
+from badger.errors import (
+    BadgerConfigError,
+    BadgerInvalidDocsError,
+    BadgerInvalidPluginError,
+    BadgerPluginNotFoundError,
+)
+from badger.interface import Interface as BadgerInterface
+from badger.settings import init_settings
+from badger.utils import get_value_or_none
 
 if TYPE_CHECKING:
     from badger.environment import Environment as BadgerEnvironment
@@ -33,7 +33,7 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "nsga2",
-    "BAX",
+    # "BAX",
 ]
 
 
