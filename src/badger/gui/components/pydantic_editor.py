@@ -338,14 +338,11 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
             return "null"
         return f'"{widget.currentText()}"'
     elif isinstance(widget, (QLabel, QLineEdit)):
-        if widget.text() == "null" or widget.text() == "None":
-            return '"null"'
+        text = widget.text()
+        if text == "null" or text == "None" or text == "":
+            return "null"
         else:
-            return (
-                ('"' + widget.text() + '"')
-                if isinstance(widget, QLineEdit)
-                else widget.text()
-            )
+            return ('"' + text + '"') if isinstance(widget, QLineEdit) else text
     return "null"
 
 
@@ -1053,6 +1050,45 @@ class BadgerPydanticEditor(QTreeWidget):
         if self.update_callback is not None:
             self.update_callback(self)
 
+    def _inject_computed_fields(
+        self,
+        parameters_dict: Any,
+        model_class: type[BaseModel],
+    ) -> None:
+        # Pydantic @computed_field values aren't editable in the form, but some
+        # validators (e.g. Xopt's discriminated-union dispatch on `class_path`)
+        # require them in the input dict. Walk the dict, derive each level's
+        # computed fields from its pydantic class, and inject them.
+        if not isinstance(parameters_dict, dict):
+            return
+
+        try:
+            instance = model_class.model_construct(**parameters_dict)
+            for cf_name in model_class.model_computed_fields:
+                if cf_name in parameters_dict:
+                    continue
+                try:
+                    parameters_dict[cf_name] = getattr(instance, cf_name)
+                except Exception as e:
+                    logger.debug(
+                        f"Could not compute {cf_name} on {model_class.__name__}: {e}"
+                    )
+        except Exception as e:
+            logger.debug(
+                f"Could not model_construct {model_class.__name__} for computed-field injection: {e}"
+            )
+
+        if isclass(model_class) and issubclass(model_class, BayesianGenerator):
+            for sub_field in ("algorithm", "numerical_optimizer", "turbo_controller"):
+                sub = parameters_dict.get(sub_field)
+                if not isinstance(sub, dict) or "name" not in sub:
+                    continue
+                try:
+                    sub_class = self.get_compatible_class(sub["name"], sub_field)
+                except (ValueError, AttributeError):
+                    continue
+                self._inject_computed_fields(sub, sub_class)
+
     def validate(self) -> bool:
         if self.model_class is None:
             raise ValueError("Model class is not set.")
@@ -1093,6 +1129,8 @@ class BadgerPydanticEditor(QTreeWidget):
             # Not valid unlesss has at least one objective
             if "vocs" not in parameters_dict:
                 raise KeyError("vocs field is required in parameters")
+
+            self._inject_computed_fields(parameters_dict, self.model_class)
 
             model = self.model_class.model_validate(parameters_dict)
 
