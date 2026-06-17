@@ -1,7 +1,6 @@
-"""Collapsible box widget for the Badger GUI. Provides an animated
-expand/collapse container used to group related settings (environment config,
-generator parameters, etc.) in the routine editor without consuming permanent
-screen space."""
+"""Animated expand/collapse container. Used in the routine editor to
+group environment config, generator parameters, etc. without taking
+up permanent screen space."""
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QLayout

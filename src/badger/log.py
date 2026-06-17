@@ -1,8 +1,13 @@
-"""Centralized multi-process logging system for Badger. Uses a QueueListener
-in the main process to collect log records from all subprocess workers via a
-multiprocessing.Queue, writing to both a daily rotating log file and the
-terminal. Provides helpers to configure per-process queue handlers and to
-update log level or file path at runtime."""
+"""
+Logging system that allows subprocesses to send logs to a central listener
+in the main process, writes logs to both logfile and the terminal.
+
+We make use of the logging.handlers classes from the python standard library, mainly:
+    QueueListener (in main process) — collects log records from a multiprocessing.Queue
+    QueueHandler (in subprocesses) — sends log records to the main process queue
+
+For example usage (in a simple context), see src/badger/tests/test_multiprocess_logging.py
+"""
 
 import os
 import datetime

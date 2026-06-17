@@ -1,6 +1,5 @@
-"""CLI sub-command for listing and inspecting registered Badger environment
-plugins. Displays all available environments or the detailed configuration
-(variables, observations, parameters) of a specific environment."""
+"""The `badger env` command. Lists available environment plugins or shows
+the details (variables, observations, parameters) of a specific one."""
 
 import logging
 

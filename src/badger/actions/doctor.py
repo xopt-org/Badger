@@ -1,7 +1,6 @@
-"""Badger self-check and first-run initialization. Validates that all required
-configuration paths are set, offers to fix missing settings interactively, and
-supports a factory-reset mode that restores default configuration and built-in
-plugins."""
+"""The `badger doctor` command. Checks that all required paths are configured,
+offers to fix missing ones interactively, and can factory-reset Badger back
+to its default state."""
 
 from badger.settings import init_settings, mock_settings
 from badger.actions.config import _config_path_var

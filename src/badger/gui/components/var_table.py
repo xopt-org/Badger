@@ -1,7 +1,6 @@
-"""Variable table widget for the Badger GUI routine editor. Displays
-optimization variables with configurable lower/upper bounds via RobustSpinBox
-cells, supporting checkbox toggling, drag-and-drop reordering, per-variable
-range limit dialogs, and context-menu actions for bound manipulation."""
+"""Table for editing optimization variables and their bounds (lower/upper).
+Supports drag-and-drop reordering, range-limit dialogs, and context-menu
+actions for batch bound manipulation."""
 
 from functools import partial
 from importlib import resources

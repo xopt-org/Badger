@@ -1,7 +1,11 @@
-"""Formula interpreter for Badger observable expressions. Allows users to
-define computed observables using inline mathematical expressions with
-backtick-quoted variable references and numpy functions. Provides safe
-evaluation with name validation, typo suggestions, and sandboxed execution."""
+"""
+Evaluates user-defined math expressions for computed observables.
+
+Users write formulas like `quad1:b`+`quad2:b` or np.sqrt(`signal`) as
+observable names. This module parses backtick-quoted variable references,
+substitutes measured values, and evaluates the expression in a sandboxed
+namespace (numpy only). Includes typo detection for misspelled variable names.
+"""
 
 import numpy as np
 import re

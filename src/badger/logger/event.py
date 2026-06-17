@@ -1,5 +1,5 @@
-"""Event constants for the Badger optimization lifecycle. Used to notify
-loggers and observers of optimization start, step, and end events."""
+"""Event constants (start, step, end) that the optimization loop fires
+to notify loggers and observers of progress."""
 
 
 class Events:

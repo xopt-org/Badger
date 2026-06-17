@@ -1,6 +1,5 @@
-"""CLI sub-command for listing and inspecting registered Badger interface
-plugins. Displays all available interfaces or the detailed configuration of a
-specific interface."""
+"""The `badger interface` command. Lists available interface plugins or
+shows the details of a specific one."""
 
 import logging
 

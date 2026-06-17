@@ -1,6 +1,5 @@
-"""Factory function for creating observable state row widgets. Produces a
-horizontal widget with a combo box for selecting an observable name and a
-remove button, used in the states/observables list of the routine editor."""
+"""Creates a single observable-state row: a combo box for the observable
+name and a remove button."""
 
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from PyQt5.QtWidgets import QStyledItemDelegate

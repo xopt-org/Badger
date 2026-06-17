@@ -1,7 +1,6 @@
-"""Shared Qt widget utilities for the Badger GUI. Provides helper functions
-for creating styled buttons, preventing scroll-wheel spin box changes,
-managing deep copies of widget configurations, and custom combo box and
-dialog classes used across the GUI."""
+"""Shared Qt helpers used throughout the GUI — styled button factories,
+scroll-wheel filters for spinboxes, custom combo boxes, and dialog
+utilities."""
 
 from importlib import resources
 from typing import Any

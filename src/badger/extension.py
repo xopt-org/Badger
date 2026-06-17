@@ -1,7 +1,6 @@
-"""Abstract base class for Badger generator extensions. Extensions provide an
-alternative plugin mechanism for optimization algorithms, allowing third-party
-packages to register generators with their own configuration and execution
-logic outside the standard Xopt generator registry."""
+"""Base class for generator extensions — an alternative way to register
+optimization algorithms outside the standard Xopt generator registry.
+Third-party packages can subclass Extension to plug in custom algorithms."""
 
 from abc import ABC, abstractmethod
 from typing import List

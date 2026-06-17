@@ -1,7 +1,11 @@
-"""Pydantic model editor widget for the Badger GUI. Renders Xopt generator and
-environment Pydantic model schemas as an interactive tree of typed input
-widgets (spinboxes, checkboxes, line edits, nested trees), allowing users to
-configure parameters with validation feedback."""
+"""
+Turns a Pydantic model schema into an editable widget tree.
+
+Used in the routine editor to let users configure generator and environment
+parameters. Each field becomes the appropriate input widget (spinbox for
+numbers, checkbox for bools, nested tree for sub-models), and changes are
+validated against the Pydantic schema in real time.
+"""
 
 from dataclasses import dataclass
 from types import NoneType

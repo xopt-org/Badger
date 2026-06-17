@@ -1,8 +1,6 @@
-"""Routine configuration page for the Badger GUI. The main form where users
-build an optimization routine by naming it, selecting an environment and
-generator, configuring variables/objectives/constraints, setting initial
-points, and defining variable range limits. Handles saving, loading, and
-validation of routine configurations."""
+"""The main form where users build a routine: name it, pick an environment
+and algorithm, configure variables/objectives/constraints, set initial
+points, and define variable ranges."""
 
 from typing import Any
 import warnings

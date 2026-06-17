@@ -1,6 +1,6 @@
-"""CLI sub-command for installing Badger plugins from a remote registry or
-local tarballs. Currently disabled — users are directed to the online
-documentation for plugin management."""
+"""The `badger install` command (currently disabled). Was intended for
+installing plugins from a registry or local tarball — see docs for
+the current plugin installation workflow."""
 
 import logging
 import requests

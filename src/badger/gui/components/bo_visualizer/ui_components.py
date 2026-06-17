@@ -1,7 +1,5 @@
-"""UI control panel for the BO visualizer extension. Provides combo boxes for
-variable selection, a reference point table, grid resolution spinner, and
-plot option checkboxes (show samples, prior mean, feasibility, acquisition
-function) that configure the surrogate model visualization."""
+"""Control panel for the BO visualizer — variable selectors, reference
+point table, grid resolution, and plot option checkboxes."""
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,

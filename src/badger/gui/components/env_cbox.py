@@ -1,7 +1,5 @@
-"""Environment configuration box for the Badger GUI routine editor. Provides
-the collapsible panel where users select an environment plugin and configure
-its variables, objectives, constraints, observables, and Pydantic-validated
-parameters."""
+"""Collapsible panel where users pick an environment and configure its
+variables, objectives, constraints, observables, and parameters."""
 
 from importlib import resources
 from typing import Any

@@ -1,7 +1,5 @@
-"""Eliding label widget for the Badger GUI. Provides a QLabel subclass that
-automatically truncates text with an ellipsis when it exceeds the available
-widget width, used for displaying long routine names and status messages in
-constrained layouts."""
+"""QLabel that truncates text with "..." when it doesn't fit. Used for
+long routine names and status messages in tight layouts."""
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 

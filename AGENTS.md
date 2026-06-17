@@ -25,7 +25,7 @@ Or directly with pytest (tests are at `src/badger/tests/`):
 pytest src/badger/tests/ -v -vrxs
 ```
 
-All 144 tests should pass. GUI tests use `pytest-qt` and require a display server (the CI uses Xvfb on Linux). On macOS, set `QT_MAC_WANTS_LAYER=1` if qtbot interactions fail.
+All tests should pass. GUI tests use `pytest-qt` and require a display server (the CI uses Xvfb on Linux). On macOS, set `QT_MAC_WANTS_LAYER=1` if qtbot interactions fail.
 
 ### Test gotchas
 

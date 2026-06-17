@@ -1,7 +1,5 @@
-"""Plotting area for the BO visualizer extension. Manages the matplotlib
-figure, axes, and canvas embedded in the widget, rendering surrogate model
-visualizations via Xopt's visualize_generator_model and handling interactive
-mouse events for data exploration."""
+"""Matplotlib canvas for the BO visualizer. Renders surrogate model plots
+via Xopt's visualize_generator_model and handles mouse interaction."""
 
 from collections.abc import Callable
 from typing import Optional, cast

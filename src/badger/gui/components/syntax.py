@@ -1,7 +1,5 @@
-"""Python syntax highlighter for the Badger GUI script editor. Provides
-keyword, string, comment, number, and operator highlighting using
-QSyntaxHighlighter rules, applied to the QPlainTextEdit in the script editing
-dialog."""
+"""Python syntax highlighter for the script editor. Colors keywords, strings,
+comments, numbers, and operators."""
 
 from PyQt5 import QtCore, QtGui
 

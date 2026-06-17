@@ -1,7 +1,6 @@
-"""Archive search widget for the Badger GUI routine editor. Provides a
-searchable table of environment variables from the plugin registry, supporting
-drag-and-drop into the variable, observable, and constraint tables to
-configure a routine."""
+"""Searchable table of environment variables from the plugin registry.
+Users drag items from here into the variable/observable/constraint tables
+when building a routine."""
 
 import logging
 from typing import List

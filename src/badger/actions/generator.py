@@ -1,6 +1,5 @@
-"""CLI sub-command for listing and inspecting available optimization generators
-(algorithms). Displays all registered Xopt generators or the default
-configuration of a specific generator."""
+"""The `badger generator` command. Lists available optimization algorithms
+or shows the default configuration of a specific one."""
 
 import logging
 

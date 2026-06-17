@@ -1,9 +1,7 @@
-"""Navigator widgets for browsing history and template files in the Badger GUI.
-Displayed in a tabbed panel on the left side of the home page. Includes
-HistoryNavigator (year/month/day file tree of archived runs),
-TemplateNavigator (file-system tree of routine templates), and
-FileContextMenuBase (right-click actions: open file, open directory, copy
-path)."""
+"""Tabbed sidebar for browsing past runs and templates.
+HistoryNavigator shows archived runs in a date tree (year/month/day);
+TemplateNavigator shows routine template files. Both support right-click
+context menus (open, copy path, etc.)."""
 
 import os
 from PyQt5.QtWidgets import (

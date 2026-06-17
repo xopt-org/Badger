@@ -1,7 +1,5 @@
-"""Generator (algorithm) configuration box for the Badger GUI routine editor.
-Provides the panel where users select an optimization algorithm from the Xopt
-registry, configure its parameters via a Pydantic-driven tree editor, and
-optionally enable scaling functions."""
+"""Panel where users pick an optimization algorithm from the Xopt registry
+and configure its parameters via the Pydantic tree editor."""
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,

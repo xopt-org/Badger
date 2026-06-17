@@ -1,7 +1,11 @@
-"""File-system archive for completed optimization runs. Stores run data as
-YAML files in a date-based directory hierarchy (year/month/day) and provides
-functions to archive, list, load, and delete runs. Also manages temporary
-run files used during in-progress optimizations."""
+"""
+Saves completed optimization runs as YAML files on disk.
+
+Files are organized by date: BADGER_ARCHIVE_ROOT/year/year-month/year-month-day/.
+Each file contains the routine config plus all evaluated data points.
+During an active run, a temporary file is periodically updated so data
+isn't lost if the process crashes.
+"""
 
 import os
 import time

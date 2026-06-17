@@ -1,7 +1,5 @@
-"""Factory function for creating labeled line-edit widgets. Produces a compact
-horizontal widget pairing a fixed-width label with a QLineEdit, used
-throughout the Badger GUI for displaying read-only or editable key-value
-fields."""
+"""Creates a compact label + QLineEdit pair used throughout the GUI for
+key-value fields."""
 
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 

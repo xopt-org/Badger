@@ -1,7 +1,11 @@
-"""Routine runner for the Badger GUI. Manages the lifecycle of an optimization
-subprocess — prepares arguments, dispatches the routine to a pre-spawned
-process, polls for results via a pipe, and emits Qt signals for progress
-updates, completion, and errors back to the run monitor."""
+"""
+Manages a single optimization run inside the GUI.
+
+Grabs a pre-spawned subprocess from the ProcessManager, sends it the routine
+config, then polls the pipe for evaluated solutions. Each result is forwarded
+to the run monitor via Qt signals (progress, finished, error). Handles
+pause/resume and clean shutdown when the user hits stop.
+"""
 
 import logging
 import time

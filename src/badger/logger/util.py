@@ -1,6 +1,5 @@
-"""ANSI color utilities for terminal output formatting. Provides the Colours
-class used by ScreenLogger to highlight optimal solutions and format
-optimization progress tables with colored text."""
+"""ANSI color codes for terminal output. ScreenLogger uses these to
+highlight optimal solutions and format progress tables."""
 
 
 class Colours:
