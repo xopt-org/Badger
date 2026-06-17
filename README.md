@@ -58,6 +58,18 @@ pip install badger-opt
 Currently, Badger only officially supports Linux. Badger on MacOS and
 Windows could be potentially unstable.
 
+## Thread configuration
+
+Badger caps numeric library threads (`OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`) to **4** by default. This prevents performance degradation on high-core-count machines where the default (one thread per core) causes contention for the relatively small matrix operations in Bayesian Optimization workloads.
+
+To override the default, set the environment variable before launching Badger:
+
+```shell
+export OMP_NUM_THREADS=8
+```
+
+Any value you set explicitly will be respected. Badger only fills in the cap when the variable is unset.
+
 ## Run an optimization
 
 Once Badger is installed, launch the GUI by running the following command in the terminal:
