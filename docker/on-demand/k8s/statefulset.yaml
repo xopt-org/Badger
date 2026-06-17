@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: badger-gui
+  namespace: badger-gui
+  labels:
+    app: badger-gui
+spec:
+  serviceName: badger-gui-headless
+  replicas: 20
+  selector:
+    matchLabels:
+      app: badger-gui
+  template:
+    metadata:
+      labels:
+        app: badger-gui
+    spec:
+      containers:
+        - name: badger-gui
+          image: pluflou/badger-novnc:latest
+          ports:
+            - containerPort: 6080
+              name: novnc
+            - containerPort: 8080
+              name: status
+          env:
+            - name: RESOLUTION
+              value: "1920x1080x24"
+            - name: IDLE_TIMEOUT
+              value: "600"
+            - name: OMP_NUM_THREADS
+              value: "4"
+            - name: MKL_NUM_THREADS
+              value: "4"
+            - name: OPENBLAS_NUM_THREADS
+              value: "4"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "8Gi"
+            limits:
+              cpu: "4"
+              memory: "16Gi"
+          readinessProbe:
+            httpGet:
+              path: /vnc.html
+              port: 6080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /vnc.html
+              port: 6080
+            initialDelaySeconds: 30
+            periodSeconds: 15

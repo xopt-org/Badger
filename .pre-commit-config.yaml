@@ -14,6 +14,7 @@ repos:
       - id: check-symlinks
       - id: check-xml
       - id: check-yaml
+        args: [--allow-multiple-documents]
         exclude: "^(python/src/badger/_version.py)$"
 
   - repo: local

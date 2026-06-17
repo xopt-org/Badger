@@ -1,0 +1,39 @@
+services:
+  # Simulates a single badger session pod
+  badger-gui-0:
+    build:
+      context: ../..
+      dockerfile: docker/on-demand/Dockerfile
+      platforms:
+        - linux/amd64
+    environment:
+      - RESOLUTION=1920x1080x24
+      - IDLE_TIMEOUT=0
+    expose:
+      - "6080"
+      - "8080"
+
+  badger-gui-1:
+    build:
+      context: ../..
+      dockerfile: docker/on-demand/Dockerfile
+      platforms:
+        - linux/amd64
+    environment:
+      - RESOLUTION=1920x1080x24
+      - IDLE_TIMEOUT=0
+    expose:
+      - "6080"
+      - "8080"
+
+  # Gateway with lobby page (uses local nginx config for docker-compose DNS)
+  gateway:
+    build:
+      context: ./gateway
+    volumes:
+      - ./gateway/nginx.local.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "6080:80"
+    depends_on:
+      - badger-gui-0
+      - badger-gui-1
