@@ -114,3 +114,11 @@ class BadgerRoutineError(Exception):
 class BadgerRunTerminated(Exception):
     def __init__(self, message="Optimization run has been terminated!"):
         super().__init__(message)
+
+
+# Constants for measurement-error retry option feature.
+# Used in communication between routine runner and subprocess.
+MEASUREMENT_ERROR_TYPE = "measurement_error"
+MEASUREMENT_ACTION_TYPE = "measurement_action"
+MEASUREMENT_ACTION_RETRY = "retry"
+MEASUREMENT_ACTION_ABORT = "abort"
