@@ -1,6 +1,25 @@
-"""Table for editing optimization variables and their bounds (lower/upper).
-Supports drag-and-drop reordering, range-limit dialogs, and context-menu
-actions for batch bound manipulation."""
+"""
+The variable table in the routine editor — where the user picks which machine
+variables to tune and sets a min/max range for each.
+
+VariableTable is its own QTableWidget subclass (unlike the objective/constraint/
+observable tables, which share editable_table.py) because it carries two extra
+RobustSpinBox columns for the lower and upper bound. It validates as you type:
+if min >= max the row gets a red border.
+
+What it manages:
+    - the list of variables, their bounds, and which are checked, kept in
+      internal dicts (all_variables, variables, bounds, selected)
+    - fetching live bounds from the environment when a new variable is added
+      (see get_bounds)
+    - a per-row config button and right-click menu (info, config, copy)
+    - inline-added variables, tracked separately and tinted so they stand out
+    - a "show checked only" filter and drag-drop text to add variables in bulk
+
+Signals: data_changed (any edit), sig_sel_changed (selection), sig_pv_added,
+and sig_var_config (config button clicked). Use export_variables() to get the
+checked variables with their current bounds.
+"""
 
 from functools import partial
 from importlib import resources

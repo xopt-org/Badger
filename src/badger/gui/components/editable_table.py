@@ -1,6 +1,24 @@
-"""Base table widget with checkboxes, drag-and-drop reordering, and text
-drop support. The variable, objective, constraint, and observable tables
-all inherit from this."""
+"""
+Base class for the objective, constraint, and observable tables in the
+routine editor. (The variable table is a separate, parallel implementation —
+see var_table.py — because it needs min/max bound columns.)
+
+EditableTable gives each of those tables the shared behavior:
+    - a checkbox column for selecting which rows are active, with a
+      header-click "toggle all"
+    - drag-and-drop row reordering
+    - dropping text onto the table to add new items
+    - an always-present empty row at the bottom for quick inline adds
+    - keyword filtering and a "show selected only" mode
+    - support for formula items (a name plus its formula string / variables)
+
+Subclasses override create_cell_widgets() to customize what each row looks
+like. Any change to selection or values fires the data_changed signal, which
+env_cbox.py listens to so it can recompose the VOCS.
+
+Useful entry points: update_items() to bulk-load state, export_data() to pull
+back only the checked rows.
+"""
 
 from typing import Any, Callable, List, Dict, ParamSpec, cast
 from functools import partial, wraps

@@ -1,5 +1,22 @@
-"""Collapsible panel where users pick an environment and configure its
-variables, objectives, constraints, observables, and parameters."""
+"""
+The environment half of the routine editor — pick an environment and define
+what the optimizer is allowed to touch and watch.
+
+BadgerEnvBox holds:
+    - the environment selector (combo box) and a Pydantic editor for that
+      environment's parameters
+    - four VOCS tables: variables, objectives, constraints, observables
+    - the initial points sub-section for the variable table
+    - filter/search controls and an "automatic" vs. manual range toggle
+
+Each table emits its own data_changed signal; the box listens to all of them
+and re-emits a single vocs_updated(VOCS) signal whenever anything changes.
+That's the main way the rest of the GUI (mainly routine_page.py) stays in
+sync — call compose_vocs() to pull the current VOCS object out of the tables.
+
+Environments are loaded through the plugin factory (factory.py); the combo
+box is populated from the list of available environment plugins.
+"""
 
 from importlib import resources
 from typing import Any

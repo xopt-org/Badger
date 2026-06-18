@@ -1,6 +1,29 @@
-"""The main form where users build a routine: name it, pick an environment
-and algorithm, configure variables/objectives/constraints, set initial
-points, and define variable ranges."""
+"""
+The big form where a routine gets built — most of the routine editor lives here.
+
+BadgerRoutinePage is organized into tabs:
+    Metadata    — name, description, tags, template save/load
+    Environment — the environment box (env_cbox.py) plus the VOCS tables
+                  (variables, objectives, constraints, observables) and
+                  initial points
+    Algorithm   — the generator box (generator_cbox.py) for picking and
+                  configuring the optimization algorithm
+    Data        — pre-loaded data and archive search
+
+Its central job is _compose_routine(): take everything the user has entered
+across those tabs and assemble it into a Routine object ready to run. It also
+handles the reverse — set_routine()/refresh_ui() load an existing routine back
+into the form.
+
+A few areas carry most of the complexity:
+    - variable ranges: automatic vs. manual bounds, hard-limit overrides, and
+      "relative to current" mode (ratio/delta around the live machine values)
+    - initial points: fill from current values or random sampling
+    - templates: save/load routine configs as YAML
+
+This page is wrapped by routine_editor.py, which adds the save/cancel/delete
+buttons around it.
+"""
 
 from typing import Any
 import warnings
