@@ -1,5 +1,12 @@
+import pytest
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QDialog
+
+
+# conftest suppresses ExpandableMessageBox's exec_ call, but we need it here.
+@pytest.fixture(autouse=True)
+def suppress_popups():
+    pass
 
 
 def test_measurement_retry_dialog_retry(qtbot):
