@@ -36,6 +36,7 @@ class CreateProcess(QObject):
         self.data_queue = Queue()
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
+        self.dialog_action_queue = Queue()
         config_path = init_settings()._instance.config_path
 
         # Get the logging queue from the centralized manager
@@ -53,6 +54,7 @@ class CreateProcess(QObject):
                 self.wait_event,
                 config_path,
                 log_queue,
+                self.dialog_action_queue,
             ),
         )
         new_process.start()
@@ -64,6 +66,7 @@ class CreateProcess(QObject):
                 "data_queue": self.data_queue,
                 "evaluate_queue": self.evaluate_queue,
                 "wait_event": self.wait_event,
+                "dialog_action_queue": self.dialog_action_queue,
             }
         )
         self.finished.emit()
