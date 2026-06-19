@@ -370,8 +370,10 @@ class BadgerEnvBox(QWidget):
         # construct variables as an hbox, with label, stretch, then table on the right
         hbox_var = QHBoxLayout(var_panel_origin)
         hbox_var.setContentsMargins(0, 0, 0, 0)
+        hbox_var.setSpacing(6)
 
         lbl_var_col = QWidget()  # column with stretch under
+        lbl_var_col.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_var = QVBoxLayout(lbl_var_col)
         vbox_lbl_var.setContentsMargins(0, 0, 0, 0)
         lbl_var = QLabel("Variables")
@@ -392,16 +394,23 @@ class BadgerEnvBox(QWidget):
         action_var = QWidget()
         hbox_action_var = QHBoxLayout(action_var)
         hbox_action_var.setContentsMargins(0, 0, 0, 0)
+        hbox_action_var.setSpacing(0)
         vbox_var_edit.addWidget(action_var)
         # filter variables
         self.edit_var = edit_var = QLineEdit()
         edit_var.setPlaceholderText("Filter variables...")
-        edit_var.setFixedWidth(160)
+        edit_var.setFixedWidth(192)
+
+        # refresh current
+        self.refresh_current_btn = QPushButton("Refresh")
+        self.refresh_current_btn.setFixedSize(96, 24)
 
         # show checked only
         self.check_only_var = check_only_var = QCheckBox("Show Checked Only")
         check_only_var.setChecked(False)
         hbox_action_var.addWidget(edit_var)
+        hbox_action_var.addSpacing(14)
+        hbox_action_var.addWidget(self.refresh_current_btn)
         hbox_action_var.addStretch()
         hbox_action_var.addWidget(check_only_var)
 
@@ -453,7 +462,9 @@ class BadgerEnvBox(QWidget):
         vbox.addWidget(obj_panel)
         hbox_obj = QHBoxLayout(obj_panel)
         hbox_obj.setContentsMargins(0, 0, 0, 0)
+        hbox_obj.setSpacing(6)
         lbl_obj_col = QWidget()
+        lbl_obj_col.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_obj = QVBoxLayout(lbl_obj_col)
         vbox_lbl_obj.setContentsMargins(0, 0, 0, 0)
         lbl_obj = QLabel("Objectives")
@@ -493,7 +504,9 @@ class BadgerEnvBox(QWidget):
         vbox_more.addWidget(con_panel)
         hbox_con = QHBoxLayout(con_panel)
         hbox_con.setContentsMargins(0, 0, 0, 0)
+        hbox_con.setSpacing(6)
         lbl_con_col = QWidget()
+        lbl_con_col.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_con = QVBoxLayout(lbl_con_col)
         vbox_lbl_con.setContentsMargins(0, 0, 0, 0)
         lbl_con = QLabel("Constraints")
@@ -529,7 +542,9 @@ class BadgerEnvBox(QWidget):
         vbox_more.addWidget(sta_panel)
         hbox_sta = QHBoxLayout(sta_panel)
         hbox_sta.setContentsMargins(0, 0, 0, 0)
+        hbox_sta.setSpacing(6)
         lbl_sta_col = QWidget()
+        lbl_sta_col.setFixedWidth(LABEL_WIDTH)
         vbox_lbl_sta = QVBoxLayout(lbl_sta_col)
         vbox_lbl_sta.setContentsMargins(0, 0, 0, 0)
         lbl_sta = QLabel("Observables")
@@ -571,6 +586,7 @@ class BadgerEnvBox(QWidget):
         self.check_only_con.stateChanged.connect(self.toggle_con_show_mode)
         self.btn_env_params.toggled.connect(self.toggle_env_params)
         self.btn_algo_parans.toggled.connect(self.toggle_algorithm_params)
+        self.refresh_current_btn.clicked.connect(self.var_table.refresh_current_values)
 
         self.obj_table.data_changed.connect(lambda: self.update_vocs("obj_table"))
         self.con_table.data_changed.connect(lambda: self.update_vocs("con_table"))
