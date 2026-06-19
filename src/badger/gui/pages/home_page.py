@@ -1,3 +1,15 @@
+"""
+The main view you see when you open Badger.
+
+Left side: routine editor (configure variables, objectives, algorithm).
+Right side: run monitor (live plots, data table, start/stop controls).
+Bottom-left tabs: history navigator and template browser.
+
+This widget coordinates data flow between those panels — e.g. when you
+select a routine from history, it loads into the editor and shows past
+results in the monitor.
+"""
+
 import gc
 import os
 import traceback

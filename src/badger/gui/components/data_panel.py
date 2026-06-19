@@ -1,3 +1,6 @@
+"""Panel for viewing and managing pre-loaded optimization data. Lets
+users load data from archived runs or clear the buffer before starting."""
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,

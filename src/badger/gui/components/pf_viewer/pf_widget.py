@@ -1,3 +1,7 @@
+"""Pareto front viewer for multi-objective runs. Plots objective pairs
+with color-mapped iteration progress and optional Pareto-only filtering,
+updating live as new solutions come in."""
+
 import time
 from typing import Optional
 

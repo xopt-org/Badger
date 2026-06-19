@@ -1,3 +1,6 @@
+"""Launcher panel listing available analysis extensions (BO Visualizer,
+Pareto Front Viewer) with buttons to open each in its own window."""
+
 import traceback
 
 from PyQt5.QtWidgets import (

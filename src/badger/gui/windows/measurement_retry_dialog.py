@@ -1,3 +1,7 @@
+"""Dialog shown when setting variables or reading observables fails mid-run.
+Displays the error (with an expandable details pane) and asks the user whether
+to retry the measurement or stop the run."""
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontDatabase, QTextOption
 from PyQt5.QtWidgets import (
