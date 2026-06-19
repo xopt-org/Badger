@@ -18,44 +18,41 @@ Environments are loaded through the plugin factory (factory.py); the combo
 box is populated from the list of available environment plugins.
 """
 
+import logging
 from importlib import resources
 from typing import Any
 
-from PyQt5.QtWidgets import (
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QWidget,
-    QLineEdit,
-)
+from gest_api.vocs import ContinuousVariable
+from pydantic_core import ValidationError
+from PyQt5.QtCore import QPropertyAnimation, QRegExp, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QCheckBox,
-    QStyledItemDelegate,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QPushButton,
     QSizePolicy,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import QRegExp, QPropertyAnimation, pyqtSignal
-from pydantic_core import ValidationError
+from xopt.vocs import VOCS
 
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
+from badger.gui.components.con_table import ConstraintTable
+from badger.gui.components.data_table import init_data_table
+from badger.gui.components.obj_table import ObjectiveTable
+from badger.gui.components.obs_table import ObservableTable
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
 from badger.gui.components.var_table import VariableTable
-from badger.gui.components.obj_table import ObjectiveTable
-from badger.gui.components.con_table import ConstraintTable
-from badger.gui.components.obs_table import ObservableTable
-from badger.gui.components.data_table import init_data_table
-from badger.settings import init_settings
 from badger.gui.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
 )
+from badger.settings import init_settings
 from badger.utils import strtobool
-from xopt.vocs import VOCS
-from gest_api.vocs import ContinuousVariable
-
-import logging
 
 LABEL_WIDTH = 96
 ENV_PARAMS_BTN = 1  # use button or collapsible box for env parameters
@@ -538,7 +535,7 @@ class BadgerEnvBox(QWidget):
         self.sta_table.data_changed.connect(lambda: self.update_vocs("sta_table"))
         self.var_table.data_changed.connect(lambda: self.update_vocs("var_table"))
 
-    def update_vocs(self, origin: str):
+    def update_vocs(self, origin: str) -> None:
         logger.debug(f"Emitting vocs_updated signal from env_cbox: {origin}")
         vocs, _ = self.compose_vocs()
         self.vocs_updated.emit(vocs)
