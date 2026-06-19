@@ -305,10 +305,15 @@ class BadgerEnvBox(QWidget):
         self.btn_env_params.setCheckable(True)
         self.set_selected_env_name(None)
 
+        self.btn_env_docs = QPushButton("Docs")
+        self.btn_env_docs.setFixedSize(44, 24)
+        self.btn_env_docs.setToolTip("Open environment docs")
+
         hbox_select_env.addWidget(env_lbl)
         hbox_select_env.addWidget(env_cb)
         hbox_select_env.addSpacing(8)
         hbox_select_env.addWidget(self.btn_env_params)
+        hbox_select_env.addWidget(self.btn_env_docs)
         hbox_select_env.addStretch()
 
         # Environment params editor (hidden)
@@ -324,6 +329,7 @@ class BadgerEnvBox(QWidget):
         algo_widget = QWidget()
         hbox_algo = QHBoxLayout(algo_widget)
         hbox_algo.setContentsMargins(0, 0, 0, 0)
+        hbox_algo.setSpacing(6)
         algo_lbl = QLabel("Algorithm")  # label
         algo_lbl.setFixedWidth(LABEL_WIDTH)
         self.algo_cb = algo_cb = NoHoverFocusComboBox()  # comboBox
@@ -336,11 +342,15 @@ class BadgerEnvBox(QWidget):
         self.btn_algo_parans.setFixedSize(96, 24)
         self.btn_algo_parans.setCheckable(True)
 
+        self.btn_algo_docs = QPushButton("Docs")
+        self.btn_algo_docs.setFixedSize(44, 24)
+        self.btn_algo_docs.setToolTip("Open algorithm docs")
+
         hbox_algo.addWidget(algo_lbl)
         hbox_algo.addWidget(algo_cb)
         hbox_algo.addSpacing(8)
         hbox_algo.addWidget(self.btn_algo_parans)
-
+        hbox_algo.addWidget(self.btn_algo_docs)
         hbox_algo.addStretch()
 
         self.edit_algo_params = BadgerPydanticEditor()

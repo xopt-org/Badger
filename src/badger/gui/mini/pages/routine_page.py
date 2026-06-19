@@ -254,12 +254,12 @@ class BadgerRoutinePage(QWidget):
                 self.env_box._qtree_height_hint(self.env_box.edit_algo_params)
             )
         )
-        # self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
         self.env_box.var_table.sig_change_bounds.connect(
             self.adjust_variable_range_options
         )
-        # self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
+        self.env_box.btn_env_docs.clicked.connect(self.open_environment_docs)
+        self.env_box.btn_algo_docs.clicked.connect(self.open_generator_docs)
         # self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
