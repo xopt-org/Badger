@@ -1,3 +1,6 @@
+"""Error dialog with an expandable "Details" section. Shows a short error
+message by default; click to reveal the full traceback."""
+
 from PyQt5.QtWidgets import (
     QDialog,
     QMessageBox,

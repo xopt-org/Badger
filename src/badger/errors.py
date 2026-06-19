@@ -1,3 +1,7 @@
+"""Badger's exception classes. The base BadgerError pops up a Qt message box
+with the traceback when raised inside the GUI. Subclasses cover config issues,
+database errors, plugin failures, and optimization stop signals."""
+
 from PyQt5.QtWidgets import QMessageBox
 import traceback
 import sys

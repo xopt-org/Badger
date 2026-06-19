@@ -1,14 +1,7 @@
-"""
-Navigator GUI windows for browsing history files and template files.
-These windows are displyaed in a tabbed window on the left side of the main Badger GUI.
-
-This file defines the following classes:
-- HistoryNavigator: Displays history files in a 'year -> month -> day' file tree.
-- TemplateNavigator: Displays template files in tree view.
-- FileContextMenuBase: Shared class that adds right-click context menu
-  for doing file related actions (open file, open file dir, copy full file path to clipboard).
-
-"""
+"""Tabbed sidebar for browsing past runs and templates.
+HistoryNavigator shows archived runs in a date tree (year/month/day);
+TemplateNavigator shows routine template files. Both support right-click
+context menus (open, copy path, etc.)."""
 
 import os
 from PyQt5.QtWidgets import (

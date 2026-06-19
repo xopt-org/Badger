@@ -1,3 +1,12 @@
+"""
+The live dashboard shown during and after an optimization run.
+
+Displays pyqtgraph plots that update in real time as new points are evaluated,
+a data table of all solutions, and start/pause/stop controls. When a run
+finishes, it archives the data and hands results off to analysis extensions
+(BO visualizer, Pareto front viewer) if the user has them open.
+"""
+
 import os
 import traceback
 from importlib import resources

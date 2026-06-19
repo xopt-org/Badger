@@ -1,3 +1,6 @@
+"""Base class that all analysis extension widgets must implement.
+Defines the interface for receiving routine updates and rendering plots."""
+
 from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any, Optional

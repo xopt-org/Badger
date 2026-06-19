@@ -1,3 +1,6 @@
+"""Dialog wrappers for analysis extensions (BO visualizer, Pareto front
+viewer). Each dialog receives live data updates from the run monitor."""
+
 from typing import Optional, cast
 import logging
 

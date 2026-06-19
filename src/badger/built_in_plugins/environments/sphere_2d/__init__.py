@@ -1,3 +1,7 @@
+"""Simple test environment with two variables (x0, x1) and analytic
+objectives (f = x0^2 + x1^2, g = x0 + x1). Useful for testing
+optimizers without needing any hardware."""
+
 from badger import environment
 
 

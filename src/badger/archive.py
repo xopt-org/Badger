@@ -1,3 +1,12 @@
+"""
+Saves completed optimization runs as YAML files on disk.
+
+Files are organized by date: BADGER_ARCHIVE_ROOT/year/year-month/year-month-day/.
+Each file contains the routine config plus all evaluated data points.
+During an active run, a temporary file is periodically updated so data
+isn't lost if the process crashes.
+"""
+
 import os
 import time
 import warnings

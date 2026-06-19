@@ -1,3 +1,6 @@
+"""Matplotlib canvas for the BO visualizer. Renders surrogate model plots
+via Xopt's visualize_generator_model and handles mouse interaction."""
+
 from collections.abc import Callable
 from typing import Optional, cast
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions

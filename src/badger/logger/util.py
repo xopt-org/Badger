@@ -1,4 +1,7 @@
-# Borrowed from bayes_opt
+"""ANSI color codes for terminal output. ScreenLogger uses these to
+highlight optimal solutions and format progress tables."""
+
+
 class Colours:
     """Print in nice colours."""
 

@@ -1,3 +1,6 @@
+"""Python syntax highlighter for the script editor. Colors keywords, strings,
+comments, numbers, and operators."""
+
 from PyQt5 import QtCore, QtGui
 
 

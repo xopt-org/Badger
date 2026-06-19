@@ -1,3 +1,12 @@
+"""
+Manages a single optimization run inside the GUI.
+
+Grabs a pre-spawned subprocess from the ProcessManager, sends it the routine
+config, then polls the pipe for evaluated solutions. Each result is forwarded
+to the run monitor via Qt signals (progress, finished, error). Handles
+pause/resume and clean shutdown when the user hits stop.
+"""
+
 import logging
 import time
 import traceback

@@ -1,3 +1,6 @@
+"""The `badger env` command. Lists available environment plugins or shows
+the details (variables, observations, parameters) of a specific one."""
+
 import logging
 
 from badger.utils import range_to_str, yprint

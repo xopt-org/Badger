@@ -1,3 +1,7 @@
+"""Shared Qt helpers used throughout the GUI — styled button factories,
+scroll-wheel filters for spinboxes, custom combo boxes, and dialog
+utilities."""
+
 from importlib import resources
 from typing import Any
 from PyQt5.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox, QToolButton

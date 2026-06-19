@@ -1,3 +1,6 @@
+"""Simple search bar (QLineEdit with placeholder text) for filtering
+routine lists."""
+
 from PyQt5.QtWidgets import QLineEdit
 
 

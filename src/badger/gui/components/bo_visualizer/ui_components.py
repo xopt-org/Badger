@@ -1,3 +1,6 @@
+"""Control panel for the BO visualizer — variable selectors, reference
+point table, grid resolution, and plot option checkboxes."""
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,

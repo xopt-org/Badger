@@ -1,3 +1,10 @@
+"""Top-level Badger package. Exposes the version number and serves as
+the namespace root for the plugin system, database, and GUI. 
+Also sets a cap on the library threads to 4 by default, since
+libraries auto-detect all available cores and spawn that many threads.
+This prevents performance degradation on high-core-count for
+typical BO workloads. Does not override user-set environment variables."""
+
 import os
 
 _DEFAULT_NUM_THREADS = "4"
