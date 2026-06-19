@@ -34,9 +34,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdotool \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure fluxbox to maximize all windows by default
+# Maximize only the main Badger window; let dialogs/popups open at native size
 RUN mkdir -p /root/.fluxbox && \
-    echo "[app] (name=.*)\n  [Maximized] {yes}\n[end]" > /root/.fluxbox/apps
+    echo "[app] (title=Badger mini.*)\n  [Maximized] {yes}\n[end]" > /root/.fluxbox/apps
 
 # Install Badger and dependencies
 COPY . /app
@@ -46,6 +46,10 @@ RUN pip install --no-cache-dir -e ".[dev]"
 
 # Install latest xopt from main branch
 RUN pip install --no-cache-dir git+https://github.com/xopt-org/Xopt.git@main
+
+# Install the LCLS FEL surrogate (enables the lcls_fel_surrogate environment plugin;
+# pulls lume-torch + model weights as package data)
+RUN pip install --no-cache-dir git+https://github.com/slaclab/LCLS_FEL_Surrogate.git@main
 
 # Pre-configure Badger so it doesn't prompt on first launch
 RUN mkdir -p /root/.config && python docker/on-demand/setup_badger.py

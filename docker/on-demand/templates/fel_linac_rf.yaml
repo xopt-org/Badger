@@ -1,0 +1,61 @@
+name: FEL linac RF tuning
+description: Maximize FEL pulse energy (GDET:FEE1:241:ENRC) by tuning the L1S/L1X
+  RF amplitudes & phases and the L2/L3 energy setpoints. Bayesian optimization (expected
+  improvement).
+environment:
+  name: lcls_fel_surrogate
+  params: {}
+generator:
+  name: expected_improvement
+  turbo_controller: null
+  numerical_optimizer:
+    name: LBFGS
+    n_restarts: 20
+    max_iter: 2000
+    max_time: 5.0
+  max_travel_distances: null
+vocs:
+  constants: {}
+  constraints: {}
+  objectives:
+    GDET:FEE1:241:ENRC: MAXIMIZE
+  observables: []
+  variables:
+    ACCL:LI21:1:L1S_S_AV:
+    - 100.00001525878906
+    - 111.22259521484375
+    ACCL:LI21:180:L1X_S_AV:
+    - 6.948431968688965
+    - 25.50543975830078
+    ACCL:LI22:1:ADES:
+    - 3502.705322265625
+    - 5997.24365234375
+    ACCL:LI25:1:ADES:
+    - 5606.73388671875
+    - 8023.0810546875
+    ACCL:LI21:1:L1S_S_PV:
+    - -33.887779235839844
+    - -15.789875030517578
+    ACCL:LI21:180:L1X_S_PV:
+    - -175.42947387695312
+    - -156.74661254882812
+    ACCL:LI22:1:PDES:
+    - -44.52250289916992
+    - -26.240581512451172
+vrange_limit_options: {}
+relative_to_current: false
+initial_point_actions:
+- type: add_curr
+- config:
+    fraction: 0.1
+    method: 0
+    n_points: 3
+  type: add_rand
+critical_constraint_names: []
+additional_variables: []
+formulas: {}
+constraint_formulas: {}
+observable_formulas: {}
+vrange_hard_limit: {}
+badger_version: ''
+xopt_version: ''

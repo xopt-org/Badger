@@ -1,0 +1,9 @@
+---
+name: lcls_fel_surrogate
+description: "LCLS FEL pulse-energy surrogate model (LUME-torch)"
+version: "0.1"
+dependencies:
+  - badger-opt
+  - torch
+  - lume-torch
+  - lcls-fel-model

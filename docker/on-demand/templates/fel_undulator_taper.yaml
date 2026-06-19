@@ -1,0 +1,64 @@
+name: FEL undulator taper (HXR segments 1-8)
+description: Maximize FEL pulse energy by tuning the first eight HXR undulator segment
+  gaps (USEG:UNDH GapAct). Bayesian optimization (upper confidence bound).
+environment:
+  name: lcls_fel_surrogate
+  params: {}
+generator:
+  name: upper_confidence_bound
+  turbo_controller: null
+  numerical_optimizer:
+    name: LBFGS
+    n_restarts: 20
+    max_iter: 2000
+    max_time: 5.0
+  max_travel_distances: null
+  beta: 2.0
+vocs:
+  constants: {}
+  constraints: {}
+  objectives:
+    GDET:FEE1:241:ENRC: MAXIMIZE
+  observables: []
+  variables:
+    USEG:UNDH:1450:GapAct:
+    - 7.279615879058838
+    - 7.818066120147705
+    USEG:UNDH:1550:GapAct:
+    - 7.224699974060059
+    - 7.689549922943115
+    USEG:UNDH:1650:GapAct:
+    - 7.26485013961792
+    - 7.781050205230713
+    USEG:UNDH:1750:GapAct:
+    - 7.26800012588501
+    - 7.856249809265137
+    USEG:UNDH:1850:GapAct:
+    - 7.281449794769287
+    - 7.713500022888184
+    USEG:UNDH:1950:GapAct:
+    - 7.2893500328063965
+    - 7.892950057983398
+    USEG:UNDH:2050:GapAct:
+    - 7.33489990234375
+    - 7.853750228881836
+    USEG:UNDH:2250:GapAct:
+    - 7.302999973297119
+    - 7.526899814605713
+vrange_limit_options: {}
+relative_to_current: false
+initial_point_actions:
+- type: add_curr
+- config:
+    fraction: 0.1
+    method: 0
+    n_points: 3
+  type: add_rand
+critical_constraint_names: []
+additional_variables: []
+formulas: {}
+constraint_formulas: {}
+observable_formulas: {}
+vrange_hard_limit: {}
+badger_version: ''
+xopt_version: ''

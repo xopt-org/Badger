@@ -1,0 +1,51 @@
+name: FEL LI21 matching quads
+description: Maximize FEL pulse energy by tuning the LI21 matching quadrupoles. Bayesian
+  optimization (expected improvement).
+environment:
+  name: lcls_fel_surrogate
+  params: {}
+generator:
+  name: expected_improvement
+  turbo_controller: null
+  numerical_optimizer:
+    name: LBFGS
+    n_restarts: 20
+    max_iter: 2000
+    max_time: 5.0
+  max_travel_distances: null
+vocs:
+  constants: {}
+  constraints: {}
+  objectives:
+    GDET:FEE1:241:ENRC: MAXIMIZE
+  observables: []
+  variables:
+    QUAD:LI21:211:BCTRL:
+    - 3.2707419395446777
+    - 7.083395004272461
+    QUAD:LI21:221:BCTRL:
+    - -0.7424343228340149
+    - 0.2432546466588974
+    QUAD:LI21:251:BCTRL:
+    - -0.7296757698059082
+    - 0.25308719277381897
+    QUAD:LI21:271:BCTRL:
+    - -7.801762104034424
+    - -4.287487983703613
+vrange_limit_options: {}
+relative_to_current: false
+initial_point_actions:
+- type: add_curr
+- config:
+    fraction: 0.1
+    method: 0
+    n_points: 3
+  type: add_rand
+critical_constraint_names: []
+additional_variables: []
+formulas: {}
+constraint_formulas: {}
+observable_formulas: {}
+vrange_hard_limit: {}
+badger_version: ''
+xopt_version: ''

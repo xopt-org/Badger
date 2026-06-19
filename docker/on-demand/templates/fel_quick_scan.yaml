@@ -1,0 +1,33 @@
+name: FEL quick scan (random)
+description: 'Fast smoke test: random sampling of the L2/L3 beam energy setpoints
+  to maximize FEL pulse energy. Good for verifying the surrogate environment end-to-end.'
+environment:
+  name: lcls_fel_surrogate
+  params: {}
+generator:
+  name: random
+vocs:
+  constants: {}
+  constraints: {}
+  objectives:
+    GDET:FEE1:241:ENRC: MAXIMIZE
+  observables: []
+  variables:
+    ACCL:LI22:1:ADES:
+    - 3502.705322265625
+    - 5997.24365234375
+    ACCL:LI25:1:ADES:
+    - 5606.73388671875
+    - 8023.0810546875
+vrange_limit_options: {}
+relative_to_current: false
+initial_point_actions:
+- type: add_curr
+critical_constraint_names: []
+additional_variables: []
+formulas: {}
+constraint_formulas: {}
+observable_formulas: {}
+vrange_hard_limit: {}
+badger_version: ''
+xopt_version: ''

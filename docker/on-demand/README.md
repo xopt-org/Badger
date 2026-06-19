@@ -57,6 +57,7 @@ kubectl apply -f docker/on-demand/k8s/namespace.yaml
 kubectl apply -f docker/on-demand/k8s/statefulset.yaml
 kubectl apply -f docker/on-demand/k8s/service.yaml
 kubectl apply -f docker/on-demand/k8s/gateway.yaml
+kubectl apply -f docker/on-demand/k8s/daily-restart-cronjob.yaml
 
 # 3. Watch pods come up
 kubectl get pods -n badger-gui -w
@@ -97,6 +98,16 @@ Users pick an available session from the lobby. Each session is fully isolated �
 2. If the user reconnects within `IDLE_TIMEOUT` seconds, they pick up where they left off
 3. After `IDLE_TIMEOUT` (default 10 min) with no VNC clients, the pod self-terminates
 4. Kubernetes automatically restarts it as a fresh session
+
+### Nightly Reset
+
+Runs are archived to each pod's ephemeral filesystem (no PersistentVolume), so they
+survive until the pod's container restarts. A pod that stays connected (e.g. a browser
+tab left open) never hits the idle timeout, so its archived runs would otherwise leak
+across users and days. `daily-restart-cronjob.yaml` runs `kubectl rollout restart
+statefulset/badger-gui` at **midnight Pacific** (`America/Los_Angeles`, DST-aware) to
+guarantee every session starts the day fresh. It uses a dedicated `badger-restarter`
+ServiceAccount with a Role scoped to patching the StatefulSet.
 
 ### Scaling
 
@@ -184,5 +195,6 @@ docker/on-demand/
     ├── namespace.yaml      # badger-gui namespace
     ├── statefulset.yaml    # 20 Badger session pods
     ├── service.yaml        # Headless service + ingress
-    └── gateway.yaml        # Gateway deployment + service
+    ├── gateway.yaml        # Gateway deployment + service
+    └── daily-restart-cronjob.yaml  # Nightly statefulset restart (clears runs)
 ```

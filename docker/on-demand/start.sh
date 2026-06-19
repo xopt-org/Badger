@@ -52,7 +52,7 @@ if [ -n "${IDLE_TIMEOUT}" ] && [ "${IDLE_TIMEOUT}" -gt 0 ] 2>/dev/null; then
 fi
 
 # Launch Badger GUI in background, then maximize the window
-badger -g &
+badger -mini &
 BADGER_PID=$!
 
 # Wait for the window to appear, then maximize it
@@ -66,7 +66,7 @@ wait $BADGER_PID || true
 while true; do
     echo "Badger exited, restarting in 2s..."
     sleep 2
-    badger -g &
+    badger -mini &
     BADGER_PID=$!
     sleep 3
     xdotool search --name "Badger" windowactivate --sync windowsize 100% 100% windowmove 0 0 2>/dev/null || true
