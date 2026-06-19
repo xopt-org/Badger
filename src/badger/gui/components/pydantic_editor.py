@@ -58,9 +58,6 @@ TUPLE_PATTERN = re.compile(r"\((.*?,.*?)\)")
 class CustomSafeLoader(yaml.SafeLoader):
     def __init__(self, stream: Any) -> None:
         super().__init__(stream)
-        self.add_constructor(
-            "tag:yaml.org,2002:null", type(self).handle_null_constructor
-        )
         self.add_constructor("tag:yaml.org,2002:str", type(self).tuple_constructor)
 
     @staticmethod
@@ -71,13 +68,6 @@ class CustomSafeLoader(yaml.SafeLoader):
                 return ast.literal_eval(value)
             except Exception:
                 pass
-        return value
-
-    @staticmethod
-    def handle_null_constructor(loader: Any, node: yaml.ScalarNode) -> Any:
-        value = loader.construct_scalar(node)
-        if value.lower() in ["null", "none", ""]:
-            return None
         return value
 
 
@@ -94,14 +84,24 @@ def _set_value_for_basic_widget(
     widget: QWidget,
     value: str | float | int | bool | None,
 ) -> None:
+    nullable = bool(widget.property("badger_nullable"))
     if isinstance(widget, QLabel) or isinstance(widget, QLineEdit):
         widget.setText("null" if value is None else str(value))
     elif isinstance(widget, QDoubleSpinBox):
-        widget.setValue(convert_to_type(value, float))
+        if value is None and nullable:
+            widget.setValue(widget.minimum())
+        else:
+            widget.setValue(convert_to_type(value, float))
     elif isinstance(widget, QSpinBox):
-        widget.setValue(convert_to_type(value, int))
+        if value is None and nullable:
+            widget.setValue(widget.minimum())
+        else:
+            widget.setValue(convert_to_type(value, int))
     elif isinstance(widget, QCheckBox):
-        widget.setChecked(convert_to_type(value, bool))
+        if value is None and nullable:
+            widget.setCheckState(Qt.CheckState.PartiallyChecked)
+        else:
+            widget.setChecked(convert_to_type(value, bool))
 
 
 @dataclass
@@ -285,23 +285,43 @@ class BadgerResolvedType:
             widget = QDoubleSpinBox()
             widget.setRange(float("-inf"), float("inf"))
             widget.setDecimals(6)
-            value = convert_to_type(default, float) if default is not None else 0.0
-            widget.setValue(value)
+            if resolved_type.nullable:
+                # The minimum value doubles as the "null" sentinel.
+                widget.setSpecialValueText("null")
+            if default is not None:
+                widget.setValue(convert_to_type(default, float))
+            elif resolved_type.nullable:
+                widget.setValue(widget.minimum())
+            else:
+                widget.setValue(0.0)
 
             if editor_info is not None:
                 widget.valueChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is int:
             widget = QSpinBox()
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
-            value = convert_to_type(default, int) if default is not None else 0
-            widget.setValue(value)
+            if resolved_type.nullable:
+                # The minimum value doubles as the "null" sentinel.
+                widget.setSpecialValueText("null")
+            if default is not None:
+                widget.setValue(convert_to_type(default, int))
+            elif resolved_type.nullable:
+                widget.setValue(widget.minimum())
+            else:
+                widget.setValue(0)
 
             if editor_info is not None:
                 widget.valueChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is bool:
             widget = QCheckBox()
-            value = convert_to_type(default, bool) if default is not None else False
-            widget.setChecked(value)
+            if resolved_type.nullable:
+                widget.setTristate(True)
+            if default is not None:
+                widget.setChecked(convert_to_type(default, bool))
+            elif resolved_type.nullable:
+                widget.setCheckState(Qt.CheckState.PartiallyChecked)
+            else:
+                widget.setChecked(False)
 
             if editor_info is not None:
                 widget.stateChanged.connect(lambda: handle_changed(editor_info))
@@ -330,8 +350,15 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_yaml()
     elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+        if widget.property("badger_nullable") and widget.value() == widget.minimum():
+            return "null"
         return str(widget.value())
     elif isinstance(widget, QCheckBox):
+        if (
+            widget.property("badger_nullable")
+            and widget.checkState() == Qt.CheckState.PartiallyChecked
+        ):
+            return "null"
         return "true" if widget.isChecked() else "false"
     elif isinstance(widget, QComboBox):
         if widget.currentText() == "null":
@@ -386,8 +413,15 @@ def _qt_widget_to_value(widget: Any) -> Any:
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_dict()
     elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+        if widget.property("badger_nullable") and widget.value() == widget.minimum():
+            return None
         return widget.value()
     elif isinstance(widget, QCheckBox):
+        if (
+            widget.property("badger_nullable")
+            and widget.checkState() == Qt.CheckState.PartiallyChecked
+        ):
+            return None
         return widget.isChecked()
     elif isinstance(widget, QComboBox):
         return widget.currentText()
