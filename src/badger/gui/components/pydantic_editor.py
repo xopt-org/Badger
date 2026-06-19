@@ -40,6 +40,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from xopt.errors import VOCSError
 from xopt.generators import get_generator
 from xopt.generators.bayesian.bax.algorithms import Algorithm
 from xopt.generators.bayesian.bax_generator import BaxGenerator
@@ -1125,7 +1126,7 @@ class BadgerPydanticEditor(QTreeWidget):
                     continue
                 self._inject_computed_fields(sub, sub_class)
 
-    def validate(self) -> bool:
+    def validate(self) -> None:
         if self.model_class is None:
             raise ValueError("Model class is not set.")
 
@@ -1161,13 +1162,10 @@ class BadgerPydanticEditor(QTreeWidget):
                         parameters_dict["vocs"][key] = convert_dict(
                             parameters_dict["vocs"][key]
                         )
-
-            # Not valid unlesss has at least one objective
-            if "vocs" not in parameters_dict:
+            else:
                 raise KeyError("vocs field is required in parameters")
 
             self._inject_computed_fields(parameters_dict, self.model_class)
-
             model = self.model_class.model_validate(parameters_dict)
 
             # After we validate the model, some fields may have been changed due to any validation logic present within the Pydantic model (i.e. field validators changing default values). We need to update the tree to reflect these changes.
@@ -1179,45 +1177,45 @@ class BadgerPydanticEditor(QTreeWidget):
 
             self.update_after_validate(defaults)
 
-            return True
-
         except KeyError as e:
             logger.error(e)
-            return False
+        except VOCSError as e:
+            logger.error(e)
+            loc: tuple[int | str, ...] = ("vocs",)
+            msg = e.message if hasattr(e, "message") else str(e)
+            self.update_error_styles(loc, msg)
         except ValidationError as e:
             logger.error(e)
 
             for error in e.errors():
                 loc = error["loc"]
                 msg = error["msg"]
-                error_widget: (
-                    QTreeWidgetItem | QTreeWidget | "BadgerPydanticEditor" | None
-                ) = None
-                if len(loc) > 0:
-                    error_widget = self.find_widget_at_path(loc)
-                else:
-                    error_widget = self
-                if error_widget:
-                    if type(error_widget) is QTreeWidgetItem:
-                        error_widget.setBackground(0, Qt.GlobalColor.red)
-                        widget = self.itemWidget(error_widget, self.value_col)
-                        if widget is not None:
-                            widget.setProperty("error", True)
-                            widget.setStyleSheet(
-                                '*[error="true"] { border: 2px dashed red }'
-                            )
-                            if isinstance(widget, BadgerListEditor):
-                                widget.list_container.setProperty("error", True)
-                                widget.list_container.setStyleSheet(
-                                    '*[error="true"] { border: 2px dashed red }'
-                                )
+                self.update_error_styles(loc, msg)
 
-                        error_widget.setToolTip(0, msg)
-                    else:
-                        error_widget = cast(QTreeWidget, error_widget)
-                        error_widget.setProperty("error", True)
-                        error_widget.setStyleSheet(
+    def update_error_styles(self, loc: tuple[int | str, ...], msg: str) -> None:
+        error_widget: QTreeWidgetItem | QTreeWidget | "BadgerPydanticEditor" | None = (
+            None
+        )
+        if len(loc) > 0:
+            error_widget = self.find_widget_at_path(loc)
+        else:
+            error_widget = self
+        if error_widget:
+            if type(error_widget) is QTreeWidgetItem:
+                error_widget.setBackground(0, Qt.GlobalColor.red)
+                widget = self.itemWidget(error_widget, self.value_col)
+                if widget is not None:
+                    widget.setProperty("error", True)
+                    widget.setStyleSheet('*[error="true"] { border: 2px dashed red }')
+                    if isinstance(widget, BadgerListEditor):
+                        widget.list_container.setProperty("error", True)
+                        widget.list_container.setStyleSheet(
                             '*[error="true"] { border: 2px dashed red }'
                         )
-                        error_widget.setToolTip(msg)
-            return False
+
+                error_widget.setToolTip(0, msg)
+            else:
+                error_widget = cast(QTreeWidget, error_widget)
+                error_widget.setProperty("error", True)
+                error_widget.setStyleSheet('*[error="true"] { border: 2px dashed red }')
+                error_widget.setToolTip(msg)

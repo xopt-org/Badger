@@ -20,26 +20,25 @@ Useful entry points: update_items() to bulk-load state, export_data() to pull
 back only the checked rows.
 """
 
-from typing import Any, Callable, List, Dict, ParamSpec, cast
+import logging
 from functools import partial, wraps
+from typing import Any, Callable, Dict, List, ParamSpec, cast
+
+from pyparsing import TypeVar
+from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
     QAbstractItemView,
     QCheckBox,
     QComboBox,
-    QStyledItemDelegate,
     QDoubleSpinBox,
+    QHeaderView,
     QMessageBox,
+    QStyledItemDelegate,
+    QTableWidget,
+    QTableWidgetItem,
     QWidget,
 )
-from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
-from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
-
-import logging
-
-from pyparsing import TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +104,7 @@ class EditableTable(QTableWidget):
             hheader.sectionClicked.connect(self.header_clicked)
         self.itemChanged.connect(self.on_edit_table_item)
 
-    def update_vocs(self):
+    def update_vocs(self) -> None:
         logging.debug("Emitting data_changed signal from editable_table")
         self.data_changed.emit()
 
