@@ -1,3 +1,6 @@
+"""Creates a single constraint row widget: observable selector, relation
+combo (>, <, =), threshold spinbox, criticality checkbox, and remove button."""
+
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QPushButton,

@@ -1,3 +1,7 @@
+"""Top-level CLI actions. The main `show_info` handler either launches the
+GUI or prints config details; sub-command handlers are re-exported from
+their own modules (doctor, routine, env, generator, etc.)."""
+
 import os
 from importlib import metadata
 from badger.actions.doctor import check_n_config_paths

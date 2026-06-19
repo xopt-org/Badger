@@ -1,3 +1,6 @@
+"""TypedDict definitions for BO visualizer options — grid resolution,
+display toggles, variable selection, and reference points."""
+
 from typing import TypedDict
 
 from gest_api.vocs import ContinuousVariable

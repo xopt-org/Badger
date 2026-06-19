@@ -1,3 +1,6 @@
+"""The `badger interface` command. Lists available interface plugins or
+shows the details of a specific one."""
+
 import logging
 
 from badger.utils import yprint

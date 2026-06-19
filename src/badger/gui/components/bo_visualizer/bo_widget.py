@@ -1,3 +1,12 @@
+"""
+Live surrogate-model visualizer for Bayesian Optimization runs.
+
+Shows 1D or 2D plots of the GP model (mean + uncertainty), the acquisition
+function, feasibility regions, and evaluated sample points. Updates
+automatically each time Xopt evaluates a new candidate. Only active for
+routines using a BayesianGenerator.
+"""
+
 import logging
 from typing import Optional, cast
 

@@ -1,3 +1,14 @@
+"""
+The main optimization loop that runs inside the current process (no subprocess).
+
+Each iteration asks Xopt to generate a candidate, evaluates it through the
+environment, and passes the result back. User-supplied callbacks control
+pause/resume behavior, state persistence, and progress reporting.
+
+This is the simpler of the two execution paths — core_subprocess.py wraps
+the same logic but runs it in a child process for the GUI.
+"""
+
 import time
 from typing import Callable
 

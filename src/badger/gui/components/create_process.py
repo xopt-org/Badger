@@ -1,3 +1,6 @@
+"""QThread worker that pre-spawns an optimization subprocess in the
+background so it's ready to go when the user hits "start"."""
+
 from multiprocessing import Event, Pipe, Process, Queue
 
 from PyQt5.QtCore import pyqtSignal, QObject

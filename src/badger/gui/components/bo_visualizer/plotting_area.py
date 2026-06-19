@@ -1,3 +1,6 @@
+"""Matplotlib canvas for the BO visualizer. Renders surrogate model plots
+via Xopt's visualize_generator_model and handles mouse interaction."""
+
 import logging
 import time
 from collections.abc import Callable

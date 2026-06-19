@@ -1,3 +1,6 @@
+"""Keeps a pool of pre-spawned subprocesses ready to run optimizations.
+When one is consumed by a run, signals that a new one should be created."""
+
 from typing import Dict, Optional
 
 from PyQt5.QtCore import pyqtSignal, QObject

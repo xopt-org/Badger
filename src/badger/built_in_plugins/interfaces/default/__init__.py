@@ -1,3 +1,7 @@
+"""In-memory interface that stores channel values in a plain dict.
+Used by test environments and as the fallback when no hardware
+interface is configured."""
+
 from badger import interface
 
 

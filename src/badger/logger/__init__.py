@@ -1,3 +1,7 @@
+"""Loggers that report optimization progress to the terminal (ScreenLogger)
+and to a JSON file (JSONLogger). Both subscribe to lifecycle events
+(start, step, end) from the optimization loop."""
+
 from __future__ import print_function
 import os
 import json

@@ -1,3 +1,6 @@
+"""Toolbar with run-control buttons (start, pause, stop), logbook submission,
+docs access, and the extensions palette launcher."""
+
 from PyQt5.QtWidgets import QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
 from PyQt5.QtGui import QIcon, QFont

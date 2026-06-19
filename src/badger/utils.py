@@ -1,3 +1,7 @@
+"""Grab-bag of helpers used throughout Badger: YAML pretty-printing,
+timestamp formatting, value normalization, run filename generation,
+and platform-specific data directory resolution."""
+
 import json
 import logging
 import os

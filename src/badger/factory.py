@@ -1,3 +1,14 @@
+"""
+Finds, loads, and serves Badger plugins (environments, interfaces, generators).
+
+On startup, scans BADGER_PLUGIN_ROOT for subdirectories matching the plugin
+layout (configs.yaml + Python module). Plugins are loaded lazily — only
+instantiated when first requested by name. The same accessors are used by
+both the CLI (e.g. `badger env`) and the GUI combo boxes.
+
+Also handles loading Markdown docs for the built-in documentation browser.
+"""
+
 import importlib
 import logging
 import os
@@ -33,7 +44,7 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "nsga2",
-    # "BAX",
+    "bax",
 ]
 
 
