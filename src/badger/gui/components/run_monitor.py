@@ -95,8 +95,7 @@ class BadgerOptMonitor(QWidget):
         # Run optimization
         self.routine_runner = None
         self.running = False
-        # Fix the auto range issue
-        self.eval_count = 0
+
         # Termination condition for the run
         self.termination_condition = None
 
@@ -388,7 +387,6 @@ class BadgerOptMonitor(QWidget):
         # Switch run button state
         self.sig_toggle_run.emit(False)
 
-        self.eval_count = 0  # reset the evaluation count
         self.enable_auto_range()
 
         # Reset button should only be available if it's the current run
@@ -528,11 +526,6 @@ class BadgerOptMonitor(QWidget):
         self.update_curves(results)
         self.update_analysis_extensions()
         self.extensions_palette.update_palette()
-
-        # Quick-n-dirty fix to the auto range issue
-        self.eval_count += 1
-        if self.eval_count < 2:
-            self.enable_auto_range()
 
         self.sig_progress.emit(self.routine.data.tail(1))
 
