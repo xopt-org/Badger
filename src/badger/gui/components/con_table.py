@@ -1,7 +1,6 @@
-"""Constraint table widget for the Badger GUI routine editor. Displays
-optimization constraints with configurable relations (>, <, =), threshold
-values, and criticality flags, supporting drag-and-drop reordering and
-batch toggle operations."""
+"""Table for editing optimization constraints. Each row has a relation
+(>, <, =), threshold value, and criticality flag. Supports drag-and-drop
+reordering."""
 
 from typing import Any
 from PyQt5.QtWidgets import (

@@ -1,7 +1,6 @@
-"""Terminal and file loggers for optimization progress reporting. Provides
-ScreenLogger (formatted table output during optimization) and JSONLogger
-(append-only JSON log of each step), both driven by optimization lifecycle
-events."""
+"""Loggers that report optimization progress to the terminal (ScreenLogger)
+and to a JSON file (JSONLogger). Both subscribe to lifecycle events
+(start, step, end) from the optimization loop."""
 
 from __future__ import print_function
 import os

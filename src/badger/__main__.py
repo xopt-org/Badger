@@ -1,6 +1,5 @@
-"""Command-line entry point for Badger. Parses arguments to either launch the
-PyQt5 GUI (``badger -g``) or execute CLI sub-commands for managing routines,
-generators, environments, interfaces, plugins, and configuration."""
+"""Command-line entry point. Run `badger -g` to launch the GUI, or use
+sub-commands like `badger routine`, `badger env`, `badger config`, etc."""
 
 import argparse
 import logging

@@ -1,8 +1,14 @@
-"""Subprocess-based optimization loop for the Badger GUI. Runs the
-generate-evaluate cycle inside a child process communicating with the main
-Qt event loop via multiprocessing primitives (queues, pipes, events). Handles
-pause/resume, termination conditions, periodic archiving, and centralized
-logging back to the main process."""
+"""
+Subprocess version of the optimization loop, used by the GUI.
+
+Runs the generate-evaluate cycle in a child process so the Qt event loop
+stays responsive. Communication with the main process happens through:
+    multiprocessing.Pipe  — sends evaluated solutions back for live plotting
+    multiprocessing.Event — signals pause, resume, and stop
+    multiprocessing.Queue — routes log records to the central logger (see log.py)
+
+See core.py for the simpler in-process version of the same loop.
+"""
 
 from copy import deepcopy
 import logging

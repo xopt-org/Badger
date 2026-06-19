@@ -1,7 +1,6 @@
-"""Shared utility functions used across Badger. Includes YAML formatting,
-timestamp conversions, configuration loading, value normalization, run filename
-generation, a Qt signal-blocking context manager, and platform-specific data
-directory resolution."""
+"""Grab-bag of helpers used throughout Badger: YAML pretty-printing,
+timestamp formatting, value normalization, run filename generation,
+and platform-specific data directory resolution."""
 
 from importlib import metadata
 import json

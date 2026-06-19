@@ -1,6 +1,6 @@
-"""Built-in default interface for Badger. Provides an in-memory dictionary-
-backed interface that stores channel values locally, used by test environments
-and as a fallback when no hardware interface is configured."""
+"""In-memory interface that stores channel values in a plain dict.
+Used by test environments and as the fallback when no hardware
+interface is configured."""
 
 from badger import interface
 

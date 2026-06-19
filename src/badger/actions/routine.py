@@ -1,6 +1,6 @@
-"""CLI sub-command for listing, inspecting, and running saved optimization
-routines. Deprecated in favor of the GUI — retained for backwards
-compatibility with existing scripts."""
+"""The `badger routine` command. Lists, inspects, or runs saved routines
+from the terminal. Deprecated in favor of the GUI but kept for
+backwards compatibility."""
 
 import logging
 

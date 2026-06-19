@@ -1,6 +1,5 @@
-"""Filter box widget for the Badger GUI. Provides collapsible combo-box
-filters for narrowing routine lists by objective or region, used in the
-routine navigator sidebar."""
+"""Combo-box filters for narrowing the routine list by objective or region,
+shown in the navigator sidebar."""
 
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget
 from PyQt5.QtWidgets import QComboBox, QStyledItemDelegate, QLabel

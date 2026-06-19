@@ -1,6 +1,5 @@
-"""Process pool manager for the Badger GUI. Maintains a queue of pre-spawned
-optimization subprocesses ready to execute routines, signaling when new
-processes are needed to replenish the pool after one is consumed by a run."""
+"""Keeps a pool of pre-spawned subprocesses ready to run optimizations.
+When one is consumed by a run, signals that a new one should be created."""
 
 from typing import Dict, Optional
 

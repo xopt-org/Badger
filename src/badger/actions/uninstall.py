@@ -1,6 +1,5 @@
-"""CLI sub-command for removing installed Badger plugins from the plugin root.
-Currently disabled — users are directed to the online documentation for plugin
-management."""
+"""The `badger uninstall` command (currently disabled). Was intended for
+removing plugins — see docs for the current workflow."""
 
 import shutil
 from os.path import exists

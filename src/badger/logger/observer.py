@@ -1,6 +1,5 @@
-"""Observer base classes for the Badger optimization logger. Defines the
-Observer interface and the _Tracker mixin that counts iterations and tracks
-elapsed time, used by ScreenLogger and JSONLogger."""
+"""Base classes for logger observers. Observer defines the update() interface;
+_Tracker adds iteration counting and elapsed-time tracking."""
 
 from datetime import datetime
 from badger.logger.event import Events

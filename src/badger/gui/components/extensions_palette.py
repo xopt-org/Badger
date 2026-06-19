@@ -1,7 +1,5 @@
-"""Extensions palette window for the Badger GUI. Provides a launcher panel
-listing available analysis extensions (BO Visualizer, Pareto Front Viewer)
-with buttons to open each extension in its own dialog window, connected to
-the active run monitor."""
+"""Launcher panel listing available analysis extensions (BO Visualizer,
+Pareto Front Viewer) with buttons to open each in its own window."""
 
 import traceback
 

@@ -1,7 +1,5 @@
-"""Type definitions for the Pareto front viewer extension. Defines TypedDict
-structures for plot options, configurable parameters (objective/variable
-selection, plot tab index), and UI widget references used internally by the
-ParetoFrontWidget."""
+"""TypedDict definitions for the Pareto front viewer — plot options,
+objective/variable selection, and internal UI widget references."""
 
 from typing import TypedDict
 

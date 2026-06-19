@@ -1,6 +1,6 @@
-"""Built-in 2D sphere test environment for Badger. Provides a simple
-two-variable (x0, x1) environment with analytic observables (f=x0^2+x1^2,
-g=x0+x1) for testing optimization algorithms without hardware access."""
+"""Simple test environment with two variables (x0, x1) and analytic
+objectives (f = x0^2 + x1^2, g = x0 + x1). Useful for testing
+optimizers without needing any hardware."""
 
 from badger import environment
 

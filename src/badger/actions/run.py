@@ -1,7 +1,12 @@
-"""CLI routine execution and archiving. Provides ``run_n_archive`` which drives
-an optimization loop with pause/resume via SIGINT, periodic data archiving,
-and interface log dumping. The ``run_routine`` CLI entry point is deprecated
-in favor of the GUI."""
+"""
+Runs an optimization routine from the command line and saves results.
+
+The main function here is run_n_archive: it calls core.run_routine in a loop,
+catches Ctrl-C (SIGINT) for pause/resume, periodically dumps data to the
+archive, and logs interface channel values to disk.
+
+Note: the CLI runner is deprecated — most users should use the GUI instead.
+"""
 
 import logging
 import os

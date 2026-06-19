@@ -1,7 +1,11 @@
-"""Run monitor widget for the Badger GUI. Displays real-time optimization
-progress with live-updating pyqtgraph plots, a data table of evaluated
-points, run controls (start/pause/stop), and post-run analysis tools. Manages
-archiving completed runs and coordinating with analysis extensions."""
+"""
+The live dashboard shown during and after an optimization run.
+
+Displays pyqtgraph plots that update in real time as new points are evaluated,
+a data table of all solutions, and start/pause/stop controls. When a run
+finishes, it archives the data and hands results off to analysis extensions
+(BO visualizer, Pareto front viewer) if the user has them open.
+"""
 
 import os
 import traceback

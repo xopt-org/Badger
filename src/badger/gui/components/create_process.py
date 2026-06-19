@@ -1,7 +1,5 @@
-"""Worker object for pre-creating optimization subprocesses. Runs on a
-QThread to initialize multiprocessing primitives (queues, pipes, events) and
-spawn a subprocess ready to execute an optimization routine without blocking
-the GUI thread."""
+"""QThread worker that pre-spawns an optimization subprocess in the
+background so it's ready to go when the user hits "start"."""
 
 from multiprocessing import Event, Pipe, Process, Queue
 

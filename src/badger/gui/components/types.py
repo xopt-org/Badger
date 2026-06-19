@@ -1,6 +1,5 @@
-"""Shared type definitions for the Badger GUI analysis extensions. Defines
-TypedDict structures for configurable plot options, variable selections, and
-reference point settings used by the run monitor and extension widgets."""
+"""TypedDict definitions shared by the analysis extensions — plot options,
+variable selections, and reference point settings."""
 
 from typing import TypedDict
 

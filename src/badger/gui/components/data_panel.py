@@ -1,6 +1,5 @@
-"""Data panel widget for the Badger GUI routine editor. Displays and manages
-pre-loaded optimization data in a tabular format, with controls for loading
-data from archived runs and clearing the data buffer."""
+"""Panel for viewing and managing pre-loaded optimization data. Lets
+users load data from archived runs or clear the buffer before starting."""
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,

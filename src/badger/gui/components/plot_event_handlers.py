@@ -1,7 +1,5 @@
-"""Matplotlib interaction handlers for the Badger GUI analysis extensions.
-Manages click, hover, scroll-zoom, and pick events on embedded matplotlib
-figures, providing data-point annotations and interactive navigation in the
-BO visualizer and Pareto front viewer."""
+"""Mouse event handlers for matplotlib plots in the analysis extensions.
+Handles click, hover, scroll-zoom, and data-point annotation tooltips."""
 
 from badger.routine import Routine
 from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent

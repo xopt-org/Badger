@@ -1,6 +1,5 @@
-"""Action bar widget for the Badger GUI run monitor. Provides toolbar buttons
-for run control (start, pause, stop), logbook submission, documentation
-access, and the extensions palette launcher."""
+"""Toolbar with run-control buttons (start, pause, stop), logbook submission,
+docs access, and the extensions palette launcher."""
 
 from PyQt5.QtWidgets import QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
