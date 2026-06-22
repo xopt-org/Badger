@@ -305,8 +305,8 @@ class BadgerEnvBox(QWidget):
         self.btn_env_params.setCheckable(True)
         self.set_selected_env_name(None)
 
-        self.btn_env_docs = QPushButton("Docs")
-        self.btn_env_docs.setFixedSize(44, 24)
+        self.btn_env_docs = QPushButton("Open Docs")
+        self.btn_env_docs.setFixedSize(96, 24)
         self.btn_env_docs.setToolTip("Open environment docs")
 
         hbox_select_env.addWidget(env_lbl)
@@ -342,8 +342,8 @@ class BadgerEnvBox(QWidget):
         self.btn_algo_parans.setFixedSize(96, 24)
         self.btn_algo_parans.setCheckable(True)
 
-        self.btn_algo_docs = QPushButton("Docs")
-        self.btn_algo_docs.setFixedSize(44, 24)
+        self.btn_algo_docs = QPushButton("Open Docs")
+        self.btn_algo_docs.setFixedSize(96, 24)
         self.btn_algo_docs.setToolTip("Open algorithm docs")
 
         hbox_algo.addWidget(algo_lbl)
