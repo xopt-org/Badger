@@ -388,8 +388,9 @@ class BadgerRoutinePage(QWidget):
         # set environment
         if env_name in self.envs:
             i = self.envs.index(env_name)
+            # if this changes the selected env, the ui update will trigger routine_page.select_env
+            # to load the new environment
             self.env_box.set_selected_env_name(env_name)
-            self.select_env(i)
             self.env_box.edit_env_params.set_params_from_dict(env_params)
 
         else:
@@ -426,11 +427,13 @@ class BadgerRoutinePage(QWidget):
                 all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
         all_variables.update(self.var_hard_limit)
-        # Format for update_variables method
-        all_variables = dict(sorted(all_variables.items()))
-        all_variables = [{key: value} for key, value in all_variables.items()]
 
-        self.env_box.var_table.update_variables(all_variables)
+        if len(additional_variables) > 0:
+            # Format for update_variables method
+            all_variables = dict(sorted(all_variables.items()))
+            all_variables = [{key: value} for key, value in all_variables.items()]
+            self.env_box.var_table.update_variables(all_variables)
+
         self.env_box.var_table.set_selected(vocs.variables)
         self.env_box.var_table.addtl_vars = additional_variables
 
