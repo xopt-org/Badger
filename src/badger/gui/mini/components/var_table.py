@@ -651,7 +651,9 @@ class VariableTable(QTableWidget):
     def set_scan_range_options(self):
         self.update_variables(self.variables, 2)
 
-    def refresh_current_values(self, variable_names: list[str] | None = None):
+    def refresh_current_values(
+        self, variable_names: list[str] | None = None, values: list[float] | None = None
+    ):
         """
         Refresh current values for variables displayed in the table.
 
@@ -660,6 +662,9 @@ class VariableTable(QTableWidget):
         variable_names : list[str] | None
             List of variable names to refresh. If ``None`` or empty,
             updates all variables in ``self.variables``.
+        values : list[float] | None
+            If values are provided, they are used directly.
+            Otherwise if values is None the method queries the environment for current values.
 
         Returns
         -------
@@ -672,10 +677,15 @@ class VariableTable(QTableWidget):
         if not variable_names:
             variable_names = [next(iter(var)) for var in self.variables]
 
-        self.env = instantiate_env(self.env_class, self.configs)
-
         # get current values
-        value_dict = self.env.get_variables(variable_names)
+        if values is None:
+            # get values from environment
+            self.env = instantiate_env(self.env_class, self.configs)
+            value_dict = self.env.get_variables(variable_names)
+        else:
+            # During optimization loop, variable values are passed from the generator
+            # so use values if provided rather than querying the environment.
+            value_dict = dict(zip(variable_names, values))
         self.current_values.update(value_dict)
         for name, value in value_dict.items():
             if name not in self.saved_values:

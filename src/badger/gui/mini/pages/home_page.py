@@ -624,9 +624,9 @@ class BadgerHomePage(QWidget):
         stas = list(solution[vocs.observable_names].to_numpy()[0])
         add_row(self.run_table, objs + cons + vars + stas)
         self.data_panel.add_live_data(solution)
-        # update "current" values in var table
+        # update current values in var table
         self.routine_editor.env_box.var_table.refresh_current_values(
-            vocs.variable_names
+            vocs.variable_names, list(solution[vocs.variable_names].to_numpy()[0])
         )
 
     def delete_run(self):
