@@ -106,6 +106,7 @@ def update_table(table, data=None, vocs=None, info=False):
         list(map(str, _data.index))
     )  # row index starts from 0
     table.horizontalHeader().setVisible(True)
+    table.resizeColumnsToContents()
 
     return table
 
@@ -118,6 +119,7 @@ def reset_table(table, header):
     table.horizontalHeader().setVisible(False)
     table.setHorizontalHeaderLabels(header)
     table.horizontalHeader().setVisible(True)
+    table.resizeColumnsToContents()
 
     return table
 
@@ -154,6 +156,7 @@ def init_data_table(variable_names=None):
     table.horizontalHeader().setVisible(False)
     table.setHorizontalHeaderLabels(variable_names)
     table.horizontalHeader().setVisible(True)
+    table.resizeColumnsToContents()
 
     return table
 
@@ -194,6 +197,7 @@ def update_init_data_table(table, variable_names):
     table.horizontalHeader().setVisible(False)
     table.setHorizontalHeaderLabels(variable_names)
     table.horizontalHeader().setVisible(True)
+    table.resizeColumnsToContents()
 
     for col, name in enumerate(variable_names):
         if name in current_init_data:
