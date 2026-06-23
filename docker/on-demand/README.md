@@ -118,6 +118,21 @@ kubectl scale statefulset badger-gui -n badger-gui --replicas=30
 
 **Important:** Also update `TOTAL_SESSIONS` in `gateway/lobby.html` to match, then rebuild and push the gateway image.
 
+## Plugins & Templates
+
+Environment/interface plugins and routine templates are **not** stored in this repo.
+They come from the external [Badger-Plugins](https://github.com/pluflou/Badger-Plugins)
+repo (the fork, for now), which the Dockerfile clones into `/opt/Badger-Plugins` at
+build time. `setup_badger.py` then points Badger at it:
+
+- `BADGER_PLUGIN_ROOT` → `/opt/Badger-Plugins` (its `environments/` and `interfaces/` dirs)
+- `BADGER_TEMPLATE_ROOT` → `/opt/Badger-Plugins/environments/lcls_fel_surrogate/templates`
+
+The `lcls_fel_surrogate` environment imports the `lcls-fel-model` package, which the
+Dockerfile installs separately (plugin `configs.yaml` dependencies are metadata only and
+are not auto-installed). To add or change plugins/templates, edit the Badger-Plugins repo
+and rebuild the image — no change to this repo is needed.
+
 ## Configuration
 
 | Environment Variable | Default | Description |

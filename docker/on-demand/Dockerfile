@@ -47,9 +47,15 @@ RUN pip install --no-cache-dir -e ".[dev]"
 # Install latest xopt from main branch
 RUN pip install --no-cache-dir git+https://github.com/xopt-org/Xopt.git@main
 
-# Install the LCLS FEL surrogate (enables the lcls_fel_surrogate environment plugin;
-# pulls lume-torch + model weights as package data)
+# Install the LCLS FEL surrogate model (imported by the lcls_fel_surrogate plugin
+# below; pulls lume-torch + model weights as package data)
 RUN pip install --no-cache-dir git+https://github.com/slaclab/LCLS_FEL_Surrogate.git@main
+
+# Environment/interface plugins + routine templates come from the external
+# Badger-Plugins repo (the fork, for now). setup_badger.py points the plugin and
+# template roots here.
+ENV BADGER_PLUGINS_DIR=/opt/Badger-Plugins
+RUN git clone --depth 1 https://github.com/pluflou/Badger-Plugins.git "$BADGER_PLUGINS_DIR"
 
 # Pre-configure Badger so it doesn't prompt on first launch
 RUN mkdir -p /root/.config && python docker/on-demand/setup_badger.py
