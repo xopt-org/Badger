@@ -549,8 +549,9 @@ class VariableTable(QTableWidget):
         self,
         variables: dict[str, tuple[float, float]],
         signal: bool = True,
-        clipped: dict[str, bool] = {},
+        clipped: dict[str, bool] | None = None,
     ):
+        clipped = clipped or {}
         for name in variables:
             self.bounds[name] = variables[name]
             if name in clipped:
