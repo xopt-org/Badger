@@ -1,3 +1,5 @@
+"""Entry points and app bootstrap helpers for the Badger mini GUI package."""
+
 from importlib import resources
 import signal
 import os

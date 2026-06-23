@@ -1,3 +1,13 @@
+"""
+Builds and edits a Routine in the mini GUI.
+
+BadgerRoutinePage owns the environment/VOCS editor, template load/save,
+variable range controls, and initial-point tools. Its main job is
+_compose_routine(), which validates GUI state and returns a Routine ready
+to run. It also supports the reverse path (refresh_ui/set_routine) to load
+an existing Routine back into the form.
+"""
+
 from typing import Any
 import warnings
 import traceback
@@ -254,12 +264,12 @@ class BadgerRoutinePage(QWidget):
                 self.env_box._qtree_height_hint(self.env_box.edit_algo_params)
             )
         )
-        # self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
         self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
         self.env_box.var_table.sig_change_bounds.connect(
             self.adjust_variable_range_options
         )
-        # self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
+        self.env_box.btn_env_docs.clicked.connect(self.open_environment_docs)
+        self.env_box.btn_algo_docs.clicked.connect(self.open_generator_docs)
         # self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
@@ -388,8 +398,9 @@ class BadgerRoutinePage(QWidget):
         # set environment
         if env_name in self.envs:
             i = self.envs.index(env_name)
+            # if this changes the selected env, the ui update will trigger routine_page.select_env
+            # to load the new environment
             self.env_box.set_selected_env_name(env_name)
-            self.select_env(i)
             self.env_box.edit_env_params.set_params_from_dict(env_params)
 
         else:
@@ -426,11 +437,13 @@ class BadgerRoutinePage(QWidget):
                 all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
         all_variables.update(self.var_hard_limit)
-        # Format for update_variables method
-        all_variables = dict(sorted(all_variables.items()))
-        all_variables = [{key: value} for key, value in all_variables.items()]
 
-        self.env_box.var_table.update_variables(all_variables)
+        if len(additional_variables) > 0:
+            # Format for update_variables method
+            all_variables = dict(sorted(all_variables.items()))
+            all_variables = [{key: value} for key, value in all_variables.items()]
+            self.env_box.var_table.update_variables(all_variables)
+
         self.env_box.var_table.set_selected(vocs.variables)
         self.env_box.var_table.addtl_vars = additional_variables
 

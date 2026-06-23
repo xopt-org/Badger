@@ -1,3 +1,5 @@
+"""Main top-level window and subprocess queue wiring for the mini GUI."""
+
 import logging
 from importlib import metadata
 from typing import Dict

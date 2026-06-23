@@ -1,3 +1,13 @@
+"""
+Variable table widget for the Badger mini GUI.
+
+Provides class VariableTable, a PyQt5.QtWidgets.QTableWidget
+subclass that displays optimizer variables with their saved values,
+current values, and adjustable scan ranges.  Also defines the supporting
+ui cell widgets (SavedValueCell, CurrentValueCell, ScanRangeCell) and the
+RangeAdjustButtonStack helper.
+"""
+
 from functools import partial
 from importlib import resources
 import traceback
@@ -298,13 +308,28 @@ class VariableTable(QTableWidget):
             # header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-            # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-            # header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+
         self.setColumnWidth(0, 20)
         self.setColumnWidth(2, 76)
         self.setColumnWidth(3, 76)
         self.setColumnWidth(4, 76)
         self.setColumnWidth(5, 44)
+
+        # values for horizontal resizing
+        self._base_viewport_width: int | None = None
+        self._base_col_width = 76
+        self._max_col_width = 100
+        # cache col widths to avoid duplicate updates
+        self._last_col_widths: tuple[int, int, int] = (
+            self._base_col_width,
+            self._base_col_width,
+            self._base_col_width,
+        )
+
         self.setHorizontalHeaderLabels(
             ["", "Name", "Saved", "Current", "Range (Δ)", ""]
         )
@@ -334,6 +359,7 @@ class VariableTable(QTableWidget):
             tuple[int, int], str
         ] = {}  # to track changes in table
         self.config_logic()
+        QTimer.singleShot(0, self._capture_resize_baseline)  # get initial table size
         self.customContextMenuRequested.connect(self.display_context_menu)
 
     def _init_range_header_controls(self) -> None:
@@ -430,7 +456,56 @@ class VariableTable(QTableWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._update_column_widths()
         self._position_range_header_controls()
+
+    def _capture_resize_baseline(self) -> None:
+        """update startup widths after the initial layout settles."""
+        self._base_viewport_width = self.viewport().width()
+        self._last_col_widths = (
+            self.columnWidth(2),
+            self.columnWidth(3),
+            self.columnWidth(4),
+        )
+
+    def _update_column_widths(self) -> None:
+        """
+        Smoothly update column 1-4 widths up to maximum, after which only col 1 continues to expand
+        """
+
+        # get current width
+        current_width = self.viewport().width()
+        if self._base_viewport_width is None:
+            return
+
+        # calculate extra width needed, return if already at max
+        extra_width = max(0, current_width - self._base_viewport_width)
+        max_extra = self._max_col_width - self._base_col_width
+        if extra_width >= 4 * max_extra and self._last_col_widths == (
+            self._max_col_width,
+            self._max_col_width,
+            self._max_col_width,
+        ):
+            return
+
+        # distribute extra between cols
+        shared_extra = min(extra_width // 4, max_extra)
+        remainder = extra_width % 4
+        target_width = self._base_col_width + shared_extra
+        target_widths = [target_width, target_width, target_width]
+
+        # Distribute leftover pixels for smooth growth during resize
+        for i in range(min(remainder, 3)):
+            target_widths[i] = min(target_widths[i] + 1, self._max_col_width)
+
+        target_tuple = (target_widths[0], target_widths[1], target_widths[2])
+        if target_tuple == self._last_col_widths:
+            return
+
+        for col, width in zip((2, 3, 4), target_tuple):
+            self.setColumnWidth(col, width)
+
+        self._last_col_widths = target_tuple
 
     def is_all_checked(self):
         for i in range(self.rowCount() - 1):
@@ -651,7 +726,9 @@ class VariableTable(QTableWidget):
     def set_scan_range_options(self):
         self.update_variables(self.variables, 2)
 
-    def refresh_current_values(self, variable_names: list[str] | None = None):
+    def refresh_current_values(
+        self, variable_names: list[str] | None = None, values: list[float] | None = None
+    ):
         """
         Refresh current values for variables displayed in the table.
 
@@ -660,6 +737,9 @@ class VariableTable(QTableWidget):
         variable_names : list[str] | None
             List of variable names to refresh. If ``None`` or empty,
             updates all variables in ``self.variables``.
+        values : list[float] | None
+            If values are provided, they are used directly.
+            Otherwise if values is None the method queries the environment for current values.
 
         Returns
         -------
@@ -672,10 +752,15 @@ class VariableTable(QTableWidget):
         if not variable_names:
             variable_names = [next(iter(var)) for var in self.variables]
 
-        self.env = instantiate_env(self.env_class, self.configs)
-
         # get current values
-        value_dict = self.env.get_variables(variable_names)
+        if values is None:
+            # get values from environment
+            self.env = instantiate_env(self.env_class, self.configs)
+            value_dict = self.env.get_variables(variable_names)
+        else:
+            # During optimization loop, variable values are passed from the generator
+            # so use values if provided rather than querying the environment.
+            value_dict = dict(zip(variable_names, values))
         self.current_values.update(value_dict)
         for name, value in value_dict.items():
             if name not in self.saved_values:
