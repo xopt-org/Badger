@@ -13,10 +13,9 @@ from importlib import resources
 
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
-from PyQt5.QtGui import QIcon, QKeySequence
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QMessageBox,
-    QShortcut,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -282,14 +281,6 @@ class BadgerHomePage(QWidget):
         )
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
-
-        # Assign shortcuts
-        self.shortcut_go_search = QShortcut(QKeySequence("Ctrl+L"), self)
-        self.shortcut_go_search.activated.connect(self.go_search)
-
-    def go_search(self):
-        logger.info("Activating search bar.")
-        self.sbar.setFocus()
 
     def update_saved_values_from_monitor(self):
         """
