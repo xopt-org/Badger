@@ -1,3 +1,13 @@
+"""
+Builds and edits a Routine in the mini GUI.
+
+BadgerRoutinePage owns the environment/VOCS editor, template load/save,
+variable range controls, and initial-point tools. Its main job is
+_compose_routine(), which validates GUI state and returns a Routine ready
+to run. It also supports the reverse path (refresh_ui/set_routine) to load
+an existing Routine back into the form.
+"""
+
 from typing import Any
 import warnings
 import traceback

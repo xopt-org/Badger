@@ -1,3 +1,11 @@
+"""
+Main page of the Badger mini GUI that ties routine editing to live run monitoring.
+
+Left side: routine editor (configure variables, objectives, algorithm).
+Right side: run monitor (live plots, data table).
+Bottom (action bar): start/stop controls, logging, reset, checkpointing, and other run actions.
+"""
+
 import gc
 import os
 import traceback

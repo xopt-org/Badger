@@ -1,3 +1,12 @@
+"""
+Composite editor panel for configuring a Badger optimization routine.
+
+Combines environment selection, algorithm selection, and all VOCS editors
+(variables, objectives, constraints, observables) into a single widget.
+Template loading populates every sub-table at once; individual changes in
+vocs tables emit ``vocs_updated`` so the rest of the UI stays in sync.
+"""
+
 from pathlib import Path
 from typing import Any
 

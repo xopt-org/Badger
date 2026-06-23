@@ -1,3 +1,13 @@
+"""
+Variable table widget for the Badger mini GUI.
+
+Provides class VariableTable, a PyQt5.QtWidgets.QTableWidget
+subclass that displays optimizer variables with their saved values,
+current values, and adjustable scan ranges.  Also defines the supporting
+ui cell widgets (SavedValueCell, CurrentValueCell, ScanRangeCell) and the
+RangeAdjustButtonStack helper.
+"""
+
 from functools import partial
 from importlib import resources
 import traceback
