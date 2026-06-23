@@ -52,7 +52,7 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
             f"{self.configs.get('current_value', 0):.4f}"
         )
         self.lbl_current_value.setEnabled(False)
-        self.lbl_current_value.setStyleSheet("Color: LightGray;")
+        self.lbl_current_value.setStyleSheet("color: lightgray;")
         hbox_current.addWidget(lbl_current)
         hbox_current.addStretch()
         hbox_current.addWidget(lbl_current_value)
@@ -60,7 +60,6 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         info_group.setFrameShape(QFrame.Box)
         info_group.setFrameShadow(QFrame.Plain)
         info_group.setLineWidth(1)
-        info_group.setStyleSheet("Background-Color: QColor(0,0,0,255);")
 
         # Add the rows to the info group
         vbox_info.addLayout(hbox_current)
