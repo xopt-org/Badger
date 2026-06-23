@@ -74,6 +74,15 @@ def format_value(v):
     return f
 
 
+def resize_columns_to_content_or_default(table):
+    """Resize columns to the maximum of default width and content width."""
+    default_width = table.horizontalHeader().defaultSectionSize()
+    table.resizeColumnsToContents()
+    for col in range(table.columnCount()):
+        current_width = table.columnWidth(col)
+        table.setColumnWidth(col, max(default_width, current_width))
+
+
 def update_table(table, data=None, vocs=None, info=False):
     table.setRowCount(0)
     table.horizontalHeader().setVisible(False)
@@ -106,7 +115,7 @@ def update_table(table, data=None, vocs=None, info=False):
         list(map(str, _data.index))
     )  # row index starts from 0
     table.horizontalHeader().setVisible(True)
-    table.resizeColumnsToContents()
+    resize_columns_to_content_or_default(table)
 
     return table
 
@@ -119,7 +128,6 @@ def reset_table(table, header):
     table.horizontalHeader().setVisible(False)
     table.setHorizontalHeaderLabels(header)
     table.horizontalHeader().setVisible(True)
-    table.resizeColumnsToContents()
 
     return table
 
@@ -156,7 +164,7 @@ def init_data_table(variable_names=None):
     table.horizontalHeader().setVisible(False)
     table.setHorizontalHeaderLabels(variable_names)
     table.horizontalHeader().setVisible(True)
-    table.resizeColumnsToContents()
+    resize_columns_to_content_or_default(table)
 
     return table
 
@@ -197,7 +205,6 @@ def update_init_data_table(table, variable_names):
     table.horizontalHeader().setVisible(False)
     table.setHorizontalHeaderLabels(variable_names)
     table.horizontalHeader().setVisible(True)
-    table.resizeColumnsToContents()
 
     for col, name in enumerate(variable_names):
         if name in current_init_data:
