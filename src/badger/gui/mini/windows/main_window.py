@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class BadgerMiniWindow(QMainWindow):
     def __init__(self) -> None:
-        logger.info("Initializing BadgerMainWindow.")
+        logger.info("Initializing BadgerMiniWindow.")
 
         super().__init__()
         self.thread_list = []
