@@ -1,3 +1,6 @@
+"""Panel where users pick an optimization algorithm from the Xopt registry
+and configure its parameters via the Pydantic tree editor."""
+
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,

@@ -1,23 +1,44 @@
-from typing import Any, Callable, List, Dict, ParamSpec, cast
+"""
+Base class for the objective, constraint, and observable tables in the
+routine editor. (The variable table is a separate, parallel implementation —
+see var_table.py — because it needs min/max bound columns.)
+
+EditableTable gives each of those tables the shared behavior:
+    - a checkbox column for selecting which rows are active, with a
+      header-click "toggle all"
+    - drag-and-drop row reordering
+    - dropping text onto the table to add new items
+    - an always-present empty row at the bottom for quick inline adds
+    - keyword filtering and a "show selected only" mode
+    - support for formula items (a name plus its formula string / variables)
+
+Subclasses override create_cell_widgets() to customize what each row looks
+like. Any change to selection or values fires the data_changed signal, which
+env_cbox.py listens to so it can recompose the VOCS.
+
+Useful entry points: update_items() to bulk-load state, export_data() to pull
+back only the checked rows.
+"""
+
+import logging
 from functools import partial, wraps
+from typing import Any, Callable, Dict, List, ParamSpec, cast
+
+from pyparsing import TypeVar
+from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
     QAbstractItemView,
     QCheckBox,
     QComboBox,
-    QStyledItemDelegate,
     QDoubleSpinBox,
+    QHeaderView,
     QMessageBox,
+    QStyledItemDelegate,
+    QTableWidget,
+    QTableWidgetItem,
     QWidget,
 )
-from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
-from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
-
-import logging
-
-from pyparsing import TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +104,7 @@ class EditableTable(QTableWidget):
             hheader.sectionClicked.connect(self.header_clicked)
         self.itemChanged.connect(self.on_edit_table_item)
 
-    def update_vocs(self):
+    def update_vocs(self) -> None:
         logging.debug("Emitting data_changed signal from editable_table")
         self.data_changed.emit()
 

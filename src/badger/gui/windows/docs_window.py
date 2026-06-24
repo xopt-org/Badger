@@ -1,3 +1,7 @@
+"""Documentation browser window. Renders Markdown docs for generators,
+environments, and general Badger guides in a QTextBrowser with
+clickable navigation links."""
+
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,

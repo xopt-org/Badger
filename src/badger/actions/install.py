@@ -1,3 +1,7 @@
+"""The `badger install` command (currently disabled). Was intended for
+installing plugins from a registry or local tarball — see docs for
+the current plugin installation workflow."""
+
 import logging
 import requests
 import tarfile

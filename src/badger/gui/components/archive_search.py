@@ -1,3 +1,7 @@
+"""Searchable table of environment variables from the plugin registry.
+Users drag items from here into the variable/observable/constraint tables
+when building a routine."""
+
 import logging
 from typing import List
 from PyQt5.QtGui import QDrag, QKeyEvent
