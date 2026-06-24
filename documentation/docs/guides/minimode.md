@@ -34,7 +34,7 @@ The full GUI is still available via `badger -g`. The two modes use separate UI c
 Mini MODE fits all main controls for creating and running an optimization on a single page without scrolling. The interface has two tabs:
 
 - **Routine creation** — set up and launch a new optimization
-- **History** — view and navigate runs
+- **History** — view and navigate past runs
 
 ## Routine Creation
 
