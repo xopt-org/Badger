@@ -1,3 +1,6 @@
+"""The `badger generator` command. Lists available optimization algorithms
+or shows the default configuration of a specific one."""
+
 import logging
 
 from badger.utils import yprint

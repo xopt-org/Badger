@@ -1,3 +1,7 @@
+"""Table for editing optimization constraints. Each row has a relation
+(>, <, =), threshold value, and criticality flag. Supports drag-and-drop
+reordering."""
+
 from typing import Any
 from PyQt5.QtWidgets import (
     QCheckBox,

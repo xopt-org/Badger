@@ -1,3 +1,15 @@
+"""
+Base classes that all Badger environment plugins inherit from.
+
+An environment tells the optimizer what variables it can change and what
+observables it can read back. There are two flavors:
+    BaseEnvironment — talks to hardware (or simulation) directly
+    Environment     — delegates get/set calls to an Interface plugin
+
+Decorators defined here handle bounds-checking on setpoints and formula
+evaluation on computed observables (see formula.py).
+"""
+
 from abc import abstractmethod
 from logging import warning
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional

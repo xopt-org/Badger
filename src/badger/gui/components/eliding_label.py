@@ -1,4 +1,6 @@
-# https://stackoverflow.com/a/67628976/4263605
+"""QLabel that truncates text with "..." when it doesn't fit. Used for
+long routine names and status messages in tight layouts."""
+
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 

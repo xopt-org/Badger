@@ -1,3 +1,7 @@
+"""Dialog for adding random initial sampling points to a routine. Lets the
+user configure the number of random points and the sampling fraction around
+the current operating point before starting an optimization run."""
+
 from copy import deepcopy
 
 from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QStackedWidget

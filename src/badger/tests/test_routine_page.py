@@ -1,15 +1,16 @@
 import json
+
 import pandas as pd
 import pytest
-from pytestqt.qtbot import QtBot
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QApplication
 from gest_api.vocs import (
-    LessThanConstraint,
     ContinuousVariable,
+    LessThanConstraint,
     MinimizeObjective,
     Observable,
 )
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication
+from pytestqt.qtbot import QtBot
 
 
 def test_routine_page_init(qtbot: QtBot):
@@ -32,10 +33,10 @@ def test_set_routine(qtbot: QtBot):
 
 def test_routine_generation(qtbot: QtBot):
     from badger.errors import BadgerRoutineError
-    from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
     from badger.gui.components.routine_page import BadgerRoutinePage
+    from badger.utils import get_badger_version, get_xopt_version
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -189,8 +190,8 @@ def test_constraints(qtbot: QtBot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
-    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     qtbot.keyClicks(window.env_box.cb, "test")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
 
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)

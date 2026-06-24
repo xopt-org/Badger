@@ -1,3 +1,16 @@
+"""
+The Routine is Badger's central unit of work — it bundles everything needed
+to run an optimization:
+
+    generator   — the algorithm (e.g. Bayesian, Nelder-Mead)
+    environment — where variables are set and observables are read
+    VOCS        — which variables/objectives/constraints/observables to use
+    initial_points — optional seed data for the optimizer
+
+Helper functions here compute variable bounds relative to the current machine
+state and generate initial sampling points.
+"""
+
 import logging
 import json
 from copy import deepcopy

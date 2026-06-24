@@ -1,3 +1,6 @@
+"""Shared helpers for analysis extensions: matplotlib figure management,
+update throttling, error-handling decorators, and numeric formatting."""
+
 import time
 from functools import wraps
 import traceback

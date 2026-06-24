@@ -1,3 +1,7 @@
+"""Helpers for creating and populating QTableWidgets that display
+optimization data (variables, objectives, constraints) with clipboard
+copy and alternating-row styling."""
+
 from pandas import DataFrame
 from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
 from PyQt5.QtCore import Qt

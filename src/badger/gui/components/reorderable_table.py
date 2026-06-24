@@ -1,3 +1,6 @@
+"""QTableView with drag-and-drop row reordering and a custom drop-indicator
+line style."""
+
 # PyQt Functionality Snippet by Apocalyptech
 # "Licensed" in the Public Domain under CC0 1.0 Universal (CC0 1.0)
 # Public Domain Dedication.  Use it however you like!
