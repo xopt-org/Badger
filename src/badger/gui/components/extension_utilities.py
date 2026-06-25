@@ -1,18 +1,17 @@
 """Shared helpers for analysis extensions: matplotlib figure management,
 update throttling, error-handling decorators, and numeric formatting."""
 
+import logging
 import time
-from functools import wraps
 import traceback
-from typing import Any, Callable, Optional, ParamSpec
+from functools import wraps
 from types import TracebackType
-from PyQt5.QtWidgets import QLayout, QTabWidget
+from typing import Any, Callable, Optional, ParamSpec
 
+import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
-
-import logging
+from PyQt5.QtWidgets import QLayout, QTabWidget
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +123,7 @@ class MatplotlibFigureContext:
         else:
             self.ax = ax
 
-    def __enter__(self):
+    def __enter__(self) -> tuple[Figure, Axes]:
         return self.fig, self.ax
 
     def __exit__(
@@ -132,5 +131,5 @@ class MatplotlibFigureContext:
         exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         exc_traceback: Optional[TracebackType],
-    ):
+    ) -> None:
         plt.close(self.fig)

@@ -2,62 +2,55 @@
 with color-mapped iteration progress and optional Pareto-only filtering,
 updating live as new solutions come in."""
 
+import logging
 import time
 from typing import Optional
 
-from PyQt5.QtWidgets import (
-    QWidget,
-    QSizePolicy,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QPushButton,
-    QComboBox,
-    QCheckBox,
-    QLabel,
-    QGroupBox,
-    QTabWidget,
-)
-
-from PyQt5.QtCore import Qt
-from badger.gui.components.plot_event_handlers import (
-    MatplotlibInteractionHandler,
-)
-from badger.gui.components.pf_viewer.types import PFUI, ConfigurableOptions
-from badger.routine import Routine
-
-from badger.utils import BlockSignalsContext, create_archive_run_filename
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.ticker import MaxNLocator
-from matplotlib.backends.backend_qt import (
-    NavigationToolbar2QT as NavigationToolbar,
-)
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.colors import Normalize
+from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 from torch import Tensor
-
 from xopt.generators.bayesian.mobo import MOBOGenerator
 
-from badger.gui.components.pf_viewer.types import (
-    PFUIWidgets,
-    PFUILayouts,
-)
-
 from badger.gui.components.analysis_widget import AnalysisWidget
-
 from badger.gui.components.extension_utilities import (
     HandledException,
     MatplotlibFigureContext,
-    signal_logger,
-    requires_update,
-    clear_tabs,
     clear_layout,
+    clear_tabs,
+    requires_update,
+    signal_logger,
 )
-
-import logging
+from badger.gui.components.pf_viewer.types import (
+    PFUI,
+    ConfigurableOptions,
+    PFUILayouts,
+    PFUIWidgets,
+)
+from badger.gui.components.plot_event_handlers import (
+    MatplotlibInteractionHandler,
+)
+from badger.routine import Routine
+from badger.utils import BlockSignalsContext, create_archive_run_filename
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +161,7 @@ class ParetoFrontWidget(AnalysisWidget):
         # Update the last updated time
         self.last_updated = time.time()
 
-    def setup_connections(self):
+    def setup_connections(self) -> None:
         self.ui["components"]["update"].clicked.connect(
             lambda: signal_logger("Update button clicked")(
                 lambda: self.on_button_click()
