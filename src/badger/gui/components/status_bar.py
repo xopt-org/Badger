@@ -1,3 +1,5 @@
+"""Bottom status bar showing run status and a settings button."""
+
 from importlib import resources
 from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
 from PyQt5.QtGui import QIcon

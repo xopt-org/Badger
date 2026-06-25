@@ -1,3 +1,13 @@
+"""
+Reads and writes Badger's configuration (stored as a YAML file on disk).
+
+Settings include paths (plugin root, archive root, database root), GUI
+preferences (theme, table mode), and feature flags. Access is through
+a singleton (ConfigSingleton) so all parts of the app see the same state.
+
+Run `badger config` from the CLI to edit settings interactively.
+"""
+
 import os
 import platform
 import yaml

@@ -1,3 +1,12 @@
+"""
+Evaluates user-defined math expressions for computed observables.
+
+Users write formulas like `quad1:b`+`quad2:b` or np.sqrt(`signal`) as
+observable names. This module parses backtick-quoted variable references,
+substitutes measured values, and evaluates the expression in a sandboxed
+namespace (numpy only). Includes typo detection for misspelled variable names.
+"""
+
 import numpy as np
 import re
 import ast

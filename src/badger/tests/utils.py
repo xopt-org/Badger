@@ -28,7 +28,6 @@ def create_routine():
 
     return Routine(
         name="test",
-        vocs=vocs,
         generator=generator,
         environment={"name": "test"},
         initial_points=pd.DataFrame(test_routine["init_points"]),
@@ -168,7 +167,6 @@ def create_routine_constrained_ucb():
 
     return Routine(
         name="test",
-        vocs=vocs,
         generator=generator,
         environment={"name": "test"},
         initial_points=pd.DataFrame(test_routine["init_points"]),

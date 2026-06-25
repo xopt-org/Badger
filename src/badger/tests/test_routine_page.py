@@ -1,8 +1,16 @@
+import json
+
 import pandas as pd
 import pytest
-from pytestqt.qtbot import QtBot
+from gest_api.vocs import (
+    ContinuousVariable,
+    LessThanConstraint,
+    MinimizeObjective,
+    Observable,
+)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication
+from pytestqt.qtbot import QtBot
 
 
 def test_routine_page_init(qtbot: QtBot):
@@ -25,10 +33,10 @@ def test_set_routine(qtbot: QtBot):
 
 def test_routine_generation(qtbot: QtBot):
     from badger.errors import BadgerRoutineError
-    from badger.utils import get_badger_version, get_xopt_version
 
     # test if a simple routine can be created
     from badger.gui.components.routine_page import BadgerRoutinePage
+    from badger.utils import get_badger_version, get_xopt_version
 
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
@@ -60,8 +68,10 @@ def test_routine_generation(qtbot: QtBot):
     qtbot.mouseClick(window.env_box.btn_add_curr, Qt.LeftButton)
 
     routine = window._compose_routine()
-    assert routine.vocs.variables == {"x0": (-1, 1)}
-    assert routine.vocs.objectives == {"f": "MINIMIZE"}
+    assert routine.vocs.variables == {
+        "x0": ContinuousVariable(dtype=None, default_value=None, domain=[-1.0, 1.0])
+    }
+    assert routine.vocs.objectives == {"f": MinimizeObjective(dtype=None)}
     # assert routine.initial_points.empty
 
     # Test if badger and xopt version match with the current version
@@ -156,10 +166,21 @@ def test_ui_update(qtbot: QtBot):
     idx = window.generators.index(routine.generator.name)
     window.select_generator(idx)
 
-    assert (
-        window.generator_box.edit.get_parameters_yaml()
-        == '{"vocs":{"variables":{"x0":"(-1.0, 1.0)","x1":"(-1.0, 1.0)","x2":"(-1.0, 1.0)","x3":"(-1.0, 1.0)"},"constraints":{"c":"(\'GREATER_THAN\', 0.0)"},"objectives":{"f":"MAXIMIZE"},"constants":{},"observables":[]}}'
-    )
+    expected_params = {
+        "returns_id": False,
+        "vocs": {
+            "variables": "{'x0': {'dtype': None, 'default_value': None, 'domain': [-1.0, 1.0], 'type': 'ContinuousVariable'}, "
+            "'x1': {'dtype': None, 'default_value': None, 'domain': [-1.0, 1.0], 'type': 'ContinuousVariable'}, "
+            "'x2': {'dtype': None, 'default_value': None, 'domain': [-1.0, 1.0], 'type': 'ContinuousVariable'}, "
+            "'x3': {'dtype': None, 'default_value': None, 'domain': [-1.0, 1.0], 'type': 'ContinuousVariable'}}",
+            "constraints": "{'c': {'dtype': None, 'value': 0.0, 'type': 'GreaterThanConstraint'}}",
+            "objectives": "{'f': {'dtype': None, 'type': 'MaximizeObjective'}}",
+            "constants": "{}",
+            "observables": "{}",
+        },
+    }
+    actual_params = json.loads(window.generator_box.edit.get_parameters_yaml())
+    assert actual_params == expected_params
 
 
 def test_constraints(qtbot: QtBot):
@@ -169,8 +190,8 @@ def test_constraints(qtbot: QtBot):
     window = BadgerRoutinePage()
     qtbot.addWidget(window)
 
-    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
     qtbot.keyClicks(window.env_box.cb, "test")
+    qtbot.keyClicks(window.generator_box.cb, "expected_improvement")
 
     # click checkbox to select vars/objectives
     window.env_box.var_table.cellWidget(0, 0).setChecked(True)
@@ -181,7 +202,7 @@ def test_constraints(qtbot: QtBot):
     con_widget_critical.setChecked(True)
 
     routine = window._compose_routine()
-    assert routine.vocs.constraints == {"c": ("LESS_THAN", 0.0)}
+    assert routine.vocs.constraints == {"c": LessThanConstraint(dtype=None, value=0.0)}
     assert routine.critical_constraint_names == ["c"]
 
 
@@ -204,7 +225,7 @@ def test_observables(qtbot: QtBot):
     window.env_box.sta_table.cellWidget(1, 0).setChecked(True)
 
     routine = window._compose_routine()
-    assert routine.vocs.observables == ["c"]
+    assert routine.vocs.observables == {"c": Observable(dtype=None)}
 
 
 def test_add_random_points(qtbot: QtBot):

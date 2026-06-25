@@ -1,3 +1,7 @@
+"""Animated expand/collapse container. Used in the routine editor to
+group environment config, generator parameters, etc. without taking
+up permanent screen space."""
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QLayout
 

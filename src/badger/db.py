@@ -1,3 +1,11 @@
+"""
+Stores routines and their run records in a local SQLite database.
+
+Each routine is saved as a YAML blob keyed by a UUID. Run records link back
+to their parent routine. The database file lives under BADGER_DB_ROOT (set
+in settings) and can be exported/imported for sharing between installations.
+"""
+
 import os
 import warnings
 from datetime import datetime

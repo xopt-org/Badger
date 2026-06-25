@@ -1,3 +1,13 @@
+"""
+Runs an optimization routine from the command line and saves results.
+
+The main function here is run_n_archive: it calls core.run_routine in a loop,
+catches Ctrl-C (SIGINT) for pause/resume, periodically dumps data to the
+archive, and logs interface channel values to disk.
+
+Note: the CLI runner is deprecated — most users should use the GUI instead.
+"""
+
 import logging
 import os
 import sys

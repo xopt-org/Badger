@@ -1,3 +1,27 @@
+"""
+The variable table in the routine editor — where the user picks which machine
+variables to tune and sets a min/max range for each.
+
+VariableTable is its own QTableWidget subclass (unlike the objective/constraint/
+observable tables, which share editable_table.py) because it carries two extra
+RobustSpinBox columns for the lower and upper bound. It validates as you type:
+if min >= max the row gets a red border.
+
+What it manages:
+    - the list of variables, their bounds, and which are checked, kept in
+      internal dicts (all_variables, variables, bounds, selected)
+    - fetching live bounds from the environment when a new variable is added
+      (see get_bounds)
+    - a per-row config button and right-click menu (info, config, copy)
+    - inline-added variables, tracked separately and tinted so they stand out
+    - a "show checked only" filter and drag-drop text to add variables in bulk
+
+Signals: data_changed (any edit), sig_sel_changed (selection), sig_pv_added,
+and sig_var_config (config button clicked). Use export_variables() to get the
+checked variables with their current bounds.
+"""
+
+from functools import partial
 from importlib import resources
 import traceback
 from typing import Any, cast
@@ -30,6 +54,8 @@ from badger.gui.components.robust_spinbox import RobustSpinBox
 from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
+
+from gest_api.vocs import ContinuousVariable
 
 import logging
 
@@ -309,7 +335,9 @@ class VariableTable(QTableWidget):
         return {k: (v[0], v[1]) for k, v in bounds.items()}
 
     def update_variables(
-        self, variables: list[dict[str, tuple[float, float]]], filtered: int = 0
+        self,
+        variables: list[dict[str, tuple[float, float] | ContinuousVariable]],
+        filtered: int = 0,
     ):
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
@@ -364,12 +392,22 @@ class VariableTable(QTableWidget):
             self.setItem(i, 1, item)
 
             _bounds = self.bounds[name]
+            default_val = (
+                _bounds.domain[0]
+                if isinstance(_bounds, ContinuousVariable)
+                else _bounds[0]
+            )
             sb_lower = RobustSpinBox(
-                default_value=_bounds[0], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=default_val, lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_lower.valueChanged.connect(self.update_bounds)
+            default_val = (
+                _bounds.domain[1]
+                if isinstance(_bounds, ContinuousVariable)
+                else _bounds[1]
+            )
             sb_upper = RobustSpinBox(
-                default_value=_bounds[1], lower_bound=vrange[0], upper_bound=vrange[1]
+                default_value=default_val, lower_bound=vrange[0], upper_bound=vrange[1]
             )
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(i, 2, sb_lower)
@@ -390,7 +428,7 @@ class VariableTable(QTableWidget):
             layout.setContentsMargins(2, 0, 0, 0)  # Remove extra margins
             self.setCellWidget(i, 4, button_container)
 
-            config_button.clicked.connect(lambda: self.handle_config_button(name))
+            config_button.clicked.connect(partial(self.handle_config_button, name))
 
             if self.bounds_locked:
                 sb_lower.setEnabled(False)

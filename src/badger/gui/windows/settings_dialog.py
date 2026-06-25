@@ -1,3 +1,7 @@
+"""Settings dialog for the Badger GUI. Provides controls for configuring the
+application theme (dark/light/default), log level, and log directory, with
+changes applied immediately to the running application."""
+
 import logging
 import os
 

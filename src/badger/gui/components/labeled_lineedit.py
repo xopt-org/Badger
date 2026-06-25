@@ -1,3 +1,6 @@
+"""Creates a compact label + QLineEdit pair used throughout the GUI for
+key-value fields."""
+
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 

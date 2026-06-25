@@ -1,3 +1,7 @@
+"""Interactive `badger config` command. Walks the user through each setting
+(plugin root, archive root, theme, log level, etc.) and lets them set,
+skip, or reset values from the terminal."""
+
 from badger.settings import init_settings
 import os
 import logging

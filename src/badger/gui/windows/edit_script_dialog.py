@@ -1,3 +1,7 @@
+"""Script editor dialog for the Badger GUI. Provides a syntax-highlighted
+Python code editor for writing custom generator scripts that execute as part
+of an optimization routine."""
+
 from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout, QWidget
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton
 from PyQt5.QtGui import QFont

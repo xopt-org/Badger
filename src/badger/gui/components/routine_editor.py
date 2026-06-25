@@ -1,3 +1,6 @@
+"""Container that wraps the routine page in a scrollable area with
+save/cancel/delete buttons. Coordinates creation, editing, and deletion."""
+
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
 from PyQt5.QtWidgets import QTextEdit, QStackedWidget, QScrollArea
 from PyQt5.QtCore import pyqtSignal

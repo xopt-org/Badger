@@ -1,3 +1,7 @@
+"""Dialog for loading historical run data into the current routine. Lets the
+user browse archived runs, preview their data as a plot, and import selected
+data points to seed the optimizer with prior observations."""
+
 from PyQt5.QtWidgets import (
     QDialog,
     QWidget,

@@ -1,3 +1,7 @@
+"""Termination condition dialog for the Badger GUI. Lets the user configure
+when an optimization run should automatically stop — either after a maximum
+number of evaluations or after a maximum elapsed time."""
+
 from PyQt5.QtWidgets import (
     QDialog,
     QWidget,

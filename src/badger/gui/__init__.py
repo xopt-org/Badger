@@ -1,3 +1,6 @@
+"""Launches the Badger GUI. Sets up the QApplication (theming, DPI scaling,
+error handling) and opens the main window. Called via `badger -g`."""
+
 from importlib import resources
 import signal
 import sys

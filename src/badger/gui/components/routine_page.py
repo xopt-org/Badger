@@ -1,3 +1,30 @@
+"""
+The big form where a routine gets built — most of the routine editor lives here.
+
+BadgerRoutinePage is organized into tabs:
+    Metadata    — name, description, tags, template save/load
+    Environment — the environment box (env_cbox.py) plus the VOCS tables
+                  (variables, objectives, constraints, observables) and
+                  initial points
+    Algorithm   — the generator box (generator_cbox.py) for picking and
+                  configuring the optimization algorithm
+    Data        — pre-loaded data and archive search
+
+Its central job is _compose_routine(): take everything the user has entered
+across those tabs and assemble it into a Routine object ready to run. It also
+handles the reverse — set_routine()/refresh_ui() load an existing routine back
+into the form.
+
+A few areas carry most of the complexity:
+    - variable ranges: automatic vs. manual bounds, hard-limit overrides, and
+      "relative to current" mode (ratio/delta around the live machine values)
+    - initial points: fill from current values or random sampling
+    - templates: save/load routine configs as YAML
+
+This page is wrapped by routine_editor.py, which adds the save/cancel/delete
+buttons around it.
+"""
+
 from typing import Any
 import warnings
 import traceback
@@ -15,12 +42,21 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
 from coolname import generate_slug
 from xopt import VOCS
+from xopt.vocs import random_inputs
 from xopt.generators import (
     get_generator_defaults,
     all_generator_names,
     get_generator_dynamic,
 )
 from xopt.utils import get_local_region
+from gest_api.vocs import (
+    BaseConstraint,
+    BaseObjective,
+    GreaterThanConstraint,
+    LessThanConstraint,
+    MinimizeObjective,
+    MaximizeObjective,
+)
 from pydantic import ValidationError
 
 from badger.gui.components.generator_cbox import BadgerAlgoBox
@@ -65,21 +101,13 @@ from badger.utils import (
     ts_float_to_str,
 )
 
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-LABEL_WIDTH = 96
-CONS_RELATION_DICT = {
-    ">": "GREATER_THAN",
-    "<": "LESS_THAN",
-}
-CONS_RELATION_DICT_INV = {
-    "GREATER_THAN": ">",
-    "LESS_THAN": "<",
-}
 
-logger = logging.getLogger(__name__)
+LABEL_WIDTH = 96
 
 
 def format_validation_error(e: ValidationError) -> str:
@@ -90,6 +118,31 @@ def format_validation_error(e: ValidationError) -> str:
         msg = f"{loc}: {err['msg']}\n"
         messages.append(msg)
     return "\n".join(messages)
+
+
+def extract_constraint_symbol_and_value(constraint: BaseConstraint) -> str:
+    """
+    Extract symbol and value from gest-api constraint objects
+    generator standard library [gest-api](https://github.com/campa-consortium/gest-api)
+    """
+    if isinstance(constraint, GreaterThanConstraint):
+        return ">", constraint.value
+    if isinstance(constraint, LessThanConstraint):
+        return "<", constraint.value
+    else:  # Expand for other constraints if needed
+        return "", 0
+
+
+def extract_objective_symbol(objective: BaseObjective) -> str:
+    """
+    Extract text from gest-api objective objects
+    """
+    if isinstance(objective, MinimizeObjective):
+        return "MINIMIZE"
+    if isinstance(objective, MaximizeObjective):
+        return "MAXIMIZE"
+    else:
+        raise ValueError(f"Unknown objective type: {objective}")
 
 
 class BadgerRoutinePage(QWidget):
@@ -489,7 +542,7 @@ class BadgerRoutinePage(QWidget):
             status[name] = False  # selected
             objectives.append(obj)
         for name, val in vocs.objectives.items():
-            rule = val
+            rule = extract_objective_symbol(val)
 
             idx = objectives_names_full.index(name)
             if idx == -1:
@@ -522,9 +575,8 @@ class BadgerRoutinePage(QWidget):
             status[name] = False  # selected
             constraints.append(cons)
         for name, val in vocs.constraints.items():
-            relation, thres = val
+            relation, thres = extract_constraint_symbol_and_value(val)
             critical = name in critical_constraint_names
-            relation = CONS_RELATION_DICT_INV[relation]
 
             idx = constraints_names_full.index(name)
             if idx == -1:
@@ -839,7 +891,7 @@ class BadgerRoutinePage(QWidget):
             status[name] = False  # selected
             objectives.append(obj)
         for name, val in routine.vocs.objectives.items():
-            rule = val
+            rule = extract_objective_symbol(val)
 
             idx = objectives_names_full.index(name)
             if idx == -1:
@@ -875,9 +927,8 @@ class BadgerRoutinePage(QWidget):
             status[name] = False  # selected
             constraints.append(cons)
         for name, val in routine.vocs.constraints.items():
-            relation, thres = val
+            relation, thres = extract_constraint_symbol_and_value(val)
             critical = name in routine.critical_constraint_names
-            relation = CONS_RELATION_DICT_INV[relation]
 
             idx = constraints_names_full.index(name)
             if idx == -1:
@@ -1263,8 +1314,8 @@ class BadgerRoutinePage(QWidget):
         random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
         with warnings.catch_warnings(record=True) as caught_warnings:
             try:
-                random_points = vocs.random_inputs(
-                    n_point, custom_bounds=random_sample_region
+                random_points = random_inputs(
+                    vocs, n_point, custom_bounds=random_sample_region
                 )
             except ValueError:
                 raise VariableRangeError(
@@ -1829,7 +1880,6 @@ class BadgerRoutinePage(QWidget):
                 xopt_version=get_xopt_version(),
                 creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
                 # Xopt part
-                vocs=vocs,
                 generator=generator,
                 # Badger part
                 name=name,

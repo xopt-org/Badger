@@ -16,6 +16,15 @@ repos:
       - id: check-yaml
         exclude: "^(python/src/badger/_version.py)$"
 
+  - repo: local
+    hooks:
+      - id: check-module-docstrings
+        name: check module docstrings
+        entry: python scripts/check_docstrings.py
+        language: python
+        files: ^src/badger/.*\.py$
+        exclude: ^src/badger/tests/
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.2
     hooks:

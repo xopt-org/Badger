@@ -1,3 +1,7 @@
+"""Routine review dialog for the Badger GUI. Displays a read-only YAML
+preview of a fully-configured routine before it is saved or run, allowing the
+user to confirm the settings."""
+
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
 
 from badger.routine import Routine

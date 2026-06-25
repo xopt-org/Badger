@@ -1,3 +1,6 @@
+"""Command-line entry point. Run `badger -g` to launch the GUI, or use
+sub-commands like `badger routine`, `badger env`, `badger config`, etc."""
+
 import argparse
 import logging
 

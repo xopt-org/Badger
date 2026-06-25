@@ -1,3 +1,7 @@
+"""The `badger routine` command. Lists, inspects, or runs saved routines
+from the terminal. Deprecated in favor of the GUI but kept for
+backwards compatibility."""
+
 import logging
 
 import pandas as pd

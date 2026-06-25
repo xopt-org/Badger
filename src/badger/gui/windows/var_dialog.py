@@ -1,3 +1,7 @@
+"""Variable discovery dialog for the Badger GUI. Provides a search interface
+for finding and adding environment variables by name, querying the environment
+plugin to verify the variable exists and retrieve its current value."""
+
 from PyQt5.QtWidgets import (
     QDialog,
     QWidget,

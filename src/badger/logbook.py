@@ -1,3 +1,7 @@
+"""Sends optimization results to the LCLS electronic logbook. Generates an
+XML entry with run summary (gain, duration, algorithm) and attaches a
+screenshot of the GUI for the facility archive."""
+
 import os
 from datetime import datetime
 import logging

@@ -1,3 +1,7 @@
+"""Scrollable message dialog for the Badger GUI. Displays long-form messages
+with an optional expandable details section in a resizable, scrollable window,
+used for showing verbose error information or optimization summaries."""
+
 from PyQt5.QtWidgets import (
     QDialog,
     QMessageBox,

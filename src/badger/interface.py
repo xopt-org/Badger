@@ -1,3 +1,7 @@
+"""Base class for interface plugins — the layer that talks to hardware or
+simulators. Environments delegate get/set channel calls here. Also includes
+utilities for logging channel interactions to disk for post-run analysis."""
+
 import pickle
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Dict, List, TypedDict

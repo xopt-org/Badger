@@ -1,3 +1,6 @@
+"""Creates a single observable-state row: a combo box for the observable
+name and a remove button."""
+
 from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
 from PyQt5.QtWidgets import QStyledItemDelegate
 from badger.gui.utils import NoHoverFocusComboBox

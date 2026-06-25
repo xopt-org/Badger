@@ -1,3 +1,6 @@
+"""TypedDict definitions shared by the analysis extensions — plot options,
+variable selections, and reference point settings."""
+
 from typing import TypedDict
 
 

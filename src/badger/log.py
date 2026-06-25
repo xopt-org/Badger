@@ -1,3 +1,14 @@
+"""
+Logging system that allows subprocesses to send logs to a central listener
+in the main process, writes logs to both logfile and the terminal.
+
+We make use of the logging.handlers classes from the python standard library, mainly:
+    QueueListener (in main process) — collects log records from a multiprocessing.Queue
+    QueueHandler (in subprocesses) — sends log records to the main process queue
+
+For example usage (in a simple context), see src/badger/tests/test_multiprocess_logging.py
+"""
+
 import os
 import datetime
 import logging
@@ -9,17 +20,6 @@ from badger.settings import get_user_config_folder
 from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
-
-"""
-Logging system that allows subprocesses to send logs to a central listener
-in the main process, writes logs to both logfile and the terminal.
-
-We make use of the logging.handlers classes from the python standard library, mainly:
-    QueueListener (in main process) — collects log records from a multiprocessing.Queue
-    QueueHandler (in subprocesses) — sends log records to the main process queue
-
-For example usage (in a simple context), see src/badger/tests/test_multiprocess_logging.py
-"""
 
 
 class LoggingManager:

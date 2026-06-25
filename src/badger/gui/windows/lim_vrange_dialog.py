@@ -1,3 +1,8 @@
+"""Dialog for globally limiting variable ranges before an optimization run.
+Lets the user choose between restricting ranges as a fraction of the full
+hardware range or a fraction centered on the current value, applied uniformly
+to all variables in the routine."""
+
 from copy import deepcopy
 
 from PyQt5.QtWidgets import (

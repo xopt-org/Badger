@@ -1,3 +1,6 @@
+"""Mouse event handlers for matplotlib plots in the analysis extensions.
+Handles click, hover, scroll-zoom, and data-point annotation tooltips."""
+
 from badger.routine import Routine
 from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg

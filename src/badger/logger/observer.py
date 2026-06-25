@@ -1,6 +1,5 @@
-"""
-observers...
-"""
+"""Base classes for logger observers. Observer defines the update() interface;
+_Tracker adds iteration counting and elapsed-time tracking."""
 
 from datetime import datetime
 from badger.logger.event import Events

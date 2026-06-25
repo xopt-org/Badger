@@ -1,3 +1,6 @@
+"""The top-level window. Contains the home page and manages the subprocess
+pool for optimization runs. Handles graceful shutdown when closed."""
+
 import logging
 import os
 from importlib import metadata

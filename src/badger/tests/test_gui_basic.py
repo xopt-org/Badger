@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from PyQt5.QtCore import QEventLoop, Qt, QTimer
+from PyQt5.QtWidgets import QDialog
 
 
 @pytest.fixture(scope="session")
@@ -128,6 +129,66 @@ def test_traceback_during_run(qtbot, init_multiprocessing):
             qtbot.wait(100)
 
         window.process_manager.close_proccesses()
+
+
+def test_measurement_retry_dialog_in_app_flow(qtbot, init_multiprocessing):
+    from badger.gui.windows.main_window import BadgerMainWindow
+    from badger.tests.utils import create_routine, fix_path_issues
+
+    fix_path_issues()
+    window = BadgerMainWindow()
+    qtbot.addWidget(window)
+
+    loop = QEventLoop()
+    QTimer.singleShot(1000, loop.quit)
+    loop.exec_()
+
+    routine = create_routine()
+    home_page = window.home_page
+    home_page.current_routine = routine
+    home_page.go_run(-1)
+    home_page.run_monitor.init_routine_runner()
+    runner = home_page.run_monitor.routine_runner
+
+    # Grab queue and process from the process manager
+    process_with_args = window.process_manager.remove_from_queue()
+    assert process_with_args is not None
+    runner.data_and_error_queue = process_with_args["data_queue"]
+    runner.dialog_action_queue = process_with_args["dialog_action_queue"]
+    runner.evaluate_queue = process_with_args["evaluate_queue"]
+    runner.routine_process = process_with_args["process"]
+
+    with patch(
+        "badger.gui.windows.measurement_retry_dialog.BadgerMeasurementRetryDialog.exec_",
+        return_value=QDialog.Accepted,
+    ) as exec_mock:
+        runner.data_and_error_queue.put(
+            {
+                "type": "measurement_error",
+                "title": "Injected measurement error",
+                "traceback": "traceback details",
+            }
+        )
+
+        # Wait up to 1 second in 10 for queue to receive the error.
+        for _ in range(10):
+            if not runner.data_and_error_queue.empty():
+                break
+            qtbot.wait(100)
+
+        # Explicitly check if any errors were thrown
+        runner.check_queue()
+
+        exec_mock.assert_called_once()
+        response = runner.dialog_action_queue.get(timeout=1)
+        assert response == {
+            "type": "measurement_action",
+            "action": "retry",
+        }
+
+    window.process_manager.close_proccesses()
+    process_with_args["process"].terminate()
+    process_with_args["process"].join()
 
 
 # TODO: Check the use_low_noise_prior parameter in the routine
