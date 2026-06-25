@@ -277,7 +277,11 @@ class BadgerEnvBox(QWidget):
         self.load_template_button = self.template_row.load_template_button
 
         config_singleton = init_settings()
-        template_dir = Path(config_singleton.read_value("BADGER_TEMPLATE_ROOT"))
+        BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
+        try:
+            template_dir = Path(config_singleton.read_value("BADGER_TEMPLATE_ROOT"))
+        except KeyError:
+            template_dir = Path(BADGER_PLUGIN_ROOT) / "templates"
         yaml_files = list(template_dir.glob("*.y*ml"))
         self.template_cb.addItems([file.stem for file in sorted(yaml_files)])
         self.template_cb.setCurrentIndex(-1)

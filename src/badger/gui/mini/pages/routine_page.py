@@ -77,6 +77,7 @@ from badger.utils import (
     get_badger_version,
     get_xopt_version,
     ts_float_to_str,
+    _round_bounds_inward,
 )
 
 
@@ -370,7 +371,10 @@ class BadgerRoutinePage(QWidget):
 
         # set vocs
         vocs = VOCS(
-            variables=template_dict["vocs"]["variables"],
+            variables={
+                name: _round_bounds_inward(bounds)
+                for name, bounds in template_dict["vocs"]["variables"].items()
+            },
             objectives=template_dict["vocs"]["objectives"],
             constraints=template_dict["vocs"]["constraints"],
             constants={},
@@ -411,7 +415,10 @@ class BadgerRoutinePage(QWidget):
         # Load the vrange options and hard limits
         self.ratio_var_ranges = vrange_limit_options
         self.init_table_actions = initial_point_actions
-        self.var_hard_limit = vrange_hard_limit
+        self.var_hard_limit = {
+            name: _round_bounds_inward(bounds)
+            for name, bounds in vrange_hard_limit.items()
+        }
 
         self.env_box.check_only_var.setChecked(True)
 
@@ -434,9 +441,16 @@ class BadgerRoutinePage(QWidget):
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
 
+                bounds = _round_bounds_inward(bounds)
+
                 all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
-        all_variables.update(self.var_hard_limit)
+        all_variables.update(
+            {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in self.var_hard_limit.items()
+            }
+        )
 
         if len(additional_variables) > 0:
             # Format for update_variables method
@@ -455,7 +469,13 @@ class BadgerRoutinePage(QWidget):
                 bounds, clipped = self.calc_auto_bounds()
                 self.env_box.var_table.set_bounds(bounds, signal=False, clipped=clipped)
             else:
-                self.env_box.var_table.set_bounds(vocs.variables, signal=False)
+                self.env_box.var_table.set_bounds(
+                    {
+                        name: _round_bounds_inward(bounds)
+                        for name, bounds in vocs.variables.items()
+                    },
+                    signal=False,
+                )
             # Populate the initial table anyways, auto mode or not
             self.clear_init_table(reset_actions=False)
             self.update_init_table(force=True)
@@ -762,7 +782,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.edit_var.clear()
 
         try:
-            self.var_hard_limit = routine.vrange_hard_limit
+            self.var_hard_limit = {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in routine.vrange_hard_limit.items()
+            }
         except AttributeError:
             self.var_hard_limit = {}
         # Add additional variables to table as well
@@ -779,9 +802,16 @@ class BadgerRoutinePage(QWidget):
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
 
+                bounds = _round_bounds_inward(bounds)
+
                 all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
-        all_variables.update(self.var_hard_limit)
+        all_variables.update(
+            {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in self.var_hard_limit.items()
+            }
+        )
         # Format for update_variables method
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
@@ -803,7 +833,13 @@ class BadgerRoutinePage(QWidget):
         self.toggle_relative_to_curr(flag_relative, refresh=False)
 
         # Always use ranges stored in routine
-        self.env_box.var_table.set_bounds(routine.vocs.variables, signal=False)
+        self.env_box.var_table.set_bounds(
+            {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in routine.vocs.variables.items()
+            },
+            signal=False,
+        )
 
         # Fill in initial points stored in routine if available
         try:
@@ -1070,7 +1106,11 @@ class BadgerRoutinePage(QWidget):
         self.env_box.edit_env_params.set_params_from_dict(configs["params"])
 
         # Get and save vars to combine with additional vars added on the fly
-        vars_env = self.vars_env = configs["variables"]
+        vars_env = self.vars_env = [
+            {var_name: _round_bounds_inward(bounds)}
+            for var in configs["variables"]
+            for var_name, bounds in var.items()
+        ]
         vars_combine = [*vars_env]
 
         # Needed for getting bounds and current values on the fly.
@@ -1691,6 +1731,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             try:
                 bounds = env.get_bounds([vname])[vname]
+                bounds = _round_bounds_inward(bounds)
             except BadgerEnvVarError as e:
                 msg = str(e)
                 bounds = eval(msg.split(": ")[1])
