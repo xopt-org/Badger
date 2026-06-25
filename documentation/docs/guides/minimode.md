@@ -1,6 +1,7 @@
 ---
 sidebar_position: 9
 ---
+
 # Mini MODE
 
 Mini MODE is a simplified version of the Badger GUI designed for quick, streamlined optimization runs. It removes complexity from the full GUI by consolidating routine creation onto a single page and defaulting to automatic behavior.
@@ -9,15 +10,11 @@ Mini MODE is a simplified version of the Badger GUI designed for quick, streamli
 
 Launch Mini MODE from the command line:
 
-```bash
-badger -mini
-```
+`badger -mini`
 
 To launch with a template preloaded:
 
-```bash
-badger -mini -t sphere_test.yaml
-```
+`badger -mini -t sphere_test.yaml`
 
 The `-t` (or `--template`) argument will look for a matching YAML template file in your configured template root directory.
 
