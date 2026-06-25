@@ -42,6 +42,7 @@ from PyQt5.QtGui import (
 from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
+from badger.utils import _round_bounds_inward
 
 from gest_api.vocs import ContinuousVariable
 
@@ -1000,7 +1001,7 @@ class VariableTable(QTableWidget):
 
         value = self.env.get_variable(name)
         bound = self.env.get_bounds([name])[name]
-        return value, bound
+        return value, _round_bounds_inward(bound)
 
     def add_variable(self, name: str, lb: float, ub: float):
         var = {name: (lb, ub)}
