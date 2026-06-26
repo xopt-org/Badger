@@ -4,7 +4,7 @@ viewer). Each dialog receives live data updates from the run monitor."""
 import logging
 from typing import Optional, cast
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from xopt import Generator
@@ -27,6 +27,10 @@ class AnalysisExtension(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
+        # A parented QWidget is a child widget by default. Setting the Window
+        # flag keeps the palette as the owner (for lifetime/stacking) while
+        # still displaying this as a separate top-level window.
+        self.setWindowFlag(Qt.WindowType.Window)
 
     def update_window(self, routine: Routine) -> None:
         try:
@@ -101,7 +105,9 @@ class BOVisualizer(AnalysisExtension):
         super().__init__(parent=parent)
 
         self.initialize_extension(
-            extension_widget=BOPlotWidget(routine=routine),
+            extension_widget=BOPlotWidget(
+                routine=routine,
+            ),
             extension_name="Bayesian Optimization Visualizer",
             generator_type=cast(type[Generator], BayesianGenerator),
         )
@@ -116,7 +122,9 @@ class BaxVisualizer(AnalysisExtension):
         super().__init__(parent=parent)
 
         self.initialize_extension(
-            extension_widget=BaxWidget(routine=routine),
+            extension_widget=BaxWidget(
+                routine=routine,
+            ),
             extension_name="Bax Visualizer",
             generator_type=cast(type[Generator], BayesianGenerator),
         )

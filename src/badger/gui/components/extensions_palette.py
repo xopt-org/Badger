@@ -131,7 +131,7 @@ class ExtensionsPalette(QMainWindow):
             return
 
         self.add_child_window_to_monitor(
-            ParetoFrontViewer(routine=self.run_monitor.routine)
+            ParetoFrontViewer(routine=self.run_monitor.routine, parent=self)
         )
 
     def add_bo_visualizer(self) -> None:
@@ -147,7 +147,9 @@ class ExtensionsPalette(QMainWindow):
             )
             return
 
-        self.add_child_window_to_monitor(BOVisualizer(routine=self.run_monitor.routine))
+        self.add_child_window_to_monitor(
+            BOVisualizer(routine=self.run_monitor.routine, parent=self)
+        )
 
     def add_bax_visualizer(self) -> None:
         """
@@ -163,7 +165,7 @@ class ExtensionsPalette(QMainWindow):
             return
 
         self.add_child_window_to_monitor(
-            BaxVisualizer(routine=self.run_monitor.routine)
+            BaxVisualizer(routine=self.run_monitor.routine, parent=self)
         )
 
     def add_child_window_to_monitor(self, child_window: AnalysisExtension) -> None:

@@ -2,10 +2,10 @@
 
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
@@ -18,31 +18,63 @@ from badger.utils import create_archive_run_filename
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class Parameters:
+@dataclass()
+class PlotParameters:
     n_grid: int = 50
     n_samples: int = 100
-    fig_size: tuple[int, int] = (5, 5)
 
 
-DEFAULT_PARAMETERS = Parameters(n_grid=50, n_samples=100, fig_size=(5, 5))
+@dataclass()
+class Parameters:
+    tab_1: PlotParameters = field(default_factory=PlotParameters)
+    tab_2: PlotParameters = field(default_factory=PlotParameters)
+    variables: list[str] = field(default_factory=list)
+    variable_idx_x: int = 0
+    variable_idx_y: int = 1
+    include_y: bool = True
+
+
+DEFAULT_PARAMETERS = Parameters()
 
 
 class BaxWidget(AnalysisWidget):
-    parameters = DEFAULT_PARAMETERS
     generator: BaxGenerator
+    parameters: Parameters = DEFAULT_PARAMETERS
 
     def __init__(self, routine: Routine, parent: Optional[QWidget] = None):
         logger.debug("Initializing BaxWidget")
         super().__init__(routine=routine, parent=parent)
 
-        self.ui = UI(routine=self.routine, parameters=self.parameters, parent=self)
+        self.ui = UI(routine=self.routine, parameters=self.parameters)
 
-        self.setWindowTitle("BAX Visualizer")
+        # The UI must live inside a layout, otherwise Qt never manages its
+        # geometry and the widget's size hints / minimum size are ignored.
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.ui)
+        self.setLayout(layout)
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumSize(800, 600)
 
+        self.initialize_widget()
+
     def initialize_widget(self) -> None:
-        pass
+        logger.debug("Initializing BaxWidget")
+
+        variable_names = list(self.routine.vocs.variable_names)
+        self.parameters.variables = variable_names
+
+        temp_x = self.parameters.variable_idx_x
+        temp_y = self.parameters.variable_idx_y
+        if len(variable_names) < 2:
+            self.parameters.include_y = False
+            self.parameters.variable_idx_x = 0
+            self.parameters.variable_idx_y = -1
+        else:
+            self.parameters.include_y = True
+            self.parameters.variable_idx_x = min(temp_x, len(variable_names) - 1)
+            self.parameters.variable_idx_y = min(temp_y, len(variable_names) - 1)
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -85,7 +117,6 @@ class BaxWidget(AnalysisWidget):
 
     def reset_widget(self) -> None:
         logger.debug("Resetting BaxWidget")
-        self.initialized = False
         self.routine_identifier = ""
         self.df_length = float("inf")
 
@@ -93,12 +124,48 @@ class BaxWidget(AnalysisWidget):
         if not requires_update(self.last_updated, interval, requires_rebuild):
             return
 
+        self.ui.controls_area.update_controls()
+
         self.ui.plotting_area.update_tab_widget()
 
         self.last_updated = time.time()
 
     def setup_connections(self) -> None:
-        pass
+        self.ui.controls_area.update_button.clicked.connect(
+            lambda: self.update_plots(requires_rebuild=True, interval=0)
+        )
+
+        self.ui.controls_area.x_axis_combo_box.currentIndexChanged.connect(
+            lambda: self.update_variables()
+        )
+        self.ui.controls_area.y_axis_combo_box.currentIndexChanged.connect(
+            lambda: self.update_variables()
+        )
+        self.ui.controls_area.y_axis_checkbox.stateChanged.connect(
+            lambda: self.update_y_axis_controls()
+        )
+
+    def update_variables(self) -> None:
+
+        self.parameters.variable_idx_x = (
+            self.ui.controls_area.x_axis_combo_box.currentIndex()
+        )
+        self.parameters.variable_idx_y = (
+            self.ui.controls_area.y_axis_combo_box.currentIndex()
+        )
+
+        self.update_plots(requires_rebuild=True, interval=0)
+
+    def update_y_axis_controls(self) -> None:
+
+        self.parameters.include_y = self.ui.controls_area.y_axis_checkbox.isChecked()
+
+        if not self.parameters.include_y:
+            self.ui.controls_area.y_axis_combo_box.setEnabled(False)
+        else:
+            self.ui.controls_area.y_axis_combo_box.setEnabled(True)
+
+        self.update_plots(requires_rebuild=True, interval=0)
 
     def isValidRoutine(self, routine: Routine) -> None:
         if not isinstance(routine.generator, BayesianGenerator):
