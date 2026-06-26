@@ -219,18 +219,11 @@ class VariableTable(QTableWidget):
         sb_lower = cast(RobustSpinBox, sb_lower)
         sb_upper = cast(RobustSpinBox, sb_upper)
 
-        if sb_lower.value() >= sb_upper.value():  # Invalid bounds
-            # Apply a red border to the entire row
-            for col in range(2, 4):
-                widget = self.cellWidget(row, col)
-                if widget:
-                    widget.setStyleSheet("border: 1px solid red;")
-        else:  # Valid bounds
-            # Remove the red border
-            for col in range(2, 4):
-                widget = self.cellWidget(row, col)
-                if widget:
-                    widget.setStyleSheet("")
+        cb = self.cellWidget(row, 0)
+        cb = cast(QCheckBox, cb)
+        is_selected = cb.isChecked()
+
+        self._set_spinbox_text_color(row, is_selected)
 
     def set_bounds(
         self, variables: dict[str, tuple[float, float]], signal: bool = True
@@ -273,8 +266,11 @@ class VariableTable(QTableWidget):
             if not widget:
                 raise Exception("Variable name widget not found!")
             name = widget.text()
+            is_selected = _cb.isChecked()
+            widget.setForeground(QColor("lightgray" if is_selected else "gray"))
+            self._set_spinbox_text_color(i, is_selected)
             if name != self.PLACEHOLDER_TEXT:  # TODO: fix...
-                self.selected[name] = _cb.isChecked()
+                self.selected[name] = is_selected
 
         self.sig_sel_changed.emit()
         self.update_vocs()
@@ -334,6 +330,28 @@ class VariableTable(QTableWidget):
     def _convert_bounds_to_tuple(self, bounds: Any) -> dict[str, tuple[float, float]]:
         return {k: (v[0], v[1]) for k, v in bounds.items()}
 
+    def _set_spinbox_style(
+        self, spinbox: RobustSpinBox, is_selected: bool, has_error: bool = False
+    ):
+        """Set the style of a spinbox based on selection and error status."""
+        color = "lightgray" if is_selected else "gray"
+        border = "border: 1px solid red;" if has_error else ""
+        spinbox.setStyleSheet(f"QDoubleSpinBox {{ color: {color}; {border} }}")
+
+    def _set_spinbox_text_color(self, row: int, is_selected: bool):
+        """Set the text color of the spinboxes in a given row based on selection status."""
+        sb_lower = self.cellWidget(row, 2)
+        sb_upper = self.cellWidget(row, 3)
+
+        sb_lower = cast(RobustSpinBox, sb_lower)
+        sb_upper = cast(RobustSpinBox, sb_upper)
+        has_error = sb_lower.value() >= sb_upper.value()
+
+        for col in (2, 3):
+            spinbox = self.cellWidget(row, col)
+            spinbox = cast(RobustSpinBox, spinbox)
+            self._set_spinbox_style(spinbox, is_selected, has_error)
+
     def update_variables(
         self,
         variables: list[dict[str, tuple[float, float] | ContinuousVariable]],
@@ -389,6 +407,7 @@ class VariableTable(QTableWidget):
             else:
                 # Make non-new PVs not editable
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setForeground(QColor("lightgray" if _cb.isChecked() else "gray"))
             self.setItem(i, 1, item)
 
             _bounds = self.bounds[name]
@@ -412,6 +431,7 @@ class VariableTable(QTableWidget):
             sb_upper.valueChanged.connect(self.update_bounds)
             self.setCellWidget(i, 2, sb_lower)
             self.setCellWidget(i, 3, sb_upper)
+            self._set_spinbox_text_color(i, _cb.isChecked())
             self.validate_row(i)  # Validate the row after setting bounds
 
             # Add the config button
