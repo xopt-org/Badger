@@ -264,10 +264,8 @@ class ScanRangeCell(QWidget):
         layout.addWidget(self.line_edit)
         layout.addWidget(self._button_stack)
 
-        if is_clipped:
-            self.setToolTip("Requested bounds are clipped by hard variable limits")
-        elif not is_centered:
-            self.setToolTip("Range (Δ) is not centered on current value")
+        if is_clipped or not is_centered:
+            self.setToolTip("Requested bounds are clipped by hardware limits")
 
     def set_selected(self, is_selected: bool):
         color = self.SELECTED_COLOR if is_selected else self.UNSELECTED_COLOR
