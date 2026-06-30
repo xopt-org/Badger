@@ -452,11 +452,10 @@ class BadgerRoutinePage(QWidget):
             }
         )
 
-        if len(additional_variables) > 0:
-            # Format for update_variables method
-            all_variables = dict(sorted(all_variables.items()))
-            all_variables = [{key: value} for key, value in all_variables.items()]
-            self.env_box.var_table.update_variables(all_variables)
+        # Format for update_variables method
+        all_variables = dict(sorted(all_variables.items()))
+        all_variables = [{key: value} for key, value in all_variables.items()]
+        self.env_box.var_table.update_variables(all_variables)
 
         self.env_box.var_table.set_selected(vocs.variables)
         self.env_box.var_table.addtl_vars = additional_variables
@@ -1546,7 +1545,10 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges[vname] = option
 
         # recalculate bounds
-        bounds, clipped = self.calc_auto_bounds()
+        _bounds, _clipped = self.calc_auto_bounds()
+        # only apply requested bounds updates
+        bounds = {k: v for k, v in _bounds.items() if k in variable_names}
+        clipped = {k: v for k, v in _clipped.items() if k in variable_names}
         with BlockSignalsContext(self.env_box.var_table):
             self.env_box.var_table.set_bounds(bounds, clipped=clipped)
 
