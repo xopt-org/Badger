@@ -156,12 +156,12 @@ class TestEnvironment:
 
         # Test invalid setpoints
         with pytest.raises(
-            BadgerEnvVarError, match="Input point for x1 is outside its bounds"
+            BadgerEnvVarError, match=r"Input point .*? for x1 is outside its bounds"
         ):
             env.set_variables({"x1": 2.0})  # Outside upper bound
 
         with pytest.raises(
-            BadgerEnvVarError, match="Input point for x2 is outside its bounds"
+            BadgerEnvVarError, match=r"Input point .*? for x2 is outside its bounds"
         ):
             env.set_variables({"x2": -1.0})  # Outside lower bound
 

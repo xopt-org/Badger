@@ -28,6 +28,9 @@ def main():
         "-ga", "--gui-acr", action="store_true", help="launch the GUI for ACR"
     )
     parser.add_argument(
+        "-mini", "--mini", action="store_true", help="launch Badger mini"
+    )
+    parser.add_argument(
         "-l",
         "--log_level",
         choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"],
@@ -43,6 +46,13 @@ def main():
         type=str,
         default=None,
         help="Path to the config file",
+    )
+    parser.add_argument(
+        "-t",
+        "--template",
+        type=str,
+        default=None,
+        help="Template filename for mini GUI launch",
     )
     parser.set_defaults(func=show_info)
     subparsers = parser.add_subparsers(help="Badger commands help")
