@@ -168,6 +168,7 @@ class BadgerHomePage(QWidget):
 
         # Add action bar
         self.run_action_bar = run_action_bar = BadgerActionBar()
+        run_action_bar.docs_name = "minimode"
 
         # Run panel (routine editor + run monitor + data table + action bar)
         panel_run = QWidget()

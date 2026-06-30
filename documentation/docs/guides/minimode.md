@@ -1,6 +1,7 @@
 ---
 sidebar_position: 9
 ---
+
 # Mini Mode
 
 Mini Mode is a simplified version of the Badger GUI designed for quick, streamlined optimization runs. It removes complexity from the full GUI by consolidating routine creation onto a single page and defaulting to automatic behavior.
