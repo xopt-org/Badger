@@ -23,7 +23,7 @@ The full GUI is still available via `badger -g`. The two Modes use separate UI c
 
 ## Overview
 
-![Mini Mode main window](/img/guides/miniMode.png)
+![Mini Mode main window](/img/guides/minimode.png)
 
 <!-- Screenshot: full Mini Mode window showing the routine page with template loaded -->
 
@@ -37,7 +37,7 @@ Mini Mode fits all main controls for creating and running an optimization on a s
 ### Selecting a Template
 
 <!-- Screenshot: template dropdown at top of routine page -->
-![Mini Mode template](/img/guides/miniMode-template.png)
+![Mini Mode template](/img/guides/minimode-template.png)
 
 At the top of the page, a dropdown lets you select from available routine templates. When a template is loaded, it populates:
 
@@ -50,7 +50,7 @@ At the top of the page, a dropdown lets you select from available routine templa
 
 <!-- Screenshot: Environment + VOCS tab with algorithm selection expanded -->
 
-![Mini Mode Environment + VOCS](/img/guides/miniMode-vocs.png)
+![Mini Mode Environment + VOCS](/img/guides/minimode-vocs.png)
 
 
 The main tab combines environment selection and VOCS configuration. Key differences from the full GUI:
@@ -63,7 +63,7 @@ The main tab combines environment selection and VOCS configuration. Key differen
 
 <!-- Screenshot: variable table showing Saved, Current, and Range columns -->
 
-![Mini Mode Variable Table](/img/guides/miniMode-variable.png)
+![Mini Mode Variable Table](/img/guides/minimode-variable.png)
 
 The variable table displays three key columns instead of raw upper/lower bounds:
 
@@ -94,7 +94,7 @@ When "Show checked only" is unchecked, the table scrolls to display the first se
 ### Variable Range Dialog
 
 <!-- Screenshot: individual variable range dialog with bounds preview bar -->
-![Mini Mode Variable Dialog](/img/guides/miniMode-variable2.png)
+![Mini Mode Variable Dialog](/img/guides/minimode-variable2.png)
 
 Clicking the gear icon on a variable row opens a dialog with:
 
@@ -106,7 +106,7 @@ Clicking the gear icon on a variable row opens a dialog with:
 ### Initial Points
 
 <!-- Screenshot: initial points section collapsed -->
-![Mini Mode Initial Points](/img/guides/miniMode-initialpoints.png)
+![Mini Mode Initial Points](/img/guides/minimode-initialpoints.png)
 
 Initial points selection is collapsed by default. Points are automatically chosen from within a subset of the configured variable range.
 
@@ -123,6 +123,6 @@ Variable ranges are automatically set around the current value based on template
 ## History Tab
 
 <!-- Screenshot: history tab showing past runs -->
-![Mini Mode History Tab](/img/guides/miniMode-history.png)
+![Mini Mode History Tab](/img/guides/minimode-history.png)
 
 The History tab lets you browse and load past optimization runs, similar to the History Navigator in the full GUI.
