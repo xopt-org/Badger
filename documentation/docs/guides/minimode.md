@@ -1,14 +1,13 @@
 ---
 sidebar_position: 9
 ---
+# Mini Mode
 
-# Mini MODE
+Mini Mode is a simplified version of the Badger GUI designed for quick, streamlined optimization runs. It removes complexity from the full GUI by consolidating routine creation onto a single page and defaulting to automatic behavior.
 
-Mini MODE is a simplified version of the Badger GUI designed for quick, streamlined optimization runs. It removes complexity from the full GUI by consolidating routine creation onto a single page and defaulting to automatic behavior.
+## Launching Mini Mode
 
-## Launching Mini MODE
-
-Launch Mini MODE from the command line:
+Launch Mini Mode from the command line:
 
 `badger -mini`
 
@@ -19,16 +18,16 @@ To launch with a template preloaded:
 The `-t` (or `--template`) argument will look for a matching YAML template file in your configured template root directory.
 
 :::note
-The full GUI is still available via `badger -g`. The two modes use separate UI components and do not interfere with each other.
+The full GUI is still available via `badger -g`. The two Modes use separate UI components and do not interfere with each other.
 :::
 
 ## Overview
 
-![Mini MODE main window](/img/guides/minimode.png)
+![Mini Mode main window](/img/guides/miniMode.png)
 
-<!-- Screenshot: full Mini MODE window showing the routine page with template loaded -->
+<!-- Screenshot: full Mini Mode window showing the routine page with template loaded -->
 
-Mini MODE fits all main controls for creating and running an optimization on a single page without scrolling. The interface has two tabs:
+Mini Mode fits all main controls for creating and running an optimization on a single page without scrolling. The interface has two tabs:
 
 - **Routine creation** — set up and launch a new optimization
 - **History** — view and navigate past runs
@@ -38,7 +37,7 @@ Mini MODE fits all main controls for creating and running an optimization on a s
 ### Selecting a Template
 
 <!-- Screenshot: template dropdown at top of routine page -->
-![Mini MODE template](/img/guides/minimode-template.png)
+![Mini Mode template](/img/guides/miniMode-template.png)
 
 At the top of the page, a dropdown lets you select from available routine templates. When a template is loaded, it populates:
 
@@ -51,7 +50,7 @@ At the top of the page, a dropdown lets you select from available routine templa
 
 <!-- Screenshot: Environment + VOCS tab with algorithm selection expanded -->
 
-![Mini MODE Environment + VOCS](/img/guides/minimode-vocs.png)
+![Mini Mode Environment + VOCS](/img/guides/miniMode-vocs.png)
 
 
 The main tab combines environment selection and VOCS configuration. Key differences from the full GUI:
@@ -64,7 +63,7 @@ The main tab combines environment selection and VOCS configuration. Key differen
 
 <!-- Screenshot: variable table showing Saved, Current, and Range columns -->
 
-![Mini MODE Variable Table](/img/guides/minimode-variable.png)
+![Mini Mode Variable Table](/img/guides/miniMode-variable.png)
 
 The variable table displays three key columns instead of raw upper/lower bounds:
 
@@ -95,7 +94,7 @@ When "Show checked only" is unchecked, the table scrolls to display the first se
 ### Variable Range Dialog
 
 <!-- Screenshot: individual variable range dialog with bounds preview bar -->
-![Mini MODE Variable Dialog](/img/guides/minimode-variable2.png)
+![Mini Mode Variable Dialog](/img/guides/miniMode-variable2.png)
 
 Clicking the gear icon on a variable row opens a dialog with:
 
@@ -107,13 +106,13 @@ Clicking the gear icon on a variable row opens a dialog with:
 ### Initial Points
 
 <!-- Screenshot: initial points section collapsed -->
-![Mini MODE Initial Points](/img/guides/minimode-initialpoints.png)
+![Mini Mode Initial Points](/img/guides/miniMode-initialpoints.png)
 
 Initial points selection is collapsed by default. Points are automatically chosen from within a subset of the configured variable range.
 
 ## Running an Optimization
 
-Mini MODE defaults to automatic behavior — there is no manual/automatic mode toggle. Once your routine is configured:
+Mini Mode defaults to automatic behavior — there is no manual/automatic Mode toggle. Once your routine is configured:
 
 1. Select or load a template
 2. Verify variables, ranges, and objectives
@@ -124,6 +123,6 @@ Variable ranges are automatically set around the current value based on template
 ## History Tab
 
 <!-- Screenshot: history tab showing past runs -->
-![Mini MODE History Tab](/img/guides/minimode-history.png)
+![Mini Mode History Tab](/img/guides/miniMode-history.png)
 
 The History tab lets you browse and load past optimization runs, similar to the History Navigator in the full GUI.
