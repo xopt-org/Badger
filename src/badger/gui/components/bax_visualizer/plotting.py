@@ -1,8 +1,6 @@
 """Matplotlib-based plotting widget for visualizing BAX virtual measurements."""
 
 import logging
-import os
-import sys
 from typing import TYPE_CHECKING, Optional
 
 import matplotlib.pyplot as plt
@@ -23,16 +21,6 @@ from badger.gui.components.extension_utilities import (
     clear_tabs,
 )
 from badger.utils import BlockSignalsContext
-
-# Temporary: the vendored ``bax_algorithms`` package uses absolute imports
-# rooted at the top-level name ``bax_algorithms`` (e.g.
-# ``from bax_algorithms.utils import ...``). Add the directory that contains the
-# package to ``sys.path`` so it is importable as a top-level package until it is
-# properly published as part of xopt.
-_BAX_ALGORITHMS_DIR = os.path.join(os.path.dirname(__file__), "bax_algorithms")
-if _BAX_ALGORITHMS_DIR not in sys.path:
-    sys.path.insert(0, _BAX_ALGORITHMS_DIR)
-
 from bax_algorithms.visualize import (  # noqa: E402
     plot_bax_input_convergence,
     plot_bax_objective_convergence,

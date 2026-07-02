@@ -8,16 +8,18 @@ a singleton (ConfigSingleton) so all parts of the app see the same state.
 Run `badger config` from the CLI to edit settings interactively.
 """
 
+import logging
 import os
 import platform
-import yaml
 import shutil
 from importlib import resources
-from badger.utils import get_datadir
-from pydantic import BaseModel, Field, ValidationError
 from typing import Any, Dict, Optional, Union
+
+import yaml
+from pydantic import BaseModel, Field, ValidationError
+
 from badger.errors import BadgerLoadConfigError
-import logging
+from badger.utils import get_datadir
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,8 @@ class BadgerConfig(BaseModel):
         Setting for the logging level.
     BADGER_LOG_DIRECTORY : Setting
         Setting for the location of logfile.
+    BADGER_TEMP_DIRECTORY : Setting
+        Setting for the location of temporary files.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
@@ -107,6 +111,12 @@ class BadgerConfig(BaseModel):
         display_name="log directory",
         description="Directory where daily log files will be stored",
         value="logs",
+        is_path=True,
+    )
+    BADGER_TEMP_DIRECTORY: Setting = Setting(
+        display_name="temp directory",
+        description="Directory where temporary files will be stored",
+        value="temp",
         is_path=True,
     )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
@@ -442,7 +452,54 @@ def init_settings(config_arg: str = None) -> ConfigSingleton:
         user_flag = True
 
     config_singleton = ConfigSingleton(file_path, user_flag)
+    get_or_create_temp_directory(config_singleton)
     return config_singleton
+
+
+def get_or_create_temp_directory(config_singleton: ConfigSingleton) -> str:
+    """Resolve BADGER_TEMP_DIRECTORY to an absolute path under the user config
+    folder and ensure the directory exists on disk.
+
+    This migrates older configs that either lack the key or hold the relative
+    default ("temp"): they get rewritten to an absolute path anchored under
+    ``get_user_config_folder()`` so the temp location is OS-appropriate and
+    stable regardless of the current working directory.
+
+    Parameters
+    ----------
+    config_singleton: ConfigSingleton
+        The active configuration singleton.
+
+    Returns
+    -------
+    str
+        The absolute path to the temp directory that now exists on disk.
+    """
+    try:
+        temp_dir = config_singleton.read_value("BADGER_TEMP_DIRECTORY")
+    except KeyError:
+        temp_dir = None
+
+    # Migrate: unset or a relative path -> anchor under the user config folder
+    if not temp_dir or not os.path.isabs(os.path.expanduser(temp_dir)):
+        temp_dir = os.path.join(get_user_config_folder(), "temp")
+        config_singleton.write_value("BADGER_TEMP_DIRECTORY", temp_dir)
+
+    temp_dir = os.path.expanduser(str(temp_dir))
+
+    # Ensure the directory exists, falling back to the config folder on failure
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+    except (PermissionError, FileExistsError):
+        logger.warning(
+            "Cannot use temp directory %s, falling back to the user config folder",
+            temp_dir,
+        )
+        temp_dir = os.path.join(get_user_config_folder(), "temp")
+        config_singleton.write_value("BADGER_TEMP_DIRECTORY", temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+
+    return temp_dir
 
 
 def apply_pytorch_multiprocess_tensor_sharing_setting(
@@ -512,6 +569,10 @@ def mock_settings():
     templates_dir = str(app_data_dir / "templates")
     os.makedirs(templates_dir, exist_ok=True)
     config_singleton.write_value("BADGER_TEMPLATE_ROOT", templates_dir)
+
+    temp_dir = str(app_data_dir / "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    config_singleton.write_value("BADGER_TEMP_DIRECTORY", temp_dir)
 
     # Set other settings to the default values
     for key in config_singleton.config.model_dump(by_alias=True).keys():

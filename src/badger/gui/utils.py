@@ -2,13 +2,34 @@
 scroll-wheel filters for spinboxes, custom combo boxes, and dialog
 utilities."""
 
+import copy
+import logging
+import os
 from importlib import resources
 from typing import Any
-from PyQt5.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox, QToolButton
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
-from PyQt5.QtCore import Qt, QObject, QEvent, QSize
+
+from PyQt5.QtCore import QEvent, QObject, QSize, Qt
 from PyQt5.QtGui import QIcon
-import copy
+from PyQt5.QtWidgets import (
+    QAbstractSpinBox,
+    QComboBox,
+    QDialog,
+    QLabel,
+    QPushButton,
+    QToolButton,
+    QVBoxLayout,
+)
+
+from badger.errors import BadgerConfigError
+from badger.settings import init_settings
+
+logger = logging.getLogger(__name__)
+
+# Check badger optimization run archive root
+config_singleton = init_settings()
+BADGER_TEMP_DIRECTORY = config_singleton.read_value("BADGER_TEMP_DIRECTORY")
+if BADGER_TEMP_DIRECTORY is None:
+    raise BadgerConfigError("Please set the BADGER_TEMP_DIRECTORY env var!")
 
 
 def preventAnnoyingSpinboxScrollBehaviour(self, control: QAbstractSpinBox) -> None:
@@ -59,7 +80,10 @@ def create_button(
     return btn
 
 
-def filter_generator_config(name: str, config: dict[str, Any]):
+DEFAULT_ALGORITHM_RESULTS_FILE = "algorithm_results"
+
+
+def filter_generator_config(name: str, config: dict[str, Any]) -> dict[str, Any]:
     filtered_config: dict[str, Any] = {}
     if name == "neldermead":
         filtered_config["adaptive"] = config["adaptive"]
@@ -79,6 +103,12 @@ def filter_generator_config(name: str, config: dict[str, Any]):
         filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
         filtered_config["max_travel_distances"] = config["max_travel_distances"]
         filtered_config["reference_point"] = config["reference_point"]
+    elif name == "bax":
+        filtered_config = config
+        filtered_config["algorithm_results_file"] = (
+            f"{BADGER_TEMP_DIRECTORY}{os.sep}{DEFAULT_ALGORITHM_RESULTS_FILE}"
+        )
+
     else:
         filtered_config = config
 

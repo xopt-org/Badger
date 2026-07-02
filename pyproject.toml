@@ -28,6 +28,8 @@ dependencies = [
     "pillow",
     "requests",
     "xopt>=3.0.0",
+    "bax-algorithms",
+
 ]
 dynamic = ["version"]
 [tool.setuptools_scm]

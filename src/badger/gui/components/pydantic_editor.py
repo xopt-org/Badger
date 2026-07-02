@@ -22,7 +22,7 @@ from typing import (
 import yaml
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
-from pydantic_core import PydanticUndefined
+from pydantic_core import PydanticUndefined, PydanticUndefinedType
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -48,6 +48,7 @@ from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
+
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +213,7 @@ class BadgerResolvedType:
     ) -> QWidget | None:
         resolved_type = BadgerResolvedType.resolve(annotation)
         widget: QWidget | None = None
+        property_name = editor_info[1].text(0) if editor_info is not None else ""
 
         if resolved_type.main is None:
             widget = QLineEdit()
@@ -239,15 +241,21 @@ class BadgerResolvedType:
         elif resolved_type.main is dict:
             subtypes = resolved_type.subtype
             if subtypes is None:
-                raise ValueError("Dict type must have subtypes")
+                raise ValueError(
+                    f"Property name {property_name}: Dict type must have subtypes"
+                )
             if not isinstance(subtypes, list) or len(subtypes) != 2:
-                raise ValueError("Dict type must have two subtypes")
+                raise ValueError(
+                    f"Property name {property_name}: Dict type must have two subtypes"
+                )
 
             primary_type = subtypes[0]
             secondary_type = subtypes[1]
 
             if primary_type.main is None or secondary_type.main is None:
-                raise ValueError("Dict subtypes must be basic types")
+                raise ValueError(
+                    f"Property name {property_name}: Dict subtypes must be basic types"
+                )
 
             widget = BadgerListEditor(primary_type.main, secondary_type.main)
 
@@ -261,7 +269,9 @@ class BadgerResolvedType:
                 widget.listChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is list:
             if resolved_type.subtype is None:
-                raise ValueError("List type must have a subtype")
+                raise ValueError(
+                    f"Property name {property_name}: List type must have a subtype"
+                )
             if isinstance(resolved_type.subtype, list):
                 primary_type = resolved_type.subtype[0]
                 secondary_type = (
@@ -272,7 +282,9 @@ class BadgerResolvedType:
                 primary_type = resolved_type.subtype
                 secondary_type = None
             if primary_type.main is None:
-                raise ValueError("List subtype must be a basic type")
+                raise ValueError(
+                    f"Property name {property_name}: List subtype must be a basic type"
+                )
             widget = BadgerListEditor(
                 primary_type.main, secondary_type.main if secondary_type else None
             )
@@ -288,43 +300,46 @@ class BadgerResolvedType:
             widget = QDoubleSpinBox()
             widget.setRange(float("-inf"), float("inf"))
             widget.setDecimals(6)
-            if resolved_type.nullable:
-                # The minimum value doubles as the "null" sentinel.
-                widget.setSpecialValueText("null")
-            if default is not None:
+            if default is not None and not isinstance(default, PydanticUndefinedType):
                 widget.setValue(convert_to_type(default, float))
             elif resolved_type.nullable:
+                # The minimum value doubles as the "null" sentinel.
+                widget.setSpecialValueText("null")
                 widget.setValue(widget.minimum())
             else:
-                widget.setValue(0.0)
+                raise ValueError(
+                    f"Property name {property_name}: Float type must have a default value"
+                )
 
             if editor_info is not None:
                 widget.valueChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is int:
             widget = QSpinBox()
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
-            if resolved_type.nullable:
-                # The minimum value doubles as the "null" sentinel.
-                widget.setSpecialValueText("null")
-            if default is not None:
+            if default is not None and not isinstance(default, PydanticUndefinedType):
                 widget.setValue(convert_to_type(default, int))
             elif resolved_type.nullable:
+                # The minimum value doubles as the "null" sentinel.
+                widget.setSpecialValueText("null")
                 widget.setValue(widget.minimum())
             else:
-                widget.setValue(0)
+                raise ValueError(
+                    f"Property name {property_name}: Int type must have a default value"
+                )
 
             if editor_info is not None:
                 widget.valueChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is bool:
             widget = QCheckBox()
-            if resolved_type.nullable:
-                widget.setTristate(True)
-            if default is not None:
+            if default is not None and not isinstance(default, PydanticUndefinedType):
                 widget.setChecked(convert_to_type(default, bool))
             elif resolved_type.nullable:
+                widget.setTristate(True)
                 widget.setCheckState(Qt.CheckState.PartiallyChecked)
             else:
-                widget.setChecked(False)
+                raise ValueError(
+                    f"Property name {property_name}: Bool type must have a default value"
+                )
 
             if editor_info is not None:
                 widget.stateChanged.connect(lambda: handle_changed(editor_info))
@@ -854,6 +869,11 @@ class BadgerPydanticEditor(QTreeWidget):
             if not issubclass(self.model_class, BaxGenerator):
                 raise ValueError("Generator does not support algorithms.")
             compatible_classes = self.model_class.get_compatible_algorithms()
+            # TODO: Add in additional from BAX algorithms.
+            # compatible_classes = list(compatible_classes) + [
+            #     EmittanceAlgorithm,
+            #     PathwiseSolenoidAlignment,
+            # ]
         else:
             raise ValueError(f"Field name {field_name} is not recognized.")
 
@@ -942,6 +962,21 @@ class BadgerPydanticEditor(QTreeWidget):
             defaults,
             True,
         )
+
+        # ``class_path`` is a Pydantic computed field (absent from ``model_fields``)
+        # so it never becomes a widget on its own. BaxGenerator.validate_algorithm
+        # relies on it to import algorithms that are not registered in the
+        # generator's compatible list (e.g. the vendored BAX algorithms). Render it
+        # as a hidden item so its value is carried through get_parameters_yaml()/
+        # get_parameters_dict() into the final config.
+        if "class_path" in pydantic_class.model_computed_fields:
+            class_path_value = f"{pydantic_class.__module__}.{pydantic_class.__name__}"
+            self._set_params_recurse(
+                tree_widget_item,
+                {"class_path": FieldInfo(annotation=str, default=class_path_value)},
+                {"class_path": class_path_value},
+                True,
+            )
 
         self.expandItem(tree_widget_item)
 
