@@ -5,10 +5,12 @@ utilities."""
 from importlib import resources
 from typing import Any
 from PyQt5.QtWidgets import QAbstractSpinBox, QPushButton, QComboBox, QToolButton
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QApplication
 from PyQt5.QtCore import Qt, QObject, QEvent, QSize
 from PyQt5.QtGui import QIcon
 import copy
+from functools import wraps
+from typing import Callable
 
 
 def preventAnnoyingSpinboxScrollBehaviour(self, control: QAbstractSpinBox) -> None:
@@ -119,3 +121,23 @@ class ModalOverlay(QDialog):
         self.setLayout(layout)
         # Semi-transparent background
         self.setStyleSheet("background-color: rgba(0, 0, 0, 80);")
+
+
+def set_busy_cursor() -> None:
+    QApplication.setOverrideCursor(Qt.BusyCursor)
+
+
+def unset_busy_cursor() -> None:
+    QApplication.restoreOverrideCursor()
+
+
+def with_busy_cursor(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        set_busy_cursor()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            unset_busy_cursor()
+
+    return wrapped
