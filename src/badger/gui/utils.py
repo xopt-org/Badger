@@ -5,7 +5,6 @@ utilities."""
 import copy
 import logging
 import os
-from datetime import datetime
 from importlib import resources
 from typing import Any
 
@@ -84,28 +83,15 @@ def create_button(
 DEFAULT_ALGORITHM_RESULTS_FILE = "algorithm_results"
 
 
-def needs_new_bax_results_folder(value: str | None) -> bool:
-    """Return True when the BAX results path should get a fresh per-run folder.
-
-    A value is considered "already scoped" when it lives in its own sub-folder
-    of the temp directory (``temp/<folder-id>/...``). The shared default
-    (``temp/algorithm_results``) or an empty value triggers a new folder.
-    """
-    if not value:
-        return True
-    parent = os.path.dirname(value)
-    return bool(os.path.normpath(parent) == os.path.normpath(BADGER_TEMP_DIRECTORY))
-
-
-def build_bax_results_file(create_dir: bool = False) -> str:
+def build_bax_results_file(folder_id: str, create_dir: bool = False) -> str:
     """Build a ``temp/<folder-id>/algorithm_results`` prefix for BAX pkl dumps.
 
-    The archive name isn't known until a run starts, so the folder id is a
-    timestamp. BaxGenerator does not create the parent directory and appends
-    ``_<index>.pkl`` to the returned prefix, so ``create_dir`` should be True
-    whenever the path is going to be used for an actual run.
+    ``folder_id`` should match the run's archive name (``<env>-<creation_ts>``)
+    so the results directory is traceable to the archived run and stays
+    consistent with what the visualizer plots. BaxGenerator does not create the
+    parent directory and appends ``_<index>.pkl`` to the returned prefix, so
+    ``create_dir`` should be True whenever the path is used for an actual run.
     """
-    folder_id = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     results_dir = os.path.join(BADGER_TEMP_DIRECTORY, folder_id)
     if create_dir:
         os.makedirs(results_dir, exist_ok=True)

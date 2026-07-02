@@ -125,6 +125,11 @@ class BaxWidget(AnalysisWidget):
         if not requires_update(self.last_updated, interval, requires_rebuild):
             return
 
+        # The plotting area caches the generator it was built with. Re-sync it
+        # with the current routine's generator so it reads this run's
+        # algorithm_results_file instead of a stale one from a previous run.
+        self.ui.plotting_area.generator = self.generator
+
         self.ui.controls_area.update_controls()
 
         self.ui.plotting_area.update_tab_widget()

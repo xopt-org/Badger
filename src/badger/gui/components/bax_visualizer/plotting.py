@@ -69,6 +69,7 @@ class PlottingWidget(QWidget):
                 self.parameters.variables[self.parameters.variable_idx_y]
             )
 
+        logger.debug(f"Results file: {self.generator.algorithm_results_file}")
         fig, ax = visualize_virtual_measurement_result(
             self.generator,
             variable_names=selected_variable_names,
@@ -83,6 +84,7 @@ class PlottingWidget(QWidget):
 
     def create_second_plot(self) -> tuple[Figure, Axes]:
         logger.debug("Creating second plot")
+        logger.debug(f"Results file: {self.generator.algorithm_results_file}")
         fig, ax = plot_bax_objective_convergence(
             self.generator,
         )
@@ -90,6 +92,7 @@ class PlottingWidget(QWidget):
 
     def create_third_plot(self) -> tuple[Figure, Axes]:
         logger.debug("Creating third plot")
+        logger.debug(f"Results file: {self.generator.algorithm_results_file}")
         fig, ax = plot_bax_input_convergence(
             self.generator,
         )
