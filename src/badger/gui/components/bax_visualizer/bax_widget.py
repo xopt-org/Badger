@@ -28,6 +28,7 @@ class PlotParameters:
 class Parameters:
     tab_1: PlotParameters = field(default_factory=PlotParameters)
     tab_2: PlotParameters = field(default_factory=PlotParameters)
+    active_tab: int = 0
     variables: list[str] = field(default_factory=list)
     variable_idx_x: int = 0
     variable_idx_y: int = 1
@@ -144,6 +145,12 @@ class BaxWidget(AnalysisWidget):
         self.ui.controls_area.y_axis_checkbox.stateChanged.connect(
             lambda: self.update_y_axis_controls()
         )
+        self.ui.plotting_area.plot_tab_widget.currentChanged.connect(
+            lambda index: self.update_tab_index(index)
+        )
+
+    def update_tab_index(self, index: int) -> None:
+        self.parameters.active_tab = index
 
     def update_variables(self) -> None:
 

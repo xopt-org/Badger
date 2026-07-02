@@ -49,7 +49,6 @@ from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -623,6 +622,41 @@ class BadgerPydanticEditor(QTreeWidget):
     generator_name: str = ""
     model_class: type[BaseModel] | None = None
 
+    # Fields holding runtime state that has no editable widget representation
+    # (e.g. pandas DataFrames populated during/after optimization). These are
+    # dropped from the tree entirely so their stringified values never reach
+    # validation.
+    #
+    # ``COMMON_EXCLUDED_FIELDS`` applies to every generator. Add generator
+    # specific exclusions to ``GENERATOR_EXCLUDED_FIELDS`` keyed by the
+    # generator name (i.e. the value passed to ``set_params_from_generator`` /
+    # the generator's ``name`` field). The effective set is the union of both,
+    # resolved by ``get_excluded_fields``.
+    COMMON_EXCLUDED_FIELDS: frozenset[str] = frozenset({"computation_time"})
+    GENERATOR_EXCLUDED_FIELDS: dict[str, frozenset[str]] = {
+        # "bax": frozenset({"algorithm_results"}),
+    }
+
+    def get_excluded_fields(self) -> frozenset[str]:
+        """Return the set of fields to exclude from the tree for the current
+        generator: the common fields plus any generator-specific ones."""
+        excluded: set[str] = set(self.COMMON_EXCLUDED_FIELDS)
+
+        # Resolve the generator name from the loaded model class when available,
+        # falling back to the name provided to ``set_params_from_generator``.
+        names: set[str] = set()
+        if self.generator_name:
+            names.add(self.generator_name)
+        if self.model_class is not None:
+            name_field = self.model_class.model_fields.get("name")
+            if name_field is not None and isinstance(name_field.default, str):
+                names.add(name_field.default)
+
+        for name in names:
+            excluded |= self.GENERATOR_EXCLUDED_FIELDS.get(name, frozenset())
+
+        return frozenset(excluded)
+
     def __init__(
         self,
         parent: QTreeWidget | None = None,
@@ -761,7 +795,11 @@ class BadgerPydanticEditor(QTreeWidget):
         fields_to_remove = ["vocs"]
 
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
-            self.model_class, fields_to_remove, defaults, include_defaults=True
+            self.model_class,
+            fields_to_remove,
+            defaults,
+            include_defaults=True,
+            excluded_fields=self.get_excluded_fields(),
         )
 
         self._set_params_recurse(
@@ -986,6 +1024,7 @@ class BadgerPydanticEditor(QTreeWidget):
         fields_to_remove: list[str] = [],
         defaults: dict[str, Any] = {},
         include_defaults: bool = False,
+        excluded_fields: frozenset[str] = frozenset(),
     ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
         condition: Callable[[str], bool]
 
@@ -1001,13 +1040,15 @@ class BadgerPydanticEditor(QTreeWidget):
             condition = exclude_condition
 
         filtered_class_fields = {
-            k: v for k, v in pydantic_class.model_fields.items() if condition(k)
+            k: v
+            for k, v in pydantic_class.model_fields.items()
+            if condition(k) and k not in excluded_fields
         }
 
         removed_class_fields = {
             k: v
             for k, v in pydantic_class.model_fields.items()
-            if k in fields_to_remove
+            if k in fields_to_remove and k not in excluded_fields
         }
 
         return filtered_class_fields, removed_class_fields
@@ -1099,7 +1140,11 @@ class BadgerPydanticEditor(QTreeWidget):
         fields_to_remove = ["vocs"]
 
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
-            model_class, fields_to_remove, defaults, include_defaults=True
+            model_class,
+            fields_to_remove,
+            defaults,
+            include_defaults=True,
+            excluded_fields=self.get_excluded_fields(),
         )
 
         self._set_params_recurse(

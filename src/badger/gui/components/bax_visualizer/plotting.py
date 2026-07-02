@@ -163,3 +163,4 @@ class PlottingWidget(QWidget):
             clear_tabs(self.plot_tab_widget)
             self.update_first_tab()
             self.update_second_tab()
+        self.plot_tab_widget.setCurrentIndex(self.parameters.active_tab)
