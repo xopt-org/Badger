@@ -103,6 +103,7 @@ will be clipped by the variable range."""
                 "ratio wrt current value",
                 "ratio wrt full range",
                 "delta around current value",
+                "exact bounds",
             ]
         )
         cb.setCurrentIndex(self.configs.get("limit_option_idx", 0))
@@ -155,9 +156,40 @@ will be clipped by the variable range."""
         hbox_delta.addWidget(lbl)
         hbox_delta.addWidget(sb_delta, 1)
 
+        # Absolute bounds config (used in non-relative mode)
+        bounds_config = QWidget()
+        vbox_bounds = QVBoxLayout(bounds_config)
+        vbox_bounds.setContentsMargins(0, 0, 0, 0)
+
+        hbox_bounds_lower = QHBoxLayout()
+        hbox_bounds_lower.setContentsMargins(0, 0, 0, 0)
+        lbl_lower = QLabel("Lower")
+        self.sb_bounds_lower = sb_bounds_lower = QDoubleSpinBox()
+        sb_bounds_lower.setMinimum(float(self.configs.get("hard_lower_bound", -1e14)))
+        sb_bounds_lower.setMaximum(float(self.configs.get("hard_upper_bound", 1e14)))
+        sb_bounds_lower.setDecimals(6)
+        sb_bounds_lower.setValue(float(self.configs.get("lower_bound", 0.0)))
+        hbox_bounds_lower.addWidget(lbl_lower)
+        hbox_bounds_lower.addWidget(sb_bounds_lower, 1)
+
+        hbox_bounds_upper = QHBoxLayout()
+        hbox_bounds_upper.setContentsMargins(0, 0, 0, 0)
+        lbl_upper = QLabel("Upper")
+        self.sb_bounds_upper = sb_bounds_upper = QDoubleSpinBox()
+        sb_bounds_upper.setMinimum(float(self.configs.get("hard_lower_bound", -1e14)))
+        sb_bounds_upper.setMaximum(float(self.configs.get("hard_upper_bound", 1e14)))
+        sb_bounds_upper.setDecimals(6)
+        sb_bounds_upper.setValue(float(self.configs.get("upper_bound", 0.0)))
+        hbox_bounds_upper.addWidget(lbl_upper)
+        hbox_bounds_upper.addWidget(sb_bounds_upper, 1)
+
+        vbox_bounds.addLayout(hbox_bounds_lower)
+        vbox_bounds.addLayout(hbox_bounds_upper)
+
         stacks.addWidget(ratio_curr_config)
         stacks.addWidget(ratio_full_config)
         stacks.addWidget(delta_config)
+        stacks.addWidget(bounds_config)
 
         stacks.setCurrentIndex(self.configs.get("limit_option_idx", 0))
         vbox_config.addWidget(stacks)
@@ -214,6 +246,8 @@ will be clipped by the variable range."""
         self.sb_ratio_curr.valueChanged.connect(self.ratio_curr_changed)
         self.sb_ratio_full.valueChanged.connect(self.ratio_full_changed)
         self.sb_delta.valueChanged.connect(self.delta_changed)
+        self.sb_bounds_lower.valueChanged.connect(self.bounds_lower_changed)
+        self.sb_bounds_upper.valueChanged.connect(self.bounds_upper_changed)
         self.update_bounds_preview()
 
     def _clip(self, value: float, lower: float, upper: float) -> float:
@@ -229,6 +263,13 @@ will be clipped by the variable range."""
         hard_upper = self.configs.get("upper_bound", 0)
 
         option_idx = self.cb.currentIndex()
+        if option_idx == 0:
+            ratio = self.sb_ratio_curr.value()
+            sign = math.copysign(1.0, curr) if curr != 0 else 0.0
+            bounds = [
+                curr * (1 - 0.5 * sign * ratio),
+                curr * (1 + 0.5 * sign * ratio),
+            ]
         if option_idx == 1:
             ratio = self.sb_ratio_full.value()
             delta = 0.5 * ratio * (hard_upper - hard_lower)
@@ -237,11 +278,15 @@ will be clipped by the variable range."""
             delta = self.sb_delta.value()
             bounds = [curr - delta, curr + delta]
         else:
-            ratio = self.sb_ratio_curr.value()
-            sign = math.copysign(1.0, curr) if curr != 0 else 0.0
+            hard_lower = float(
+                self.configs.get("hard_lower_bound", self.sb_bounds_lower.value())
+            )
+            hard_upper = float(
+                self.configs.get("hard_upper_bound", self.sb_bounds_upper.value())
+            )
             bounds = [
-                curr * (1 - 0.5 * sign * ratio),
-                curr * (1 + 0.5 * sign * ratio),
+                float(self.sb_bounds_lower.value()),
+                float(self.sb_bounds_upper.value()),
             ]
 
         bounds = [
@@ -275,6 +320,11 @@ will be clipped by the variable range."""
                 self.configs["ratio_full"] = self.sb_ratio_full.value()
             if "delta" not in self.configs:
                 self.configs["delta"] = self.sb_delta.value()
+
+            lower = float(self.sb_bounds_lower.value())
+            upper = float(self.sb_bounds_upper.value())
+            self.configs["lower_bound"] = min(lower, upper)
+            self.configs["upper_bound"] = max(lower, upper)
         except ValueError:
             pass  # Optionally handle invalid input
 
@@ -288,6 +338,14 @@ will be clipped by the variable range."""
 
     def delta_changed(self, delta):
         self.configs["delta"] = delta
+        self.update_bounds_preview()
+
+    def bounds_lower_changed(self, lower):
+        self.configs["lower_bound"] = lower
+        self.update_bounds_preview()
+
+    def bounds_upper_changed(self, upper):
+        self.configs["upper_bound"] = upper
         self.update_bounds_preview()
 
     def set(self):
