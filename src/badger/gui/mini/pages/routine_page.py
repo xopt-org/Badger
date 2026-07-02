@@ -58,7 +58,7 @@ from badger.gui.windows.ind_lim_vrange_dialog import (
 from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.utils import filter_generator_config
+from badger.gui.utils import filter_generator_config, with_busy_cursor
 from badger.environment import instantiate_env
 from badger.errors import (
     BadgerEnvNotFoundError,
@@ -1067,6 +1067,7 @@ class BadgerRoutinePage(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))
 
+    @with_busy_cursor
     def select_env(self, i: int):
         logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
         # Reset the initial table actions and ratio var ranges
