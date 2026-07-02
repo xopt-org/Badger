@@ -49,6 +49,8 @@ from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
 
+from badger.gui.utils import build_bax_results_file, needs_new_bax_results_folder
+
 logger = logging.getLogger(__name__)
 
 
@@ -794,6 +796,14 @@ class BadgerPydanticEditor(QTreeWidget):
 
         fields_to_remove = ["vocs"]
 
+        if issubclass(self.model_class, BaxGenerator):
+            # The results file is derived, not user-editable: give the run its
+            # own temp folder and hide the field from the tree. The physical
+            # directory is created at run start (see prepare_run), not here.
+            if needs_new_bax_results_folder(defaults.get("algorithm_results_file")):
+                defaults["algorithm_results_file"] = build_bax_results_file()
+            fields_to_remove.append("algorithm_results_file")
+
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
             self.model_class,
             fields_to_remove,
@@ -1138,6 +1148,11 @@ class BadgerPydanticEditor(QTreeWidget):
         self.clear()
 
         fields_to_remove = ["vocs"]
+
+        if isclass(model_class) and issubclass(model_class, BaxGenerator):
+            # Keep the derived results file hidden after re-rendering; its value
+            # is preserved from the (hidden) tree item via ``defaults``.
+            fields_to_remove.append("algorithm_results_file")
 
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
             model_class,

@@ -51,7 +51,7 @@ from badger.gui.components.navigators import HistoryNavigator, TemplateNavigator
 from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
-from badger.gui.utils import ModalOverlay
+from badger.gui.utils import ModalOverlay, build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
@@ -492,6 +492,13 @@ class BadgerHomePage(QWidget):
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
+
+        # Give this run its own results folder so BAX pkl dumps don't reuse the
+        # folder set at config time. The folder is created here, at run start.
+        if routine.generator.name == "bax":
+            results_file = build_bax_results_file(create_dir=True)
+            routine.generator.algorithm_results_file = results_file
+            logger.debug(f"BAX results file set for run: {results_file}")
 
         # Add data to routine before saving tmp file
         if data is not None:
