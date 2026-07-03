@@ -31,6 +31,7 @@ from badger.gui.components.bo_visualizer.ui_components import UIComponents
 from badger.gui.components.bo_visualizer.plotting_area import PlottingArea
 from PyQt5.QtCore import Qt
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
+from xopt.vocs import select_best
 from badger.gui.components.analysis_widget import AnalysisWidget
 
 import logging
@@ -546,8 +547,8 @@ class BOPlotWidget(AnalysisWidget):
                 "No data available in generator for selecting best reference points",
             )
 
-        index_arr, value_arr, input_params = self.routine.vocs.select_best(
-            self.generator.data
+        index_arr, value_arr, input_params = select_best(
+            self.routine.vocs, self.generator.data
         )
 
         if not index_arr or not value_arr:
