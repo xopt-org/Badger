@@ -28,7 +28,7 @@ from pydantic import (
 )
 from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
-from xopt.utils import get_local_region
+from xopt.vocs import get_local_region
 from xopt.generators.sequential import SequentialGenerator
 from badger.utils import curr_ts
 from badger.environment import BaseEnvironment, instantiate_env
@@ -259,7 +259,7 @@ def calculate_initial_points(init_actions, vocs, env):
             var_curr = env.get_variables(vnames)
             n_point = action["config"]["n_points"]
             fraction = action["config"]["fraction"]
-            random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
+            random_sample_region = get_local_region(vocs, var_curr, fraction=fraction)
             random_points = vocs.random_inputs(
                 n_point, custom_bounds=random_sample_region
             )

@@ -48,7 +48,7 @@ from xopt.generators import (
     all_generator_names,
     get_generator_dynamic,
 )
-from xopt.utils import get_local_region
+from xopt.vocs import get_local_region
 from gest_api.vocs import (
     BaseConstraint,
     BaseObjective,
@@ -1311,7 +1311,7 @@ class BadgerRoutinePage(QWidget):
 
         n_point = add_rand_config["n_points"]
         fraction = add_rand_config["fraction"]
-        random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
+        random_sample_region = get_local_region(vocs, var_curr, fraction=fraction)
         with warnings.catch_warnings(record=True) as caught_warnings:
             try:
                 random_points = random_inputs(
