@@ -9,9 +9,11 @@ from typing import TYPE_CHECKING, Optional
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -40,7 +42,9 @@ class ControlsWidget(QWidget):
         # Create the layout for the controls
         controls_layout = QVBoxLayout()
 
-        controls_layout.addLayout(self._create_variable_layout())
+        controls_layout.addWidget(self._create_variable_group())
+        controls_layout.addWidget(self._create_plot_options())
+        controls_layout.addStretch()  # Add stretch to push controls to the top
 
         # Add the controls to the layout
 
@@ -51,6 +55,65 @@ class ControlsWidget(QWidget):
         controls_layout.addWidget(self.update_button)
 
         self.setLayout(controls_layout)
+
+    def _create_plot_options(self) -> QGroupBox:
+        layout = QVBoxLayout()
+        group_widget = QGroupBox("Optional Plots")
+
+        n_grid_label = QLabel("Number of Grid Points:")
+        self.n_grid_spin_box = QSpinBox()
+        self.n_grid_spin_box.setRange(10, 100)
+        self.n_grid_spin_box.setSingleStep(10)
+        self.n_grid_spin_box.setValue(self.parameters.tab_1.n_grid)
+
+        n_samples_label = QLabel("Number of Samples:")
+        self.n_samples_spin_box = QSpinBox()
+        self.n_samples_spin_box.setRange(10, 100)
+        self.n_samples_spin_box.setSingleStep(10)
+        self.n_samples_spin_box.setValue(self.parameters.tab_1.n_samples)
+
+        layout.addWidget(n_grid_label)
+        layout.addWidget(self.n_grid_spin_box)
+        layout.addWidget(n_samples_label)
+        layout.addWidget(self.n_samples_spin_box)
+
+        # Create checkboxes for optional plots based on the parameters
+
+        self.grid_optimize_checkbox = QCheckBox("Grid Optimize")
+        self.grid_optimize_checkbox.setChecked(
+            self.parameters.tab_1.grid_optimize.objective
+        )
+        self.emittance_x_checkbox = QCheckBox("Emittance X")
+        self.emittance_x_checkbox.setChecked(
+            self.parameters.tab_1.emittance.emittance_x
+        )
+        self.emittance_y_checkbox = QCheckBox("Emittance Y")
+        self.emittance_y_checkbox.setChecked(
+            self.parameters.tab_1.emittance.emittance_y
+        )
+        self.bmag_x_checkbox = QCheckBox("Bmag X")
+        self.bmag_x_checkbox.setChecked(self.parameters.tab_1.emittance.bmag_x)
+        self.bmag_y_checkbox = QCheckBox("Bmag Y")
+        self.bmag_y_checkbox.setChecked(self.parameters.tab_1.emittance.bmag_y)
+        self.alignment_x_checkbox = QCheckBox("Alignment X")
+        self.alignment_x_checkbox.setChecked(
+            self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x
+        )
+        self.alignment_y_checkbox = QCheckBox("Alignment Y")
+        self.alignment_y_checkbox.setChecked(
+            self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_y
+        )
+
+        layout.addWidget(self.grid_optimize_checkbox)
+        layout.addWidget(self.emittance_x_checkbox)
+        layout.addWidget(self.emittance_y_checkbox)
+        layout.addWidget(self.bmag_x_checkbox)
+        layout.addWidget(self.bmag_y_checkbox)
+        layout.addWidget(self.alignment_x_checkbox)
+        layout.addWidget(self.alignment_y_checkbox)
+
+        group_widget.setLayout(layout)
+        return group_widget
 
     def update_controls(self) -> None:
         self.update_variables()
@@ -72,7 +135,8 @@ class ControlsWidget(QWidget):
             self.y_axis_combo_box.clear()
             self.y_axis_combo_box.addItems(self.parameters.variables)
 
-    def _create_variable_layout(self) -> QVBoxLayout:
+    def _create_variable_group(self) -> QGroupBox:
+        group_box = QGroupBox("Variable Selection")
         layout = QVBoxLayout()
         x_axis_combo_box, self.x_axis_combo_box = self._create_variable_combo_box(
             is_x_axis=True
@@ -85,7 +149,8 @@ class ControlsWidget(QWidget):
         layout.addLayout(x_axis_combo_box)
         layout.addLayout(y_axis_combo_box)
         layout.addWidget(self.y_axis_checkbox)
-        return layout
+        group_box.setLayout(layout)
+        return group_box
 
     def _create_variable_combo_box(
         self, is_x_axis: bool = True, disabled: bool = False

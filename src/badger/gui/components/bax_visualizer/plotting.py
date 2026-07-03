@@ -58,6 +58,37 @@ class PlottingWidget(QWidget):
 
         self.update_tab_widget()
 
+    def get_plot_results_keys(self) -> list[str]:
+        algorithm_type = self.generator.algorithm.name
+        if algorithm_type == "grid_optimize":
+            plot_options_dict = {
+                "objective": self.parameters.tab_1.grid_optimize.objective
+            }
+
+        elif algorithm_type == "emittance":
+            plot_options_dict = {
+                "emittance_x": self.parameters.tab_1.emittance.emittance_x,
+                "emittance_y": self.parameters.tab_1.emittance.emittance_y,
+                "bmag_x": self.parameters.tab_1.emittance.bmag_x,
+                "bmag_y": self.parameters.tab_1.emittance.bmag_y,
+            }
+        elif algorithm_type == "pathwise_solenoid_alignment":
+            plot_options_dict = {
+                "misalignment_x": self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x,
+                "misalignment_y": self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_y,
+            }
+        else:
+            raise ValueError(f"Unsupported algorithm type: {algorithm_type}")
+
+        result_keys = [key for key, enabled in plot_options_dict.items() if enabled]
+
+        if len(result_keys) == 0:
+            logger.warning(
+                "No results keys selected for plotting. Please enable at least one plot option."
+            )
+
+        return result_keys
+
     def create_first_plot(self) -> tuple[Figure, Axes]:
         logger.debug("Creating first plot")
 
@@ -69,6 +100,9 @@ class PlottingWidget(QWidget):
                 self.parameters.variables[self.parameters.variable_idx_y]
             )
 
+        results_keys = self.get_plot_results_keys()
+        logger.debug(f"Results keys for plotting: {results_keys}")
+
         logger.debug(f"Results file: {self.generator.algorithm_results_file}")
         fig, ax = visualize_virtual_measurement_result(
             self.generator,
@@ -78,7 +112,7 @@ class PlottingWidget(QWidget):
             n_grid=self.parameters.tab_1.n_grid,
             n_samples=self.parameters.tab_1.n_samples,
             show_observations=True,
-            result_keys=["objective"],
+            result_keys=results_keys,
         )
         return fig, ax
 

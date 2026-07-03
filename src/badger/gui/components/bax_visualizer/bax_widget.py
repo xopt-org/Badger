@@ -13,21 +13,51 @@ from badger.gui.components.analysis_widget import AnalysisWidget
 from badger.gui.components.bax_visualizer.ui import UI
 from badger.gui.components.extension_utilities import HandledException, requires_update
 from badger.routine import Routine
-from badger.utils import create_archive_run_filename
+from badger.utils import BlockSignalsContext, create_archive_run_filename
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class GridOptimizePlots:
+    objective: bool = True
+
+
+@dataclass
+class EmittancePlots:
+    emittance_x: bool = True
+    emittance_y: bool = True
+    bmag_x: bool = True
+    bmag_y: bool = True
+
+
+@dataclass
+class PathwiseSolenoidAlignmentPlots:
+    misalignment_x: bool = True
+    misalignment_y: bool = True
+
+
 @dataclass()
-class PlotParameters:
+class Plot1Parameters:
+    n_grid: int = 50
+    n_samples: int = 100
+    grid_optimize: GridOptimizePlots = field(default_factory=GridOptimizePlots)
+    emittance: EmittancePlots = field(default_factory=EmittancePlots)
+    pathwise_solenoid_alignment: PathwiseSolenoidAlignmentPlots = field(
+        default_factory=PathwiseSolenoidAlignmentPlots
+    )
+
+
+@dataclass()
+class Plot2Parameters:
     n_grid: int = 50
     n_samples: int = 100
 
 
 @dataclass()
 class Parameters:
-    tab_1: PlotParameters = field(default_factory=PlotParameters)
-    tab_2: PlotParameters = field(default_factory=PlotParameters)
+    tab_1: Plot1Parameters = field(default_factory=Plot1Parameters)
+    tab_2: Plot2Parameters = field(default_factory=Plot2Parameters)
     active_tab: int = 0
     variables: list[str] = field(default_factory=list)
     variable_idx_x: int = 0
@@ -63,6 +93,8 @@ class BaxWidget(AnalysisWidget):
     def initialize_widget(self) -> None:
         logger.debug("Initializing BaxWidget")
 
+        self.parameters = DEFAULT_PARAMETERS
+
         variable_names = list(self.routine.vocs.variable_names)
         self.parameters.variables = variable_names
 
@@ -76,6 +108,24 @@ class BaxWidget(AnalysisWidget):
             self.parameters.include_y = True
             self.parameters.variable_idx_x = min(temp_x, len(variable_names) - 1)
             self.parameters.variable_idx_y = min(temp_y, len(variable_names) - 1)
+
+        # Hide plotting options that are not relevant to the current algorithm
+        algorithm_type = self.generator.algorithm.name
+        if algorithm_type == "grid_optimize":
+            self.ui.controls_area.emittance_x_checkbox.setVisible(False)
+            self.ui.controls_area.emittance_y_checkbox.setVisible(False)
+            self.ui.controls_area.bmag_x_checkbox.setVisible(False)
+            self.ui.controls_area.bmag_y_checkbox.setVisible(False)
+            self.ui.controls_area.alignment_x_checkbox.setVisible(False)
+            self.ui.controls_area.alignment_y_checkbox.setVisible(False)
+        elif algorithm_type == "emittance":
+            self.ui.controls_area.grid_optimize_checkbox.setVisible(False)
+            self.ui.controls_area.alignment_x_checkbox.setVisible(False)
+            self.ui.controls_area.alignment_y_checkbox.setVisible(False)
+        elif algorithm_type == "pathwise_solenoid_alignment":
+            self.ui.controls_area.grid_optimize_checkbox.setVisible(False)
+            self.ui.controls_area.emittance_x_checkbox.setVisible(False)
+            self.ui.controls_area.emittance_y_checkbox.setVisible(False)
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -154,17 +204,98 @@ class BaxWidget(AnalysisWidget):
             lambda index: self.update_tab_index(index)
         )
 
+        self.ui.controls_area.n_grid_spin_box.valueChanged.connect(
+            lambda value: self.update_n_grid(value)
+        )
+        self.ui.controls_area.n_samples_spin_box.valueChanged.connect(
+            lambda value: self.update_n_samples(value)
+        )
+
+        # Plotting options checkboxes
+        for label, value in [
+            ("Grid Optimize", self.parameters.tab_1.grid_optimize.objective),
+            ("Emittance X", self.parameters.tab_1.emittance.emittance_x),
+            ("Emittance Y", self.parameters.tab_1.emittance.emittance_y),
+            ("Bmag X", self.parameters.tab_1.emittance.bmag_x),
+            ("Bmag Y", self.parameters.tab_1.emittance.bmag_y),
+            (
+                "Alignment X",
+                self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x,
+            ),
+            (
+                "Alignment Y",
+                self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_y,
+            ),
+        ]:
+            checkbox = getattr(
+                self.ui.controls_area, label.replace(" ", "_").lower() + "_checkbox"
+            )
+            checkbox.stateChanged.connect(
+                lambda _, lbl=label: self.update_plot_option(lbl)
+            )
+
+    def update_n_grid(self, value: int) -> None:
+        self.parameters.tab_1.n_grid = value
+        self.update_plots(requires_rebuild=True, interval=0)
+
+    def update_n_samples(self, value: int) -> None:
+        self.parameters.tab_1.n_samples = value
+        self.update_plots(requires_rebuild=True, interval=0)
+
+    def update_plot_option(self, label: str) -> None:
+        checkbox = getattr(
+            self.ui.controls_area, label.replace(" ", "_").lower() + "_checkbox"
+        )
+        is_checked = checkbox.isChecked()
+
+        if label == "Grid Optimize":
+            self.parameters.tab_1.grid_optimize.objective = is_checked
+        elif label == "Emittance X":
+            self.parameters.tab_1.emittance.emittance_x = is_checked
+        elif label == "Emittance Y":
+            self.parameters.tab_1.emittance.emittance_y = is_checked
+        elif label == "Bmag X":
+            self.parameters.tab_1.emittance.bmag_x = is_checked
+        elif label == "Bmag Y":
+            self.parameters.tab_1.emittance.bmag_y = is_checked
+        elif label == "Alignment X":
+            self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x = (
+                is_checked
+            )
+        elif label == "Alignment Y":
+            self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_y = (
+                is_checked
+            )
+
+        self.update_plots(requires_rebuild=True, interval=0)
+
     def update_tab_index(self, index: int) -> None:
         self.parameters.active_tab = index
 
     def update_variables(self) -> None:
 
-        self.parameters.variable_idx_x = (
-            self.ui.controls_area.x_axis_combo_box.currentIndex()
-        )
-        self.parameters.variable_idx_y = (
-            self.ui.controls_area.y_axis_combo_box.currentIndex()
-        )
+        previous_x_index = self.parameters.variable_idx_x
+        previous_y_index = self.parameters.variable_idx_y
+
+        current_x_index = self.ui.controls_area.x_axis_combo_box.currentIndex()
+        current_y_index = self.ui.controls_area.y_axis_combo_box.currentIndex()
+
+        if current_x_index == current_y_index:
+            with BlockSignalsContext(
+                (
+                    self.ui.controls_area.x_axis_combo_box,
+                    self.ui.controls_area.y_axis_combo_box,
+                )
+            ):
+                # If the user selects the same variable for both axes, we can either swap the previous indices or reset to defaults. Here, we choose to swap.
+                self.ui.controls_area.x_axis_combo_box.setCurrentIndex(previous_y_index)
+                self.ui.controls_area.y_axis_combo_box.setCurrentIndex(previous_x_index)
+            # If the user selects the same variable for both axes, we can either swap the previous indices or reset to defaults. Here, we choose to swap.
+            current_x_index = self.parameters.variable_idx_y
+            current_y_index = self.parameters.variable_idx_x
+
+        self.parameters.variable_idx_x = current_x_index
+        self.parameters.variable_idx_y = current_y_index
 
         self.update_plots(requires_rebuild=True, interval=0)
 
