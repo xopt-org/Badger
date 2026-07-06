@@ -35,6 +35,17 @@ spec:
               value: "4"
             - name: OPENBLAS_NUM_THREADS
               value: "4"
+            # Confine EPICS Channel Access to pod-localhost so each pod's lume-pva
+            # model server and Badger client only talk to each other (no cross-pod
+            # PV name collisions between the 20 sessions).
+            - name: EPICS_CA_ADDR_LIST
+              value: "127.0.0.1"
+            - name: EPICS_CA_AUTO_ADDR_LIST
+              value: "NO"
+            - name: EPICS_CAS_INTF_ADDR_LIST
+              value: "127.0.0.1"
+            - name: EPICS_CAS_BEACON_ADDR_LIST
+              value: "127.0.0.1"
           resources:
             requests:
               cpu: "1"

@@ -12,7 +12,13 @@ Browser → Ingress (/badger) → Gateway (nginx)
                                 └── /badger/session/N/    → badger-gui-N pod
 ```
 
-Each pod runs: `Xvfb → fluxbox → x11vnc → websockify/noVNC → Badger GUI + status server`
+Each pod runs: `Xvfb → fluxbox → x11vnc → websockify/noVNC → lume-pva FEL model server (EPICS PVs) → Badger GUI + status server`
+
+The FEL surrogate model is **not** run inside Badger. Each pod starts a lume-pva server
+(`fel_runner.py`) that serves the model's inputs and objective as local EPICS PVs; Badger's
+`lcls_fel_surrogate` environment (an `epics` interface wrapper) reads/writes those PVs, simulating
+the machine interface. `start.sh` launches the model server first and waits for the objective PV
+(`GDET:FEE1:241:ENRC`) to connect before starting the Badger GUI.
 
 ## Production URL
 
@@ -128,10 +134,11 @@ build time. `setup_badger.py` then points Badger at it:
 - `BADGER_PLUGIN_ROOT` → `/opt/Badger-Plugins` (its `environments/` and `interfaces/` dirs)
 - `BADGER_TEMPLATE_ROOT` → `/opt/Badger-Plugins/environments/lcls_fel_surrogate/templates`
 
-The `lcls_fel_surrogate` environment imports the `lcls-fel-model` package, which the
-Dockerfile installs separately (plugin `configs.yaml` dependencies are metadata only and
-are not auto-installed). To add or change plugins/templates, edit the Badger-Plugins repo
-and rebuild the image — no change to this repo is needed.
+The `lcls_fel_surrogate` environment is an `epics` interface wrapper — it does **not** run the
+model in-process. It reads/writes the PVs served by `fel_runner.py` (which wraps the
+`lcls-fel-model` package via lume-pva; the Dockerfile installs both the model and the lume-pva
+serving stack). To add or change plugins/templates, edit the Badger-Plugins repo and rebuild the
+image — no change to this repo is needed.
 
 ## Configuration
 
@@ -146,19 +153,32 @@ and rebuild the image — no change to this repo is needed.
 
 PyTorch autodetects the wrong thread count inside containers. `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, and `OPENBLAS_NUM_THREADS` are set explicitly in the StatefulSet env to match the CPU limit.
 
-## EPICS Access
+## EPICS / FEL Model Serving
 
-To connect to EPICS IOCs, add to the StatefulSet env in `k8s/statefulset.yaml`:
+The FEL surrogate is served as **local EPICS PVs** by `fel_runner.py` (lume-pva), one server per
+pod. Badger connects to it over Channel Access on localhost — no external IOC is involved.
+
+PV traffic is confined to pod-localhost so the 20 sessions don't collide on shared PV names
+(`GDET:FEE1:241:ENRC`, `QUAD:...:BCTRL`, etc.). This is enforced by env vars set in both the
+Dockerfile and `k8s/statefulset.yaml`:
 
 ```yaml
 env:
-  - name: EPICS_CA_ADDR_LIST
-    value: "your-ioc-gateway.slac.stanford.edu"
+  - name: EPICS_CA_ADDR_LIST        # pyepics client → local server only
+    value: "127.0.0.1"
   - name: EPICS_CA_AUTO_ADDR_LIST
     value: "NO"
+  - name: EPICS_CAS_INTF_ADDR_LIST  # pcaspy CA server binds localhost only
+    value: "127.0.0.1"
+  - name: EPICS_CAS_BEACON_ADDR_LIST
+    value: "127.0.0.1"
 ```
 
-Then reapply: `kubectl apply -f docker/on-demand/k8s/statefulset.yaml`
+Quick smoke test inside a pod/container:
+
+```bash
+python -c "import epics; print(epics.caget('GDET:FEE1:241:ENRC'))"
+```
 
 ## Troubleshooting
 
@@ -194,10 +214,13 @@ Do **not** add `configuration-snippet` with `proxy_set_header Upgrade/Connection
 
 ## File Structure
 
+The lume-pva model server lives one level up at `docker/fel_runner.py` and is COPYed into the
+image by the Dockerfile.
+
 ```
 docker/on-demand/
-├── Dockerfile              # Badger + Xvfb + VNC + noVNC image
-├── start.sh                # Container entrypoint (starts all services)
+├── Dockerfile              # Badger + lume-pva + Xvfb + VNC + noVNC image
+├── start.sh                # Container entrypoint (model server → Badger + services)
 ├── setup_badger.py         # Pre-configures Badger for headless use
 ├── status_server.py        # HTTP endpoint reporting VNC client count
 ├── docker-compose.yml      # Local multi-session testing

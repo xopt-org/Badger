@@ -51,6 +51,24 @@ if [ -n "${IDLE_TIMEOUT}" ] && [ "${IDLE_TIMEOUT}" -gt 0 ] 2>/dev/null; then
     ) &
 fi
 
+# Start the FEL surrogate model server (lume-pva) so it serves the model as EPICS
+# PVs. Badger's lcls_fel_surrogate env (epics interface) reads/writes these PVs.
+echo "Starting FEL surrogate model server (lume-pva)..."
+python /fel_runner.py &
+FEL_PID=$!
+
+# Wait for the objective PV to connect before launching Badger
+python - <<'PY'
+import sys, time, epics
+pv = "GDET:FEE1:241:ENRC"
+for _ in range(120):
+    if epics.caget(pv, timeout=1, connection_timeout=1) is not None:
+        print(f"{pv} is live")
+        sys.exit(0)
+    time.sleep(1)
+print(f"WARNING: {pv} not seen after 120s; launching Badger anyway", file=sys.stderr)
+PY
+
 # Launch Badger GUI in background, then maximize the window
 badger -mini &
 BADGER_PID=$!
