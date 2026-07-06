@@ -415,8 +415,15 @@ def _round_bounds_inward(
     Round numeric bounds to a set number of significant figures.
     This avoids unexpected bounds errors due to inconsistent rounding, defaulting to 10 sig-figs
     """
+    if type(bounds) not in [tuple, list, dict, ContinuousVariable]:
+        raise BadgerLoadConfigError(
+            f"invalid bounds type {type(bounds)}. Must be tuple, dict, or ContinuousVariable"
+        )
+
     if isinstance(bounds, ContinuousVariable):
         bounds = bounds.domain
+    elif isinstance(bounds, dict):
+        bounds = bounds["domain"]
 
     lower = _round_to_sigfig(float(bounds[0]), sigfigs, mode="ceil")
     upper = _round_to_sigfig(float(bounds[1]), sigfigs, mode="floor")
