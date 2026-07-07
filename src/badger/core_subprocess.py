@@ -82,6 +82,11 @@ def evaluate_measurement_with_retry(
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
             logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
+            if dialog_action_queue is None:
+                # Headless/CLI runs have no retry dialog to respond to, so
+                # surface the real measurement error instead of blocking on a
+                # queue that will never receive a retry/abort action.
+                raise
             queue.put(
                 {
                     "type": MEASUREMENT_ERROR_TYPE,
