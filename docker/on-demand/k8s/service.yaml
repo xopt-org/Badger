@@ -1,0 +1,46 @@
+# Headless service for StatefulSet pod DNS resolution
+# Gives each pod a name: badger-gui-N.badger-gui-headless.badger-gui.svc.cluster.local
+apiVersion: v1
+kind: Service
+metadata:
+  name: badger-gui-headless
+  namespace: badger-gui
+  labels:
+    app: badger-gui
+spec:
+  clusterIP: None
+  ports:
+    - port: 6080
+      targetPort: 6080
+      protocol: TCP
+      name: novnc
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: status
+  selector:
+    app: badger-gui
+---
+# Ingress routes all traffic to the gateway
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: badger-gui
+  namespace: badger-gui
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "71.198.255.25,134.79.0.0/16,172.16.0.0/12,208.45.173.162,216.46.165.69,172.27.8.0/24"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+spec:
+  rules:
+    - host: "ard-modeling-service.slac.stanford.edu"
+      http:
+        paths:
+          - path: /badger
+            pathType: Prefix
+            backend:
+              service:
+                name: badger-gateway
+                port:
+                  number: 80

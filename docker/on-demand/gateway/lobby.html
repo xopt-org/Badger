@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badger GUI Sessions</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .session-card {
+            background: #16213e;
+            border: 2px solid #0f3460;
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .session-card:hover {
+            border-color: #4da8da;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(77, 168, 218, 0.2);
+        }
+        .session-card.occupied {
+            border-color: #e94560;
+            opacity: 0.7;
+        }
+        .session-card.occupied:hover {
+            border-color: #e94560;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .session-card.offline {
+            border-color: #444;
+            opacity: 0.4;
+        }
+        .session-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .status-dot.available { background: #4caf50; }
+        .status-dot.occupied { background: #e94560; }
+        .status-dot.offline { background: #666; }
+        .status-text {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <h1>Badger GUI</h1>
+    <p class="subtitle">Select an available session to launch</p>
+    <div class="legend">
+        <span class="legend-item"><span class="status-dot available"></span> Available</span>
+        <span class="legend-item"><span class="status-dot occupied"></span> In Use</span>
+        <span class="legend-item"><span class="status-dot offline"></span> Offline</span>
+    </div>
+    <div class="grid" id="sessions"></div>
+
+    <script>
+        const TOTAL_SESSIONS = 20;
+        const POLL_INTERVAL = 5000;
+
+        function createSessionCard(id) {
+            const card = document.createElement('div');
+            card.className = 'session-card offline';
+            card.id = `session-${id}`;
+            card.innerHTML = `
+                <div class="session-number">${id}</div>
+                <div class="status-text">
+                    <span class="status-dot offline"></span>
+                    <span class="status-label">Checking...</span>
+                </div>
+            `;
+            card.addEventListener('click', () => openSession(id, card));
+            return card;
+        }
+
+        function openSession(id, card) {
+            if (card.classList.contains('occupied') || card.classList.contains('offline')) return;
+            window.open(
+                `/badger/session/${id}/vnc.html?path=badger/session/${id}/websockify&resize=scale&autoconnect=true`,
+                '_blank'
+            );
+        }
+
+        async function checkStatus(id) {
+            const card = document.getElementById(`session-${id}`);
+            const dot = card.querySelector('.status-dot');
+            const label = card.querySelector('.status-label');
+
+            try {
+                const resp = await fetch(`/badger/session/${id}/status`, { signal: AbortSignal.timeout(3000) });
+                if (!resp.ok) throw new Error('not ok');
+                const data = await resp.json();
+
+                card.className = 'session-card' + (data.occupied ? ' occupied' : '');
+                dot.className = 'status-dot ' + (data.occupied ? 'occupied' : 'available');
+                label.textContent = data.occupied ? 'In Use' : 'Available';
+            } catch {
+                card.className = 'session-card offline';
+                dot.className = 'status-dot offline';
+                label.textContent = 'Offline';
+            }
+        }
+
+        function pollAll() {
+            for (let i = 0; i < TOTAL_SESSIONS; i++) {
+                checkStatus(i);
+            }
+        }
+
+        // Init
+        const grid = document.getElementById('sessions');
+        for (let i = 0; i < TOTAL_SESSIONS; i++) {
+            grid.appendChild(createSessionCard(i));
+        }
+        pollAll();
+        setInterval(pollAll, POLL_INTERVAL);
+    </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: badger-restarter
+  namespace: badger-gui
+  labels:
+    app: badger-restarter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: badger-restarter
+  namespace: badger-gui
+  labels:
+    app: badger-restarter
+rules:
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: badger-restarter
+  namespace: badger-gui
+  labels:
+    app: badger-restarter
+subjects:
+  - kind: ServiceAccount
+    name: badger-restarter
+    namespace: badger-gui
+roleRef:
+  kind: Role
+  name: badger-restarter
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: badger-daily-restart
+  namespace: badger-gui
+  labels:
+    app: badger-restarter
+spec:
+  # Midnight Pacific time (handles PST/PDT automatically)
+  schedule: "0 0 * * *"
+  timeZone: "America/Los_Angeles"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            app: badger-restarter
+        spec:
+          serviceAccountName: badger-restarter
+          restartPolicy: Never
+          containers:
+            - name: kubectl
+              image: bitnami/kubectl:latest
+              command:
+                - kubectl
+                - rollout
+                - restart
+                - statefulset/badger-gui
+                - -n
+                - badger-gui
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "128Mi"

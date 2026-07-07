@@ -160,6 +160,10 @@ Every non-empty Python file under `src/badger/` (excluding `src/badger/tests/`) 
 
 A pre-commit hook (`check-module-docstrings`) enforces presence. Empty `__init__.py` files are exempt.
 
+## On-Demand Deployment (noVNC on Kubernetes)
+
+The `docker/on-demand/` directory contains everything for running Badger GUI as a browser-accessible service on Kubernetes. See [`docker/on-demand/README.md`](docker/on-demand/README.md) for architecture, deployment steps, troubleshooting, and configuration.
+
 ## Common pitfalls
 
 1. **Don't import `badger.factory` in isolation tests** without ensuring config is set up — it will raise `BadgerConfigError` at import time.
