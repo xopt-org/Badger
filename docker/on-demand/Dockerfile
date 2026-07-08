@@ -65,14 +65,11 @@ RUN pip install --no-cache-dir git+https://github.com/slaclab/LCLS_FEL_Surrogate
 # Install the lume-pva serving stack (not on PyPI; install from git in dependency
 # order). fel_runner.py uses these to serve the FEL model as EPICS PVs (CA + PVA)
 # so Badger talks to it through the epics interface instead of running it in-process.
-# Pin to the commits from the known-good fel-lume-pva env. lume-pva main has since
-# moved past e1f8335 to a version that calls model.get() on input vars at startup
-# (before any set()), which the FEL surrogate rejects with a KeyError.
 RUN pip install --no-cache-dir \
     git+https://github.com/slaclab/lume-base \
     git+https://github.com/lume-science/lume-torch.git \
     git+https://github.com/slac-epics/pvua \
-    git+https://github.com/lume-science/lume-pva.git@e1f8335036785fe319003eeffd8195eedfe99f23
+    git+https://github.com/lume-science/lume-pva.git
 
 # FEL surrogate model server (serves the model as EPICS PVs; launched by start.sh
 # before Badger)
