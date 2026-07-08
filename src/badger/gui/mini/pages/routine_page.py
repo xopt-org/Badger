@@ -1195,6 +1195,30 @@ class BadgerRoutinePage(QWidget):
                 header_list.append("")  # Handle the case where the header item is None
         return header_list
 
+    @staticmethod
+    def _format_curr_value_within_bounds(value: float, bounds: list) -> str:
+        """
+        Make sure that current value displayed in init points table is rounded
+        to within the variable bounds. If the rounded value is outside the bounds,
+        increments up or down to within the bounds.
+        """
+        # Round for GUI display and clip to bounds.
+        lb, ub = float(bounds[0]), float(bounds[1])
+        rounded_value = float(f"{value:.6g}")
+        clipped_value = float(np.clip(rounded_value, lb, ub))
+        text = f"{clipped_value:.6g}"
+
+        # Ensure final rounded text stays within bounds.
+        final_value = float(text)
+        if final_value < lb:
+            step = 10.0 ** (np.floor(np.log10(abs(lb))) - 5) if lb != 0 else 1e-5
+            text = f"{lb + step:.6g}"
+        elif final_value > ub:
+            step = 10.0 ** (np.floor(np.log10(abs(ub))) - 5) if ub != 0 else 1e-5
+            text = f"{ub - step:.6g}"
+
+        return text
+
     def fill_curr_in_init_table(self, record=False):
         logger.info(f"Filling current values in init table (record={record})")
         env = self.create_env()
@@ -1221,7 +1245,10 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.6g}")
+                    value = float(var_curr[name])
+                    bounds = self.env_box.var_table.bounds.get(name)
+                    text = self._format_curr_value_within_bounds(value, bounds)
+                    item = QTableWidgetItem(text)
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 
