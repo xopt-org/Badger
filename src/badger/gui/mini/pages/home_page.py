@@ -435,6 +435,7 @@ class BadgerHomePage(QWidget):
         Removed data loading implementation from mini GUI,
         """
         logger.info("Preparing new run.")
+        self.routine_editor.update_init_table(force=True)
         try:
             routine = self.routine_editor._compose_routine()
         except Exception as e:
