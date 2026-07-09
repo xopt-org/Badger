@@ -2,7 +2,7 @@
 user browse archived runs, preview their data as a plot, and import selected
 data points to seed the optimizer with prior observations."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 from typing import List, Callable

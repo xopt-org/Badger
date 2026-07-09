@@ -1,7 +1,7 @@
 import multiprocessing
 
 import pytest
-from PyQt5.QtCore import QEventLoop, QTimer
+from qtpy.QtCore import QEventLoop, QTimer
 
 
 @pytest.fixture(scope="session")

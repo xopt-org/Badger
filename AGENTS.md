@@ -2,7 +2,7 @@
 
 ## Overview
 
-Badger is a PyQt5 GUI/CLI optimization tool for particle accelerators. It wraps the [Xopt](https://github.com/xopt-org/Xopt) library and uses a plugin system for environments and interfaces. The package name on PyPI/conda is `badger-opt`, but the Python import is `badger`.
+Badger is a qtpy GUI/CLI optimization tool for particle accelerators. It wraps the [Xopt](https://github.com/xopt-org/Xopt) library and uses a plugin system for environments and interfaces. The package name on PyPI/conda is `badger-opt`, but the Python import is `badger`.
 
 ## Development Setup
 
@@ -11,7 +11,7 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
-Python 3.11–3.13 only. PyQt5 is a hard dependency even for non-GUI code paths (`badger.utils` imports `PyQt5.QtWidgets` at the top level).
+Python 3.11–3.13 only. qtpy is a hard dependency even for non-GUI code paths (`badger.utils` imports `qtpy.QtWidgets` at the top level).
 
 ## Running Tests
 
@@ -144,7 +144,7 @@ Temporary runs (pre-archive) go to `BADGER_ARCHIVE_ROOT/.tmp/` with `.tmp-Badger
 
 ## GUI structure
 
-The GUI is a single-window PyQt5 app (`BadgerMainWindow`) with:
+The GUI is a single-window qtpy app (`BadgerMainWindow`) with:
 - One page: `home_page.py` (contains routine editor + run monitor)
 - Components in `gui/components/` — the naming doesn't always match the visual element (see `GUI_GUIDE.md` for the mapping)
 - Dialogs in `gui/windows/`
@@ -170,4 +170,4 @@ A pre-commit hook (`check-module-docstrings`) enforces presence. Empty `__init__
 
 4. **The `db.py` module is semi-deprecated** — it requires `BADGER_DB_ROOT` config which is not in the default `BadgerConfig` model. The `x-test_db.py` and `x-test_routine_id.py` files test this functionality but are excluded from normal test runs.
 
-5. **`utils.py` has Qt dependencies** — `BlockSignalsContext` and related utilities import from `PyQt5.QtWidgets` at the module level, so `badger.utils` cannot be imported without PyQt5 installed.
+5. **`utils.py` has Qt dependencies** — `BlockSignalsContext` and related utilities import from `qtpy.QtWidgets` at the module level, so `badger.utils` cannot be imported without PyQt5 installed.

@@ -2,7 +2,7 @@
 with an optional expandable details section in a resizable, scrollable window,
 used for showing verbose error information or optimization summaries."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QMessageBox,
     QVBoxLayout,
@@ -12,8 +12,8 @@ from PyQt5.QtWidgets import (
     QScrollArea,
     QTextEdit,
 )
-from PyQt5.QtGui import QTextOption, QFont, QFontDatabase
-from PyQt5.QtCore import Qt
+from qtpy.QtGui import QTextOption, QFont, QFontDatabase
+from qtpy.QtCore import Qt
 # from ..components.eliding_label import ElidingLabel
 
 

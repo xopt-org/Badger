@@ -3,8 +3,8 @@
 import logging
 from importlib import metadata
 from typing import Dict
-from PyQt5.QtCore import QThread
-from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWidget
+from qtpy.QtCore import QThread
+from qtpy.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWidget
 from badger.gui.components.create_process import CreateProcess
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.mini.pages.home_page import BadgerHomePage

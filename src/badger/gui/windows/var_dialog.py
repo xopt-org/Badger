@@ -2,7 +2,7 @@
 for finding and adding environment variables by name, querying the environment
 plugin to verify the variable exists and retrieve its current value."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
-from PyQt5.QtWidgets import QGroupBox, QMessageBox
+from qtpy.QtWidgets import QGroupBox, QMessageBox
 from badger.gui.components.labeled_lineedit import labeled_lineedit
 from badger.environment import instantiate_env
 

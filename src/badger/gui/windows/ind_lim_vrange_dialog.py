@@ -6,7 +6,7 @@ fine-grained control over the optimization search space."""
 from copy import deepcopy
 import math
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QDialog,
     QWidget,
     QHBoxLayout,
@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QFrame,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 from badger.gui.components.bounds_preview import BoundsPreviewBar
 
 

@@ -1,7 +1,7 @@
 """Control panel for the BO visualizer — variable selectors, reference
 point table, grid resolution, and plot option checkboxes."""
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QComboBox,
@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QHeaderView,
 )
-from PyQt5.QtCore import Qt
+from qtpy.QtCore import Qt
 
 from gest_api.vocs import BaseVariable
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions

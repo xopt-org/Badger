@@ -1,6 +1,6 @@
 import pytest
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QDialog
+from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import QDialog
 
 
 # conftest suppresses ExpandableMessageBox's exec_ call, but we need it here.

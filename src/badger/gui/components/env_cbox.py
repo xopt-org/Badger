@@ -24,9 +24,9 @@ from typing import Any
 
 from gest_api.vocs import ContinuousVariable
 from pydantic_core import ValidationError
-from PyQt5.QtCore import QPropertyAnimation, QRegExp, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import QPropertyAnimation, QRegularExpression, Signal
+from qtpy.QtGui import QFont, QIcon
+from qtpy.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,
@@ -147,7 +147,7 @@ def format_validation_error(e: ValidationError) -> str:
 
 
 class BadgerEnvBox(QWidget):
-    vocs_updated = pyqtSignal(object)  # or use a more specific type if you want
+    vocs_updated = Signal(object)  # or use a more specific type if you want
 
     def __init__(
         self,
@@ -566,12 +566,12 @@ class BadgerEnvBox(QWidget):
 
     def filter_var(self):
         keyword = self.edit_var.text()
-        rx = QRegExp(keyword)
+        rx = QRegularExpression(keyword)
 
         _variables = []
         for var in self.var_table.all_variables:
             vname = next(iter(var))
-            if rx.indexIn(vname, 0) != -1:
+            if rx.match(vname).hasMatch():
                 _variables.append(var)
 
         self.var_table.update_variables(_variables, 1)

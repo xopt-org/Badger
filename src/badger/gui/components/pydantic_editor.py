@@ -30,8 +30,8 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Signal, Qt
+from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -521,7 +521,7 @@ class BadgerListItem(QWidget):
 
 
 class BadgerListEditor(QWidget):
-    listChanged = pyqtSignal()
+    listChanged = Signal()
 
     def __init__(
         self,

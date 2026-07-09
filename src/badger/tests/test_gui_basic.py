@@ -3,8 +3,8 @@ import time
 from unittest.mock import patch
 
 import pytest
-from PyQt5.QtCore import QEventLoop, Qt, QTimer
-from PyQt5.QtWidgets import QDialog
+from qtpy.QtCore import QEventLoop, Qt, QTimer
+from qtpy.QtWidgets import QDialog
 
 
 @pytest.fixture(scope="session")

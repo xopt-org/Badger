@@ -1,8 +1,8 @@
 """Widget for visualizing hard bounds, preview scan bounds, and current value."""
 
-from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QPaintEvent
-from PyQt5.QtWidgets import QWidget
+from qtpy.QtCore import Qt, QRectF
+from qtpy.QtGui import QColor, QPainter, QPen, QBrush, QPaintEvent
+from qtpy.QtWidgets import QWidget
 
 
 class BoundsPreviewBar(QWidget):

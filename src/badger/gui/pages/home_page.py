@@ -18,9 +18,9 @@ from importlib import resources
 
 import numpy as np
 from pandas import DataFrame
-from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
-from PyQt5.QtGui import QIcon, QKeySequence
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Signal, QModelIndex, Qt
+from qtpy.QtGui import QIcon, QKeySequence
+from qtpy.QtWidgets import (
     QLabel,
     QMessageBox,
     QShortcut,
@@ -52,7 +52,7 @@ from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
 from badger.gui.utils import ModalOverlay
 
-# from PyQt5.QtGui import QBrush, QColor
+# from qtpy.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
@@ -79,8 +79,8 @@ QPushButton
 
 
 class BadgerHomePage(QWidget):
-    sig_routine_activated = pyqtSignal(bool)
-    sig_routine_invalid = pyqtSignal()
+    sig_routine_activated = Signal(bool)
+    sig_routine_invalid = Signal()
 
     def __init__(self, process_manager=None):
         logger.info("Initializing BadgerHomePage.")

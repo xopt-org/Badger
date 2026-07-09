@@ -10,7 +10,7 @@ vocs tables emit ``vocs_updated`` so the rest of the UI stays in sync.
 from pathlib import Path
 from typing import Any
 
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QFrame,
     QVBoxLayout,
     QHBoxLayout,
@@ -20,13 +20,11 @@ from PyQt5.QtWidgets import (
     QWidget,
     QLineEdit,
     QTreeWidget,
-)
-from PyQt5.QtWidgets import (
     QCheckBox,
     QStyledItemDelegate,
     QLabel,
 )
-from PyQt5.QtCore import QRegExp, pyqtSignal
+from qtpy.QtCore import Signal, QRegularExpression
 from badger.gui.components.obs_table import ObservableTable
 from badger.settings import init_settings
 from pydantic_core import ValidationError
@@ -226,7 +224,7 @@ class TemplateSelectorRow(QFrame):
 
 
 class BadgerEnvBox(QWidget):
-    vocs_updated = pyqtSignal(object)  # or use a more specific type if you want
+    vocs_updated = Signal(object)  # or use a more specific type if you want
 
     def __init__(
         self,
@@ -649,12 +647,12 @@ class BadgerEnvBox(QWidget):
 
     def filter_var(self):
         keyword = self.edit_var.text()
-        rx = QRegExp(keyword)
+        rx = QRegularExpression(keyword)
 
         _variables = []
         for var in self.var_table.all_variables:
             vname = next(iter(var))
-            if rx.indexIn(vname, 0) != -1:
+            if rx.match(vname, 0).hasMatch():
                 _variables.append(var)
 
         self.var_table.update_variables(_variables, 1)

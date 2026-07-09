@@ -2,7 +2,7 @@
 with the traceback when raised inside the GUI. Subclasses cover config issues,
 database errors, plugin failures, and optimization stop signals."""
 
-from PyQt5.QtWidgets import QMessageBox
+from qtpy.QtWidgets import QMessageBox
 import traceback
 import sys
 
