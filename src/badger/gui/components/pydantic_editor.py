@@ -49,6 +49,9 @@ from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
 
+from bax_algorithms.emittance import EmittanceAlgorithm
+from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
+
 logger = logging.getLogger(__name__)
 
 
@@ -914,10 +917,10 @@ class BadgerPydanticEditor(QTreeWidget):
                 raise ValueError("Generator does not support algorithms.")
             compatible_classes = self.model_class.get_compatible_algorithms()
             # TODO: Add in additional from BAX algorithms.
-            # compatible_classes = list(compatible_classes) + [
-            #     EmittanceAlgorithm,
-            #     PathwiseSolenoidAlignment,
-            # ]
+            compatible_classes = list(compatible_classes) + [
+                EmittanceAlgorithm,
+                PathwiseSolenoidAlignment,
+            ]
         else:
             raise ValueError(f"Field name {field_name} is not recognized.")
 

@@ -6,14 +6,18 @@ for variable selection and visualization updates in the BAX visualizer.
 
 from typing import TYPE_CHECKING, Optional
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPushButton,
     QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -24,8 +28,14 @@ from badger.utils import BlockSignalsContext
 if TYPE_CHECKING:
     from badger.gui.components.bax_visualizer.bax_widget import Parameters
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ControlsWidget(QWidget):
+    ref_inputs: list[QTableWidgetItem] = []
+
     def __init__(
         self,
         routine: Routine,
@@ -43,6 +53,7 @@ class ControlsWidget(QWidget):
         controls_layout = QVBoxLayout()
 
         controls_layout.addWidget(self._create_variable_group())
+        controls_layout.addWidget(self._create_reference_point_group())
         controls_layout.addWidget(self._create_plot_options())
         controls_layout.addStretch()  # Add stretch to push controls to the top
 
@@ -55,6 +66,120 @@ class ControlsWidget(QWidget):
         controls_layout.addWidget(self.update_button)
 
         self.setLayout(controls_layout)
+
+        # Initialize the reference table based on the current vocs variable names
+        if self.parameters.tab_1.use_reference_point:
+            self.reference_table.setEnabled(True)
+            self.select_best_reference_point_button.setEnabled(True)
+        else:
+            self.reference_table.setEnabled(False)
+            self.select_best_reference_point_button.setEnabled(False)
+
+    def _create_reference_point_group(self) -> QGroupBox:
+        layout = QVBoxLayout()
+        group_widget = QGroupBox("Reference Point")
+
+        self.reference_point_checkbox = QCheckBox("Use Reference Point")
+        self.reference_point_checkbox.setChecked(
+            self.parameters.tab_1.use_reference_point
+        )
+
+        self.reference_table = QTableWidget()
+        self.reference_table.setColumnCount(2)
+        self.reference_table.setHorizontalHeaderLabels(["Variable", "Value"])
+        horizontal_header = self.reference_table.horizontalHeader()
+        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        self.select_best_reference_point_button = QPushButton(
+            "Set Best Reference Point"
+        )
+        self.best_point_display = QLabel("Best Reference Point: N/A")
+
+        layout.addWidget(self.reference_point_checkbox)
+        layout.addWidget(self.reference_table)
+        layout.addWidget(self.select_best_reference_point_button)
+        layout.addWidget(self.best_point_display)
+
+        group_widget.setLayout(layout)
+        return group_widget
+
+    def populate_reference_table(
+        self,
+    ) -> None:
+        """Populate the reference table based on the current vocs variable names."""
+
+        logger.debug("Populating reference table")
+
+        with BlockSignalsContext(self.reference_table):
+            self.reference_table.setRowCount(len(self.parameters.variables))
+            self.ref_inputs: list[QTableWidgetItem] = []
+
+            for i, var_name in enumerate(self.parameters.variables):
+                variable_item = QTableWidgetItem(var_name)
+                itemIsEditable = Qt.ItemFlag.ItemIsEditable
+
+                variable_item.setFlags(
+                    variable_item.flags() & ~Qt.ItemFlags(itemIsEditable)
+                )
+                self.reference_table.setItem(i, 0, variable_item)
+
+                value = self.parameters.tab_1.reference_points[var_name]
+
+                reference_point_item = QTableWidgetItem(str(value))
+                self.ref_inputs.append(reference_point_item)
+                self.reference_table.setItem(i, 1, reference_point_item)
+
+            self.update_reference_point_table_editability()
+
+    def get_reference_points(self, variable_names: list[str]) -> dict[str, float]:
+        reference_points: dict[str, float] = {}
+
+        # Create a mapping from variable names to ref_inputs
+        ref_inputs_dict = dict(zip(self.parameters.variables, self.ref_inputs))
+        for var in self.parameters.variables:
+            if var in variable_names:
+                ref_value = float(ref_inputs_dict[var].text())
+                reference_points[var] = ref_value
+        return reference_points
+
+    def update_reference_point_table_editability(self) -> None:
+        """Disable and gray out reference points for selected variables."""
+
+        selected_variables = self.get_selected_variables()
+
+        white = Qt.GlobalColor.white
+        lightGray = Qt.GlobalColor.lightGray
+        black = Qt.GlobalColor.black
+
+        itemIsEditable = Qt.ItemFlag.ItemIsEditable
+
+        for i, var_name in enumerate(self.parameters.variables):
+            # Get the reference point item from the table
+            ref_item = self.ref_inputs[i]
+
+            if var_name in selected_variables:
+                # Disable editing and gray out the background
+                ref_item.setFlags(ref_item.flags() & ~Qt.ItemFlags(itemIsEditable))
+                ref_item.setBackground(lightGray)
+                ref_item.setForeground(white)
+            else:
+                # Re-enable editing and set background to white
+                ref_item.setFlags(ref_item.flags() | Qt.ItemFlags(itemIsEditable))
+                ref_item.setBackground(white)
+                ref_item.setForeground(black)
+
+        # Force the table to refresh and update its view
+        viewport = self.reference_table.viewport()
+        viewport.update()
+
+    def get_selected_variables(self) -> list[str]:
+        """Get the currently selected variables from the combo boxes."""
+        selected_variables = [self.parameters.variables[self.parameters.variable_idx_x]]
+        if self.parameters.include_y:
+            selected_variables.append(
+                self.parameters.variables[self.parameters.variable_idx_y]
+            )
+        return selected_variables
 
     def _create_plot_options(self) -> QGroupBox:
         layout = QVBoxLayout()
@@ -79,27 +204,27 @@ class ControlsWidget(QWidget):
 
         # Create checkboxes for optional plots based on the parameters
 
-        self.grid_optimize_checkbox = QCheckBox("Grid Optimize")
+        self.grid_optimize_checkbox = QCheckBox("Show Objective")
         self.grid_optimize_checkbox.setChecked(
             self.parameters.tab_1.grid_optimize.objective
         )
-        self.emittance_x_checkbox = QCheckBox("Emittance X")
+        self.emittance_x_checkbox = QCheckBox("Show Emittance X")
         self.emittance_x_checkbox.setChecked(
             self.parameters.tab_1.emittance.emittance_x
         )
-        self.emittance_y_checkbox = QCheckBox("Emittance Y")
+        self.emittance_y_checkbox = QCheckBox("Show Emittance Y")
         self.emittance_y_checkbox.setChecked(
             self.parameters.tab_1.emittance.emittance_y
         )
-        self.bmag_x_checkbox = QCheckBox("Bmag X")
+        self.bmag_x_checkbox = QCheckBox("Show Bmag X")
         self.bmag_x_checkbox.setChecked(self.parameters.tab_1.emittance.bmag_x)
-        self.bmag_y_checkbox = QCheckBox("Bmag Y")
+        self.bmag_y_checkbox = QCheckBox("Show Bmag Y")
         self.bmag_y_checkbox.setChecked(self.parameters.tab_1.emittance.bmag_y)
-        self.alignment_x_checkbox = QCheckBox("Alignment X")
+        self.alignment_x_checkbox = QCheckBox("Show Alignment X")
         self.alignment_x_checkbox.setChecked(
             self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x
         )
-        self.alignment_y_checkbox = QCheckBox("Alignment Y")
+        self.alignment_y_checkbox = QCheckBox("Show Alignment Y")
         self.alignment_y_checkbox.setChecked(
             self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_y
         )
@@ -179,5 +304,5 @@ class ControlsWidget(QWidget):
 
     def _create_update_button(self) -> QPushButton:
         # Create a button for updating the plots
-        button = QPushButton("Update")  # Replace with actual button implementation
+        button = QPushButton("Update")
         return button

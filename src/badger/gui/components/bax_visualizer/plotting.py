@@ -104,11 +104,16 @@ class PlottingWidget(QWidget):
         logger.debug(f"Results keys for plotting: {results_keys}")
 
         logger.debug(f"Results file: {self.generator.algorithm_results_file}")
+
+        ref_point = None
+        if self.parameters.tab_1.use_reference_point:
+            ref_point = self.parameters.tab_1.reference_points
+
         fig, ax = visualize_virtual_measurement_result(
             self.generator,
             variable_names=selected_variable_names,
-            idx=0,
-            reference_point=None,  # type: ignore[arg-type]
+            idx=-1,
+            reference_point=ref_point,
             n_grid=self.parameters.tab_1.n_grid,
             n_samples=self.parameters.tab_1.n_samples,
             show_observations=True,

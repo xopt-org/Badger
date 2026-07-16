@@ -154,7 +154,7 @@ class UIComponents:
                 variable.domain,  # pyright: ignore[reportUnknownMemberType]
             )
             reference_points[var_name] = to_precision_float(
-                (domain[1] - domain[0]) / 2.0
+                domain[0] + ((domain[1] - domain[0]) / 2.0)
             )
 
         configurable_options["reference_points"] = reference_points

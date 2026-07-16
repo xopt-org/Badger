@@ -3,7 +3,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, cast
 
 from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 from xopt.generators.bayesian.bax_generator import BaxGenerator
@@ -11,7 +11,11 @@ from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 from badger.gui.components.analysis_widget import AnalysisWidget
 from badger.gui.components.bax_visualizer.ui import UI
-from badger.gui.components.extension_utilities import HandledException, requires_update
+from badger.gui.components.extension_utilities import (
+    HandledException,
+    requires_update,
+    to_precision_float,
+)
 from badger.routine import Routine
 from badger.utils import BlockSignalsContext, create_archive_run_filename
 
@@ -41,6 +45,8 @@ class PathwiseSolenoidAlignmentPlots:
 class Plot1Parameters:
     n_grid: int = 50
     n_samples: int = 100
+    use_reference_point: bool = False
+    reference_points: dict[str, float] = field(default_factory=dict)
     grid_optimize: GridOptimizePlots = field(default_factory=GridOptimizePlots)
     emittance: EmittancePlots = field(default_factory=EmittancePlots)
     pathwise_solenoid_alignment: PathwiseSolenoidAlignmentPlots = field(
@@ -48,16 +54,14 @@ class Plot1Parameters:
     )
 
 
-@dataclass()
-class Plot2Parameters:
-    n_grid: int = 50
-    n_samples: int = 100
+# @dataclass()
+# class Plot2Parameters:
 
 
 @dataclass()
 class Parameters:
     tab_1: Plot1Parameters = field(default_factory=Plot1Parameters)
-    tab_2: Plot2Parameters = field(default_factory=Plot2Parameters)
+    # tab_2: Plot2Parameters = field(default_factory=Plot2Parameters)
     active_tab: int = 0
     variables: list[str] = field(default_factory=list)
     variable_idx_x: int = 0
@@ -126,6 +130,8 @@ class BaxWidget(AnalysisWidget):
             self.ui.controls_area.grid_optimize_checkbox.setVisible(False)
             self.ui.controls_area.emittance_x_checkbox.setVisible(False)
             self.ui.controls_area.emittance_y_checkbox.setVisible(False)
+
+        self.ui.initialize_reference_table()
 
     def requires_reinitialization(self) -> bool:
         # Check if the extension needs to be reinitialized
@@ -211,6 +217,18 @@ class BaxWidget(AnalysisWidget):
             lambda value: self.update_n_samples(value)
         )
 
+        self.ui.controls_area.reference_point_checkbox.stateChanged.connect(
+            lambda: self.update_use_reference_point()
+        )
+
+        self.ui.controls_area.reference_table.cellChanged.connect(
+            lambda: self.update_reference_point()
+        )
+
+        self.ui.controls_area.select_best_reference_point_button.clicked.connect(
+            lambda: self.set_best_reference_points()
+        )
+
         # Plotting options checkboxes
         for label, value in [
             ("Grid Optimize", self.parameters.tab_1.grid_optimize.objective),
@@ -233,6 +251,55 @@ class BaxWidget(AnalysisWidget):
             checkbox.stateChanged.connect(
                 lambda _, lbl=label: self.update_plot_option(lbl)
             )
+
+    def set_best_reference_points(
+        self,
+    ) -> None:
+        if self.generator.data is None:
+            raise HandledException(
+                ValueError,
+                "No data available in generator for selecting best reference points",
+            )
+
+        input_params = (
+            # -1 index is used to select the last row of the DataFrame, which corresponds to the best reference points
+            self.generator.data[self.routine.vocs.variable_names].iloc[-1].to_dict()
+        )
+
+        logger.debug(f"Best reference points: {input_params}")
+
+        # Update the reference table with the best reference points
+        self.parameters.tab_1.reference_points = cast(
+            dict[str, float],
+            {var: to_precision_float(input_params[var]) for var in input_params},
+        )
+        self.ui.controls_area.best_point_display.setText(
+            f"Best Reference Points: {', '.join(f'{k}: {v}' for k, v in input_params.items())}"
+        )
+
+        self.ui.controls_area.populate_reference_table()
+
+        self.update_plots(requires_rebuild=True, interval=0)
+
+    def update_use_reference_point(self) -> None:
+        self.parameters.tab_1.use_reference_point = (
+            self.ui.controls_area.reference_point_checkbox.isChecked()
+        )
+
+        if self.parameters.tab_1.use_reference_point:
+            self.ui.controls_area.reference_table.setEnabled(True)
+            self.ui.controls_area.select_best_reference_point_button.setEnabled(True)
+        else:
+            self.ui.controls_area.reference_table.setEnabled(False)
+            self.ui.controls_area.select_best_reference_point_button.setEnabled(False)
+
+        self.update_plots(requires_rebuild=True, interval=0)
+
+    def update_reference_point(self) -> None:
+        self.parameters.tab_1.reference_points = (
+            self.ui.controls_area.get_reference_points(self.parameters.variables)
+        )
+        self.update_plots(requires_rebuild=True, interval=0)
 
     def update_n_grid(self, value: int) -> None:
         self.parameters.tab_1.n_grid = value
@@ -297,6 +364,9 @@ class BaxWidget(AnalysisWidget):
         self.parameters.variable_idx_x = current_x_index
         self.parameters.variable_idx_y = current_y_index
 
+        with BlockSignalsContext(self.ui.controls_area.reference_table):
+            self.ui.controls_area.update_reference_point_table_editability()
+
         self.update_plots(requires_rebuild=True, interval=0)
 
     def update_y_axis_controls(self) -> None:
@@ -307,6 +377,9 @@ class BaxWidget(AnalysisWidget):
             self.ui.controls_area.y_axis_combo_box.setEnabled(False)
         else:
             self.ui.controls_area.y_axis_combo_box.setEnabled(True)
+
+        with BlockSignalsContext(self.ui.controls_area.reference_table):
+            self.ui.controls_area.update_reference_point_table_editability()
 
         self.update_plots(requires_rebuild=True, interval=0)
 
