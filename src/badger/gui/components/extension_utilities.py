@@ -9,6 +9,7 @@ from types import TracebackType
 from typing import Any, Callable, Optional, ParamSpec
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QLayout, QTabWidget
@@ -77,6 +78,18 @@ def to_precision_float(value: Any, precision: int = 4) -> float:
             ValueError,
             f"Value {value} cannot be converted to float with precision {precision}",
         )
+
+
+def get_latest_reference_points(
+    data: pd.DataFrame | None, variable_names: list[str]
+) -> dict[str, float]:
+
+    if data is None or data.empty:
+        raise ValueError("No data available to extract the latest reference point.")
+
+    reference_points = data[variable_names].iloc[-1].to_dict()
+
+    return {str(k): to_precision_float(v) for k, v in reference_points.items()}
 
 
 class HandledException(Exception):

@@ -29,11 +29,12 @@ from badger.gui.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.components.bo_visualizer.ui_components import UIComponents
 from badger.gui.components.extension_utilities import (
     HandledException,
+    get_latest_reference_points,
     signal_logger,
     to_precision_float,
 )
 from badger.routine import Routine
-from badger.utils import BlockSignalsContext, create_archive_run_filename
+from badger.utils import BlockSignalsContext
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,6 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
     "variable_2": 1,
     "variables": [],
     "reference_points": {},
-    "reference_points_range": {},
     "include_variable_2": True,
 }
 
@@ -126,9 +126,11 @@ class BOPlotWidget(AnalysisWidget):
             self.parameters["include_variable_2"] = False
             self.parameters["variable_2"] = -1
 
-        vocs_variables = self.routine.vocs.variables
+        vocs_variables = self.routine.vocs.variable_names
 
-        self.ui_components.initialize_variables(self.parameters, vocs_variables)
+        self.ui_components.initialize_variables(
+            self.routine.generator.data, self.parameters, vocs_variables
+        )
 
         self.ui_components.update_variables(self.parameters)
 
@@ -205,6 +207,12 @@ class BOPlotWidget(AnalysisWidget):
             )()
         )
 
+        self.ui_components.set_latest_reference_points_button.clicked.connect(
+            lambda: signal_logger("Set latest reference points clicked")(
+                lambda: self.on_set_latest_reference_points_clicked()
+            )()
+        )
+
     def on_button_clicked(self) -> None:
         self.update_extension(self.routine, True)
 
@@ -218,6 +226,19 @@ class BOPlotWidget(AnalysisWidget):
                 self,
                 "Error",
                 f"Error getting best reference points: {e}",
+            )
+        self.update_plots(requires_rebuild=True)
+
+    def on_set_latest_reference_points_clicked(self) -> None:
+        logger.debug("Setting latest reference points")
+        try:
+            self.set_latest_reference_points()
+        except Exception as e:
+            logger.error(f"Error getting latest reference points: {e}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Error getting latest reference points: {e}",
             )
         self.update_plots(requires_rebuild=True)
 
@@ -244,45 +265,6 @@ class BOPlotWidget(AnalysisWidget):
         self.parameters = (  # pyright: ignore[reportIncompatibleVariableOverride]
             DEFAULT_PARAMETERS.copy()
         )
-
-    def requires_reinitialization(self) -> bool:
-        # Check if the extension needs to be reinitialized
-        logger.debug("Checking if BO Visualizer needs to be reinitialized")
-
-        archive_name = create_archive_run_filename(self.routine)
-
-        logger.debug(f"Archive name: {archive_name}")
-
-        if not self.initialized:
-            logger.debug("Reset - Extension never initialized")
-            # Set up connections
-            logger.debug("Setting up connections")
-            self.setup_connections()
-            self.routine_identifier = archive_name
-            self.initialized = True
-            return True
-
-        if self.routine_identifier != archive_name:
-            logger.debug("Reset - Routine name has changed")
-            self.routine_identifier = archive_name
-            self.reset_widget()
-            return True
-
-        if self.routine.data is None:
-            logger.debug("Reset - No data available")
-
-            return True
-
-        previous_len = self.df_length
-        self.df_length = len(self.routine.data)
-        new_length = self.df_length
-
-        if previous_len > new_length:
-            logger.debug("Reset - Data length is the same or smaller")
-            self.df_length = float("inf")
-            return True
-
-        return False
 
     def on_axis_selection_changed(self) -> None:
         logger.debug("Axis selection changed")
@@ -482,12 +464,8 @@ class BOPlotWidget(AnalysisWidget):
 
         # Get reference points for non-selected variables
 
-        non_selected_variables = [
-            var for var in self.parameters["variables"] if var not in selected_variables
-        ]
-
         reference_point = self.get_reference_points(
-            self.ui_components.ref_inputs, non_selected_variables
+            self.ui_components.ref_inputs, self.parameters["variables"]
         )
 
         logger.debug("Updating plot with selected variables and reference points")
@@ -561,4 +539,42 @@ class BOPlotWidget(AnalysisWidget):
         )
         self.ui_components.best_point_display.setText(
             f"Best Point Index: {index}\nValue: {to_precision_float(value)}"
+        )
+        self.ui_components.populate_reference_table(
+            self.parameters["variables"],
+            self.parameters["reference_points"],
+        )
+
+    def set_latest_reference_points(
+        self,
+    ) -> None:
+        if self.generator.data is None:
+            raise HandledException(
+                ValueError,
+                "No data available in generator for selecting latest reference points",
+            )
+
+        reference_points = get_latest_reference_points(
+            self.generator.data, self.routine.vocs.variable_names
+        )
+
+        if not reference_points:
+            raise HandledException(ValueError, "No latest reference points found")
+
+        logger.debug(f"Latest reference points: {reference_points}")
+
+        # Update the reference table with the latest reference points
+        self.parameters["reference_points"] = cast(
+            dict[str, float],
+            {
+                var: to_precision_float(reference_points[var])
+                for var in reference_points
+            },
+        )
+
+        self.ui_components.best_point_display.setText("Latest Reference Points Set")
+
+        self.ui_components.populate_reference_table(
+            self.parameters["variables"],
+            self.parameters["reference_points"],
         )

@@ -3,7 +3,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional, cast
+from typing import Optional
 
 from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 from xopt.generators.bayesian.bax_generator import BaxGenerator
@@ -13,11 +13,11 @@ from badger.gui.components.analysis_widget import AnalysisWidget
 from badger.gui.components.bax_visualizer.ui import UI
 from badger.gui.components.extension_utilities import (
     HandledException,
+    get_latest_reference_points,
     requires_update,
-    to_precision_float,
 )
 from badger.routine import Routine
-from badger.utils import BlockSignalsContext, create_archive_run_filename
+from badger.utils import BlockSignalsContext
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,6 @@ class PathwiseSolenoidAlignmentPlots:
 class Plot1Parameters:
     n_grid: int = 50
     n_samples: int = 100
-    use_reference_point: bool = False
     reference_points: dict[str, float] = field(default_factory=dict)
     grid_optimize: GridOptimizePlots = field(default_factory=GridOptimizePlots)
     emittance: EmittancePlots = field(default_factory=EmittancePlots)
@@ -69,16 +68,17 @@ class Parameters:
     include_y: bool = True
 
 
-DEFAULT_PARAMETERS = Parameters()
-
-
 class BaxWidget(AnalysisWidget):
     generator: BaxGenerator
-    parameters: Parameters = DEFAULT_PARAMETERS
+    parameters: Parameters  # type: ignore[assignment]
 
     def __init__(self, routine: Routine, parent: Optional[QWidget] = None):
         logger.debug("Initializing BaxWidget")
         super().__init__(routine=routine, parent=parent)
+
+        # Instance-level parameters. Never use a class-level default here: it
+        # would be shared (and mutated) across every BaxWidget instance.
+        self.parameters = Parameters()
 
         self.ui = UI(routine=self.routine, parameters=self.parameters)
 
@@ -97,7 +97,17 @@ class BaxWidget(AnalysisWidget):
     def initialize_widget(self) -> None:
         logger.debug("Initializing BaxWidget")
 
-        self.parameters = DEFAULT_PARAMETERS
+        # Start from a clean parameter state and propagate that single object to
+        # every child widget so the whole UI subtree resets in lock-step. Simply
+        # rebinding ``self.parameters`` would leave the UI holding the previous
+        # run's object and cause state to desync.
+        self.parameters = Parameters()
+        self.ui.set_parameters(self.parameters)
+
+        # The child widgets also cache the routine/generator they were built
+        # with. Refresh them too, otherwise the controls read the previous
+        # routine's variables (leaving stale reference-point keys behind).
+        self.ui.set_routine(self.routine)
 
         variable_names = list(self.routine.vocs.variable_names)
         self.parameters.variables = variable_names
@@ -112,70 +122,15 @@ class BaxWidget(AnalysisWidget):
             self.parameters.include_y = True
             self.parameters.variable_idx_x = min(temp_x, len(variable_names) - 1)
             self.parameters.variable_idx_y = min(temp_y, len(variable_names) - 1)
-
-        # Hide plotting options that are not relevant to the current algorithm
-        algorithm_type = self.generator.algorithm.name
-        if algorithm_type == "grid_optimize":
-            self.ui.controls_area.emittance_x_checkbox.setVisible(False)
-            self.ui.controls_area.emittance_y_checkbox.setVisible(False)
-            self.ui.controls_area.bmag_x_checkbox.setVisible(False)
-            self.ui.controls_area.bmag_y_checkbox.setVisible(False)
-            self.ui.controls_area.alignment_x_checkbox.setVisible(False)
-            self.ui.controls_area.alignment_y_checkbox.setVisible(False)
-        elif algorithm_type == "emittance":
-            self.ui.controls_area.grid_optimize_checkbox.setVisible(False)
-            self.ui.controls_area.alignment_x_checkbox.setVisible(False)
-            self.ui.controls_area.alignment_y_checkbox.setVisible(False)
-        elif algorithm_type == "pathwise_solenoid_alignment":
-            self.ui.controls_area.grid_optimize_checkbox.setVisible(False)
-            self.ui.controls_area.emittance_x_checkbox.setVisible(False)
-            self.ui.controls_area.emittance_y_checkbox.setVisible(False)
+        self.ui.reset_ui()
 
         self.ui.initialize_reference_table()
-
-    def requires_reinitialization(self) -> bool:
-        # Check if the extension needs to be reinitialized
-        logger.debug("Checking if Bax Visualizer needs to be reinitialized")
-
-        archive_name = create_archive_run_filename(self.routine)
-
-        logger.debug(f"Archive name: {archive_name}")
-
-        if not self.initialized:
-            logger.debug("Reset - Extension never initialized")
-            # Set up connections
-            logger.debug("Setting up connections")
-            self.setup_connections()
-            self.routine_identifier = archive_name
-            self.initialized = True
-            return True
-
-        if self.routine_identifier != archive_name:
-            logger.debug("Reset - Routine name has changed")
-            self.routine_identifier = archive_name
-            self.reset_widget()
-            return True
-
-        if self.routine.data is None:
-            logger.debug("Reset - No data available")
-
-            return True
-
-        previous_len = self.df_length
-        self.df_length = len(self.routine.data)
-        new_length = self.df_length
-
-        if previous_len > new_length:
-            logger.debug("Reset - Data length is smaller")
-            self.df_length = float("inf")
-            return True
-
-        return False
 
     def reset_widget(self) -> None:
         logger.debug("Resetting BaxWidget")
         self.routine_identifier = ""
         self.df_length = float("inf")
+        self.ui.reset_ui()
 
     def update_plots(self, requires_rebuild: bool, interval: int) -> None:
         if not requires_update(self.last_updated, interval, requires_rebuild):
@@ -185,8 +140,6 @@ class BaxWidget(AnalysisWidget):
         # with the current routine's generator so it reads this run's
         # algorithm_results_file instead of a stale one from a previous run.
         self.ui.plotting_area.generator = self.generator
-
-        self.ui.controls_area.update_controls()
 
         self.ui.plotting_area.update_tab_widget()
 
@@ -217,16 +170,12 @@ class BaxWidget(AnalysisWidget):
             lambda value: self.update_n_samples(value)
         )
 
-        self.ui.controls_area.reference_point_checkbox.stateChanged.connect(
-            lambda: self.update_use_reference_point()
-        )
-
         self.ui.controls_area.reference_table.cellChanged.connect(
             lambda: self.update_reference_point()
         )
 
-        self.ui.controls_area.select_best_reference_point_button.clicked.connect(
-            lambda: self.set_best_reference_points()
+        self.ui.controls_area.select_latest_reference_point_button.clicked.connect(
+            lambda: self.set_latest_reference_points()
         )
 
         # Plotting options checkboxes
@@ -252,46 +201,28 @@ class BaxWidget(AnalysisWidget):
                 lambda _, lbl=label: self.update_plot_option(lbl)
             )
 
-    def set_best_reference_points(
+    def set_latest_reference_points(
         self,
     ) -> None:
         if self.generator.data is None:
             raise HandledException(
                 ValueError,
-                "No data available in generator for selecting best reference points",
+                "No data available in generator for selecting latest reference points",
             )
 
-        input_params = (
-            # -1 index is used to select the last row of the DataFrame, which corresponds to the best reference points
-            self.generator.data[self.routine.vocs.variable_names].iloc[-1].to_dict()
+        reference_points = get_latest_reference_points(
+            self.generator.data, self.routine.vocs.variable_names
         )
 
-        logger.debug(f"Best reference points: {input_params}")
+        logger.debug(f"Latest reference points: {reference_points}")
 
-        # Update the reference table with the best reference points
-        self.parameters.tab_1.reference_points = cast(
-            dict[str, float],
-            {var: to_precision_float(input_params[var]) for var in input_params},
-        )
-        self.ui.controls_area.best_point_display.setText(
-            f"Best Reference Points: {', '.join(f'{k}: {v}' for k, v in input_params.items())}"
+        # Update the reference table with the latest reference points
+        self.parameters.tab_1.reference_points = reference_points
+        self.ui.controls_area.reference_point_display.setText(
+            f"Latest Reference Points: {', '.join(f'{k}: {v}' for k, v in reference_points.items())}"
         )
 
         self.ui.controls_area.populate_reference_table()
-
-        self.update_plots(requires_rebuild=True, interval=0)
-
-    def update_use_reference_point(self) -> None:
-        self.parameters.tab_1.use_reference_point = (
-            self.ui.controls_area.reference_point_checkbox.isChecked()
-        )
-
-        if self.parameters.tab_1.use_reference_point:
-            self.ui.controls_area.reference_table.setEnabled(True)
-            self.ui.controls_area.select_best_reference_point_button.setEnabled(True)
-        else:
-            self.ui.controls_area.reference_table.setEnabled(False)
-            self.ui.controls_area.select_best_reference_point_button.setEnabled(False)
 
         self.update_plots(requires_rebuild=True, interval=0)
 

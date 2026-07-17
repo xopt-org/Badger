@@ -67,22 +67,98 @@ class ControlsWidget(QWidget):
 
         self.setLayout(controls_layout)
 
-        # Initialize the reference table based on the current vocs variable names
-        if self.parameters.tab_1.use_reference_point:
-            self.reference_table.setEnabled(True)
-            self.select_best_reference_point_button.setEnabled(True)
-        else:
-            self.reference_table.setEnabled(False)
-            self.select_best_reference_point_button.setEnabled(False)
+    def reset_controls_widget(self) -> None:
+        """Reset the controls to their initial state."""
+
+        with BlockSignalsContext(
+            [
+                self.emittance_x_checkbox,
+                self.emittance_y_checkbox,
+                self.bmag_x_checkbox,
+                self.bmag_y_checkbox,
+                self.alignment_x_checkbox,
+                self.alignment_y_checkbox,
+                self.grid_optimize_checkbox,
+                self.n_grid_spin_box,
+                self.n_samples_spin_box,
+                self.y_axis_checkbox,
+                self.reference_table,
+                self.x_axis_combo_box,
+                self.y_axis_combo_box,
+            ]
+        ):
+            # Start from every option visible, then hide the ones that are not
+            # relevant to the current algorithm. Resetting visibility first
+            # ensures a checkbox hidden by a previous run's algorithm is shown
+            # again when the routine changes.
+            all_option_checkboxes = [
+                self.grid_optimize_checkbox,
+                self.emittance_x_checkbox,
+                self.emittance_y_checkbox,
+                self.bmag_x_checkbox,
+                self.bmag_y_checkbox,
+                self.alignment_x_checkbox,
+                self.alignment_y_checkbox,
+            ]
+            for checkbox in all_option_checkboxes:
+                checkbox.setVisible(True)
+
+            # Hide plotting options that are not relevant to the current algorithm
+            algorithm_type = self.routine.generator.algorithm.name
+            if algorithm_type == "grid_optimize":
+                self.emittance_x_checkbox.setVisible(False)
+                self.emittance_y_checkbox.setVisible(False)
+                self.bmag_x_checkbox.setVisible(False)
+                self.bmag_y_checkbox.setVisible(False)
+                self.alignment_x_checkbox.setVisible(False)
+                self.alignment_y_checkbox.setVisible(False)
+            elif algorithm_type == "emittance":
+                self.grid_optimize_checkbox.setVisible(False)
+                self.alignment_x_checkbox.setVisible(False)
+                self.alignment_y_checkbox.setVisible(False)
+            elif algorithm_type == "pathwise_solenoid_alignment":
+                self.grid_optimize_checkbox.setVisible(False)
+                self.emittance_x_checkbox.setVisible(False)
+                self.emittance_y_checkbox.setVisible(False)
+            else:
+                raise ValueError(f"Unsupported algorithm type: {algorithm_type}")
+
+            # Push the (freshly reset) parameter values back into every widget so
+            # no toggle, spin value or selection lingers from the previous run.
+            self._sync_plot_options_from_parameters()
+
+            self.reference_table.clearContents()
+
+            self.x_axis_combo_box.clear()
+            self.y_axis_combo_box.clear()
+
+    def _sync_plot_options_from_parameters(self) -> None:
+        """Set every plot-option widget to match the current parameters.
+
+        Callers are responsible for blocking signals; this only mutates widget
+        state to mirror ``self.parameters``.
+        """
+        tab = self.parameters.tab_1
+
+        self.n_grid_spin_box.setValue(tab.n_grid)
+        self.n_samples_spin_box.setValue(tab.n_samples)
+
+        self.grid_optimize_checkbox.setChecked(tab.grid_optimize.objective)
+        self.emittance_x_checkbox.setChecked(tab.emittance.emittance_x)
+        self.emittance_y_checkbox.setChecked(tab.emittance.emittance_y)
+        self.bmag_x_checkbox.setChecked(tab.emittance.bmag_x)
+        self.bmag_y_checkbox.setChecked(tab.emittance.bmag_y)
+        self.alignment_x_checkbox.setChecked(
+            tab.pathwise_solenoid_alignment.misalignment_x
+        )
+        self.alignment_y_checkbox.setChecked(
+            tab.pathwise_solenoid_alignment.misalignment_y
+        )
+        self.y_axis_checkbox.setChecked(self.parameters.include_y)
 
     def _create_reference_point_group(self) -> QGroupBox:
         layout = QVBoxLayout()
         group_widget = QGroupBox("Reference Point")
-
-        self.reference_point_checkbox = QCheckBox("Use Reference Point")
-        self.reference_point_checkbox.setChecked(
-            self.parameters.tab_1.use_reference_point
-        )
 
         self.reference_table = QTableWidget()
         self.reference_table.setColumnCount(2)
@@ -90,15 +166,12 @@ class ControlsWidget(QWidget):
         horizontal_header = self.reference_table.horizontalHeader()
         horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        self.select_best_reference_point_button = QPushButton(
-            "Set Best Reference Point"
-        )
-        self.best_point_display = QLabel("Best Reference Point: N/A")
+        self.select_latest_reference_point_button = QPushButton("Set Latest")
+        self.reference_point_display = QLabel("")
 
-        layout.addWidget(self.reference_point_checkbox)
         layout.addWidget(self.reference_table)
-        layout.addWidget(self.select_best_reference_point_button)
-        layout.addWidget(self.best_point_display)
+        layout.addWidget(self.select_latest_reference_point_button)
+        layout.addWidget(self.reference_point_display)
 
         group_widget.setLayout(layout)
         return group_widget

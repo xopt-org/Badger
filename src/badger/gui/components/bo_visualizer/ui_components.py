@@ -2,9 +2,8 @@
 point table, grid resolution, and plot option checkboxes."""
 
 import logging
-from typing import cast
 
-from gest_api.vocs import BaseVariable, ContinuousVariable, VariableDict
+import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -22,7 +21,7 @@ from PyQt5.QtWidgets import (
 
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.components.extension_utilities import (
-    to_precision_float,
+    get_latest_reference_points,
 )
 from badger.utils import BlockSignalsContext
 
@@ -40,7 +39,8 @@ class UIComponents:
         self.ref_inputs: list[QTableWidgetItem] = []
         self.reference_table = QTableWidget()
         self.best_point_display = QLabel("")  # Will be initialized later
-        self.set_best_reference_point_button = QPushButton("Set Best Reference Point")
+        self.set_best_reference_point_button = QPushButton("Set Best")
+        self.set_latest_reference_points_button = QPushButton("Set Latest")
 
         # Initialize other UI components
         self.update_button = QPushButton("Update")
@@ -133,29 +133,13 @@ class UIComponents:
 
     def initialize_variables(
         self,
+        data: pd.DataFrame | None,
         configurable_options: ConfigurableOptions,
-        vocs_variables: VariableDict,
+        vocs_variables: list[str],
     ) -> None:
         """Initialize the variable checkboxes with the provided variable names."""
-        # Initialize the parameters with the routine's variables
-        configurable_options["reference_points_range"] = vocs_variables
 
-        reference_points: dict[str, float] = {}
-
-        variables = cast(dict[str, BaseVariable], vocs_variables)
-        for var_name, variable in variables.items():
-            if not isinstance(variable, ContinuousVariable):
-                raise ValueError(
-                    f"Variable '{var_name}' is not continuous. Only continuous variables are supported for reference points."
-                )
-
-            domain = cast(
-                tuple[float, float],
-                variable.domain,  # pyright: ignore[reportUnknownMemberType]
-            )
-            reference_points[var_name] = to_precision_float(
-                domain[0] + ((domain[1] - domain[0]) / 2.0)
-            )
+        reference_points = get_latest_reference_points(data, vocs_variables)
 
         configurable_options["reference_points"] = reference_points
 
@@ -169,7 +153,12 @@ class UIComponents:
         horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(self.reference_table)
-        layout.addWidget(self.set_best_reference_point_button)
+
+        btn_group = QHBoxLayout()
+        btn_group.addWidget(self.set_latest_reference_points_button)
+        btn_group.addWidget(self.set_best_reference_point_button)
+
+        layout.addLayout(btn_group)
         layout.addWidget(self.best_point_display)
         group_box.setLayout(layout)
         return group_box

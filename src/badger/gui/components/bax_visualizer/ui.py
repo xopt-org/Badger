@@ -2,13 +2,15 @@
 
 from typing import TYPE_CHECKING, Optional
 
+
 from badger.gui.components.bax_visualizer.controls import ControlsWidget
-from badger.gui.components.extension_utilities import to_precision_float
+from badger.gui.components.extension_utilities import (
+    get_latest_reference_points,
+)
 
 if TYPE_CHECKING:
     from badger.gui.components.bax_visualizer.bax_widget import Parameters
 
-from gest_api.vocs import ContinuousVariable
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
 from badger.gui.components.bax_visualizer.plotting import PlottingWidget
@@ -26,12 +28,12 @@ class UI(QWidget):
 
         self.routine = routine
         self.parameters = parameters
-        self._initialize_ui()
+        self.initialize_ui()
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumSize(1250, 600)
 
-    def _initialize_ui(self) -> None:
+    def initialize_ui(self) -> None:
         main_layout = QHBoxLayout()
 
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -64,24 +66,41 @@ class UI(QWidget):
 
         self.setLayout(main_layout)
 
+    def set_parameters(self, parameters: "Parameters") -> None:
+        """Point this widget and every child widget at the same parameters object.
+
+        This must be called whenever the top-level parameters object is
+        replaced (e.g. on reinitialization) so the controls and plotting areas
+        do not keep reading/writing a stale object from a previous run.
+        """
+        self.parameters = parameters
+        self.controls_area.parameters = parameters
+        self.plotting_area.parameters = parameters
+
+    def set_routine(self, routine: Routine) -> None:
+        """Point this widget and every child widget at the current routine.
+
+        The child widgets cache the routine (and its generator) they were built
+        with. When the user switches routines, those caches must be refreshed or
+        the controls/reference table will read the previous run's variables and
+        data (e.g. leftover reference-point keys that no longer exist in the new
+        routine's vocs).
+        """
+        self.routine = routine
+        self.controls_area.routine = routine
+        self.plotting_area.generator = routine.generator
+
+    def reset_ui(self) -> None:
+        """Reset the UI to its initial state."""
+        self.controls_area.reset_controls_widget()
+        self.controls_area.update_controls()
+
     def initialize_reference_table(self) -> None:
         """Initialize the reference table in the controls area."""
 
-        reference_points: dict[str, float] = {}
-
-        vocs_variables = self.routine.vocs.variables
-
-        for var_name, variable in vocs_variables.items():
-            if not isinstance(variable, ContinuousVariable):
-                raise ValueError(
-                    f"Variable '{var_name}' is not continuous. Only continuous variables are supported for reference points."
-                )
-
-            domain_range = variable.domain[1] - variable.domain[0]
-
-            reference_points[var_name] = to_precision_float(
-                variable.domain[0] + (domain_range / 2.0)
-            )
+        reference_points = get_latest_reference_points(
+            self.routine.generator.data, self.parameters.variables
+        )
 
         self.parameters.tab_1.reference_points = reference_points
 

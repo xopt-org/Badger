@@ -105,9 +105,7 @@ class PlottingWidget(QWidget):
 
         logger.debug(f"Results file: {self.generator.algorithm_results_file}")
 
-        ref_point = None
-        if self.parameters.tab_1.use_reference_point:
-            ref_point = self.parameters.tab_1.reference_points
+        ref_point = self.parameters.tab_1.reference_points
 
         fig, ax = visualize_virtual_measurement_result(
             self.generator,

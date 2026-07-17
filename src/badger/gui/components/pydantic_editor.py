@@ -748,9 +748,6 @@ class BadgerPydanticEditor(QTreeWidget):
             if selection is None:
                 widget.addItem("null", selection)
             else:
-                logger.debug(
-                    f"Adding selection {selection} with name {selection.model_fields['name'].default} to combo box"
-                )
                 widget.addItem(selection.model_fields["name"].default, selection)
 
     def set_params_from_class(self, pydantic_class: type[Any]) -> None:
