@@ -475,6 +475,24 @@ def _qt_widgets_to_values_recurse(
     return out
 
 
+def _default_for_new_row(
+    widget_type: type[Any] | None,
+) -> float | int | bool | None:
+    """Provide a sensible default for a freshly-added list/dict row.
+
+    Numeric and boolean widgets raise if resolved without a default value, so a
+    new (empty) row must supply one. Other types (e.g. str) already handle a
+    missing default gracefully, so ``None`` is returned for them.
+    """
+    if widget_type is float:
+        return 0.0
+    if widget_type is int:
+        return 0
+    if widget_type is bool:
+        return False
+    return None
+
+
 class BadgerListItem(QWidget):
     def __init__(self, editor: "BadgerListEditor", parent: QWidget | None = None):
         super().__init__(parent)
@@ -482,7 +500,7 @@ class BadgerListItem(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.parameter_value = BadgerResolvedType.resolve_qt(
-            editor.widget_type, default=None
+            editor.widget_type, default=_default_for_new_row(editor.widget_type)
         )
         if self.parameter_value:
             self.parameter_value.setSizePolicy(
@@ -497,7 +515,7 @@ class BadgerListItem(QWidget):
         self.parameter_value2 = None
         if editor.widget_type2 is not None:
             self.parameter_value2 = BadgerResolvedType.resolve_qt(
-                editor.widget_type2, default=None
+                editor.widget_type2, default=_default_for_new_row(editor.widget_type2)
             )
             if self.parameter_value2:
                 self.parameter_value2.setSizePolicy(
