@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from importlib import metadata
 from types import TracebackType
-from typing import TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 import yaml
 from PyQt5.QtWidgets import QLayout, QWidget
@@ -19,6 +19,10 @@ from badger.errors import BadgerLoadConfigError
 
 if TYPE_CHECKING:
     from badger.routine import Routine
+
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+
+from gest_api.vocs import ContinuousVariable
 
 logger = logging.getLogger(__name__)
 
@@ -374,3 +378,56 @@ def get_badger_version():
 
 def get_xopt_version():
     return metadata.version("xopt")
+
+
+def _round_to_sigfig(value: float, sigfigs: int, mode: str) -> float:
+    """
+    Round float to specified number of significant figures.
+    """
+    if sigfigs <= 0:
+        raise ValueError("Significant figures must be greater than 0.")
+    if mode not in ["floor", "ceil"]:
+        raise ValueError(f"Unknown rounding mode: {mode}")
+
+    value = float(value)
+    # Convert to Decimal
+    decimal_value = Decimal(str(value))
+
+    if decimal_value == 0:
+        return 0.0
+
+    # Get the exponent
+    exponent = decimal_value.adjusted()
+    # Compute rounding precision to achieve the desired sig-figs
+    precision = Decimal(f"1e{exponent - sigfigs + 1}")
+    if mode == "floor":
+        rounded = decimal_value.quantize(precision, rounding=ROUND_FLOOR)
+    elif mode == "ceil":
+        rounded = decimal_value.quantize(precision, rounding=ROUND_CEILING)
+
+    return float(rounded)
+
+
+N_BOUND_SIGFIGS = 10
+
+
+def _round_bounds_inward(
+    bounds: tuple[Any, Any] | list[Any], sigfigs: int = N_BOUND_SIGFIGS
+) -> tuple[float, float]:
+    """
+    Round numeric bounds to a set number of significant figures.
+    This avoids unexpected bounds errors due to inconsistent rounding, defaulting to 10 sig-figs
+    """
+    if type(bounds) not in [tuple, list, dict, ContinuousVariable]:
+        raise BadgerLoadConfigError(
+            f"invalid bounds type {type(bounds)}. Must be tuple, dict, or ContinuousVariable"
+        )
+
+    if isinstance(bounds, ContinuousVariable):
+        bounds = bounds.domain
+    elif isinstance(bounds, dict):
+        bounds = bounds["domain"]
+
+    lower = _round_to_sigfig(float(bounds[0]), sigfigs, mode="ceil")
+    upper = _round_to_sigfig(float(bounds[1]), sigfigs, mode="floor")
+    return [lower, upper]

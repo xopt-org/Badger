@@ -1,116 +1,87 @@
 """
-The big form where a routine gets built — most of the routine editor lives here.
+Builds and edits a Routine in the mini GUI.
 
-BadgerRoutinePage is organized into tabs:
-    Metadata    — name, description, tags, template save/load
-    Environment — the environment box (env_cbox.py) plus the VOCS tables
-                  (variables, objectives, constraints, observables) and
-                  initial points
-    Algorithm   — the generator box (generator_cbox.py) for picking and
-                  configuring the optimization algorithm
-    Data        — pre-loaded data and archive search
-
-Its central job is _compose_routine(): take everything the user has entered
-across those tabs and assemble it into a Routine object ready to run. It also
-handles the reverse — set_routine()/refresh_ui() load an existing routine back
-into the form.
-
-A few areas carry most of the complexity:
-    - variable ranges: automatic vs. manual bounds, hard-limit overrides, and
-      "relative to current" mode (ratio/delta around the live machine values)
-    - initial points: fill from current values or random sampling
-    - templates: save/load routine configs as YAML
-
-This page is wrapped by routine_editor.py, which adds the save/cancel/delete
-buttons around it.
+BadgerRoutinePage owns the environment/VOCS editor, template load/save,
+variable range controls, and initial-point tools. Its main job is
+_compose_routine(), which validates GUI state and returns a Routine ready
+to run. It also supports the reverse path (refresh_ui/set_routine) to load
+an existing Routine back into the form.
 """
 
-import copy
-import logging
-import os
-import traceback
-import warnings
-from datetime import datetime
-from functools import partial
 from typing import Any
+import warnings
+import traceback
+import copy
+from functools import partial
+import os
+import yaml
 
 import numpy as np
 import pandas as pd
-import yaml
+from PyQt5.QtCore import pyqtSignal, QTimer
+from PyQt5.QtWidgets import QLineEdit, QPushButton, QFileDialog
+from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
+from PyQt5.QtWidgets import QVBoxLayout, QScrollArea
+from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+from badger.gui.components.navigators import HistoryNavigator
 from coolname import generate_slug
+from xopt import VOCS
+from xopt.vocs import random_inputs
+from xopt.generators import (
+    get_generator_defaults,
+    all_generator_names,
+    get_generator_dynamic,
+)
+from xopt.vocs import get_local_region
 from gest_api.vocs import (
-    BaseConstraint,
     BaseObjective,
     GreaterThanConstraint,
     LessThanConstraint,
     MaximizeObjective,
     MinimizeObjective,
 )
-from pydantic import ValidationError
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtWidgets import (
-    QFileDialog,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPlainTextEdit,
-    QPushButton,
-    QScrollArea,
-    QTableWidgetItem,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget,
-)
-from xopt import VOCS
-from xopt.generators import (
-    all_generator_names,
-    get_generator_defaults,
-    get_generator_dynamic,
-)
-from xopt.utils import get_local_region
-from xopt.vocs import random_inputs
 
-from badger.archive import update_run
-from badger.environment import instantiate_env
-from badger.errors import (
-    BadgerEnvInstantiationError,
-    BadgerEnvNotFoundError,
-    BadgerEnvVarError,
-    BadgerRoutineError,
-    VariableRangeError,
-)
-from badger.factory import get_env, list_env, list_generators
-from badger.gui.components.archive_search import ArchiveSearchWidget
+from pydantic import ValidationError
+
 from badger.gui.components.data_panel import BadgerDataPanel
 from badger.gui.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
     update_init_data_table,
 )
-from badger.gui.components.env_cbox import BadgerEnvBox
-from badger.gui.components.filter_cbox import BadgerFilterBox
-from badger.gui.components.generator_cbox import BadgerAlgoBox
-from badger.gui.utils import filter_generator_config
-from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
+from badger.gui.mini.components.env_cbox import BadgerEnvBox
 from badger.gui.windows.docs_window import BadgerDocsWindow
-from badger.gui.windows.edit_script_dialog import BadgerEditScriptDialog
+from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.ind_lim_vrange_dialog import (
     BadgerIndividualLimitVariableRangeDialog,
 )
-from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
-from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.windows.review_dialog import BadgerReviewDialog
+from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
+from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.utils import filter_generator_config
+from badger.environment import instantiate_env
+from badger.errors import (
+    BadgerEnvNotFoundError,
+    BadgerRoutineError,
+    BadgerEnvVarError,
+    BadgerEnvInstantiationError,
+    VariableRangeError,
+)
+from badger.factory import list_generators, list_env, get_env
 from badger.routine import Routine
 from badger.settings import init_settings
+from datetime import datetime
 from badger.utils import (
     BlockSignalsContext,
+    load_config,
     get_badger_version,
     get_xopt_version,
-    load_config,
-    strtobool,
     ts_float_to_str,
+    _round_bounds_inward,
 )
+
+
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -128,11 +99,7 @@ def format_validation_error(e: ValidationError) -> str:
     return "\n".join(messages)
 
 
-def extract_constraint_symbol_and_value(constraint: BaseConstraint) -> str:
-    """
-    Extract symbol and value from gest-api constraint objects
-    generator standard library [gest-api](https://github.com/campa-consortium/gest-api)
-    """
+def extract_constraint_symbol_and_value(constraint):
     if isinstance(constraint, GreaterThanConstraint):
         return ">", constraint.value
     if isinstance(constraint, LessThanConstraint):
@@ -157,6 +124,8 @@ class BadgerRoutinePage(QWidget):
     sig_updated = pyqtSignal(str, str)  # routine name, routine description
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
+    sig_go_run = pyqtSignal()
+    sig_select_env = pyqtSignal(str)
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")
@@ -198,109 +167,41 @@ class BadgerRoutinePage(QWidget):
         self.config_logic()
 
         # Trigger the re-rendering of the environment box
-        self.env_box.relative_to_curr.setChecked(True)
+        # self.env_box.relative_to_curr.setChecked(True)
         # remember user selection from lim_vrange_dialog gui
         # 2: not initialized, 1: apply to all, 0: apply to only visible
         self.lim_apply_to_vars = 2
 
     def init_ui(self):
         logger.info("Initializing UI for BadgerRoutinePage.")
-        config_singleton = init_settings()
+        self.config_singleton = config_singleton = init_settings()
 
         # Set up the layout
         vbox = QVBoxLayout(self)
-        vbox.setContentsMargins(8, 18, 8, 0)
+        vbox.setContentsMargins(8, 12, 8, 0)
 
         self.tabs = tabs = QTabWidget()
         vbox.addWidget(tabs)
 
-        # Meta group
-        self.group_meta = group_meta = QWidget()
-        vbox_meta = QVBoxLayout(group_meta)
-        vbox_meta.setContentsMargins(8, 8, 8, 8)
-        tabs.addTab(group_meta, "Metadata")
+        tabs.tabBar().setExpanding(False)  # keep tabs at content width
+        tabs.setStyleSheet("QTabWidget::tab-bar { alignment: center; }")
 
-        # Name
-        name = QWidget()
-        hbox_name = QHBoxLayout(name)
-        hbox_name.setContentsMargins(0, 0, 0, 0)
-        label = QLabel("Name")
-        label.setFixedWidth(LABEL_WIDTH)
-        self.edit_save = edit_save = QLineEdit()
-        edit_save.setPlaceholderText(generate_slug(2))
-        hbox_name.addWidget(label)
-        hbox_name.addWidget(edit_save, 1)
-        vbox_meta.addWidget(name, alignment=Qt.AlignTop)
+        self.history_browser = HistoryNavigator()
+        tabs.addTab(self.history_browser, "History")
 
-        # Description
-        descr = QWidget()
-        hbox_descr = QHBoxLayout(descr)
-        hbox_descr.setContentsMargins(0, 0, 0, 0)
-        lbl_descr_col = QWidget()
-        vbox_lbl_descr = QVBoxLayout(lbl_descr_col)
-        vbox_lbl_descr.setContentsMargins(0, 0, 0, 0)
-        lbl_descr = QLabel("Description")
-        lbl_descr.setFixedWidth(LABEL_WIDTH)
-        vbox_lbl_descr.addWidget(lbl_descr)
-        vbox_lbl_descr.addStretch(1)
-        hbox_descr.addWidget(lbl_descr_col)
+        self.edit_save = QLineEdit()
+        self.edit_save.setPlaceholderText(generate_slug(2))
 
-        edit_descr_col = QWidget()
-        vbox_descr_edit = QVBoxLayout(edit_descr_col)
-        vbox_descr_edit.setContentsMargins(0, 0, 0, 0)
-        self.edit_descr = edit_descr = QPlainTextEdit()
-        edit_descr.setMinimumHeight(80)
-        vbox_descr_edit.addWidget(edit_descr)
-        descr_bar = QWidget()
-        hbox_descr_bar = QHBoxLayout(descr_bar)
-        hbox_descr_bar.setContentsMargins(0, 0, 0, 0)
-        self.btn_descr_update = btn_update = QPushButton("Update Description")
-        btn_update.setDisabled(True)
-        btn_update.setFixedSize(128, 24)
-        hbox_descr_bar.addStretch(1)
-        hbox_descr_bar.addWidget(btn_update)
-        vbox_descr_edit.addWidget(descr_bar)
-        hbox_descr.addWidget(edit_descr_col)
-        vbox_meta.addWidget(descr)
-        descr_bar.hide()
-
-        # Save Template Button
-        template_button = QWidget()
-        hbox_name = QHBoxLayout(template_button)
-        hbox_name.setContentsMargins(0, 0, 0, 0)
-        self.save_template_button = save_template_button = QPushButton(
-            "Save as Template"
-        )
-        save_template_button.setFixedSize(128, 24)
-        hbox_name.addWidget(save_template_button, alignment=Qt.AlignRight)
-        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
-        template_button.show()
-
-        # Tags
-        self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
-        if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
-            cbox_tags.hide()
-        vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
-        # vbox_meta.addStretch()
-
-        # vbox.addWidget(group_meta)
+        self.edit_descr = QPlainTextEdit()
 
         # Env box
-        self.BADGER_PLUGIN_ROOT = BADGER_PLUGIN_ROOT = config_singleton.read_value(
-            "BADGER_PLUGIN_ROOT"
-        )
-        env_dict_dir = os.path.join(
-            BADGER_PLUGIN_ROOT, "environments", "env_colors.yaml"
-        )
-        try:
-            with open(env_dict_dir, "r") as stream:
-                env_dict = yaml.safe_load(stream)
-        except (FileNotFoundError, yaml.YAMLError):
-            env_dict = {}
-        self.env_box = BadgerEnvBox(env_dict, None, self.envs)
+        self.BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
+
+        self.env_box = BadgerEnvBox(None, self.envs, self.generators)
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QScrollArea.NoFrame)
-        scroll_area.setStyleSheet("""
+        scroll_area.setStyleSheet(
+            """
             QScrollArea {
                 border: none;  /* Remove border */
                 margin: 0px;   /* Remove margin */
@@ -309,29 +210,29 @@ class BadgerRoutinePage(QWidget):
             QScrollArea > QWidget {
                 margin: 0px;   /* Remove margin inside */
             }
-        """)
+        """
+        )
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
-        scroll_layout_env.setContentsMargins(0, 0, 15, 0)
+        # add extra right margin for macOS to prevent scrollbar overlap
+        scroll_layout_env.setContentsMargins(0, 0, 5, 0)
+        self.env_box.var_table.setColumnWidth(5, 44)
+
         scroll_layout_env.addWidget(self.env_box)
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(scroll_content_env)
         tabs.addTab(scroll_area, "Environment + VOCS")
 
-        # Algo box
-        self.generator_box = BadgerAlgoBox(None, self.generators)
-        tabs.addTab(self.generator_box, "Algorithm")
-
         # Data panel
         self.data_panel = BadgerDataPanel(self)
-        tabs.addTab(self.data_panel, "Data")
+        # tabs.addTab(self.data_panel, "Data")
 
         tabs.setCurrentIndex(1)  # Show the env box by default
 
         # vbox.addStretch()
 
         # Add connection to update vocs when env or generator changes for pydantic editor validation
-        self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
+        # self.env_box.vocs_updated.connect(self.generator_box.update_vocs)
         self.env_box.vocs_updated.connect(self.data_panel.update_vocs)
 
         # Template path
@@ -342,19 +243,35 @@ class BadgerRoutinePage(QWidget):
 
     def config_logic(self):
         logger.info("Configuring logic for BadgerRoutinePage.")
-        self.btn_descr_update.clicked.connect(self.update_description)
+        # self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
-        self.save_template_button.clicked.connect(self.save_template_yaml)
-        self.generator_box.cb.currentIndexChanged.connect(self.select_generator)
-        self.generator_box.btn_docs.clicked.connect(self.open_generator_docs)
-        self.generator_box.check_use_script.stateChanged.connect(self.toggle_use_script)
-        self.generator_box.btn_edit_script.clicked.connect(self.edit_script)
-        self.env_box.cb.currentIndexChanged.connect(self.select_env)
-        self.env_box.btn_env_play.clicked.connect(self.open_playground)
-        self.env_box.btn_pv.clicked.connect(self.open_archive_search)
-        self.env_box.btn_docs.clicked.connect(self.open_environment_docs)
-        self.env_box.btn_add_var.clicked.connect(self.add_var)
-        self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
+        self.env_box.template_cb.currentTextChanged.connect(
+            lambda: (
+                self.load_template_yaml(
+                    template_path=self.env_box.template_cb.currentText() + ".yaml"
+                )
+                if self.env_box.template_cb.currentIndex() != -1
+                else None
+            )
+        )
+        # reset template selection on history change
+        # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+        #    lambda: self.env_box.template_cb.setCurrentIndex(-1)
+        # )
+        # self.save_template_button.clicked.connect(self.save_template_yaml)
+        self.env_box.algo_cb.currentIndexChanged.connect(self.select_generator)
+        self.env_box.algo_cb.currentIndexChanged.connect(
+            lambda: self.env_box.edit_algo_params.setMinimumHeight(
+                self.env_box._qtree_height_hint(self.env_box.edit_algo_params)
+            )
+        )
+        self.env_box.env_cb.currentIndexChanged.connect(self.select_env)
+        self.env_box.var_table.sig_change_bounds.connect(
+            self.adjust_variable_range_options
+        )
+        self.env_box.btn_env_docs.clicked.connect(self.open_environment_docs)
+        self.env_box.btn_algo_docs.clicked.connect(self.open_generator_docs)
+        # self.env_box.btn_lim_vrange.clicked.connect(self.limit_variable_ranges)
         self.env_box.btn_add_curr.clicked.connect(
             partial(self.fill_curr_in_init_table, record=True)
         )
@@ -363,18 +280,25 @@ class BadgerRoutinePage(QWidget):
             partial(self.clear_init_table, reset_actions=True)
         )
         self.env_box.btn_add_row.clicked.connect(self.add_row_to_init_table)
-        self.env_box.relative_to_curr.stateChanged.connect(self.toggle_relative_to_curr)
-        self.env_box.btn_refresh.clicked.connect(self.refresh_variables)
         self.env_box.var_table.sig_sel_changed.connect(self.update_init_table)
         self.env_box.var_table.sig_pv_added.connect(self.handle_pv_added)
         self.env_box.var_table.sig_var_config.connect(self.handle_var_config)
+        self.env_box.var_table.set_scan_range_options()
 
-        # self.env_box.var_table.sig_sel_changed.connect(
-        #     lambda: logger.debug("Selection changed")
-        # )  # for debugging
+    def set_saved_values_from_init_vars(
+        self, variable_names: list[str], init_vars: list[float]
+    ) -> None:
+        """Keep Saved column values aligned with run monitor reset targets."""
+        if not variable_names or not init_vars:
+            return
+
+        values_by_name = {
+            name: float(value) for name, value in zip(variable_names, init_vars)
+        }
+        self.env_box.var_table.set_saved_values(values_by_name)
 
     def load_template_yaml(
-        self, checked_state, template_path: str | None = None
+        self, checked_state=None, template_path: str | None = None
     ) -> None:
         logger.info("Loading template YAML.")
         """
@@ -397,6 +321,9 @@ class BadgerRoutinePage(QWidget):
         if not template_path:
             return
 
+        if os.path.basename(template_path) == template_path:
+            template_path = os.path.join(self.template_dir, template_path)
+
         # Load template file
         try:
             with open(template_path, "r") as stream:
@@ -405,6 +332,9 @@ class BadgerRoutinePage(QWidget):
                 self.sig_load_template.emit(
                     f"Options loaded from template: {os.path.basename(template_path)}"
                 )
+
+                template_name = os.path.basename(template_path)
+                self.env_box.update_template_cb(template_name)
         except (FileNotFoundError, yaml.YAMLError) as e:
             print(f"Error loading template: {e}")
             return
@@ -441,7 +371,10 @@ class BadgerRoutinePage(QWidget):
 
         # set vocs
         vocs = VOCS(
-            variables=template_dict["vocs"]["variables"],
+            variables={
+                name: _round_bounds_inward(bounds)
+                for name, bounds in template_dict["vocs"]["variables"].items()
+            },
             objectives=template_dict["vocs"]["objectives"],
             constraints=template_dict["vocs"]["constraints"],
             constants={},
@@ -457,20 +390,23 @@ class BadgerRoutinePage(QWidget):
         # set generator
         if generator_name in self.generators:
             i = self.generators.index(generator_name)
-            self.generator_box.cb.setCurrentIndex(i)
+            self.env_box.algo_cb.setCurrentIndex(i)
 
             filtered_config = filter_generator_config(
                 generator_name, template_dict["generator"]
             )
-            self.generator_box.edit.set_params_from_generator(
+            self.env_box.edit_algo_params.set_params_from_generator(
                 generator_name, filtered_config, vocs
             )
 
         # set environment
         if env_name in self.envs:
             i = self.envs.index(env_name)
-            self.env_box.cb.setCurrentIndex(i)
-            self.env_box.edit.set_params_from_dict(env_params)
+            # if this changes the selected env, the ui update will trigger routine_page.select_env
+            # to load the new environment
+            self.env_box.set_selected_env_name(env_name)
+            self.env_box.edit_env_params.set_params_from_dict(env_params)
+
         else:
             raise BadgerEnvNotFoundError(
                 f"Template environment {env_name} not found in Badger environments"
@@ -479,7 +415,10 @@ class BadgerRoutinePage(QWidget):
         # Load the vrange options and hard limits
         self.ratio_var_ranges = vrange_limit_options
         self.init_table_actions = initial_point_actions
-        self.var_hard_limit = vrange_hard_limit
+        self.var_hard_limit = {
+            name: _round_bounds_inward(bounds)
+            for name, bounds in vrange_hard_limit.items()
+        }
 
         self.env_box.check_only_var.setChecked(True)
 
@@ -502,29 +441,40 @@ class BadgerRoutinePage(QWidget):
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
 
+                bounds = _round_bounds_inward(bounds)
+
                 all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
-        all_variables.update(self.var_hard_limit)
+        all_variables.update(
+            {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in self.var_hard_limit.items()
+            }
+        )
+
         # Format for update_variables method
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
-
         self.env_box.var_table.update_variables(all_variables)
+
         self.env_box.var_table.set_selected(vocs.variables)
         self.env_box.var_table.addtl_vars = additional_variables
 
-        flag_relative = relative_to_current
-        self.env_box.relative_to_curr.blockSignals(True)
-        self.env_box.relative_to_curr.setChecked(flag_relative)
-        self.env_box.relative_to_curr.blockSignals(False)
-        self.toggle_relative_to_curr(flag_relative, refresh=False)
+        # self.env_box.relative_to_curr.isChecked().setChecked(flag_relative)
+        self.toggle_relative_to_curr(relative_to_current, refresh=False)
 
         if env_name:
-            if flag_relative:
-                bounds = self.calc_auto_bounds()
-                self.env_box.var_table.set_bounds(bounds, signal=False)
+            if relative_to_current:
+                bounds, clipped = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds, signal=False, clipped=clipped)
             else:
-                self.env_box.var_table.set_bounds(vocs.variables, signal=False)
+                self.env_box.var_table.set_bounds(
+                    {
+                        name: _round_bounds_inward(bounds)
+                        for name, bounds in vocs.variables.items()
+                    },
+                    signal=False,
+                )
             # Populate the initial table anyways, auto mode or not
             self.clear_init_table(reset_actions=False)
             self.update_init_table(force=True)
@@ -542,7 +492,9 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
         objectives = []
         status = {}
-        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        objectives_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in objectives_names_full:
             obj = {name: ["MINIMIZE"]}
             status[name] = False  # selected
@@ -575,7 +527,9 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
         constraints = []
         status = {}
-        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        constraints_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in constraints_names_full:
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
@@ -594,10 +548,11 @@ class BadgerRoutinePage(QWidget):
             status[name] = True
 
         # Show selected constraints only
-        self.env_box.check_only_con.blockSignals(True)
-        self.env_box.check_only_con.setChecked(True)
-        self.env_box.check_only_con.blockSignals(False)
-        self.env_box.con_table.show_selected_only = True
+        if any(status.values()):
+            self.env_box.check_only_con.blockSignals(True)
+            self.env_box.check_only_con.setChecked(True)
+            self.env_box.check_only_con.blockSignals(False)
+            self.env_box.con_table.show_selected_only = True
 
         self.env_box.con_table.update_items(constraints, status, formulas)
 
@@ -614,7 +569,7 @@ class BadgerRoutinePage(QWidget):
         observables = []
         status = {}
         observables_names_full = (
-            var_names + self.configs["observations"] + list(formulas.keys())
+            var_names + list(self.configs["observations"]) + list(formulas.keys())
         )
         for name in observables_names_full:
             obs = {name: []}
@@ -630,12 +585,6 @@ class BadgerRoutinePage(QWidget):
                 observables[idx] = {name: []}
             status[name] = True
 
-        # Show selected observables only
-        self.env_box.check_only_sta.blockSignals(True)
-        self.env_box.check_only_sta.setChecked(True)
-        self.env_box.check_only_sta.blockSignals(False)
-        self.env_box.sta_table.show_selected_only = True
-
         self.env_box.sta_table.update_items(observables, status, formulas)
 
     def generate_template_dict_from_gui(self):
@@ -647,11 +596,13 @@ class BadgerRoutinePage(QWidget):
         vocs, critical_constraints = self.env_box.compose_vocs()
 
         # Filter generator
-        generator_name = self.generator_box.cb.currentText()
+        generator_name = self.env_box.algo_cb.currentText()
 
         generator_config = self._filter_generator_params(
             generator_name=generator_name,
-            generator_config=load_config(self.generator_box.edit.get_parameters_yaml()),
+            generator_config=load_config(
+                self.env_box.edit_algo_params.get_parameters_yaml()
+            ),
         )
 
         template_dict = {
@@ -663,8 +614,10 @@ class BadgerRoutinePage(QWidget):
             }
             | generator_config,
             "environment": {
-                "name": self.env_box.cb.currentText(),
-                "params": load_config(self.env_box.edit.get_parameters_yaml()),
+                "name": self.env_box.env_name,
+                "params": load_config(
+                    self.env_box.edit_env_params.get_parameters_yaml()
+                ),
             },
             "vrange_limit_options": self.ratio_var_ranges,
             "vrange_hard_limit": self.var_hard_limit,
@@ -755,8 +708,8 @@ class BadgerRoutinePage(QWidget):
 
         if routine is None:
             # Reset the generator and env configs
-            self.generator_box.cb.setCurrentIndex(-1)
-            self.env_box.cb.setCurrentIndex(-1)
+            self.env_box.algo_cb.setCurrentIndex(-1)
+            self.env_box.clear_selected_env()
             init_table = self.env_box.init_table
             init_table.clear()
             hh = init_table.horizontalHeader()
@@ -768,7 +721,7 @@ class BadgerRoutinePage(QWidget):
             # Reset the routine configs check box status
             self.env_box.check_only_var.setChecked(False)
             self.env_box.check_only_obj.setChecked(False)
-            self.env_box.relative_to_curr.setChecked(True)
+            # self.env_box.relative_to_curr.setChecked(True)
             self.try_populate_init_table()
 
             # Reset the save settings
@@ -776,14 +729,11 @@ class BadgerRoutinePage(QWidget):
             self.edit_save.setText("")
             self.edit_save.setPlaceholderText(name)
             self.edit_descr.setPlainText("")
-            self.btn_descr_update.setDisabled(True)
 
             return
 
         self.routine = routine  # save routine for future reference
 
-        # Enable description edition
-        self.btn_descr_update.setDisabled(False)
         # Fill in the generator and env configs
         name_generator = routine.generator.name
         try:
@@ -799,8 +749,8 @@ class BadgerRoutinePage(QWidget):
                 dialog.exec_()
 
             idx_generator = -1
-        with BlockSignalsContext(self.generator_box.cb):
-            self.generator_box.cb.setCurrentIndex(idx_generator)
+        with BlockSignalsContext(self.env_box.algo_cb):
+            self.env_box.algo_cb.setCurrentIndex(idx_generator)
         filtered_config = filter_generator_config(
             name_generator, routine.generator.model_dump()
         )
@@ -813,17 +763,16 @@ class BadgerRoutinePage(QWidget):
         #     except Exception:
         #         vocs = None
 
-        self.generator_box.edit.set_params_from_generator(
+        self.env_box.edit_algo_params.set_params_from_generator(
             name_generator, filtered_config, vocs, validate=False
         )
         self.script = routine.script
 
         name_env = routine.environment.name
-        idx_env = self.envs.index(name_env)
-        self.env_box.cb.setCurrentIndex(idx_env)
+        self.env_box.set_selected_env_name(name_env)
         env_params = routine.environment.model_dump()
         del env_params["interface"]
-        self.env_box.edit.set_params_from_dict(env_params)
+        self.env_box.edit_env_params.set_params_from_dict(env_params)
 
         # Config the vocs panel
         variables = routine.vocs.variable_names
@@ -832,7 +781,10 @@ class BadgerRoutinePage(QWidget):
         self.env_box.edit_var.clear()
 
         try:
-            self.var_hard_limit = routine.vrange_hard_limit
+            self.var_hard_limit = {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in routine.vrange_hard_limit.items()
+            }
         except AttributeError:
             self.var_hard_limit = {}
         # Add additional variables to table as well
@@ -849,9 +801,16 @@ class BadgerRoutinePage(QWidget):
                     msg = str(e)
                     bounds = eval(msg.split(": ")[1])
 
+                bounds = _round_bounds_inward(bounds)
+
                 all_variables.update({vname: bounds})
         # Override the hard limits with the ones from the routine
-        all_variables.update(self.var_hard_limit)
+        all_variables.update(
+            {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in self.var_hard_limit.items()
+            }
+        )
         # Format for update_variables method
         all_variables = dict(sorted(all_variables.items()))
         all_variables = [{key: value} for key, value in all_variables.items()]
@@ -865,13 +824,21 @@ class BadgerRoutinePage(QWidget):
         if flag_relative:  # load the relative to current settings
             self.ratio_var_ranges = routine.vrange_limit_options
             self.init_table_actions = routine.initial_point_actions
-        self.env_box.relative_to_curr.blockSignals(True)
-        self.env_box.relative_to_curr.setChecked(flag_relative)
-        self.env_box.relative_to_curr.blockSignals(False)
+
+        self.env_box.var_table.set_scan_range_options()
+
+        # self.env_box.relative_to_curr.setChecked(flag_relative)
+
         self.toggle_relative_to_curr(flag_relative, refresh=False)
 
         # Always use ranges stored in routine
-        self.env_box.var_table.set_bounds(routine.vocs.variables, signal=False)
+        self.env_box.var_table.set_bounds(
+            {
+                name: _round_bounds_inward(bounds)
+                for name, bounds in routine.vocs.variables.items()
+            },
+            signal=False,
+        )
 
         # Fill in initial points stored in routine if available
         try:
@@ -891,7 +858,9 @@ class BadgerRoutinePage(QWidget):
 
         objectives = []
         status = {}
-        objectives_names_full = self.configs["observations"] + list(formulas.keys())
+        objectives_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in objectives_names_full:
             obj = {name: ["MINIMIZE"]}
             status[name] = False  # selected
@@ -927,7 +896,9 @@ class BadgerRoutinePage(QWidget):
             formulas = {}
         constraints = []
         status = {}
-        constraints_names_full = self.configs["observations"] + list(formulas.keys())
+        constraints_names_full = list(self.configs["observations"]) + list(
+            formulas.keys()
+        )
         for name in constraints_names_full:
             cons = {name: ["<", 0.0, False]}
             status[name] = False  # selected
@@ -946,14 +917,15 @@ class BadgerRoutinePage(QWidget):
             status[name] = True
 
         # Show selected constraints only
-        self.env_box.check_only_con.blockSignals(True)
-        self.env_box.check_only_con.setChecked(True)
-        self.env_box.check_only_con.blockSignals(False)
+        if any(status.values()):
+            self.env_box.check_only_con.blockSignals(True)
+            self.env_box.check_only_con.setChecked(True)
+            self.env_box.check_only_con.blockSignals(False)
         self.env_box.edit_con.blockSignals(True)
         self.env_box.edit_con.setText("")
         self.env_box.edit_con.blockSignals(False)
         self.env_box.con_table.keyword = ""
-        self.env_box.con_table.show_selected_only = True
+        # self.env_box.con_table.show_selected_only = False
 
         self.env_box.con_table.update_items(constraints, status, formulas)
 
@@ -970,7 +942,7 @@ class BadgerRoutinePage(QWidget):
         observables = []
         status = {}
         observables_names_full = (
-            var_names + self.configs["observations"] + list(formulas.keys())
+            var_names + list(self.configs["observations"]) + list(formulas.keys())
         )
         for name in observables_names_full:
             obs = {name: []}
@@ -986,39 +958,27 @@ class BadgerRoutinePage(QWidget):
                 observables[idx] = {name: []}
             status[name] = True
 
-        # Show selected observables only
-        self.env_box.check_only_sta.blockSignals(True)
-        self.env_box.check_only_sta.setChecked(True)
-        self.env_box.check_only_sta.blockSignals(False)
-        self.env_box.edit_sta.blockSignals(True)
-        self.env_box.edit_sta.setText("")
-        self.env_box.edit_sta.blockSignals(False)
-        self.env_box.sta_table.keyword = ""
-        self.env_box.sta_table.show_selected_only = True
-
-        self.env_box.sta_table.update_items(observables, status, formulas)
-
         # Config the metadata
         self.edit_save.setPlaceholderText(generate_slug(2))
         self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
 
-        self.generator_box.check_use_script.setChecked(not not self.script)
+        # self.generator_box.check_use_script.setChecked(not not self.script)
 
     def set_routine(self, routine: Routine, silent: bool = False):
         self.refresh_ui(routine, silent=silent)
 
     def select_generator(self, i: int):
         logger.info(
-            f"Generator selected: {self.generator_box.cb.itemText(i)} (index={i})"
+            f"Generator selected: {self.env_box.algo_cb.itemText(i)} (index={i})"
         )
         # Reset the script
         self.script = ""
-        self.generator_box.check_use_script.setChecked(False)
+        # self.generator_box.check_use_script.setChecked(False)
 
         if i == -1:
-            self.generator_box.edit.clear()
-            self.generator_box.cb_scaling.setCurrentIndex(-1)
+            self.env_box.edit_algo_params.clear()
+            # self.generator_box.cb_scaling.setCurrentIndex(-1)
             return
 
         name = self.generators[i]
@@ -1038,7 +998,9 @@ class BadgerRoutinePage(QWidget):
             vocs, _ = self.env_box.compose_vocs()
         except Exception:
             vocs = None
-        self.generator_box.edit.set_params_from_generator(name, filtered_config, vocs)
+        self.env_box.edit_algo_params.set_params_from_generator(
+            name, filtered_config, vocs
+        )
 
         # Update the docs
         self.window_docs.update_docs(name, "generator")
@@ -1056,21 +1018,6 @@ class BadgerRoutinePage(QWidget):
                 except IndexError:  # lower bound is the same as upper bound
                     pass
 
-    def toggle_use_script(self):
-        if self.generator_box.check_use_script.isChecked():
-            self.generator_box.btn_edit_script.show()
-            self.generator_box.edit.setDisabled(True)
-            self.refresh_params_generator()
-        else:
-            self.generator_box.btn_edit_script.hide()
-            self.generator_box.edit.setDisabled(False)
-
-    def edit_script(self):
-        logger.info("Editing script for routine.")
-        generator = self.generator_box.cb.currentText()
-        dlg = BadgerEditScriptDialog(self, generator, self.script, self.script_updated)
-        dlg.exec()
-
     def script_updated(self, text):
         logger.info("Script updated.")
         self.script = text
@@ -1078,7 +1025,7 @@ class BadgerRoutinePage(QWidget):
 
     def create_env(self):
         logger.info("Creating environment instance.")
-        env_params = load_config(self.env_box.edit.get_parameters_yaml())
+        env_params = load_config(self.env_box.edit_env_params.get_parameters_yaml())
         try:
             intf_name = self.configs["interface"][0]
         except KeyError:
@@ -1114,14 +1061,14 @@ class BadgerRoutinePage(QWidget):
                 vocs = None
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
-            self.generator_box.edit.set_params_from_generator(
+            self.env_box.edit_algo_params.set_params_from_generator(
                 self.routine.generator.name, params_generator, vocs
             )
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     def select_env(self, i: int):
-        logger.info(f"Environment selected: {self.env_box.cb.itemText(i)} (index={i})")
+        logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1131,16 +1078,13 @@ class BadgerRoutinePage(QWidget):
             self.archive_search.close()
 
         if i == -1:
-            self.env_box.edit.clear()
+            self.env_box.clear_selected_env()
+            self.env_box.edit_env_params.clear()
             self.env_box.edit_var.clear()
             self.env_box.var_table.update_variables(None)
             self.configs = None
             self.env = None
-            self.env_box.btn_add_var.setDisabled(True)
-            self.env_box.btn_lim_vrange.setDisabled(True)
-            self.env_box.btn_refresh.setDisabled(True)
             self.routine = None
-            self.env_box.update_stylesheets()
             return
 
         name: str = self.envs[i]
@@ -1150,27 +1094,29 @@ class BadgerRoutinePage(QWidget):
             self.env = env
             self.env_box.edit_var.clear()
             self.env_box.edit_obj.clear()
-            # self.env_box.btn_add_con.setDisabled(False)
-            self.env_box.btn_add_var.setDisabled(False)
-            self.env_box.btn_lim_vrange.setDisabled(False)
-            self.env_box.btn_refresh.setDisabled(False)
-            if self.generator_box.check_use_script.isChecked():
-                self.refresh_params_generator()
         except Exception:
             self.configs = None
             self.env = None
-            self.env_box.cb.setCurrentIndex(-1)
-            # self.env_box.btn_add_con.setDisabled(True)
-            self.env_box.btn_add_var.setDisabled(True)
-            self.env_box.btn_lim_vrange.setDisabled(True)
+            self.env_box.clear_selected_env()
             self.routine = None
             return QMessageBox.critical(self, "Error!", traceback.format_exc())
 
-        self.env_box.edit.set_params_from_dict(configs["params"])
+        self.env_box.set_selected_env_name(name)
+        self.env_box.edit_env_params.set_params_from_dict(configs["params"])
 
         # Get and save vars to combine with additional vars added on the fly
-        vars_env = self.vars_env = configs["variables"]
+        vars_env = self.vars_env = [
+            {var_name: _round_bounds_inward(bounds)}
+            for var in configs["variables"]
+            for var_name, bounds in var.items()
+        ]
         vars_combine = [*vars_env]
+
+        # Needed for getting bounds and current values on the fly.
+        # Set this before update_variables(), since that call refreshes current values.
+        self.env_box.var_table.env_class, self.env_box.var_table.configs = (
+            self.add_var()
+        )
 
         self.env_box.check_only_var.blockSignals(True)
         self.env_box.check_only_var.setChecked(False)
@@ -1181,11 +1127,7 @@ class BadgerRoutinePage(QWidget):
         # Auto apply the limited variable ranges if the option is set
         if self.env_box.relative_to_curr.isChecked():
             self.set_vrange()
-
-        # Needed for getting bounds on the fly
-        self.env_box.var_table.env_class, self.env_box.var_table.configs = (
-            self.add_var()
-        )
+        self.env_box.var_table.set_scan_range_options()
 
         objectives = []
         status = {}
@@ -1226,7 +1168,7 @@ class BadgerRoutinePage(QWidget):
             var_names = []  # do not show var names in observables until we have a fix to get_observables
         else:
             var_names = []
-        for name in var_names + self.configs["observations"]:
+        for name in var_names + list(self.configs["observations"]):
             obs = {name: []}
             status[name] = False  # selected
             observables.append(obs)
@@ -1238,11 +1180,6 @@ class BadgerRoutinePage(QWidget):
         self.env_box.sta_table.update_items(
             observables, status, formulas={}, vocs_signal=False
         )
-
-        self.env_box.fit_content()
-        # self.routine = None
-
-        self.env_box.update_stylesheets(env.name)
 
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
@@ -1263,6 +1200,9 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         table = self.env_box.init_table
         vname_selected = self.get_init_table_header()
+
+        if not vname_selected:
+            return
 
         try:
             # Get the current variables from the environment
@@ -1301,19 +1241,14 @@ class BadgerRoutinePage(QWidget):
         # Get current point
         env = self.create_env()
         vname_selected = self.get_init_table_header()
+
+        if not vname_selected:
+            return
+
         var_curr = env.get_variables(vname_selected)
 
         # get small region around current point to sample
-        try:
-            vocs, _ = self.env_box.compose_vocs()
-        except Exception:
-            # Switch to manual mode to allow the user fixing the vocs issue
-            QMessageBox.warning(
-                self,
-                "Variable range is not valid!",
-                "Auto mode disabled due to invalid variable range. Please fix it before enabling auto mode.",
-            )
-            return self.env_box.relative_to_curr.setChecked(False)
+        vocs, _ = self.env_box.compose_vocs()
 
         n_point = add_rand_config["n_points"]
         fraction = add_rand_config["fraction"]
@@ -1396,33 +1331,17 @@ class BadgerRoutinePage(QWidget):
             item = QTableWidgetItem("")
             table.setItem(row_position, col, item)
 
-    def open_playground(self):
-        pass
-
     def open_generator_docs(self):
-        name = self.generator_box.cb.currentText()
+        name = self.env_box.algo_cb.currentText()
         self.window_docs.update_docs(name, "generator")
         self.window_docs.show()
 
     def open_environment_docs(self):
         self.window_env_docs.show()
 
-    def open_archive_search(self):
-        if not hasattr(self, "archive_search") or not self.archive_search.isVisible():
-            try:
-                env = self.create_env()
-            except AttributeError:
-                raise BadgerRoutineError("No environment selected!")
-
-            self.archive_search = ArchiveSearchWidget(environment=env)
-            self.archive_search.show()
-        else:
-            self.archive_search.raise_()
-            self.archive_search.activateWindow()
-
     def add_var(self):
         # TODO: Use a cached env
-        env_params = load_config(self.env_box.edit.get_parameters_yaml())
+        env_params = load_config(self.env_box.edit_env_params.get_parameters_yaml())
         try:
             intf_name = self.configs["interface"][0]
         except KeyError:
@@ -1479,6 +1398,7 @@ class BadgerRoutinePage(QWidget):
             )
 
         option_idx = self.limit_option["limit_option_idx"]
+        clipped = {}
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
         if option_idx == 1:
             ratio = self.limit_option["ratio_full"]
@@ -1486,15 +1406,17 @@ class BadgerRoutinePage(QWidget):
                 hard_bounds = vrange[name]
                 delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
         elif option_idx == 2:
             delta = self.limit_option["delta"]
             for i, name in enumerate(vname_selected):
                 hard_bounds = vrange[name]
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
         else:
             ratio = self.limit_option["ratio_curr"]
             for i, name in enumerate(vname_selected):
@@ -1504,11 +1426,12 @@ class BadgerRoutinePage(QWidget):
                     var_curr[name] * (1 - 0.5 * sign * ratio),
                     var_curr[name] * (1 + 0.5 * sign * ratio),
                 ]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
 
         with BlockSignalsContext(self.env_box.var_table):
-            self.env_box.var_table.set_bounds(vrange)
+            self.env_box.var_table.set_bounds(vrange, clipped=clipped)
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 
@@ -1521,6 +1444,7 @@ class BadgerRoutinePage(QWidget):
         # Record the ratio var ranges
         for vname in vname_selected:
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
+        self.env_box.var_table.set_scan_range_options()
 
     def set_ind_vrange(self, vname, config):
         logger.info(
@@ -1544,11 +1468,11 @@ class BadgerRoutinePage(QWidget):
             ratio = option["ratio_full"]
             delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
             bounds = [curr - delta, curr + delta]
-            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         elif option_idx == 2:
             delta = option["delta"]
             bounds = [curr - delta, curr + delta]
-            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         else:
             ratio = option["ratio_curr"]
             sign = np.sign(curr)
@@ -1556,13 +1480,19 @@ class BadgerRoutinePage(QWidget):
                 curr * (1 - 0.5 * sign * ratio),
                 curr * (1 + 0.5 * sign * ratio),
             ]
-            bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+
+        # check if bounds have been clipped, then overwrite
+        is_clipped = bounds != new_bounds
+        bounds = new_bounds
 
         logger.info(
             f"Setting bounds for {vname}: {bounds} (hard bounds: {hard_bounds})"
         )
         # Set the bounds in the table
-        self.env_box.var_table.refresh_variable(vname, bounds, hard_bounds)
+        self.env_box.var_table.refresh_variable(
+            vname, bounds, hard_bounds, is_clipped=is_clipped
+        )
         self.clear_init_table(reset_actions=False)  # clear table after changing ranges
         self.update_init_table()  # auto populate if option is set
 
@@ -1570,10 +1500,67 @@ class BadgerRoutinePage(QWidget):
         self.var_hard_limit[vname] = hard_bounds
         # Record the ratio var ranges
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
+        self.env_box.var_table.set_scan_range_options()
+
+    def adjust_variable_range_options(self, ratio: float, var_name: str = None):
+        """
+        Scale variable ranges by ratio and recalculate bounds
+
+        Parameters
+        ----------
+        ratio : float
+            Ratio applied to each variable's selected range option.
+            Values > 1.0 will increase the range, values < 1.0 will decrease the range
+        var_name: str (optional)
+            If given a variable name, will update only that variable. Otherwise if None updates
+            all selected variables
+        """
+        logger.info(f"Adjusting variable range options by ratio={ratio}")
+
+        variable_names = []
+
+        if var_name:
+            variable_names = [var_name]
+        else:
+            variable_names = [
+                name
+                for name, is_selected in self.env_box.var_table.selected.items()
+                if is_selected
+            ]
+
+        for vname in variable_names:
+            # get copy of selected vrange option
+            option = copy.copy(self.ratio_var_ranges.get(vname, self.limit_option))
+            option_idx = option["limit_option_idx"]
+
+            if option_idx == 1:
+                key = "ratio_full"
+            elif option_idx == 2:
+                key = "delta"
+            else:
+                key = "ratio_curr"
+
+            # update selected option with multiplication by ratio
+            option[key] = option[key] * ratio
+            self.ratio_var_ranges[vname] = option
+
+        # recalculate bounds
+        _bounds, _clipped = self.calc_auto_bounds()
+        # only apply requested bounds updates
+        bounds = {k: v for k, v in _bounds.items() if k in variable_names}
+        clipped = {k: v for k, v in _clipped.items() if k in variable_names}
+        with BlockSignalsContext(self.env_box.var_table):
+            self.env_box.var_table.set_bounds(bounds, clipped=clipped)
+
+        # recalculate initial points
+        self.clear_init_table(reset_actions=False)
+        self.update_init_table()
+        self.env_box.var_table.set_scan_range_options()
 
     def save_limit_option(self, limit_option):
         logger.info(f"Saving limit option: {limit_option}")
         self.limit_option = limit_option
+        self.env_box.var_table.set_scan_range_options()
 
     def add_var_to_list(self, name, lb, ub):
         logger.info(f"Adding variable to list: {name}, lb={lb}, ub={ub}")
@@ -1627,6 +1614,7 @@ class BadgerRoutinePage(QWidget):
 
         env = self.create_env()
         var_curr = env.get_variables(vname_selected)
+        clipped = {}
 
         for name in vname_selected:
             try:
@@ -1641,16 +1629,18 @@ class BadgerRoutinePage(QWidget):
                 hard_bounds = vrange[name]
                 delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
-                logger.info(f"Auto bounds for {name} (full range): {bounds}")
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (full range): {new_bounds}")
             elif option_idx == 2:
                 delta = limit_option["delta"]
                 hard_bounds = vrange[name]
                 bounds = [var_curr[name] - delta, var_curr[name] + delta]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
-                logger.info(f"Auto bounds for {name} (delta): {bounds}")
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (delta): {new_bounds}")
             else:
                 ratio = limit_option["ratio_curr"]
                 hard_bounds = vrange[name]
@@ -1659,11 +1649,12 @@ class BadgerRoutinePage(QWidget):
                     var_curr[name] * (1 - 0.5 * sign * ratio),
                     var_curr[name] * (1 + 0.5 * sign * ratio),
                 ]
-                bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
-                vrange[name] = bounds
-                logger.info(f"Auto bounds for {name} (current ratio): {bounds}")
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (current ratio): {new_bounds}")
 
-        return vrange
+        return vrange, clipped
 
     def toggle_relative_to_curr(self, checked, refresh=True):
         logger.info(f"Toggling relative_to_curr: checked={checked}, refresh={refresh}")
@@ -1672,7 +1663,9 @@ class BadgerRoutinePage(QWidget):
                 _ = self.env_box.compose_vocs()
             except Exception:
                 logger.warning("Variable range is not valid, switching to manual mode.")
-                QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
+                QTimer.singleShot(
+                    0, lambda: self.env_box.relative_to_curr.isChecked()
+                )  # ??
                 QMessageBox.warning(
                     self,
                     "Variable range is not valid!",
@@ -1680,20 +1673,20 @@ class BadgerRoutinePage(QWidget):
                 )
                 return
 
-            self.env_box.switch_var_panel_style(True)
+            # self.env_box.switch_var_panel_style(True)
 
             if refresh and self.env_box.var_table.selected:
                 logger.info("Refreshing auto bounds and initial table.")
-                bounds = self.calc_auto_bounds()
-                self.env_box.var_table.set_bounds(bounds)
+                bounds, clipped = self.calc_auto_bounds()
+                self.env_box.var_table.set_bounds(bounds, clipped=clipped)
                 self.clear_init_table(reset_actions=False)
                 self.try_populate_init_table()
 
-            self.env_box.var_table.lock_bounds()
+            # self.env_box.var_table.lock_bounds()
             self.env_box.init_table.set_uneditable()
         else:
             logger.info("Switching to manual variable range mode.")
-            self.env_box.switch_var_panel_style(False)
+            # self.env_box.switch_var_panel_style(False)
 
             self.env_box.var_table.unlock_bounds()
             self.env_box.init_table.set_editable()
@@ -1701,7 +1694,7 @@ class BadgerRoutinePage(QWidget):
     def refresh_variables(self):
         logger.info("Refreshing variables and bounds.")
         variables = self.env_box.var_table.export_variables()
-        bounds = self.calc_auto_bounds()
+        bounds, clipped = self.calc_auto_bounds()
 
         no_need_to_update = True
         for vname in variables:
@@ -1713,7 +1706,7 @@ class BadgerRoutinePage(QWidget):
             return
 
         logger.info("Updating variable bounds and initial table.")
-        self.env_box.var_table.set_bounds(bounds)
+        self.env_box.var_table.set_bounds(bounds, clipped=clipped)
         self.clear_init_table(reset_actions=False)
         self.try_populate_init_table()
 
@@ -1740,6 +1733,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             try:
                 bounds = env.get_bounds([vname])[vname]
+                bounds = _round_bounds_inward(bounds)
             except BadgerEnvVarError as e:
                 msg = str(e)
                 bounds = eval(msg.split(": ")[1])
@@ -1773,17 +1767,22 @@ class BadgerRoutinePage(QWidget):
         description = self.edit_descr.toPlainText()
 
         # General sanity checks
-        if self.generator_box.cb.currentIndex() == -1:
+        if self.env_box.algo_cb.currentIndex() == -1:
             logger.error("No generator selected.")
             raise BadgerRoutineError("no generator selected")
-        if self.env_box.cb.currentIndex() == -1:
+        env_name = self.env_box.get_selected_env_name()
+        if not env_name:
             logger.error("No environment selected.")
             raise BadgerRoutineError("no environment selected")
+        if env_name not in self.envs:
+            logger.error(f"Environment not found: {env_name}")
+            raise BadgerRoutineError(f"environment not found: {env_name}")
 
         # Generator
-        generator_name = self.generators[self.generator_box.cb.currentIndex()]
-        env_name = self.envs[self.env_box.cb.currentIndex()]
-        generator_params = load_config(self.generator_box.edit.get_parameters_yaml())
+        generator_name = self.generators[self.env_box.algo_cb.currentIndex()]
+        generator_params = load_config(
+            self.env_box.edit_algo_params.get_parameters_yaml()
+        )
         logger.debug(
             f"Generator selected: {generator_name}, params: {generator_params}"
         )
@@ -1812,7 +1811,7 @@ class BadgerRoutinePage(QWidget):
                         turbo_config["center_x"] = None
 
         # Environment
-        env_params = load_config(self.env_box.edit.get_parameters_yaml())
+        env_params = load_config(self.env_box.edit_env_params.get_parameters_yaml())
         logger.debug(f"Environment selected: {env_name}, params: {env_params}")
 
         # VOCS
@@ -1823,13 +1822,9 @@ class BadgerRoutinePage(QWidget):
         if not vocs.variables:
             logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
-
-        NO_OBJECTIVE_GENERATORS = ["bax"]
-
         if not vocs.objectives:
-            if generator_name not in NO_OBJECTIVE_GENERATORS:
-                logger.error("No objectives selected.")
-                raise BadgerRoutineError("no objectives selected")
+            logger.error("No objectives selected.")
+            raise BadgerRoutineError("no objectives selected")
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
@@ -1850,11 +1845,11 @@ class BadgerRoutinePage(QWidget):
             )
 
         # Script that generates generator params
-        if self.generator_box.check_use_script.isChecked():
-            script = self.script
-            logger.debug("Using custom script for generator params.")
-        else:
-            script = None
+        # if self.generator_box.check_use_script.isChecked():
+        #    script = self.script
+        #    logger.debug("Using custom script for generator params.")
+        # else:
+        #    script = None
 
         # Relative to current params
         if self.env_box.relative_to_curr.isChecked():
@@ -1898,7 +1893,7 @@ class BadgerRoutinePage(QWidget):
                 initial_points=init_points_df.astype("double"),
                 critical_constraint_names=critical_constraints,
                 tags=None,
-                script=script,
+                # script=script,
                 relative_to_current=relative_to_current,
                 vrange_limit_options=vrange_limit_options,
                 vrange_hard_limit=vrange_hard_limit,
@@ -1934,18 +1929,3 @@ class BadgerRoutinePage(QWidget):
 
         dlg = BadgerReviewDialog(self, routine)
         dlg.exec()
-
-    def update_description(self):
-        routine = self.routine
-        routine.description = self.edit_descr.toPlainText()
-        try:
-            update_run(routine)
-            # Notify routine list to update
-            self.sig_updated.emit(routine.name, routine.description)
-            QMessageBox.information(
-                self,
-                "Update success!",
-                f"Routine {self.routine.name} description was updated!",
-            )
-        except Exception:
-            return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
