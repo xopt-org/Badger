@@ -68,8 +68,7 @@ from xopt.generators import (
     get_generator_defaults,
     get_generator_dynamic,
 )
-from xopt.utils import get_local_region
-from xopt.vocs import random_inputs
+from xopt.vocs import get_local_region, random_inputs
 
 from badger.archive import update_run
 from badger.environment import instantiate_env
