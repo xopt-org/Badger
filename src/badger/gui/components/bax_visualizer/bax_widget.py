@@ -22,9 +22,8 @@ from badger.utils import BlockSignalsContext
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class GridOptimizePlots:
-    objective: bool = True
+# @dataclass
+# class GridOptimizePlots:
 
 
 @dataclass
@@ -43,11 +42,12 @@ class PathwiseSolenoidAlignmentPlots:
 
 @dataclass()
 class Plot1Parameters:
-    n_grid: int = 50
+    n_grid: int = 20
     n_samples: int = 100
     reference_points: dict[str, float] = field(default_factory=dict)
-    grid_optimize: GridOptimizePlots = field(default_factory=GridOptimizePlots)
-    emittance: EmittancePlots = field(default_factory=EmittancePlots)
+    objective: bool = True
+    # grid_optimize: GridOptimizePlots = field(default_factory=GridOptimizePlots)
+    pathwise_minimize_emittance: EmittancePlots = field(default_factory=EmittancePlots)
     pathwise_solenoid_alignment: PathwiseSolenoidAlignmentPlots = field(
         default_factory=PathwiseSolenoidAlignmentPlots
     )
@@ -180,11 +180,17 @@ class BaxWidget(AnalysisWidget):
 
         # Plotting options checkboxes
         for label, value in [
-            ("Grid Optimize", self.parameters.tab_1.grid_optimize.objective),
-            ("Emittance X", self.parameters.tab_1.emittance.emittance_x),
-            ("Emittance Y", self.parameters.tab_1.emittance.emittance_y),
-            ("Bmag X", self.parameters.tab_1.emittance.bmag_x),
-            ("Bmag Y", self.parameters.tab_1.emittance.bmag_y),
+            ("Grid Optimize", self.parameters.tab_1.objective),
+            (
+                "Emittance X",
+                self.parameters.tab_1.pathwise_minimize_emittance.emittance_x,
+            ),
+            (
+                "Emittance Y",
+                self.parameters.tab_1.pathwise_minimize_emittance.emittance_y,
+            ),
+            ("Bmag X", self.parameters.tab_1.pathwise_minimize_emittance.bmag_x),
+            ("Bmag Y", self.parameters.tab_1.pathwise_minimize_emittance.bmag_y),
             (
                 "Alignment X",
                 self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x,
@@ -247,15 +253,15 @@ class BaxWidget(AnalysisWidget):
         is_checked = checkbox.isChecked()
 
         if label == "Grid Optimize":
-            self.parameters.tab_1.grid_optimize.objective = is_checked
+            self.parameters.tab_1.objective = is_checked
         elif label == "Emittance X":
-            self.parameters.tab_1.emittance.emittance_x = is_checked
+            self.parameters.tab_1.pathwise_minimize_emittance.emittance_x = is_checked
         elif label == "Emittance Y":
-            self.parameters.tab_1.emittance.emittance_y = is_checked
+            self.parameters.tab_1.pathwise_minimize_emittance.emittance_y = is_checked
         elif label == "Bmag X":
-            self.parameters.tab_1.emittance.bmag_x = is_checked
+            self.parameters.tab_1.pathwise_minimize_emittance.bmag_x = is_checked
         elif label == "Bmag Y":
-            self.parameters.tab_1.emittance.bmag_y = is_checked
+            self.parameters.tab_1.pathwise_minimize_emittance.bmag_y = is_checked
         elif label == "Alignment X":
             self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x = (
                 is_checked

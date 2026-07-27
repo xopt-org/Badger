@@ -120,6 +120,8 @@ class ControlsWidget(QWidget):
                 self.grid_optimize_checkbox.setVisible(False)
                 self.emittance_x_checkbox.setVisible(False)
                 self.emittance_y_checkbox.setVisible(False)
+                self.bmag_x_checkbox.setVisible(False)
+                self.bmag_y_checkbox.setVisible(False)
             else:
                 raise ValueError(f"Unsupported algorithm type: {algorithm_type}")
 
@@ -143,11 +145,15 @@ class ControlsWidget(QWidget):
         self.n_grid_spin_box.setValue(tab.n_grid)
         self.n_samples_spin_box.setValue(tab.n_samples)
 
-        self.grid_optimize_checkbox.setChecked(tab.grid_optimize.objective)
-        self.emittance_x_checkbox.setChecked(tab.emittance.emittance_x)
-        self.emittance_y_checkbox.setChecked(tab.emittance.emittance_y)
-        self.bmag_x_checkbox.setChecked(tab.emittance.bmag_x)
-        self.bmag_y_checkbox.setChecked(tab.emittance.bmag_y)
+        self.grid_optimize_checkbox.setChecked(tab.objective)
+        self.emittance_x_checkbox.setChecked(
+            tab.pathwise_minimize_emittance.emittance_x
+        )
+        self.emittance_y_checkbox.setChecked(
+            tab.pathwise_minimize_emittance.emittance_y
+        )
+        self.bmag_x_checkbox.setChecked(tab.pathwise_minimize_emittance.bmag_x)
+        self.bmag_y_checkbox.setChecked(tab.pathwise_minimize_emittance.bmag_y)
         self.alignment_x_checkbox.setChecked(
             tab.pathwise_solenoid_alignment.misalignment_x
         )
@@ -266,7 +272,7 @@ class ControlsWidget(QWidget):
 
         n_samples_label = QLabel("Number of Samples:")
         self.n_samples_spin_box = QSpinBox()
-        self.n_samples_spin_box.setRange(10, 100)
+        self.n_samples_spin_box.setRange(10, 1000)
         self.n_samples_spin_box.setSingleStep(10)
         self.n_samples_spin_box.setValue(self.parameters.tab_1.n_samples)
 
@@ -278,21 +284,23 @@ class ControlsWidget(QWidget):
         # Create checkboxes for optional plots based on the parameters
 
         self.grid_optimize_checkbox = QCheckBox("Show Objective")
-        self.grid_optimize_checkbox.setChecked(
-            self.parameters.tab_1.grid_optimize.objective
-        )
+        self.grid_optimize_checkbox.setChecked(self.parameters.tab_1.objective)
         self.emittance_x_checkbox = QCheckBox("Show Emittance X")
         self.emittance_x_checkbox.setChecked(
-            self.parameters.tab_1.emittance.emittance_x
+            self.parameters.tab_1.pathwise_minimize_emittance.emittance_x
         )
         self.emittance_y_checkbox = QCheckBox("Show Emittance Y")
         self.emittance_y_checkbox.setChecked(
-            self.parameters.tab_1.emittance.emittance_y
+            self.parameters.tab_1.pathwise_minimize_emittance.emittance_y
         )
         self.bmag_x_checkbox = QCheckBox("Show Bmag X")
-        self.bmag_x_checkbox.setChecked(self.parameters.tab_1.emittance.bmag_x)
+        self.bmag_x_checkbox.setChecked(
+            self.parameters.tab_1.pathwise_minimize_emittance.bmag_x
+        )
         self.bmag_y_checkbox = QCheckBox("Show Bmag Y")
-        self.bmag_y_checkbox.setChecked(self.parameters.tab_1.emittance.bmag_y)
+        self.bmag_y_checkbox.setChecked(
+            self.parameters.tab_1.pathwise_minimize_emittance.bmag_y
+        )
         self.alignment_x_checkbox = QCheckBox("Show Alignment X")
         self.alignment_x_checkbox.setChecked(
             self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x

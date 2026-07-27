@@ -30,7 +30,7 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, PydanticUndefinedType
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -53,6 +53,7 @@ from xopt.generators.bayesian.bax.algorithms import Algorithm
 from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
+from torch import Tensor
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
 
@@ -321,7 +322,10 @@ class BadgerResolvedType:
                 )
 
             if editor_info is not None:
-                widget.valueChanged.connect(lambda: handle_changed(editor_info))
+                # Validate on ``editingFinished`` (focus loss / Enter) rather than
+                # ``valueChanged``: rebuilding the tree on every value change would
+                # destroy this spinbox mid-edit and drop the cursor.
+                widget.editingFinished.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is int:
             widget = QSpinBox()
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
@@ -337,7 +341,10 @@ class BadgerResolvedType:
                 )
 
             if editor_info is not None:
-                widget.valueChanged.connect(lambda: handle_changed(editor_info))
+                # Validate on ``editingFinished`` (focus loss / Enter) rather than
+                # ``valueChanged``: rebuilding the tree on every value change would
+                # destroy this spinbox mid-edit and drop the cursor.
+                widget.editingFinished.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is bool:
             widget = QCheckBox()
             if default is not None and not isinstance(default, PydanticUndefinedType):
@@ -356,11 +363,23 @@ class BadgerResolvedType:
             widget = QLineEdit()
             if default is None:
                 widget.setText("null")
+            elif isinstance(default, Tensor):
+                # Tensor-typed fields (e.g. ``Tensor | None``) resolve to a bare
+                # union here, so they land in this catch-all. Render them as a plain
+                # nested list string (e.g. "[[1.0, 1.0], [0.0, 1.0]]") rather than
+                # the "tensor(...)" repr, so the value round-trips cleanly through
+                # the model's field validator.
+                widget.setText(str(default.tolist()))
             else:
                 widget.setText(str(default))
 
             if editor_info is not None:
-                widget.textChanged.connect(lambda: handle_changed(editor_info))
+                # Validate on ``editingFinished`` (focus loss / Enter) rather than
+                # ``textChanged``. ``handle_changed`` rebuilds the whole tree, which
+                # destroys and recreates this very QLineEdit; doing that on every
+                # keystroke kills the text cursor and makes the view jump. Waiting
+                # until the user is done editing keeps the cursor active while typing.
+                widget.editingFinished.connect(lambda: handle_changed(editor_info))
 
         widget.setProperty("badger_nullable", resolved_type.nullable)
         return widget
@@ -1166,6 +1185,12 @@ class BadgerPydanticEditor(QTreeWidget):
         if model_class is None:
             return
 
+        # Rebuilding the tree resets the scrollbars, making the view jump back
+        # to the top on every edit. Capture the current scroll positions so we
+        # can restore them once the tree has been repopulated.
+        h_scroll = self.horizontalScrollBar().value()
+        v_scroll = self.verticalScrollBar().value()
+
         self.clear()
 
         fields_to_remove = ["vocs"]
@@ -1199,6 +1224,15 @@ class BadgerPydanticEditor(QTreeWidget):
 
         # Update parameters with defaults from generator class
         self.set_params_post_setup(defaults)
+
+        # Restore the scroll positions captured before the rebuild. Defer to the
+        # next event-loop iteration so the restore runs after the tree has laid
+        # out its (re)created items and updated the scrollbar ranges.
+        def restore_scroll() -> None:
+            self.horizontalScrollBar().setValue(h_scroll)
+            self.verticalScrollBar().setValue(v_scroll)
+
+        QTimer.singleShot(0, restore_scroll)
 
         if self.update_callback is not None:
             self.update_callback(self)

@@ -61,19 +61,19 @@ class PlottingWidget(QWidget):
     def get_plot_results_keys(self) -> list[str]:
         algorithm_type = self.generator.algorithm.name
         if algorithm_type == "grid_optimize":
-            plot_options_dict = {
-                "objective": self.parameters.tab_1.grid_optimize.objective
-            }
+            plot_options_dict = {"objective": self.parameters.tab_1.objective}
 
-        elif algorithm_type == "emittance":
+        elif algorithm_type == "pathwise_minimize_emittance":
             plot_options_dict = {
-                "emittance_x": self.parameters.tab_1.emittance.emittance_x,
-                "emittance_y": self.parameters.tab_1.emittance.emittance_y,
-                "bmag_x": self.parameters.tab_1.emittance.bmag_x,
-                "bmag_y": self.parameters.tab_1.emittance.bmag_y,
+                "objective": self.parameters.tab_1.objective,
+                "emittance_x": self.parameters.tab_1.pathwise_minimize_emittance.emittance_x,
+                "emittance_y": self.parameters.tab_1.pathwise_minimize_emittance.emittance_y,
+                "bmag_x": self.parameters.tab_1.pathwise_minimize_emittance.bmag_x,
+                "bmag_y": self.parameters.tab_1.pathwise_minimize_emittance.bmag_y,
             }
         elif algorithm_type == "pathwise_solenoid_alignment":
             plot_options_dict = {
+                "objective": self.parameters.tab_1.objective,
                 "misalignment_x": self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_x,
                 "misalignment_y": self.parameters.tab_1.pathwise_solenoid_alignment.misalignment_y,
             }

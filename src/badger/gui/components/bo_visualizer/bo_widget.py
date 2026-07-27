@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from xopt.generator import Generator
+from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.vocs import select_best
 
@@ -84,11 +85,7 @@ class BOPlotWidget(AnalysisWidget):
                 ValueError,
                 "BO Visualizer requires at least one variable in the VOCS",
             )
-        if len(routine.vocs.objective_names) < 1:
-            raise HandledException(
-                ValueError,
-                "BO Visualizer requires at least one objective in the VOCS",
-            )
+
         if not isinstance(routine.generator, BayesianGenerator):
             raise HandledException(
                 ValueError,
@@ -217,6 +214,7 @@ class BOPlotWidget(AnalysisWidget):
         self.update_extension(self.routine, True)
 
     def on_set_best_reference_point_clicked(self) -> None:
+
         logger.debug("Setting best reference points")
         try:
             self.set_best_reference_points()
@@ -489,6 +487,13 @@ class BOPlotWidget(AnalysisWidget):
 
     def update_routine(self, routine: Routine, generator_type: type[Generator]) -> None:
         super().update_routine(routine, generator_type)
+
+        # The BAX generator has no objective, so "Set Best" (which relies on
+        # select_best over an objective) would fail. Disable the button for
+        # BAX routines and re-enable it for regular Bayesian ones.
+        self.ui_components.set_best_reference_point_button.setEnabled(
+            not isinstance(self.generator, BaxGenerator)
+        )
 
         # Handle the edge case where the extension has been opened after an optimization has already finished.
         if self.generator.model is None:
