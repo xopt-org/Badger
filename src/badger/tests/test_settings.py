@@ -107,9 +107,15 @@ class TestBadgerConfig:
             with patch(
                 "badger.settings.ConfigSingleton", return_value=mock_config_singleton
             ) as mock_config_cls:
-                config_singleton = init_settings()
+                with patch(
+                    "badger.settings.get_or_create_temp_directory"
+                ) as mock_get_or_create_temp_directory:
+                    config_singleton = init_settings()
                 mock_config_cls.assert_called_once_with(
                     "/mock/config/folder/config.yaml", False
+                )
+                mock_get_or_create_temp_directory.assert_called_once_with(
+                    mock_config_singleton
                 )
                 assert config_singleton == mock_config_singleton
 
