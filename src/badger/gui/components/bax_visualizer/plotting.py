@@ -175,7 +175,7 @@ class PlottingWidget(QWidget):
         try:
             fig, _ = self.create_first_plot()
             content = self._build_plot_widget(fig, add_stretch=True)
-            self.plot_tab_widget.addTab(self._scrollable(content), "FirstPlot")
+            self.plot_tab_widget.addTab(self._scrollable(content), "Virtual Objective")
             plt.close(fig)
         except Exception as e:
             logger.error(f"Error creating plot: {e}")
@@ -196,7 +196,7 @@ class PlottingWidget(QWidget):
         # Keep the plots top-aligned at their natural height; the scroll area
         # handles the case where their combined height exceeds the viewport.
         layout.addStretch(1)
-        self.plot_tab_widget.addTab(self._scrollable(content), "SecondPlot")
+        self.plot_tab_widget.addTab(self._scrollable(content), "Convergence")
 
     def update_tab_widget(self) -> None:
         with BlockSignalsContext(self.plot_tab_widget):
