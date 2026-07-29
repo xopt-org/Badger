@@ -112,7 +112,7 @@ class ControlsWidget(QWidget):
                 self.bmag_y_checkbox.setVisible(False)
                 self.alignment_x_checkbox.setVisible(False)
                 self.alignment_y_checkbox.setVisible(False)
-            elif algorithm_type == "emittance":
+            elif algorithm_type == "pathwise_minimize_emittance":
                 self.grid_optimize_checkbox.setVisible(False)
                 self.alignment_x_checkbox.setVisible(False)
                 self.alignment_y_checkbox.setVisible(False)
