@@ -161,14 +161,26 @@ will be clipped by the variable range."""
         vbox_bounds = QVBoxLayout(bounds_config)
         vbox_bounds.setContentsMargins(0, 0, 0, 0)
 
+        # Get hard limits (full variable range)
+        hard_lower = float(self.configs.get("lower_bound", -1e10))
+        hard_upper = float(self.configs.get("upper_bound", 1e10))
+
+        # Get exact bounds if previously set
+        if "exact_bounds" not in self.configs:
+            self.configs["exact_bounds"] = self.configs.get(
+                "current_bounds", [hard_lower, hard_upper]
+            )
+        exact_bounds = self.configs["exact_bounds"]
+
         hbox_bounds_lower = QHBoxLayout()
         hbox_bounds_lower.setContentsMargins(0, 0, 0, 0)
         lbl_lower = QLabel("Lower")
         self.sb_bounds_lower = sb_bounds_lower = QDoubleSpinBox()
-        sb_bounds_lower.setMinimum(float(self.configs.get("hard_lower_bound", -1e14)))
-        sb_bounds_lower.setMaximum(float(self.configs.get("hard_upper_bound", 1e14)))
+        sb_bounds_lower.setMinimum(hard_lower)
+        sb_bounds_lower.setMaximum(hard_upper)
         sb_bounds_lower.setDecimals(6)
-        sb_bounds_lower.setValue(float(self.configs.get("lower_bound", 0.0)))
+        sb_bounds_lower.setSingleStep((hard_upper - hard_lower) / 20)
+        sb_bounds_lower.setValue(exact_bounds[0])
         hbox_bounds_lower.addWidget(lbl_lower)
         hbox_bounds_lower.addWidget(sb_bounds_lower, 1)
 
@@ -176,10 +188,11 @@ will be clipped by the variable range."""
         hbox_bounds_upper.setContentsMargins(0, 0, 0, 0)
         lbl_upper = QLabel("Upper")
         self.sb_bounds_upper = sb_bounds_upper = QDoubleSpinBox()
-        sb_bounds_upper.setMinimum(float(self.configs.get("hard_lower_bound", -1e14)))
-        sb_bounds_upper.setMaximum(float(self.configs.get("hard_upper_bound", 1e14)))
+        sb_bounds_upper.setMinimum(hard_lower)
+        sb_bounds_upper.setMaximum(hard_upper)
         sb_bounds_upper.setDecimals(6)
-        sb_bounds_upper.setValue(float(self.configs.get("upper_bound", 0.0)))
+        sb_bounds_upper.setSingleStep((hard_upper - hard_lower) / 20)
+        sb_bounds_upper.setValue(exact_bounds[1])
         hbox_bounds_upper.addWidget(lbl_upper)
         hbox_bounds_upper.addWidget(sb_bounds_upper, 1)
 
@@ -270,7 +283,7 @@ will be clipped by the variable range."""
                 curr * (1 - 0.5 * sign * ratio),
                 curr * (1 + 0.5 * sign * ratio),
             ]
-        if option_idx == 1:
+        elif option_idx == 1:
             ratio = self.sb_ratio_full.value()
             delta = 0.5 * ratio * (hard_upper - hard_lower)
             bounds = [curr - delta, curr + delta]
@@ -278,12 +291,6 @@ will be clipped by the variable range."""
             delta = self.sb_delta.value()
             bounds = [curr - delta, curr + delta]
         else:
-            hard_lower = float(
-                self.configs.get("hard_lower_bound", self.sb_bounds_lower.value())
-            )
-            hard_upper = float(
-                self.configs.get("hard_upper_bound", self.sb_bounds_upper.value())
-            )
             bounds = [
                 float(self.sb_bounds_lower.value()),
                 float(self.sb_bounds_upper.value()),
@@ -307,10 +314,6 @@ will be clipped by the variable range."""
 
     def update_config(self):
         try:
-            # lower = float(self.lbl_hard_lower.text())
-            # upper = float(self.lbl_hard_upper.text())
-            # self.configs["lower_bound"] = lower
-            # self.configs["upper_bound"] = upper
             # Fill in default values if not exist
             if "limit_option_idx" not in self.configs:
                 self.configs["limit_option_idx"] = self.cb.currentIndex()
@@ -320,11 +323,10 @@ will be clipped by the variable range."""
                 self.configs["ratio_full"] = self.sb_ratio_full.value()
             if "delta" not in self.configs:
                 self.configs["delta"] = self.sb_delta.value()
-
             lower = float(self.sb_bounds_lower.value())
             upper = float(self.sb_bounds_upper.value())
-            self.configs["lower_bound"] = min(lower, upper)
-            self.configs["upper_bound"] = max(lower, upper)
+            # Keep exact bounds ordered to avoid invalid [lower, upper] ranges.
+            self.configs["exact_bounds"] = [min(lower, upper), max(lower, upper)]
         except ValueError:
             pass  # Optionally handle invalid input
 
@@ -341,11 +343,11 @@ will be clipped by the variable range."""
         self.update_bounds_preview()
 
     def bounds_lower_changed(self, lower):
-        self.configs["lower_bound"] = lower
+        self.configs["exact_bounds"][0] = lower
         self.update_bounds_preview()
 
     def bounds_upper_changed(self, upper):
-        self.configs["upper_bound"] = upper
+        self.configs["exact_bounds"][1] = upper
         self.update_bounds_preview()
 
     def set(self):
