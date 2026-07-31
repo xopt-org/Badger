@@ -27,7 +27,7 @@ dependencies = [
     "qdarkstyle>=3.0",
     "pillow",
     "requests",
-    "xopt>=3.0.0",
+    "xopt>=3.2.1",
     "bax-algorithms",
 
 ]
@@ -49,9 +49,9 @@ badger = "badger.__main__:main"
 [project.license]
 file = "LICENSE"
 
-[options]
-zip_safe = false
-include_package_data = true
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -63,7 +63,7 @@ extend-select = ["TID252"] # Defaults + check imports
 ignore = ["E722"]          # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
-addopts = "--cov=badger/"
-log_cli_level = "info"
-log_level = "debug"
+addopts = "--cov=badger"
+log_cli_level = "INFO"
+log_level = "DEBUG"
 testpaths = ["src/badger/tests"]
