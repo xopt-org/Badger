@@ -59,9 +59,9 @@ def show_info(args):
         "logbook root": BADGER_LOGBOOK_ROOT,
         "archive root": BADGER_ARCHIVE_ROOT,
         "logging directory": BADGER_LOG_DIRECTORY,
+        "temporary directory": BADGER_TEMP_DIRECTORY,
         "logging level": BADGER_LOG_LEVEL,
         "pytorch tensor sharing strategy": BADGER_TENSOR_STRATEGY,
-        "temporary directory": BADGER_TEMP_DIRECTORY,
         # 'plugin installation url': read_value('BADGER_PLUGINS_URL')
     }
 
