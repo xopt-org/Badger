@@ -1186,7 +1186,8 @@ class BadgerRoutinePage(QWidget):
 
         self.check_for_nan_vars()
 
-    def check_for_nan_vars(self):
+    def check_for_nan_vars(self) -> None:
+        """Check whether any var_table values are NaN and raise error to notify user"""
         current_values = self.env_box.var_table.current_values
         nan_value_keys = [
             key
@@ -1195,8 +1196,7 @@ class BadgerRoutinePage(QWidget):
         ]
         if len(nan_value_keys):
             raise BadgerEnvVarError(
-                "Failed to get values for the following variables:\n"
-                + f"{nan_value_keys}"
+                f"Failed to get values for the following variables:\n{nan_value_keys}"
             )
 
     def get_init_table_header(self):
