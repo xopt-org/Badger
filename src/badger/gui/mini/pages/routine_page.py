@@ -8,7 +8,6 @@ to run. It also supports the reverse path (refresh_ui/set_routine) to load
 an existing Routine back into the form.
 """
 
-import math
 from typing import Any
 import warnings
 import traceback
@@ -1190,11 +1189,13 @@ class BadgerRoutinePage(QWidget):
     def check_for_nan_vars(self):
         current_values = self.env_box.var_table.current_values
         nan_value_keys = [
-            key for key in current_values if math.isnan(current_values[key])
+            key
+            for key, value in current_values.items()
+            if isinstance(value, (float, np.floating)) and np.isnan(value)
         ]
         if len(nan_value_keys):
             raise BadgerEnvVarError(
-                "Failed to connect or get values for the following variables:\n"
+                "Failed to get values for the following variables:\n"
                 + f"{nan_value_keys}"
             )
 
