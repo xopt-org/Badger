@@ -422,22 +422,7 @@ def list_generators() -> list[str]:
     generator_names = list(generators.keys())
     # Filter the names
     generator_names = [n for n in generator_names if n not in ALGO_EXCLUDED]
-    return _custom_generator_order(generator_names)
-
-
-def _custom_generator_order(gen_names: list[str]) -> list[str]:
-    c_list = gen_names.copy()
-
-    # Sort the list alphabetically
-    c_list = sorted(c_list, key=lambda x: x.lower())
-
-    # Move generators to the front of the list
-    for custom_gen in ["neldermead"]:
-        if custom_gen in c_list:
-            c_list.remove(custom_gen)
-            c_list.insert(0, custom_gen)
-
-    return c_list
+    return sorted(generator_names)
 
 
 get_generator = get_generator_defaults

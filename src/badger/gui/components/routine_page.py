@@ -157,11 +157,11 @@ class BadgerRoutinePage(QWidget):
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info("Initializing BadgerRoutinePage.")
         super().__init__()
 
-        self.generators = list_generators()
+        self.generators = self._custom_order_generators(list_generators())
         self.envs = list_env()
         self.env = None
         self.routine = None
@@ -745,11 +745,11 @@ class BadgerRoutinePage(QWidget):
             logger.error(f"Error saving template: {e}")
             return
 
-    def refresh_ui(self, routine: Routine | None = None, silent: bool = False):
+    def refresh_ui(self, routine: Routine | None = None, silent: bool = False) -> None:
         logger.info(
             f"Refreshing UI for routine: {getattr(routine, 'name', None)} (silent={silent})"
         )
-        self.generators = list_generators()
+        self.generators = self._custom_order_generators(list_generators())
         self.envs = list_env()
 
         if routine is None:
@@ -1948,3 +1948,17 @@ class BadgerRoutinePage(QWidget):
             )
         except Exception:
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
+
+    def _custom_order_generators(self, generator_names: list[str]) -> list[str]:
+        c_list = generator_names.copy()
+
+        # Sort the list alphabetically
+        c_list = sorted(c_list, key=lambda x: x.lower())
+
+        # Move generators to the front of the list
+        for custom_gen in ["neldermead"]:
+            if custom_gen in c_list:
+                c_list.remove(custom_gen)
+                c_list.insert(0, custom_gen)
+
+        return c_list
