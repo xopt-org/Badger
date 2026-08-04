@@ -1187,18 +1187,13 @@ class BadgerRoutinePage(QWidget):
         self.check_for_nan_vars()
 
     def check_for_nan_vars(self) -> None:
-        """Check whether any var_table values are NaN and raise error to notify user"""
-        current_values = self.env_box.var_table.current_values
-        nan_value_keys = [
-            key
-            for key, value in current_values.items()
-            if isinstance(value, (float, np.floating)) and np.isnan(value)
-        ]
+        """Show a warning popup to notify user if any var_table values are NaN"""
+        nan_value_keys = self.env_box.get_nan_vars()
         if nan_value_keys:
             nan_vars = "\n".join(f" -  {key}" for key in nan_value_keys)
             QMessageBox.warning(
                 self,
-                "Unable to connect to some variables",
+                "Variables with invalid values",
                 f"Failed to get values for the following variables:\n{nan_vars}",
             )
 
