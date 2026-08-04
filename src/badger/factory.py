@@ -44,7 +44,6 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "nsga2",
-    # "bax",
 ]
 
 
@@ -413,7 +412,7 @@ def get_env(name: str):
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 
-def list_generators():
+def list_generators() -> list[str]:
     try:
         from xopt.generators import try_load_all_generators
 
@@ -423,7 +422,22 @@ def list_generators():
     generator_names = list(generators.keys())
     # Filter the names
     generator_names = [n for n in generator_names if n not in ALGO_EXCLUDED]
-    return sorted(generator_names)
+    return _custom_generator_order(generator_names)
+
+
+def _custom_generator_order(gen_names: list[str]) -> list[str]:
+    c_list = gen_names.copy()
+
+    # Sort the list alphabetically
+    c_list = sorted(c_list, key=lambda x: x.lower())
+
+    # Move generators to the front of the list
+    for custom_gen in ["neldermead"]:
+        if custom_gen in c_list:
+            c_list.remove(custom_gen)
+            c_list.insert(0, custom_gen)
+
+    return c_list
 
 
 get_generator = get_generator_defaults
