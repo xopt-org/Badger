@@ -1194,9 +1194,12 @@ class BadgerRoutinePage(QWidget):
             for key, value in current_values.items()
             if isinstance(value, (float, np.floating)) and np.isnan(value)
         ]
-        if len(nan_value_keys):
-            raise BadgerEnvVarError(
-                f"Failed to get values for the following variables:\n{nan_value_keys}"
+        if nan_value_keys:
+            nan_vars = "\n".join(f" -  {key}" for key in nan_value_keys)
+            QMessageBox.warning(
+                self,
+                "Unable to connect to some variables",
+                f"Failed to get values for the following variables:\n{nan_vars}",
             )
 
     def get_init_table_header(self):
