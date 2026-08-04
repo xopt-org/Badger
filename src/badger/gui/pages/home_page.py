@@ -303,7 +303,7 @@ class BadgerHomePage(QWidget):
     def init_home_page(self) -> None:
         logger.info("Initializing home page.")
         # Load the default generator
-        self.routine_editor.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.set_default_generator("neldermead")
 
     def go_run(self, i: int = None) -> None:
         logger.info(f"Activating run: {i}")

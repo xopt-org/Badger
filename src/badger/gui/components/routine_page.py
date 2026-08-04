@@ -161,7 +161,7 @@ class BadgerRoutinePage(QWidget):
         logger.info("Initializing BadgerRoutinePage.")
         super().__init__()
 
-        self.generators = self._custom_order_generators(list_generators())
+        self.generators = list_generators()
         self.envs = list_env()
         self.env = None
         self.routine = None
@@ -749,7 +749,7 @@ class BadgerRoutinePage(QWidget):
         logger.info(
             f"Refreshing UI for routine: {getattr(routine, 'name', None)} (silent={silent})"
         )
-        self.generators = self._custom_order_generators(list_generators())
+        self.generators = list_generators()
         self.envs = list_env()
 
         if routine is None:
@@ -1949,16 +1949,20 @@ class BadgerRoutinePage(QWidget):
         except Exception:
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
 
-    def _custom_order_generators(self, generator_names: list[str]) -> list[str]:
-        c_list = generator_names.copy()
+    def set_default_generator(self, generator_name: str) -> None:
+        """
+        Set the default generator for the routine page.
 
-        # Sort the list alphabetically
-        c_list = sorted(c_list, key=lambda x: x.lower())
+        Parameters
+        ----------
+        generator_name : str
+            The name of the generator to set as default.
+        """
+        if generator_name not in self.generators:
+            logger.error(
+                f"Generator {generator_name} not found in available generators."
+            )
+            raise ValueError(f"Generator {generator_name} not found.")
 
-        # Move generators to the front of the list
-        for custom_gen in ["neldermead"]:
-            if custom_gen in c_list:
-                c_list.remove(custom_gen)
-                c_list.insert(0, custom_gen)
-
-        return c_list
+        index = self.generators.index(generator_name)
+        self.generator_box.cb.setCurrentIndex(index)
