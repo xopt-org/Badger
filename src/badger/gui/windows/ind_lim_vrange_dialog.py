@@ -48,6 +48,7 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         info_group = QFrame()
         vbox_info = QVBoxLayout(info_group)
         vbox_info.setContentsMargins(2, 2, 2, 2)
+        vbox_info.setSpacing(2)
 
         # Current value row
         hbox_current = QHBoxLayout()
@@ -68,6 +69,22 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
 
         # Add the rows to the info group
         vbox_info.addLayout(hbox_current)
+
+        if "current_bounds" in self.configs:
+            # Display current bounds
+            hbox_bounds = QHBoxLayout()
+            hbox_bounds.setContentsMargins(0, 0, 0, 0)
+            lbl_bounds = QLabel("Current bounds:")
+            lbl_bounds.setFixedWidth(128)
+            current_bounds = self.configs["current_bounds"]
+            bounds_text = f"[{current_bounds[0]:.5f}, {current_bounds[1]:.5f}]"
+            lbl_current_bounds = QLabel(bounds_text)
+            lbl_current_bounds.setStyleSheet("color: #788D9C;")
+            hbox_bounds.addWidget(lbl_bounds)
+            hbox_bounds.addStretch()
+            hbox_bounds.addWidget(lbl_current_bounds)
+            hbox_bounds.addSpacing(8)
+            vbox_info.addLayout(hbox_bounds)
 
         # Add the info group to the main layout
         vbox.addWidget(info_group)
