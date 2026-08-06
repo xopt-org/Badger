@@ -182,12 +182,14 @@ will be clipped by the variable range."""
         hard_lower = float(self.configs.get("lower_bound", -1e10))
         hard_upper = float(self.configs.get("upper_bound", 1e10))
 
-        # Get exact bounds if previously set
-        if "exact_bounds" not in self.configs:
-            self.configs["exact_bounds"] = self.configs.get(
-                "current_bounds", [hard_lower, hard_upper]
+        # Get exact bounds from configs, or use current or hard bounds if not specified.
+        exact_bounds = list(
+            self.configs.get(
+                "exact_bounds",
+                self.configs.get("current_bounds", [hard_lower, hard_upper]),
             )
-        exact_bounds = self.configs["exact_bounds"]
+        )
+        self.configs["exact_bounds"] = exact_bounds
 
         hbox_bounds_lower = QHBoxLayout()
         hbox_bounds_lower.setContentsMargins(0, 0, 0, 0)
@@ -196,7 +198,7 @@ will be clipped by the variable range."""
         sb_bounds_lower.setMinimum(hard_lower)
         sb_bounds_lower.setMaximum(hard_upper)
         sb_bounds_lower.setDecimals(6)
-        sb_bounds_lower.setSingleStep((hard_upper - hard_lower) / 20)
+        sb_bounds_lower.setSingleStep((hard_upper - hard_lower) / 50)
         sb_bounds_lower.setValue(exact_bounds[0])
         hbox_bounds_lower.addWidget(lbl_lower)
         hbox_bounds_lower.addWidget(sb_bounds_lower, 1)
@@ -208,7 +210,7 @@ will be clipped by the variable range."""
         sb_bounds_upper.setMinimum(hard_lower)
         sb_bounds_upper.setMaximum(hard_upper)
         sb_bounds_upper.setDecimals(6)
-        sb_bounds_upper.setSingleStep((hard_upper - hard_lower) / 20)
+        sb_bounds_upper.setSingleStep((hard_upper - hard_lower) / 50)
         sb_bounds_upper.setValue(exact_bounds[1])
         hbox_bounds_upper.addWidget(lbl_upper)
         hbox_bounds_upper.addWidget(sb_bounds_upper, 1)

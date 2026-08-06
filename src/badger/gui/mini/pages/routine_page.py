@@ -1771,6 +1771,7 @@ class BadgerRoutinePage(QWidget):
 
         current_bounds = self.env_box.var_table.bounds.get(vname, bounds)
         if current_bounds is None or len(current_bounds) != 2:
+            # default to env bounds if bounds not set
             current_bounds = bounds
 
         configs = {
