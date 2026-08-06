@@ -283,6 +283,18 @@ class BadgerHomePage(QWidget):
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 
+        self._configure_default_run_action()
+
+    def _configure_default_run_action(self):
+        """Set the default run action as run_until_action"""
+        self.run_action_bar.btn_stop.setDefaultAction(
+            self.run_action_bar.run_until_action
+        )
+        # configure default to max_eval (tc_idx=0), 50 iterations
+        self.run_monitor.save_termination_condition(
+            {"tc_idx": 0, "max_eval": 50, "max_time": 300, "ftol": 0}
+        )
+
     def update_saved_values_from_monitor(self):
         """
         Sync Saved column values to match run monitor reset_env targets.
