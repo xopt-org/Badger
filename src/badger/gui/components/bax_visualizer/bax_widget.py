@@ -1,4 +1,11 @@
-"""Widget that hosts the BAX visualizer extension within the Badger GUI."""
+"""Widget that hosts the BAX visualizer extension within the Badger GUI.
+
+BAX (Bayesian Algorithm Execution) runs a virtual algorithm on samples drawn
+from the generator's Gaussian-process model to decide where to measure next.
+This widget visualizes that process, plotting the model's predictions and the
+sampled algorithm executions so the user can see what BAX infers about the
+target quantity (e.g. emittance or solenoid alignment) as the run progresses.
+"""
 
 import logging
 import time
@@ -20,10 +27,6 @@ from badger.routine import Routine
 from badger.utils import BlockSignalsContext
 
 logger = logging.getLogger(__name__)
-
-
-# @dataclass
-# class GridOptimizePlots:
 
 
 @dataclass
