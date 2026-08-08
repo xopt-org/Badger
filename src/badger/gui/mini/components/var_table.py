@@ -233,9 +233,7 @@ class ScanRangeCell(QWidget):
             upper_delta = abs(upper - value)
             delta = max(lower_delta, upper_delta)
 
-        self.line_edit = QLineEdit(
-            f"±{delta:.3f}{'*' if is_clipped else ''}"
-        )
+        self.line_edit = QLineEdit(f"±{delta:.3f}{'*' if is_clipped else ''}")
         self.line_edit.setReadOnly(True)
         self.line_edit.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
