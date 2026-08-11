@@ -39,6 +39,7 @@ from gest_api.vocs import (
     LessThanConstraint,
     MaximizeObjective,
     MinimizeObjective,
+    ContinuousVariable,
 )
 
 from pydantic import ValidationError
@@ -1456,6 +1457,7 @@ class BadgerRoutinePage(QWidget):
             "ratio_full": config["ratio_full"],
             "ratio_curr": config["ratio_curr"],
             "delta": config["delta"],
+            "exact_bounds": config["exact_bounds"],
         }
 
         option_idx = option["limit_option_idx"]
@@ -1463,17 +1465,24 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         curr = env.get_variables([vname])[vname]
 
-        # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
+        # set bounds based on selected option
         if option_idx == 1:
+            # ratio with full range
             ratio = option["ratio_full"]
             delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
             bounds = [curr - delta, curr + delta]
             new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         elif option_idx == 2:
+            # delta around current value
             delta = option["delta"]
             bounds = [curr - delta, curr + delta]
             new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+        elif option_idx == 3:
+            # set exact bounds
+            bounds = option.get("exact_bounds", hard_bounds)
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         else:
+            # ratio around current value
             ratio = option["ratio_curr"]
             sign = np.sign(curr)
             bounds = [
@@ -1532,16 +1541,25 @@ class BadgerRoutinePage(QWidget):
             # get copy of selected vrange option
             option = copy.copy(self.ratio_var_ranges.get(vname, self.limit_option))
             option_idx = option["limit_option_idx"]
-
-            if option_idx == 1:
-                key = "ratio_full"
-            elif option_idx == 2:
-                key = "delta"
+            if option_idx == 3:
+                # exact bounds: scale span by ratio around the current center.
+                exact_bounds = list(option.get("exact_bounds", [0.0, 0.0]))
+                lo, hi = sorted(exact_bounds)
+                center = 0.5 * (lo + hi)
+                half_span = 0.5 * (hi - lo) * ratio
+                option["exact_bounds"] = [center - half_span, center + half_span]
             else:
-                key = "ratio_curr"
+                # relative bounds options
+                if option_idx == 1:
+                    key = "ratio_full"
+                elif option_idx == 2:
+                    key = "delta"
+                else:
+                    key = "ratio_curr"
 
-            # update selected option with multiplication by ratio
-            option[key] = option[key] * ratio
+                # update selected option with multiplication by ratio
+                option[key] = option[key] * ratio
+
             self.ratio_var_ranges[vname] = option
 
         # recalculate bounds
@@ -1623,7 +1641,7 @@ class BadgerRoutinePage(QWidget):
                 limit_option = self.limit_option
 
             option_idx = limit_option["limit_option_idx"]
-            # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
+            # 0: ratio with current value, 1: ratio with full range, 2: delta around current value, 3: exact bounds
             if option_idx == 1:
                 ratio = limit_option["ratio_full"]
                 hard_bounds = vrange[name]
@@ -1641,6 +1659,14 @@ class BadgerRoutinePage(QWidget):
                 clipped[name] = bounds != new_bounds
                 vrange[name] = new_bounds
                 logger.info(f"Auto bounds for {name} (delta): {new_bounds}")
+            elif option_idx == 3:
+                exact_bounds = limit_option.get("exact_bounds")
+                hard_bounds = vrange[name]
+                bounds = sorted(exact_bounds) if exact_bounds else list(hard_bounds)
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (exact): {new_bounds}")
             else:
                 ratio = limit_option["ratio_curr"]
                 hard_bounds = vrange[name]
@@ -1744,10 +1770,18 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             option = self.limit_option
 
+        current_bounds = self.env_box.var_table.bounds.get(vname, bounds)
+        if current_bounds is None:
+            # default to env bounds if bounds not set
+            current_bounds = bounds
+        if isinstance(current_bounds, ContinuousVariable):
+            current_bounds = current_bounds.domain
+
         configs = {
             "current_value": curr,
             "lower_bound": bounds[0],
             "upper_bound": bounds[1],
+            "current_bounds": current_bounds,
             **option,
         }
 

@@ -227,16 +227,13 @@ class ScanRangeCell(QWidget):
             lower, upper = bounds
 
         delta = 0.5 * abs(upper - lower)
-        is_centered = self._is_centered(value, lower, upper)
 
         if is_clipped:
             lower_delta = abs(value - lower)
             upper_delta = abs(upper - value)
             delta = max(lower_delta, upper_delta)
 
-        self.line_edit = QLineEdit(
-            f"±{delta:.3f}{'*' if is_clipped or not is_centered else ''}"
-        )
+        self.line_edit = QLineEdit(f"±{delta:.3f}{'*' if is_clipped else ''}")
         self.line_edit.setReadOnly(True)
         self.line_edit.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
@@ -264,7 +261,7 @@ class ScanRangeCell(QWidget):
         layout.addWidget(self.line_edit)
         layout.addWidget(self._button_stack)
 
-        if is_clipped or not is_centered:
+        if is_clipped:
             self.setToolTip("Requested bounds are clipped by hardware limits")
 
     def set_selected(self, is_selected: bool):
