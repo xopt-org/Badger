@@ -22,12 +22,19 @@ from badger.errors import (
     MEASUREMENT_ACTION_TYPE,
     MEASUREMENT_ACTION_RETRY,
     MEASUREMENT_ACTION_ABORT,
+    TERMINATION_REACHED_TYPE,
+    TERMINATION_ACTION_TYPE,
+    TERMINATION_ACTION_CONTINUE,
+    TERMINATION_ACTION_END,
 )
 from badger.tests.utils import get_current_vars
 from badger.routine import calculate_variable_bounds, calculate_initial_points
 from badger.settings import init_settings
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.windows.measurement_retry_dialog import BadgerMeasurementRetryDialog
+from badger.gui.windows.termination_reached_dialog import (
+    BadgerTerminationReachedDialog,
+)
 from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
@@ -261,6 +268,17 @@ class BadgerRoutineSubprocess:
                             "action": action,
                         }
                     )
+                elif (
+                    isinstance(msg, dict)
+                    and msg.get("type") == TERMINATION_REACHED_TYPE
+                ):
+                    action = self.handle_termination_reached(msg)
+                    self.dialog_action_queue.put(
+                        {
+                            "type": TERMINATION_ACTION_TYPE,
+                            "action": action,
+                        }
+                    )
                 else:
                     error_title, error_traceback = msg
                     BadgerError(error_title, error_traceback)
@@ -280,6 +298,16 @@ class BadgerRoutineSubprocess:
         if result == QDialog.Accepted:
             return MEASUREMENT_ACTION_RETRY
         return MEASUREMENT_ACTION_ABORT
+
+    def handle_termination_reached(self, msg: dict) -> str:
+        dialog = BadgerTerminationReachedDialog(
+            tc_condition=msg.get("tc_condition"),
+            text=msg.get("title", "A termination condition has been reached."),
+        )
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            return TERMINATION_ACTION_CONTINUE
+        return TERMINATION_ACTION_END
 
     def after_evaluate(self, results: pd.DataFrame) -> None:
         logger.debug("Received evaluation results from subprocess.")
