@@ -39,6 +39,7 @@ from gest_api.vocs import (
     LessThanConstraint,
     MaximizeObjective,
     MinimizeObjective,
+    ContinuousVariable,
 )
 
 from pydantic import ValidationError
@@ -1542,7 +1543,7 @@ class BadgerRoutinePage(QWidget):
             option_idx = option["limit_option_idx"]
             if option_idx == 3:
                 # exact bounds: scale span by ratio around the current center.
-                exact_bounds = list(option.get("exact_bounds") or [0.0, 0.0])
+                exact_bounds = list(option.get("exact_bounds", [0.0, 0.0]))
                 lo, hi = sorted(exact_bounds)
                 center = 0.5 * (lo + hi)
                 half_span = 0.5 * (hi - lo) * ratio
@@ -1770,9 +1771,11 @@ class BadgerRoutinePage(QWidget):
             option = self.limit_option
 
         current_bounds = self.env_box.var_table.bounds.get(vname, bounds)
-        if current_bounds is None or len(current_bounds) != 2:
+        if current_bounds is None:
             # default to env bounds if bounds not set
             current_bounds = bounds
+        if isinstance(current_bounds, ContinuousVariable):
+            current_bounds = current_bounds.domain
 
         configs = {
             "current_value": curr,
