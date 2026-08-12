@@ -485,20 +485,32 @@ class BadgerHomePage(QWidget):
             init_points_flag=True,
         )
 
-    def start_run_until(self):
+    def start_run_until(self, dialog: bool = True):
+        """
+        Starts run with termination condition.
+
+        Args:
+            dialog (bool): If True, opens dialog popup for selecting termination condition.
+                If False skips dialog and uses the tc_config which
+                was previously saved in the run_monitor.
+
+        Notes: If no tc_config is found, opens popup regardless of dialog flag.
+        """
         logger.info("Starting run until condition met.")
-        dlg = BadgerTerminationConditionDialog(
-            self,
-            self.start_run,
-            self.run_monitor.save_termination_condition,
-            self.run_monitor.termination_condition,
-        )
-        self.tc_dialog = dlg
-        try:
-            dlg.exec()
-        finally:
-            self.tc_dialog = None
-        # self.run_monitor.start_until()
+        if dialog or not self.run_monitor.termination_condition:
+            dlg = BadgerTerminationConditionDialog(
+                self,
+                self.start_run,
+                self.run_monitor.save_termination_condition,
+                self.run_monitor.termination_condition,
+            )
+            self.tc_dialog = dlg
+            try:
+                dlg.exec()
+            finally:
+                self.tc_dialog = None
+        else:
+            self.start_run(use_termination_condition=True)
 
     def new_run(self):
         logger.info("Creating new run.")
