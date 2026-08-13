@@ -291,9 +291,9 @@ class BadgerHomePage(QWidget):
             self.run_action_bar.run_until_action
         )
         # configure default to max_eval (tc_idx=0), 50 iterations
-        self.run_monitor.save_termination_condition(
-            {"tc_idx": 0, "max_eval": 50, "max_time": 300, "ftol": 0}
-        )
+        initial_tc = {"tc_idx": 0, "max_eval": 50, "max_time": 300, "ftol": 0}
+        self.run_monitor.save_termination_condition(initial_tc)
+        self.run_action_bar.update_run_tooltip(initial_tc)
 
     def update_saved_values_from_monitor(self):
         """
@@ -509,6 +509,9 @@ class BadgerHomePage(QWidget):
                 dlg.exec()
             finally:
                 self.tc_dialog = None
+            self.run_action_bar.update_run_tooltip(
+                self.run_monitor.termination_condition
+            )
         else:
             self.start_run(use_termination_condition=True)
 

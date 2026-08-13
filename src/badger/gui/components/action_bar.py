@@ -1,13 +1,47 @@
 """Toolbar with run-control buttons (start, pause, stop), logbook submission,
 docs access, and the extensions palette launcher."""
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QStyle, QStyleOptionToolButton, QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import pyqtSignal, QSize
+from PyQt5.QtCore import QEvent, pyqtSignal, QSize
 from importlib import resources
 from badger.gui.utils import create_button
 from badger.gui.windows.docs_window import BadgerDocsWindow
+
+
+class SplitTooltipToolButton(QToolButton):
+    """
+    QToolButton that shows a separate tooltip over the dropdown-arrow area.
+    Use arg menu_tooltip="desired tooltip" to set the menu tooltip
+    """
+
+    def __init__(self, menu_tooltip="", parent=None):
+        """
+        Parameters
+        ----------
+        menu_tooltip (str)
+            tooltip for menu
+        """
+        super().__init__(parent)
+        self.menu_tooltip = menu_tooltip
+
+    def _over_menu_arrow(self, pos):
+        opt = QStyleOptionToolButton()
+        self.initStyleOption(opt)
+        rect = self.style().subControlRect(
+            QStyle.CC_ToolButton, opt, QStyle.SC_ToolButtonMenu, self
+        )
+        return rect.contains(pos)
+
+    def event(self, event):
+        if event.type() == QEvent.ToolTip and self._over_menu_arrow(event.pos()):
+            from PyQt5.QtWidgets import QToolTip
+
+            QToolTip.showText(event.globalPos(), self.menu_tooltip, self)
+            return True
+        return super().event(event)
+
 
 stylesheet_del = """
 QPushButton:hover:pressed
@@ -162,7 +196,9 @@ class BadgerActionBar(QWidget):
         self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
-        self.btn_stop = QToolButton()
+        self.btn_stop = SplitTooltipToolButton(
+            menu_tooltip="Update Termination Condition"
+        )
         self.btn_stop.setFixedSize(96, 32)
         self.btn_stop.setFont(cool_font)
         self.btn_stop.setStyleSheet(stylesheet_run)
@@ -214,7 +250,7 @@ class BadgerActionBar(QWidget):
         self.btn_stop.setDefaultAction(run_action)
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
         self.btn_stop.setDisabled(False)
-        # btn_stop.setToolTip('')
+        run_action.setToolTip("Run")
 
         # Config button
         self.btn_config = btn_config = create_button("tools.png", "Configure run")
@@ -406,3 +442,16 @@ class BadgerActionBar(QWidget):
     def env_ready(self):
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
+
+    def update_run_tooltip(self, tc=None):
+        """Update btn_stop tooltip: tc dict for run-until mode, or None."""
+        if tc is None:
+            self.run_action.setToolTip("Run")
+        else:
+            tc_idx = tc.get("tc_idx", 0)
+            if tc_idx == 0:
+                tip = f"Run until: n iterations = {tc.get('max_eval')}"
+            elif tc_idx == 1:
+                tip = f"Run until: timeout = {tc.get('max_time')}s"
+            self.run_until_action.setToolTip(tip)
+            self.run_until_menu_action.setToolTip(tip)
