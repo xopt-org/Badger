@@ -47,6 +47,7 @@ class BadgerRoutineSignals(QObject):
     error = pyqtSignal(Exception)
     info = pyqtSignal(str)
     states = pyqtSignal(str)
+    sig_status = pyqtSignal(str)  # status message information
 
 
 class BadgerRoutineSubprocess:
@@ -300,14 +301,31 @@ class BadgerRoutineSubprocess:
         return MEASUREMENT_ACTION_ABORT
 
     def handle_termination_reached(self, msg: dict) -> str:
+        # update status
+        tc_condition = msg.get("tc_condition")
+        status_str = self._format_tc_status_str(tc_condition)
+        self.signals.sig_status.emit(status_str)
+
+        # launch dialog
         dialog = BadgerTerminationReachedDialog(
-            tc_condition=msg.get("tc_condition"),
-            text=msg.get("title", "A termination condition has been reached."),
+            tc_condition=tc_condition,
+            text=msg.get("title"),
         )
         result = dialog.exec_()
         if result == QDialog.Accepted:
+            self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             return TERMINATION_ACTION_CONTINUE
         return TERMINATION_ACTION_END
+
+    def _format_tc_status_str(self, tc_condition: dict) -> str:
+        tc_type = tc_condition["type"]
+        if tc_type == "max_eval":
+            tc_type_text = "N iterations"
+            state = tc_condition["state"]
+        else:
+            tc_type_text = "timeout"
+            state = f"{tc_condition['state']:.2f} s"
+        return f"Routine {self.routine.name} paused: Condition {tc_type_text} = {state} reached"
 
     def after_evaluate(self, results: pd.DataFrame) -> None:
         logger.debug("Received evaluation results from subprocess.")
@@ -357,8 +375,10 @@ class BadgerRoutineSubprocess:
         pause : bool
         """
         if pause:
+            self.signals.sig_status.emit(f"Routine {self.routine.name} paused")
             self.pause_event.clear()
         else:
+            self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             self.pause_event.set()
 
     def close(self) -> None:
