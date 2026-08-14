@@ -528,8 +528,11 @@ class BadgerHomePage(QWidget):
     def run_name(self, name):
         logger.info(f"Updating run name: {name}")
         runs = get_runs()
+        # block signals on update after routine finished, since the selected run is already diplayed
+        self.history_browser.history_tree_widget.blockSignals(True)
         self.history_browser.updateItems(runs)
         self.history_browser._selectItemByRun(name)
+        self.history_browser.history_tree_widget.blockSignals(False)
 
     def update_status(self, info):
         logger.info(f"Updating status: {info}")
