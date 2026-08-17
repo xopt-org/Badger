@@ -36,8 +36,8 @@ from badger.factory import get_env
 
 # Import xopt.generators at startup so they don't need to be imported
 # each time a Routine is created
-import xopt.generators.bayesian
-import xopt.generators.sequential
+import xopt.generators.bayesian  # noqa: F401
+import xopt.generators.sequential  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
