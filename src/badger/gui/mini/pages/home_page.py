@@ -11,6 +11,7 @@ import os
 import traceback
 from importlib import resources
 
+import numpy as np
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt5.QtGui import QIcon
@@ -29,6 +30,8 @@ from badger.archive import (
     get_runs,
     save_tmp_run,
 )
+from badger.errors import BadgerRoutineError
+from badger.gui.components.data_panel import filter_metadata
 from badger.gui.components.data_table import (
     add_row,
     data_table,
@@ -277,6 +280,12 @@ class BadgerHomePage(QWidget):
             self.routine_editor.env_box.var_table.refresh_current_values
         )
         self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
+        self.run_action_bar.sig_run_with_data.connect(
+            lambda: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=True,
+            )
+        )
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )
@@ -291,7 +300,7 @@ class BadgerHomePage(QWidget):
             self.run_action_bar.run_until_action
         )
         # configure default to max_eval (tc_idx=0), 50 iterations
-        initial_tc = {"tc_idx": 0, "max_eval": 50, "max_time": 300, "ftol": 0}
+        initial_tc = {"tc_idx": 0, "max_eval": 100, "max_time": 300, "ftol": 0}
         self.run_monitor.save_termination_condition(initial_tc)
         self.run_action_bar.update_run_tooltip(initial_tc)
 
@@ -429,7 +438,61 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self):
+    def validate_loaded_data_keys(self, vocs, open_dialog: bool = True):
+        """
+        This function is called when adding historical data to a new routine.
+        It makes sure that the keys of data to be loaded match the
+        selected variables and objectives in VOCS. If they do not, raises an error.
+        If the set of data keys matches provided VOCS variables
+        and objectives, opens a dialog to inform user that data has been added.
+
+        Args:
+            vocs: VOCS
+        """
+        # get routine selected from data_panel
+        routine = self.current_routine
+
+        # Want to compare variables, objectives
+        loaded_data_vars_objs_names = (
+            routine.vocs.variable_names + routine.vocs.objective_names
+        )
+
+        # Raise error if loaded data keys do not match selected vocs
+        if set(loaded_data_vars_objs_names) != set(
+            vocs.variable_names + vocs.objective_names
+        ):
+            self.run_action_bar.routine_finished()  # Reset action bar
+            raise BadgerRoutineError(
+                "Keys in loaded data do not match selected VOCS:\n\n"
+                + f"Keys in data to load:\n {loaded_data_vars_objs_names}\n\n"
+                + f"Selected VOCS:\n {vocs.variable_names + vocs.objective_names}"
+            )
+
+        df = routine.sorted_data
+        data = df.to_dict(orient="list")
+        data = filter_metadata(data)
+        data_keys = data.keys()
+
+        if open_dialog:
+            # Notify user that data has been added to the routine
+            dialog = QMessageBox(
+                text=str(
+                    "Data loaded into routine for the following VOCS:\n\n"
+                    + f"{list(data_keys)}\n\n"
+                    + "Click OK to continue!"
+                ),
+                parent=self,
+            )
+            dialog.setIcon(QMessageBox.Information)
+            dialog.setWindowTitle("Data added to routine")
+            dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            result = dialog.exec_()
+
+            if result == QMessageBox.Cancel:
+                self.run_action_bar.routine_finished()  # Reset action bar
+                raise BadgerRoutineError("Routine initialization cancelled by user.")
+
+    def prepare_run(self, data=None, init_points_flag=True):
         """
         Prepares the run by composing the routine, validating data if present,
         saving created routine to a yaml file, and passing the routine to
@@ -441,10 +504,6 @@ class BadgerHomePage(QWidget):
                 confirm that initial points are being sampled if there are new columns in
                 the dataframe. If there are new columns and the flag is false, this function
                 raises an error.
-
-        Notes
-        _____
-        Removed data loading implementation from mini GUI,
         """
         logger.info("Preparing new run.")
         try:
@@ -452,6 +511,35 @@ class BadgerHomePage(QWidget):
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
+
+        # Add data to routine before saving tmp file
+        if data is not None:
+            # Make sure selected generator is compatible with prior data
+            if routine.generator.name in ["neldermead"]:
+                self.run_action_bar.routine_finished()  # Reset action bar
+                # TODO: update error message and/or support neldermead for resume function
+                raise BadgerRoutineError(
+                    "Neldermead algorithm is not compatible with data loading. "
+                    + "\nPlease uncheck 'Load displayed data into routine' "
+                    + "or select a different algorithm."
+                )
+            # Check that routine variables and objectives match loaded data
+            self.validate_loaded_data_keys(routine.vocs, open_dialog=False)
+            data["live"] = 0  # reset live data indicator for loaded data
+            for name in routine.vocs.output_names:
+                if name not in data.columns:
+                    # Add null datapoints for new constraints or observables
+                    data[name] = np.nan
+
+            # Raise error if there are new columns (all NaN) and no initial points selected
+            if data.isna().all().any() and not init_points_flag:
+                self.run_action_bar.routine_finished()  # Reset action bar
+                raise BadgerRoutineError(
+                    "Must select at least one initial point in order to add"
+                    + " new constraints to routine!"
+                )
+
+            routine.data = data
 
         self.current_routine = routine
 
@@ -463,7 +551,9 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, use_termination_condition: bool = False):
+    def start_run(
+        self, use_termination_condition: bool = False, load_displayed_data: bool = False
+    ):
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -471,19 +561,44 @@ class BadgerHomePage(QWidget):
 
         Args:
             use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog.
+            load_displayed_data (bool): If True loads data from the currently displayed routine.
 
         Notes:
             Removed data loading implementation and data_panel from mini GUI
         """
         logger.info("Starting run.")
 
-        self.prepare_run()
+        # flags for loading data
+        run_data_flag = load_displayed_data
+        init_points_flag = True
+        if run_data_flag:
+            init_points_flag = False
+
+        if run_data_flag:
+            data_to_load = self.load_data_from_run()
+            self.prepare_run(
+                data=data_to_load,
+                init_points_flag=init_points_flag,
+            )  # Pass data to prepare run, to be saved to tmp file and loaded into plots
+            self.run_monitor.init_plots(self.current_routine)
+
+            # Add routine and generator data back to the routine
+            self.current_routine.data = data_to_load
+            if self.current_routine.generator.data is None:
+                self.current_routine.generator.data = data_to_load
+        else:
+            # run data flag is False
+
+            self.prepare_run()
 
         self.run_monitor.start(
             use_termination_condition=use_termination_condition,
-            run_data_flag=False,
-            init_points_flag=True,
+            run_data_flag=run_data_flag,
+            init_points_flag=init_points_flag,
         )
+
+    def load_data_from_run(self):
+        return self.current_routine.sorted_data
 
     def start_run_until(self, dialog: bool = True):
         """

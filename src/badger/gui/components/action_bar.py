@@ -134,6 +134,7 @@ class BadgerActionBar(QWidget):
     sig_jump_to_optimal = pyqtSignal()
     sig_dial_in = pyqtSignal()
     sig_ctrl = pyqtSignal(bool)
+    sig_run_with_data = pyqtSignal()
     sig_open_extensions_palette = pyqtSignal()
 
     sig_save_checkpoint = pyqtSignal()
@@ -196,9 +197,7 @@ class BadgerActionBar(QWidget):
         self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
-        self.btn_stop = SplitTooltipToolButton(
-            menu_tooltip="Update Termination Condition"
-        )
+        self.btn_stop = SplitTooltipToolButton(menu_tooltip="Run Options Menu")
         self.btn_stop.setFixedSize(96, 32)
         self.btn_stop.setFont(cool_font)
         self.btn_stop.setStyleSheet(stylesheet_run)
@@ -238,8 +237,11 @@ class BadgerActionBar(QWidget):
         run_until_action.setIcon(self.icon_play)
         self.run_until_menu_action = run_until_menu_action = QAction("Run until", self)
         run_until_menu_action.setIcon(self.icon_play)
+        self.run_with_data_action = run_with_data_action = QAction("Resume", self)
+        run_with_data_action.setIcon(self.icon_play)
         menu.addAction(run_action)
         menu.addAction(run_until_menu_action)
+        menu.addAction(run_with_data_action)
         # Note: run_until_menu_action is triggered by selecting "run until" from the menu
         # It emits sig_start_until(True) to launch the BadgerTerminationConditionDialog
         # and sets the default run action to run_until_action. Pressing the play/stop button
@@ -292,6 +294,9 @@ class BadgerActionBar(QWidget):
         self.run_until_action.triggered.connect(self._on_run_until_action_triggered)
         self.run_until_menu_action.triggered.connect(
             self._on_run_until_menu_action_triggered
+        )
+        self.run_with_data_action.triggered.connect(
+            lambda: self.sig_run_with_data.emit()
         )
         self.save_checkpoint_action.triggered.connect(
             lambda: self.sig_save_checkpoint.emit()
