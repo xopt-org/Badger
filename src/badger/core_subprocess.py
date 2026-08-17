@@ -12,6 +12,7 @@ See core.py for the simpler in-process version of the same loop.
 
 from copy import deepcopy
 import logging
+import signal
 import time
 import traceback
 from typing import Any
@@ -45,6 +46,11 @@ from xopt.vocs import select_best
 
 
 logger = logging.getLogger(__name__)
+
+
+def _terminate_on_sigterm(signum, frame):
+    # terminate cleanly if terminate signal comes before reaching stop_process check
+    raise BadgerRunTerminated
 
 
 def evaluate_measurement_with_retry(
@@ -319,6 +325,9 @@ def run_routine_subprocess(
     )
     logger.info("Optimization started")
     opt_logger.update(Events.OPTIMIZATION_START, solution_meta)
+
+    # So a terminate() from the GUI still runs the shutdown path below
+    signal.signal(signal.SIGTERM, _terminate_on_sigterm)
 
     # evaluate initial points:
     # timeout logic will be handled in the specific environment
