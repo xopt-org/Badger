@@ -637,6 +637,14 @@ class BadgerHomePage(QWidget):
         # self.cb_history.insertItem(0, "Optimization in progress...")
         # self.cb_history.setCurrentIndex(0)
 
+        if self.current_routine.data is not None:
+            update_table(
+                self.run_table,
+                self.current_routine.sorted_data,
+                self.current_routine.vocs,
+            )
+            return
+
         header = get_header(self.current_routine)
         reset_table(self.run_table, header)
 
