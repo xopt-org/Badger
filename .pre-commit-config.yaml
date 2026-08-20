@@ -25,9 +25,9 @@ repos:
         files: ^src/badger/.*\.py$
         exclude: ^src/badger/tests/
 
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.16.3
-  #   hooks:
-  #     - id: ruff-check
-  #       args: [--fix, "--ignore=BLE001"]
-  #     - id: ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
+    hooks:
+      - id: ruff-check
+        args: [--fix, "--ignore=BLE001"]
+      - id: ruff-format
