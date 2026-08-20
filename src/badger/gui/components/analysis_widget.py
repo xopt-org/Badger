@@ -4,7 +4,7 @@ Defines the interface for receiving routine updates and rendering plots."""
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from PyQt5.QtWidgets import QWidget
 from xopt import Generator
@@ -30,7 +30,7 @@ class AnalysisWidget(QWidget):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
         self.routine = routine

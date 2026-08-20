@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 
 import pytest
-
 
 if __name__ == "__main__":
     # Show output results from every test function
@@ -18,6 +17,6 @@ if __name__ == "__main__":
         args.extend(["--cov=badger", "--cov-report", "term-missing"])
         args.remove("--show-cov")
 
-    print("pytest arguments: {}".format(args))
+    print(f"pytest arguments: {args}")
     print(f"Running tests on Python {sys.version}")
     sys.exit(pytest.main(args))

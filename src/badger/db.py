@@ -6,19 +6,19 @@ to their parent routine. The database file lives under BADGER_DB_ROOT (set
 in settings) and can be exported/imported for sharing between installations.
 """
 
-import os
-import warnings
-from datetime import datetime
 import logging
-
-import yaml
+import os
 import sqlite3
 import uuid
+import warnings
+from datetime import datetime
 
+import yaml
+
+from badger.errors import BadgerConfigError, BadgerDBError
 from badger.routine import Routine
 from badger.settings import init_settings
 from badger.utils import get_yaml_string
-from badger.errors import BadgerConfigError, BadgerDBError
 
 logger = logging.getLogger(__name__)
 

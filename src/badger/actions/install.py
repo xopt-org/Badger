@@ -3,12 +3,12 @@ installing plugins from a registry or local tarball — see docs for
 the current plugin installation workflow."""
 
 import logging
-import requests
-import tarfile
-import shutil
 import os
+import shutil
+import tarfile
 from os.path import exists
 
+import requests
 import yaml
 from tqdm.auto import tqdm
 
@@ -34,7 +34,7 @@ def plugin_install(args):
     # We will not make conda as a dependency of Badger
     # This is just a temp solution
     # Should tell the users to use the install command a conda env is needed
-    from conda.cli.python_api import run_command, Commands
+    from conda.cli.python_api import Commands, run_command
 
     hist = {
         "generator": "generators",

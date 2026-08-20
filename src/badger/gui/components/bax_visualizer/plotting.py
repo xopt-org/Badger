@@ -1,9 +1,14 @@
 """Matplotlib-based plotting widget for visualizing BAX virtual measurements."""
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
+from bax_algorithms.visualize import (
+    plot_bax_input_convergence,
+    plot_bax_objective_convergence,
+    visualize_virtual_measurement_result,
+)
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qt import NavigationToolbar2QT
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -21,11 +26,6 @@ from badger.gui.components.extension_utilities import (
     clear_tabs,
 )
 from badger.utils import BlockSignalsContext
-from bax_algorithms.visualize import (  # noqa: E402
-    plot_bax_input_convergence,
-    plot_bax_objective_convergence,
-    visualize_virtual_measurement_result,
-)
 
 if TYPE_CHECKING:
     from badger.gui.components.bax_visualizer.bax_widget import Parameters
@@ -39,7 +39,7 @@ class PlottingWidget(QWidget):
         self,
         generator: BaxGenerator,
         parameters: "Parameters",
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         logger.debug("Initializing PlottingWidget")
         super().__init__(parent=parent)

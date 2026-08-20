@@ -21,8 +21,8 @@ def show_routine(args):
     return
 
     try:
-        from badger.db import load_routine, list_routine
         from badger.actions.run import run_n_archive
+        from badger.db import list_routine, load_routine
     except Exception as e:
         logger.error(e)
         return

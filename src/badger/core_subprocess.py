@@ -10,35 +10,35 @@ stays responsive. Communication with the main process happens through:
 See core.py for the simpler in-process version of the same loop.
 """
 
-from copy import deepcopy
 import logging
-import time
-import traceback
-from typing import Any
-from queue import Empty
-from pandas import DataFrame
 import multiprocessing as mp
 import os
+import time
+import traceback
+from copy import deepcopy
+from queue import Empty
+from typing import Any
 
-from badger.settings import (
-    init_settings,
-    apply_pytorch_multiprocess_tensor_sharing_setting,
-)
-from badger.errors import (
-    BadgerRunTerminated,
-    BadgerEnvObsError,
-    MEASUREMENT_ERROR_TYPE,
-    MEASUREMENT_ACTION_TYPE,
-    MEASUREMENT_ACTION_RETRY,
-    MEASUREMENT_ACTION_ABORT,
-)
-from badger.logger import _get_default_logger
-from badger.logger.event import Events
-from badger.routine import Routine
-from badger.log import configure_process_logging
+from pandas import DataFrame
 from xopt.errors import FeasibilityError, XoptError
 from xopt.vocs import select_best
 
+from badger.errors import (
+    MEASUREMENT_ACTION_ABORT,
+    MEASUREMENT_ACTION_RETRY,
+    MEASUREMENT_ACTION_TYPE,
+    MEASUREMENT_ERROR_TYPE,
+    BadgerEnvObsError,
+    BadgerRunTerminated,
+)
+from badger.log import configure_process_logging
+from badger.logger import _get_default_logger
+from badger.logger.event import Events
+from badger.routine import Routine
+from badger.settings import (
+    apply_pytorch_multiprocess_tensor_sharing_setting,
+    init_settings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ def run_routine_subprocess(
     apply_pytorch_multiprocess_tensor_sharing_setting(config_values)
 
     # Now load the archive would use the correct config
-    from badger.archive import load_run, archive_run
+    from badger.archive import archive_run, load_run
 
     logger.info("Waiting for wait_event to be set...")
     wait_event.wait()
@@ -195,7 +195,7 @@ def run_routine_subprocess(
         args = queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
     except Exception as e:
-        logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {str(e)}")
+        logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {e!s}")
 
     # set required arguments
     try:
@@ -230,13 +230,10 @@ def run_routine_subprocess(
         routine.generator.turbo_controller.tkwargs["dtype"] = eval(dtype)
     except AttributeError:
         logger.warning("AttributeError when converting turbo_controller dtype")
-        pass
     except KeyError:
         logger.warning("KeyError when converting turbo_controller dtype")
-        pass
     except TypeError:
         logger.warning("TypeError when converting turbo_controller dtype")
-        pass
 
     # Assign the initial points and bounds
     logger.info(f"Setting routine variable ranges: {args['variable_ranges']}")

@@ -1002,7 +1002,7 @@ class BadgerRoutinePage(QWidget):
         self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
 
-        self.generator_box.check_use_script.setChecked(not not self.script)
+        self.generator_box.check_use_script.setChecked(bool(self.script))
 
     def set_routine(self, routine: Routine, silent: bool = False):
         self.refresh_ui(routine, silent=silent)

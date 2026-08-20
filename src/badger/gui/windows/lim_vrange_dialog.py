@@ -5,23 +5,21 @@ to all variables in the routine."""
 
 from copy import deepcopy
 
-from PyQt5.QtWidgets import (
-    QDialog,
-    QWidget,
-    QHBoxLayout,
-    QPushButton,
-    QVBoxLayout,
-    QDoubleSpinBox,
-    QRadioButton,
-)
-from PyQt5.QtWidgets import (
-    QGroupBox,
-    QLabel,
-    QComboBox,
-    QStyledItemDelegate,
-    QStackedWidget,
-)
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QStackedWidget,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class BadgerLimitVariableRangeDialog(QDialog):

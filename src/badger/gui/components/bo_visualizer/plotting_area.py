@@ -4,7 +4,7 @@ via Xopt's visualize_generator_model and handles mouse interaction."""
 import logging
 import time
 from collections.abc import Callable
-from typing import Optional, cast
+from typing import cast
 
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
@@ -33,9 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 class PlottingArea(QWidget):
-    last_updated: Optional[float] = None
+    last_updated: float | None = None
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
         # Create a layout for the plot area without pre-filling it with a plot

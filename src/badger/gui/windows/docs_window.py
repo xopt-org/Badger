@@ -2,16 +2,18 @@
 environments, and general Badger guides in a QTextBrowser with
 clickable navigation links."""
 
+from typing import TYPE_CHECKING
+
 from PyQt5.QtWidgets import (
-    QHBoxLayout,
-    QVBoxLayout,
     QCheckBox,
-    QWidget,
+    QHBoxLayout,
     QMainWindow,
     QTextBrowser,
+    QVBoxLayout,
+    QWidget,
 )
-from badger.factory import load_badger_docs, load_plugin_docs, list_generators
-from typing import TYPE_CHECKING
+
+from badger.factory import list_generators, load_badger_docs, load_plugin_docs
 
 if TYPE_CHECKING:
     from PyQt5.QtCore import QUrl
@@ -72,7 +74,7 @@ class BadgerDocsWindow(QMainWindow):
         self.cb_md.stateChanged.connect(self.refresh_docs_view)
         self.markdown_viewer.anchorClicked.connect(self.handle_link_click)
 
-    def load_docs(self, subdir: str = None):
+    def load_docs(self, subdir: str | None = None):
         """
         Load the docs for the current generator and subdir (if provided).
 
@@ -122,7 +124,7 @@ class BadgerDocsWindow(QMainWindow):
         href = url.toString()
 
         # Indicate links not yet supported in GUI docs viewer
-        if href.startswith("https://") or href.startswith("mailto:"):
+        if href.startswith(("https://", "mailto:")):
             self.docs_name = "external links not yet implemented in GUI docs viewer"
             self.load_docs()
             return

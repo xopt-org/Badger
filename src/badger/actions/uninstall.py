@@ -1,9 +1,9 @@
 """The `badger uninstall` command (currently disabled). Was intended for
 removing plugins — see docs for the current workflow."""
 
+import logging
 import shutil
 from os.path import exists
-import logging
 
 logger = logging.getLogger(__name__)
 

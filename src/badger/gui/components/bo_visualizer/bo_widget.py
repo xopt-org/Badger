@@ -8,7 +8,7 @@ routines using a BayesianGenerator.
 """
 
 import logging
-from typing import Optional, cast
+from typing import cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -66,7 +66,7 @@ class BOPlotWidget(AnalysisWidget):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         logger.debug("Initializing BOPlotWidget")
         super().__init__(routine, parent)

@@ -51,7 +51,7 @@ from badger.gui.components.navigators import HistoryNavigator, TemplateNavigator
 from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
-from badger.gui.utils import ModalOverlay, build_bax_results_file
+from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
@@ -88,7 +88,7 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager: "Optional[ProcessManager]" = None):
+    def __init__(self, process_manager: "ProcessManager | None" = None):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
@@ -305,7 +305,7 @@ class BadgerHomePage(QWidget):
         # Load the default generator
         self.routine_editor.set_default_generator("neldermead")
 
-    def go_run(self, i: int = None) -> None:
+    def go_run(self, i: int | None = None) -> None:
         logger.info(f"Activating run: {i}")
         gc.collect()
 
@@ -489,9 +489,9 @@ class BadgerHomePage(QWidget):
         logger.info("Preparing new run.")
         try:
             routine = self.routine_editor._compose_routine()
-        except Exception as e:
+        except Exception:
             self.sig_routine_invalid.emit()
-            raise e
+            raise
 
         # Give this run its own results folder, named after the run's archive
         # name (<env>-<creation_ts>) so the folder used during the run matches
@@ -649,18 +649,17 @@ class BadgerHomePage(QWidget):
 
     def cover_page(self) -> None:
         logger.info("Covering page with overlay.")
-        return  # disable overlay for now
 
-        try:
-            self.overlay
-        except AttributeError:
-            # Set parent to the main window
-            try:
-                main_window = self.parent().parent()
-            except AttributeError:  # in test mode
-                return
-            self.overlay = ModalOverlay(main_window)
-        self.overlay.show()
+        # try:
+        #     self.overlay
+        # except AttributeError:
+        #     # Set parent to the main window
+        #     try:
+        #         main_window = self.parent().parent()
+        #     except AttributeError:  # in test mode
+        #         return
+        #     self.overlay = ModalOverlay(main_window)
+        # self.overlay.show()
 
     def uncover_page(self) -> None:
         logger.info("Uncovering page overlay.")

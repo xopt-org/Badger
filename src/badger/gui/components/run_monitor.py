@@ -11,7 +11,7 @@ import logging
 import os
 import traceback
 from importlib import resources
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -73,7 +73,7 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
 
-    def __init__(self, process_manager: "Optional[ProcessManager]" = None):
+    def __init__(self, process_manager: "ProcessManager | None" = None):
         super().__init__()
         # self.setAttribute(Qt.WA_DeleteOnClose, True)
 
@@ -289,8 +289,8 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_con)
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No constraints plot to remove", exc_info=True)
 
             # if statics exist delete that plot
             try:
@@ -349,8 +349,8 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_con)
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No constraints plot to remove", exc_info=True)
 
         # Configure state plots
         if sta_names:
@@ -375,8 +375,8 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_obs)
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No observables plot to remove", exc_info=True)
 
         # Reset inspectors
         self.inspector_objective.setValue(0)
@@ -674,7 +674,7 @@ class BadgerOptMonitor(QWidget):
 
         except Exception as e:
             self.sig_run_name.emit(None)
-            self.sig_status.emit(f"Archive failed: {str(e)}")
+            self.sig_status.emit(f"Archive failed: {e!s}")
             # if not self.testing:
             #     QMessageBox.critical(self, 'Archive failed!',
             #                          f'Archive failed: {str(e)}')
@@ -714,7 +714,7 @@ class BadgerOptMonitor(QWidget):
         try:
             send_to_logbook(self.routine, self.monitor)
         except Exception as e:
-            self.sig_status.emit(f"Log failed: {str(e)}")
+            self.sig_status.emit(f"Log failed: {e!s}")
             # QMessageBox.critical(self, 'Log failed!', str(e))
 
             return
@@ -815,7 +815,7 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
-    def get_checkpoint(self) -> Optional[dict[str, float]]:
+    def get_checkpoint(self) -> dict[str, float] | None:
         if not self.routine or not self.routine.environment or not self.routine.vocs:
             return None
 
@@ -1092,7 +1092,7 @@ def create_cursor_line() -> pg.InfiniteLine:
     )
 
 
-def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None) -> None:
+def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None) -> None:
     # Split data into live and not live
     live_mask = data["live"].astype(bool)
     live_data = data.loc[live_mask]

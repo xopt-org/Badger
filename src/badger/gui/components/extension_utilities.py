@@ -4,9 +4,10 @@ update throttling, error-handling decorators, and numeric formatting."""
 import logging
 import time
 import traceback
+from collections.abc import Callable
 from functools import wraps
 from types import TracebackType
-from typing import Any, Callable, Optional, ParamSpec
+from typing import Any, ParamSpec
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -55,7 +56,7 @@ def clear_tabs(tab_widget: QTabWidget) -> None:
 
 
 def requires_update(
-    last_updated: Optional[float], interval: int = 1000, requires_rebuild: bool = False
+    last_updated: float | None, interval: int = 1000, requires_rebuild: bool = False
 ) -> bool:
     # Check if the plot was updated recently
     if last_updated is not None and not requires_rebuild:
@@ -141,8 +142,8 @@ class MatplotlibFigureContext:
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
     ) -> None:
         plt.close(self.fig)

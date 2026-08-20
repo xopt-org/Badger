@@ -10,7 +10,6 @@ target quantity (e.g. emittance or solenoid alignment) as the run progresses.
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 from xopt.generators.bayesian.bax_generator import BaxGenerator
@@ -75,7 +74,7 @@ class BaxWidget(AnalysisWidget):
     generator: BaxGenerator
     parameters: Parameters  # type: ignore[assignment]
 
-    def __init__(self, routine: Routine, parent: Optional[QWidget] = None):
+    def __init__(self, routine: Routine, parent: QWidget | None = None):
         logger.debug("Initializing BaxWidget")
         super().__init__(routine=routine, parent=parent)
 

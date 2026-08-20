@@ -1,5 +1,4 @@
 from badger import interface
-from typing import Dict
 
 
 class Interface(interface.Interface):
@@ -7,7 +6,7 @@ class Interface(interface.Interface):
     flag: int = 0
 
     # Private variables
-    _states: Dict
+    _states: dict
 
     def __init__(self, **data):
         super().__init__(**data)

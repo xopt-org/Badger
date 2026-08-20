@@ -11,54 +11,56 @@ Helper functions here compute variable bounds relative to the current machine
 state and generate initial sampling points.
 """
 
-import logging
 import json
+import logging
 from copy import deepcopy
-from typing import Any, List, Optional
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pydantic import (
     ConfigDict,
     Field,
-    field_validator,
-    model_validator,
     SerializeAsAny,
     ValidationInfo,
+    field_validator,
+    model_validator,
 )
-from xopt import Evaluator, VOCS, Xopt
+from xopt import VOCS, Evaluator, Xopt
 from xopt.generators import get_generator
-from xopt.vocs import get_local_region
 from xopt.generators.sequential import SequentialGenerator
-from badger.utils import curr_ts
+from xopt.vocs import get_local_region
+
 from badger.environment import BaseEnvironment, instantiate_env
 from badger.factory import get_env
+from badger.utils import curr_ts
 
 logger = logging.getLogger(__name__)
 
 
 class Routine(Xopt):
-    id: Optional[str] = Field(None)
-    creation_ts: Optional[str] = Field(None)  # Timestamp of routine creation
+    id: str | None = Field(None)
+    creation_ts: str | None = Field(None)  # Timestamp of routine creation
     name: str
-    description: Optional[str] = Field(None)
+    description: str | None = Field(None)
     environment: SerializeAsAny[BaseEnvironment]
-    initial_points: Optional[DataFrame] = Field(None)
-    critical_constraint_names: Optional[List[str]] = Field([])
-    tags: Optional[List] = Field(None)
-    script: Optional[str] = Field(None)
+    initial_points: DataFrame | None = Field(None)
+    critical_constraint_names: list[str] | None = Field([])
+    tags: list | None = Field(None)
+    script: str | None = Field(None)
     # Store relative to current params
-    relative_to_current: Optional[bool] = Field(False)
-    vrange_limit_options: Optional[dict] = Field(None)
-    vrange_hard_limit: Optional[dict] = Field({})  # override hard limits
-    initial_point_actions: Optional[List] = Field(None)
-    additional_variables: Optional[List[str]] = Field([])
-    formulas: Optional[dict[str, dict[str, Any]]] = Field({})
-    constraint_formulas: Optional[dict[str, dict[str, Any]]] = Field({})
-    observable_formulas: Optional[dict[str, dict[str, Any]]] = Field({})
+    relative_to_current: bool | None = Field(False)
+    vrange_limit_options: dict | None = Field(None)
+    vrange_hard_limit: dict | None = Field({})  # override hard limits
+    initial_point_actions: list | None = Field(None)
+    additional_variables: list[str] | None = Field([])
+    formulas: dict[str, dict[str, Any]] | None = Field({})
+    constraint_formulas: dict[str, dict[str, Any]] | None = Field({})
+    observable_formulas: dict[str, dict[str, Any]] | None = Field({})
     # Other meta data
-    badger_version: Optional[str] = Field(None)
-    xopt_version: Optional[str] = Field(None)
+    badger_version: str | None = Field(None)
+    xopt_version: str | None = Field(None)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -103,24 +105,23 @@ class Routine(Xopt):
                 data["generator"].is_active = False
 
             # validate data (if it exists
-            if "data" in data:
-                if isinstance(data["data"], dict):
-                    logger.debug("Validating and converting data to DataFrame.")
-                    try:
-                        data["data"] = pd.DataFrame(data["data"])
-                    except IndexError:
-                        data["data"] = pd.DataFrame(data["data"], index=[0])
+            if "data" in data and isinstance(data["data"], dict):
+                logger.debug("Validating and converting data to DataFrame.")
+                try:
+                    data["data"] = pd.DataFrame(data["data"])
+                except IndexError:
+                    data["data"] = pd.DataFrame(data["data"], index=[0])
 
-                    data["data"].index = data["data"].index.astype(int)
-                    data["data"].sort_index(inplace=True)
+                data["data"].index = data["data"].index.astype(int)
+                data["data"].sort_index(inplace=True)
 
-                    # Add data one row at a time to avoid generator issues
-                    if isinstance(data["generator"], SequentialGenerator):
-                        logger.debug("Setting data for SequentialGenerator.")
-                        data["generator"].set_data(data["data"])
-                    else:
-                        logger.debug("Adding data to generator.")
-                        data["generator"].add_data(data["data"])
+                # Add data one row at a time to avoid generator issues
+                if isinstance(data["generator"], SequentialGenerator):
+                    logger.debug("Setting data for SequentialGenerator.")
+                    data["generator"].set_data(data["data"])
+                else:
+                    logger.debug("Adding data to generator.")
+                    data["generator"].add_data(data["data"])
 
             # instantiate env
             if isinstance(data["environment"], dict):

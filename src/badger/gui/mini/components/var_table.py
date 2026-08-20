@@ -8,46 +8,45 @@ ui cell widgets (SavedValueCell, CurrentValueCell, ScanRangeCell) and the
 RangeAdjustButtonStack helper.
 """
 
-from functools import partial
-from importlib import resources
+import logging
 import math
 import traceback
+from functools import partial
+from importlib import resources
 from typing import Any, cast
-from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QCheckBox,
-    QMessageBox,
-    QAbstractItemView,
-    QPushButton,
-    QWidget,
-    QHBoxLayout,
-    QVBoxLayout,
-    QLineEdit,
-    QMenu,
-    QGridLayout,
-    QLabel,
-    QDialog,
-)
-from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint, QTimer
+
+from gest_api.vocs import ContinuousVariable
+from PyQt5.QtCore import QPoint, QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import (
     QColor,
-    QIcon,
-    QGuiApplication,
-    QDropEvent,
-    QDragMoveEvent,
     QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QGuiApplication,
+    QIcon,
+)
+from PyQt5.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
 from badger.utils import _round_bounds_inward
-
-from gest_api.vocs import ContinuousVariable
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -172,8 +171,11 @@ class RangeAdjustButtonStack(QWidget):
         on_increase=None,
         on_decrease=None,
         parent: QWidget | None = None,
-        button_size: QSize = QSize(12, 10),
+        button_size: QSize | None = None,
     ):
+        if button_size is None:
+            button_size = QSize(12, 10)
+
         super().__init__(parent)
 
         self.up_btn = QPushButton("▲")
@@ -446,7 +448,7 @@ class VariableTable(QTableWidget):
         """
         Emit the data_changed signal to notify that the VOCS has been updated.
         """
-        logging.debug("Emitting data_changed signal from VariableTable")
+        logger.debug("Emitting data_changed signal from VariableTable")
         self.data_changed.emit()
 
     def config_logic(self):
@@ -521,7 +523,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             item = cast(QCheckBox, item)
             if not item.isChecked():
                 return False
@@ -537,7 +539,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             item = cast(QCheckBox, item)
             # Doing batch update
             item.blockSignals(True)
@@ -560,10 +562,10 @@ class VariableTable(QTableWidget):
         variables: dict[str, tuple[float, float]],
         signal: bool = True,
         clipped: dict[str, bool] | None = None,
-    ):
+    ) -> None:
         clipped = clipped or {}
-        for name in variables:
-            self.bounds[name] = variables[name]
+        for name, value in variables.items():
+            self.bounds[name] = value
             if name in clipped:
                 self.clipped[name] = clipped[name]
             else:
@@ -602,12 +604,12 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             if not _cb:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             _cb = cast(QCheckBox, _cb)
 
             widget = self.item(i, 1)
             if not widget:
-                raise Exception("Variable name widget not found!")
+                raise RuntimeError("Variable name widget not found!")
             name = widget.text()
             is_selected = _cb.isChecked()
             widget.setForeground(QColor("lightgray" if is_selected else "gray"))
@@ -837,7 +839,7 @@ class VariableTable(QTableWidget):
 
             _cb = self.cellWidget(i, 0)
             if not _cb:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             _cb = cast(QCheckBox, _cb)
 
             _cb.setChecked(self.is_checked(name))
@@ -981,14 +983,14 @@ class VariableTable(QTableWidget):
 
         else:
             # TODO: handle this case? Right now I don't think it should happen
-            raise Exception("Environment cannot be found for new variable bounds!")
+            raise RuntimeError("Environment cannot be found for new variable bounds!")
 
         # Add checkbox only when a PV is entered
         self.setCellWidget(idx, 0, QCheckBox())
 
         _cb = self.cellWidget(idx, 0)
         if not _cb:
-            raise Exception("Checkbox widget not found!")
+            raise RuntimeError("Checkbox widget not found!")
         _cb = cast(QCheckBox, _cb)
 
         # Checked by default when entered

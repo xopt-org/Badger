@@ -10,17 +10,17 @@ Note: the CLI runner is deprecated — most users should use the GUI instead.
 
 import logging
 import os
+import signal
 import sys
 import time
-import signal
 
 from pandas import DataFrame
 
-from badger.utils import curr_ts
 from badger.core import run_routine as run
+from badger.errors import BadgerRunTerminated
 from badger.routine import Routine
 from badger.settings import init_settings
-from badger.errors import BadgerRunTerminated
+from badger.utils import curr_ts
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def run_n_archive(
 
     def handler(*args):
         if storage["paused"]:
-            print("")  # start a new line
+            print()  # start a new line
             if flush_prompt:  # erase the last prompt
                 sys.stdout.write("\033[F")
             raise BadgerRunTerminated
@@ -130,7 +130,6 @@ def run_routine(args):
         "Please use 'badger -g' to launch the Badger GUI "
         "and run an optimization."
     )
-    return
 
     # try:
     #     from ..factory import get_algo, get_env

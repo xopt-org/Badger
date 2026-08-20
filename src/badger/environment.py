@@ -12,10 +12,11 @@ evaluation on computed observables (see formula.py).
 
 from abc import abstractmethod
 from logging import warning
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from pydantic._internal._model_construction import ModelMetaclass
+
 from badger.errors import (
     BadgerEnvVarError,
     BadgerNoInterfaceError,
@@ -28,7 +29,7 @@ from badger.interface import Interface
 
 
 def validate_setpoints(func):
-    def validate(cls, variable_inputs: Dict[str, float]):
+    def validate(cls, variable_inputs: dict[str, float]):
         _bounds = cls.get_bounds(list(variable_inputs.keys()))
         for name, value in variable_inputs.items():
             lower = _bounds[name][0]
@@ -51,7 +52,7 @@ def process_formulas(func):
     to process formulas if they exist in the observable names.
     """
 
-    def process(cls, observable_names: List[str]) -> Dict[str, float]:
+    def process(cls, observable_names: list[str]) -> dict[str, float]:
         # get the list of observable names needed by themselves and any formulas
         formula_observables = []
         basic_observables = []
@@ -92,7 +93,7 @@ def process_formulas(func):
 
 
 def validate_bounds(func):
-    def validate(cls, variable_names: List[str]):
+    def validate(cls, variable_names: list[str]):
         bounds = func(cls, variable_names)
 
         for name, bound in bounds.items():
@@ -142,11 +143,11 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         validate_assignment=True, use_enum_values=True, arbitrary_types_allowed=True
     )
     name: ClassVar[str] = Field(description="environment name")
-    variables: ClassVar[Dict[str, list[float]]]  # bounds list could be empty for var
+    variables: ClassVar[dict[str, list[float]]]  # bounds list could be empty for var
     observables: ClassVar[list[str]]
 
     @abstractmethod
-    def get_variables(self, variable_names: list[str]) -> Dict[str, float]:
+    def get_variables(self, variable_names: list[str]) -> dict[str, float]:
         """
         Get the values of the specified variables from the environment.
 
@@ -160,10 +161,9 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         Dict[str, float]
             A dictionary mapping variable names to their values.
         """
-        pass
 
     @abstractmethod
-    def set_variables(self, variable_inputs: Dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]):
         """
         Set the values of the specified variables in the environment.
 
@@ -172,12 +172,11 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         variable_inputs : Dict[str, float]
             A dictionary mapping variable names to their values.
         """
-        pass
 
     @abstractmethod
     def get_observables(
-        self, observable_names: List[str]
-    ) -> Dict[str, float | List[float]]:
+        self, observable_names: list[str]
+    ) -> dict[str, float | list[float]]:
         """
         Get the values of the specified observables from the environment.
 
@@ -195,16 +194,14 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
             A dictionary mapping observable names to their values.
 
         """
-        pass
 
     def reset_environment(self):
         """
         Reset the environment to its initial state.
         This method is called at the start of each run.
         """
-        pass
 
-    def get_system_states(self) -> Dict[str, Any]:
+    def get_system_states(self) -> dict[str, Any]:
         """
         Get the current system states from the environment.
         This method is called to retrieve the current state of the environment.
@@ -299,7 +296,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
 
 class Environment(BaseEnvironment):
     # Interface
-    interface: Optional[SerializeAsAny[Interface]] = None
+    interface: SerializeAsAny[Interface] | None = None
     # Put all other env params here
     # params: float = Field(..., description='Example env parameter')
 
@@ -307,19 +304,19 @@ class Environment(BaseEnvironment):
     # Optional methods to inherit
     ############################################################
 
-    def get_variables(self, variable_names: List[str]) -> Dict:
+    def get_variables(self, variable_names: list[str]) -> dict:
         if not self.interface:
             raise BadgerNoInterfaceError
 
         return self.interface.get_values(variable_names)
 
-    def set_variables(self, variable_inputs: Dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]):
         if not self.interface:
             raise BadgerNoInterfaceError
 
         return self.interface.set_values(variable_inputs)
 
-    def get_observables(self, observable_names: List[str]) -> Dict:
+    def get_observables(self, observable_names: list[str]) -> dict:
         if not self.interface:
             raise BadgerNoInterfaceError
 
@@ -329,7 +326,7 @@ class Environment(BaseEnvironment):
         if self.interface:
             return self.interface.reset_interface()
 
-    def get_info(self, variable_names: List[str]) -> Dict | None:
+    def get_info(self, variable_names: list[str]) -> dict | None:
         if not self.interface:
             return None
 

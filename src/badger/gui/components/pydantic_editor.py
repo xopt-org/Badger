@@ -10,15 +10,14 @@ validated against the Pydantic schema in real time.
 import ast
 import logging
 import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from inspect import isclass
 from types import NoneType
 from typing import (
     Annotated,
     Any,
-    Callable,
     Optional,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -27,6 +26,8 @@ from typing import (
 )
 
 import yaml
+from bax_algorithms.emittance import PathwiseMinimizeEmittance
+from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, PydanticUndefinedType
@@ -47,18 +48,15 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from torch import Tensor
 from xopt.errors import VOCSError
 from xopt.generators import get_generator
 from xopt.generators.bayesian.bax.algorithms import Algorithm
 from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
-from torch import Tensor
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
-
-from bax_algorithms.emittance import PathwiseMinimizeEmittance
-from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +94,7 @@ def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
 
 def _set_value_for_basic_widget(
     widget: QWidget,
-    value: str | float | int | bool | None,
+    value: str | float | bool | None,
 ) -> None:
     nullable = bool(widget.property("badger_nullable"))
     if isinstance(widget, QLabel) or isinstance(widget, QLineEdit):
@@ -151,10 +149,8 @@ class BadgerResolvedType:
         return resolved[0]
 
     @classmethod
-    def resolve(
-        cls, annotation: type[Any] | Union[Any, None] | None
-    ) -> "BadgerResolvedType":
-        origin: type[Any] | Union[Any, None] | None = get_origin(annotation)
+    def resolve(cls, annotation: type[Any] | Any | None) -> "BadgerResolvedType":
+        origin: type[Any] | Any | None = get_origin(annotation)
         args = get_args(annotation)
         nullable = False
 
@@ -217,8 +213,8 @@ class BadgerResolvedType:
     @classmethod
     def resolve_qt(
         cls,
-        annotation: type[Any] | Union[Any, None] | None,
-        default: float | int | bool | dict[str, Any] | list[Any] | None = None,
+        annotation: type[Any] | Any | None,
+        default: float | bool | dict[str, Any] | list[Any] | None = None,
         editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem] | None = None,
     ) -> QWidget | None:
         resolved_type = BadgerResolvedType.resolve(annotation)
@@ -229,11 +225,11 @@ class BadgerResolvedType:
             widget = QLineEdit()
             widget.setText("null")
         elif issubclass(resolved_type.main, BaseModel):
-            if issubclass(resolved_type.main, TurboController):
-                widget = QComboBox()
-            elif issubclass(resolved_type.main, NumericalOptimizer):
-                widget = QComboBox()
-            elif issubclass(resolved_type.main, Algorithm):
+            if (
+                issubclass(resolved_type.main, TurboController)
+                or issubclass(resolved_type.main, NumericalOptimizer)
+                or issubclass(resolved_type.main, Algorithm)
+            ):
                 widget = QComboBox()
             else:
                 return None
@@ -711,8 +707,7 @@ class BadgerPydanticEditor(QTreeWidget):
         update_callback: Callable[["BadgerPydanticEditor"], None] | None = None,
     ):
         QTreeWidget.__init__(self, parent)
-        if value_col < 1:
-            value_col = 1
+        value_col = max(value_col, 1)
         self.value_col = value_col
         self.update_callback = update_callback
         self.setColumnCount(self.value_col + 1)
@@ -720,7 +715,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self.setHeaderLabels(
             [
                 "Parameter" if i == 0 else "Value" if i == self.value_col else ""
-                for i in range(0, self.value_col + 1)
+                for i in range(self.value_col + 1)
             ]
         )
 
@@ -728,14 +723,14 @@ class BadgerPydanticEditor(QTreeWidget):
 
     def _set_params_recurse(
         self,
-        parent: Optional[QTreeWidgetItem],
+        parent: QTreeWidgetItem | None,
         fields: dict[str, FieldInfo],
         defaults: dict[str, Any] | None,
         hidden: bool,
     ) -> None:
         for field_name, field_info in fields.items():
             child = QTreeWidgetItem(
-                [field_name if i == 0 else "" for i in range(0, self.value_col + 1)]
+                [field_name if i == 0 else "" for i in range(self.value_col + 1)]
             )
 
             if parent is None:
@@ -1343,9 +1338,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 self.update_error_styles(loc, msg)
 
     def update_error_styles(self, loc: tuple[int | str, ...], msg: str) -> None:
-        error_widget: QTreeWidgetItem | QTreeWidget | "BadgerPydanticEditor" | None = (
-            None
-        )
+        error_widget: QTreeWidgetItem | QTreeWidget | BadgerPydanticEditor | None = None
         if len(loc) > 0:
             error_widget = self.find_widget_at_path(loc)
         else:

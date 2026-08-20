@@ -7,15 +7,15 @@ During an active run, a temporary file is periodically updated so data
 isn't lost if the process crashes.
 """
 
+import logging
 import os
 import time
 import warnings
-import logging
 
-from badger.utils import ts_float_to_str
-from badger.settings import init_settings
-from badger.routine import Routine
 from badger.errors import BadgerConfigError
+from badger.routine import Routine
+from badger.settings import init_settings
+from badger.utils import ts_float_to_str
 
 logger = logging.getLogger(__name__)
 

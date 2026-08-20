@@ -37,7 +37,7 @@ All tests should pass. GUI tests use `pytest-qt` and require a display server (t
 
 - **`suppress_popups` is autouse.** All tests automatically mock `ExpandableMessageBox.exec_` to prevent Qt dialogs from blocking test execution.
 
-- **Disabled tests use `x-` prefix.** Files like `x-test_db.py` are excluded from pytest collection (they don't match the `test_*.py` pattern). These require `BADGER_DB_ROOT` to be configured.
+- **Disabled tests use `x_` prefix.** Files like `x_test_db.py` are excluded from pytest collection (they don't match the `test_*.py` pattern). These require `BADGER_DB_ROOT` to be configured.
 
 - **Coverage targets the `badger` module.** `pyproject.toml` uses `--cov=badger` (module name, not a path), which resolves correctly under the `src/` layout.
 
@@ -168,6 +168,6 @@ A pre-commit hook (`check-module-docstrings`) enforces presence. Empty `__init__
 
 3. **`Interface.reset_interface()`** is called after process fork — use it to reset any non-fork-safe state (file descriptors, connections, etc.) in custom interfaces.
 
-4. **The `db.py` module is semi-deprecated** — it requires `BADGER_DB_ROOT` config which is not in the default `BadgerConfig` model. The `x-test_db.py` and `x-test_routine_id.py` files test this functionality but are excluded from normal test runs.
+4. **The `db.py` module is semi-deprecated** — it requires `BADGER_DB_ROOT` config which is not in the default `BadgerConfig` model. The `x_test_db.py` and `x_test_routine_id.py` files test this functionality but are excluded from normal test runs.
 
 5. **`utils.py` has Qt dependencies** — `BlockSignalsContext` and related utilities import from `PyQt5.QtWidgets` at the module level, so `badger.utils` cannot be imported without PyQt5 installed.

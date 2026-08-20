@@ -2,8 +2,8 @@
 offers to fix missing ones interactively, and can factory-reset Badger back
 to its default state."""
 
-from badger.settings import init_settings, mock_settings
 from badger.actions.config import _config_path_var
+from badger.settings import init_settings, mock_settings
 
 
 def self_check(args):
@@ -91,7 +91,7 @@ def check_n_config_paths(config_filepath=None):
         fixed = True
         for pname in issue_list:
             try:
-                print("")
+                print()
                 success = _config_path_var(pname)
                 if not success:
                     fixed = False

@@ -1,9 +1,7 @@
 """Keeps a pool of pre-spawned subprocesses ready to run optimizations.
 When one is consumed by a run, signals that a new one should be created."""
 
-from typing import Dict, Optional
-
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import QObject, pyqtSignal
 
 
 class ProcessManager(QObject):
@@ -18,7 +16,7 @@ class ProcessManager(QObject):
         super().__init__()
         self.processes_queue = []
 
-    def add_to_queue(self, process_with_args: Dict) -> None:
+    def add_to_queue(self, process_with_args: dict) -> None:
         """
         Add to a dict contaitng a process and it's coresponding args to the processes_queue.
 
@@ -28,7 +26,7 @@ class ProcessManager(QObject):
         """
         self.processes_queue.append(process_with_args)
 
-    def remove_from_queue(self) -> Optional[Dict]:
+    def remove_from_queue(self) -> dict | None:
         """
         Removes and returns a process and it's coresponding args to the processes_queue.
         If no process are in the processes_queue then the method returns None.
@@ -52,7 +50,7 @@ class ProcessManager(QObject):
         -------
         True: bool
         """
-        for i in range(0, len(self.processes_queue)):
+        for i in range(len(self.processes_queue)):
             process = self.processes_queue.pop(0)
             process["process"].terminate()
             process["process"].join()

@@ -7,10 +7,11 @@ substitutes measured values, and evaluates the expression in a sandboxed
 namespace (numpy only). Includes typo detection for misspelled variable names.
 """
 
-import numpy as np
-import re
 import ast
 import difflib
+import re
+
+import numpy as np
 
 
 def safe_var_name(var_name):

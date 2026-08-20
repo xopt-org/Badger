@@ -4,15 +4,17 @@ plugin to verify the variable exists and retrieve its current value."""
 
 from PyQt5.QtWidgets import (
     QDialog,
-    QWidget,
+    QGroupBox,
     QHBoxLayout,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtWidgets import QGroupBox, QMessageBox
-from badger.gui.components.labeled_lineedit import labeled_lineedit
+
 from badger.environment import instantiate_env
+from badger.gui.components.labeled_lineedit import labeled_lineedit
 
 
 class BadgerVariableDialog(QDialog):
