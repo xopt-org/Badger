@@ -4,6 +4,7 @@ database errors, plugin failures, and optimization stop signals."""
 
 import sys
 import traceback
+from typing import Any
 
 from PyQt5.QtWidgets import QMessageBox
 
@@ -87,7 +88,9 @@ class BadgerInterfaceChannelError(Exception):
 
 
 class BadgerInvalidPluginError(Exception):
-    pass
+    def __init__(self, message: str = "", configs: Any = None):
+        super().__init__(message)
+        self.configs = configs
 
 
 class BadgerPluginNotFoundError(Exception):

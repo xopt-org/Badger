@@ -218,7 +218,7 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Setting best reference points")
         try:
             self.set_best_reference_points()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - UI action reports via dialog
             logger.error(f"Error getting best reference points: {e}")
             QMessageBox.critical(
                 self,
@@ -231,7 +231,7 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Setting latest reference points")
         try:
             self.set_latest_reference_points()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - UI action reports via dialog
             logger.error(f"Error getting latest reference points: {e}")
             QMessageBox.critical(
                 self,

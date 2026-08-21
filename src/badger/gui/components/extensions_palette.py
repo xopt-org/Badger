@@ -189,7 +189,7 @@ class ExtensionsPalette(QMainWindow):
             self.update_palette()
         except HandledException as e:
             QMessageBox.critical(self, "Handled Exception Error", str(e))
-        except Exception:
+        except Exception:  # noqa: BLE001 - explicit unhandled-exception fallback
             QMessageBox.critical(
                 self, "Unhandled Exception Error", traceback.format_exc()
             )

@@ -33,7 +33,7 @@ def constraint_item(
     cb_obs.addItems(options)
     try:
         idx = options.index(name)
-    except:
+    except ValueError:
         idx = 0
     cb_obs.setCurrentIndex(idx)
 

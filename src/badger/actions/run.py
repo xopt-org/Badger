@@ -30,7 +30,7 @@ def run_n_archive(
 ):
     try:
         from badger.archive import archive_run
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit
         logger.error(e)
         return
 
@@ -90,7 +90,7 @@ def run_n_archive(
                 routine.environment.interface.dump_recording(
                     os.path.join(path, filename)
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001 - interface dump is best-effort
                 logger.warning("Failed to dump interface logs")
 
         # take a break to let the outside signal to change the status
@@ -109,7 +109,7 @@ def run_n_archive(
         )
     except BadgerRunTerminated as e:
         logger.info(e)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CLI run boundary
         logger.error(e)
 
     # Save the run when at least one solution has been evaluated
@@ -120,7 +120,7 @@ def run_n_archive(
             path = _run["path"]
             filename = _run["filename"][:-4] + "pickle"
             routine.environment.interface.stop_recording(os.path.join(path, filename))
-        except Exception:
+        except Exception:  # noqa: BLE001 - interface dump is best-effort
             logger.warning("Failed to dump interface logs")
 
 

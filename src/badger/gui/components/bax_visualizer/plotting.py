@@ -177,7 +177,7 @@ class PlottingWidget(QWidget):
             content = self._build_plot_widget(fig, add_stretch=True)
             self.plot_tab_widget.addTab(self._scrollable(content), "Virtual Objective")
             plt.close(fig)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - plot render can fail many ways
             logger.error(f"Error creating plot: {e}")
             self.plot_tab_widget.addTab(QWidget(), "Error")
 
@@ -190,7 +190,7 @@ class PlottingWidget(QWidget):
                 fig, _ = create_plot()
                 layout.addWidget(self._build_plot_widget(fig))
                 plt.close(fig)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - plot render can fail many ways
                 logger.error(f"Error creating plot: {e}")
 
         # Keep the plots top-aligned at their natural height; the scroll area

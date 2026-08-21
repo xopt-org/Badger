@@ -98,4 +98,4 @@ def interpret_expression(expr, variables):
     try:
         return eval(expr, {"__builtins__": {}}, safe_namespace)
     except Exception as e:
-        raise ValueError(f"Expression evaluation failed: {e}")
+        raise ValueError(f"Expression evaluation failed: {e}") from e

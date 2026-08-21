@@ -353,7 +353,7 @@ def instantiate_env(
         intf_name = configs["interface"][0]
     except KeyError:
         intf_name = None
-    except Exception as e:
+    except (TypeError, IndexError) as e:
         logger.warning(e)
         intf_name = None
 

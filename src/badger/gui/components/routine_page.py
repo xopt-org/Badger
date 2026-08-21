@@ -1034,7 +1034,7 @@ class BadgerRoutinePage(QWidget):
         # Get vocs
         try:
             vocs, _ = self.env_box.compose_vocs()
-        except Exception:
+        except BadgerRoutineError:
             vocs = None
         self.generator_box.edit.set_params_from_generator(name, filtered_config, vocs)
 
@@ -1085,7 +1085,9 @@ class BadgerRoutinePage(QWidget):
         try:
             env = instantiate_env(self.env, configs)
         except Exception as e:
-            raise BadgerEnvInstantiationError(f"Failed to instantiate environment: {e}")
+            raise BadgerEnvInstantiationError(
+                f"Failed to instantiate environment: {e}"
+            ) from e
 
         return env
 
@@ -1099,7 +1101,7 @@ class BadgerRoutinePage(QWidget):
             exec(self.script, tmp)  # noqa: S102
             try:
                 tmp["generate"]  # test if generate function is defined
-            except Exception as e:
+            except KeyError as e:
                 QMessageBox.warning(
                     self, "Please define a valid generate function!", str(e)
                 )
@@ -1109,14 +1111,14 @@ class BadgerRoutinePage(QWidget):
             # Get vocs
             try:
                 vocs, _ = self.env_box.compose_vocs()
-            except Exception:
+            except BadgerRoutineError:
                 vocs = None
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
             self.generator_box.edit.set_params_from_generator(
                 self.routine.generator.name, params_generator, vocs
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - runs user-provided generator script
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     def select_env(self, i: int):
@@ -1155,7 +1157,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_refresh.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
-        except Exception:
+        except Exception:  # noqa: BLE001 - env selection rollback on any failure
             self.configs = None
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
@@ -1270,7 +1272,7 @@ class BadgerRoutinePage(QWidget):
             raise BadgerEnvVarError(
                 f"Failed to get current variable values : {e}\n"
                 "Please ensure the environment is properly configured."
-            )
+            ) from e
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -1305,7 +1307,7 @@ class BadgerRoutinePage(QWidget):
         # get small region around current point to sample
         try:
             vocs, _ = self.env_box.compose_vocs()
-        except Exception:
+        except BadgerRoutineError:
             # Switch to manual mode to allow the user fixing the vocs issue
             QMessageBox.warning(
                 self,
@@ -1475,7 +1477,7 @@ class BadgerRoutinePage(QWidget):
             raise BadgerEnvVarError(
                 f"Failed to get current variable values : {e}\n"
                 "Please ensure the environment is properly configured."
-            )
+            ) from e
 
         option_idx = self.limit_option["limit_option_idx"]
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
@@ -1669,7 +1671,7 @@ class BadgerRoutinePage(QWidget):
         if checked:
             try:
                 _ = self.env_box.compose_vocs()
-            except Exception:
+            except BadgerRoutineError:
                 logger.warning("Variable range is not valid, switching to manual mode.")
                 QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
                 QMessageBox.warning(
@@ -1927,7 +1929,7 @@ class BadgerRoutinePage(QWidget):
     def review(self):
         try:
             routine = self._compose_routine()
-        except Exception:
+        except Exception:  # noqa: BLE001 - routine compose reports via dialog
             return QMessageBox.critical(
                 self, "Invalid routine!", traceback.format_exc()
             )
@@ -1947,7 +1949,7 @@ class BadgerRoutinePage(QWidget):
                 "Update success!",
                 f"Routine {self.routine.name} description was updated!",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 - update reports via dialog
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
 
     def set_default_generator(self, generator_name: str) -> None:

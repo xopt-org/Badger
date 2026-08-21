@@ -55,7 +55,7 @@ def evaluate_measurement_with_retry(
     while True:
         try:
             return routine.evaluate_data(point)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - env evaluate can raise anything
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
             logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
@@ -196,7 +196,7 @@ def run_routine_subprocess(
     try:
         args = queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - subprocess queue read boundary
         logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {e!s}")
 
     # set required arguments

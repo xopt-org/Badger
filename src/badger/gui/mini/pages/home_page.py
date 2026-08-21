@@ -331,7 +331,7 @@ class BadgerHomePage(QWidget):
             self.run_monitor.routine_filename = run_filename
         except IndexError:
             return
-        except Exception as e:  # failed to load the run
+        except Exception as e:  # noqa: BLE001 - run load boundary
             details = traceback.format_exc()
             dialog = BadgerScrollableMessageBox(
                 title="Error!", text=str(e), parent=self

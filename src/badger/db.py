@@ -91,7 +91,7 @@ def filter_routines(records, tags):
             _tags = yaml.safe_load(record[3])["config"]["tags"]
             if tags.items() <= _tags.items():
                 records_filtered.append(record)
-        except Exception as e:
+        except (KeyError, TypeError, yaml.YAMLError) as e:
             logger.warning(f"Failed to extract tags from routine {record[0]}: {e}")
 
     return records_filtered
@@ -107,7 +107,7 @@ def extract_metadata(records):
             env_list.append(env)
             descr = metadata["description"]
             descr_list.append(descr)
-        except Exception:
+        except (KeyError, TypeError, yaml.YAMLError):
             env_list.append("")
             descr_list.append("")
 
@@ -424,7 +424,7 @@ def import_routines(filename):
     for record in records:
         try:
             cur_db.execute("insert into routine values (?, ?, ?, ?)", record)
-        except:
+        except sqlite3.Error:
             failed_list.append(record[0])
 
     con_db.commit()

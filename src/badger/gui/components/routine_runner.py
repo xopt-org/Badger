@@ -219,7 +219,7 @@ class BadgerRoutineSubprocess:
         except BadgerRunTerminated as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - run worker boundary
             traceback_info = traceback.format_exc()
             e._details = traceback_info
             self.signals.finished.emit()

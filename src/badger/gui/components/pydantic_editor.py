@@ -79,7 +79,7 @@ class CustomSafeLoader(yaml.SafeLoader):
         if TUPLE_PATTERN.match(value):
             try:
                 return ast.literal_eval(value)
-            except Exception:
+            except (ValueError, SyntaxError):
                 logger.warning(f"Failed to parse tuple from string: {value}")
         return value
 
@@ -1260,11 +1260,11 @@ class BadgerPydanticEditor(QTreeWidget):
                     continue
                 try:
                     parameters_dict[cf_name] = getattr(instance, cf_name)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - computed field runs model code
                     logger.debug(
                         f"Could not compute {cf_name} on {model_class.__name__}: {e}"
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - model_construct runs model code
             logger.debug(
                 f"Could not model_construct {model_class.__name__} for computed-field injection: {e}"
             )

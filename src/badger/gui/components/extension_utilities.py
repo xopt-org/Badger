@@ -74,11 +74,11 @@ def requires_update(
 def to_precision_float(value: Any, precision: int = 4) -> float:
     try:
         return float(f"{value:.{precision}g}")
-    except Exception:
+    except (ValueError, TypeError) as e:
         raise HandledException(
             ValueError,
             f"Value {value} cannot be converted to float with precision {precision}",
-        )
+        ) from e
 
 
 def get_latest_reference_points(

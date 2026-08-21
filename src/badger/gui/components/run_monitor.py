@@ -331,7 +331,7 @@ class BadgerOptMonitor(QWidget):
         if constraint_names:
             try:
                 _ = self.plot_con
-            except:
+            except AttributeError:
                 self.plot_con = plot_con = add_axes(
                     self.monitor,
                     "constraints",
@@ -358,7 +358,7 @@ class BadgerOptMonitor(QWidget):
         if sta_names:
             try:
                 _ = self.plot_obs
-            except:
+            except AttributeError:
                 self.plot_obs = plot_obs = add_axes(
                     self.monitor,
                     "observables",
@@ -674,7 +674,7 @@ class BadgerOptMonitor(QWidget):
             #         self, 'Success!',
             #         f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - archive external call
             self.sig_run_name.emit(None)
             self.sig_status.emit(f"Archive failed: {e!s}")
             # if not self.testing:
@@ -715,7 +715,7 @@ class BadgerOptMonitor(QWidget):
     def logbook(self) -> None:
         try:
             send_to_logbook(self.routine, self.monitor)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - logbook external call
             self.sig_status.emit(f"Log failed: {e!s}")
             # QMessageBox.critical(self, 'Log failed!', str(e))
 
@@ -764,7 +764,7 @@ class BadgerOptMonitor(QWidget):
             try:
                 ts = self.extract_timestamp()
                 value = idx = np.clip(np.round(pos), 0, len(ts) - 1)
-            except:  # no data
+            except (IndexError, ValueError):  # no data
                 value = idx = np.round(pos)
         self.inspector_objective.setValue(value)
         if self.vocs and self.vocs.constraint_names:

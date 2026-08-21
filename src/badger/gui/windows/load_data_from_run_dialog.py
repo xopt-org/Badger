@@ -231,7 +231,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
             routine = load_run(file_path)
             self.preview_run(routine)
         except Exception as e:
-            raise BadgerRoutineError(f"{e}")
+            raise BadgerRoutineError(f"{e}") from e
 
     def load_data(self, run_filename: str) -> None:
         """
@@ -247,7 +247,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
             return routine
         except IndexError:
             return
-        except Exception:  # failed to load the run
+        except Exception:  # noqa: BLE001 - run load boundary
             return
 
     def init_plots(self) -> None:

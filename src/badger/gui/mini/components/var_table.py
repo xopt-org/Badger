@@ -965,7 +965,7 @@ class VariableTable(QTableWidget):
                     f"Variable {name} cannot be found through the interface!",
                 )
                 return
-            except Exception:
+            except Exception:  # noqa: BLE001 - interface bounds fetch varies
                 # Raised when PV exists but value/hard limits cannot be found
                 # Set to some default values
                 _bounds = [0, 0]

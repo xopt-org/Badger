@@ -17,7 +17,7 @@ def state_item(options, remove_item, name=None):
     cb_sta.addItems(options)
     try:
         idx = options.index(name)
-    except:
+    except ValueError:
         idx = 0
     cb_sta.setCurrentIndex(idx)
 

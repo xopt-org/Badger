@@ -96,7 +96,7 @@ def scan_plugins(root: str):
                 for fname in os.listdir(proot)
                 if os.path.exists(os.path.join(proot, fname, "__init__.py"))
             ]
-        except:
+        except OSError:
             plugins = []
 
         for pname in plugins:
@@ -136,11 +136,10 @@ def load_plugin(
     try:
         module = importlib.import_module(f"{ptype}s.{pname}")
     except ImportError as e:
-        _e = BadgerInvalidPluginError(
-            f"{ptype} {pname} is not available due to missing dependencies: {e}"
-        )
-        _e.configs = configs  # attach information to the exception
-        raise _e
+        raise BadgerInvalidPluginError(
+            f"{ptype} {pname} is not available due to missing dependencies: {e}",
+            configs=configs,
+        ) from e
 
     if ptype == "generator":
         plugin = (module.optimize, configs)
@@ -172,7 +171,7 @@ def load_plugin(
                 intf = cast(BadgerInterface, Interface())
         except KeyError:
             intf = None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - interface plugin load best-effort
             logger.warning(e)
             intf = None
         env = m_env(interface=intf, params=configs)
@@ -236,7 +235,7 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         try:
             with open(docs_dir / f"{name}.md", "r") as f:
                 readme = f.read()
-        except:
+        except OSError:
             readme = f"# {name}\nNo documentation found.\n"
 
         if ptype == "generator":
@@ -295,10 +294,10 @@ def load_plugin_docs(pname: str, ptype: str) -> str:
             docstring = module.Environment.__doc__
 
         return _format_docs_str(readme, docstring, ptype)
-    except:
+    except Exception as e:
         raise BadgerInvalidDocsError(
             f"Error loading docs for {ptype} {pname}: docs not found"
-        )
+        ) from e
 
 
 def _format_docs_str(readme: str, docstring: str, ptype: str) -> str:

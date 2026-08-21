@@ -90,7 +90,7 @@ class BadgerDocsWindow(QMainWindow):
             else:
                 # Load plugin documentation from plugin root
                 self.docs = load_plugin_docs(self.docs_name, self.plugin_type)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - docs viewer shows any load error
             self.docs = str(e)
 
         self.refresh_docs_view()

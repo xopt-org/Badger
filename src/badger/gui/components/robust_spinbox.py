@@ -13,7 +13,7 @@ class RobustSpinBox(QDoubleSpinBox):
         try:
             decimals = kwargs["decimals"]
             del kwargs["decimals"]
-        except:
+        except KeyError:
             decimals = 6
 
         try:
@@ -21,7 +21,7 @@ class RobustSpinBox(QDoubleSpinBox):
             del kwargs["lower_bound"]
             if lb is None:
                 lb = -1e3
-        except:
+        except KeyError:
             lb = -1e3
 
         try:
@@ -29,7 +29,7 @@ class RobustSpinBox(QDoubleSpinBox):
             del kwargs["upper_bound"]
             if ub is None:
                 ub = 1e3
-        except:
+        except KeyError:
             ub = 1e3
 
         try:
@@ -37,7 +37,7 @@ class RobustSpinBox(QDoubleSpinBox):
             del kwargs["default_value"]
             if default_value is None:
                 default_value = 0
-        except:
+        except KeyError:
             default_value = 0
 
         super().__init__(*args, **kwargs)
