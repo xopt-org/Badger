@@ -21,43 +21,42 @@ and sig_var_config (config button clicked). Use export_variables() to get the
 checked variables with their current bounds.
 """
 
+import logging
+import traceback
 from functools import partial
 from importlib import resources
-import traceback
 from typing import Any, cast
-from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QCheckBox,
-    QMessageBox,
-    QAbstractItemView,
-    QPushButton,
-    QWidget,
-    QHBoxLayout,
-    QMenu,
-    QGridLayout,
-    QLabel,
-    QDialog,
-)
-from PyQt5.QtCore import pyqtSignal, Qt, QSize, QPoint
+
+from gest_api.vocs import ContinuousVariable
+from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
 from PyQt5.QtGui import (
     QColor,
-    QIcon,
-    QGuiApplication,
-    QDropEvent,
-    QDragMoveEvent,
     QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QGuiApplication,
+    QIcon,
 )
-from badger.gui.components.robust_spinbox import RobustSpinBox
+from PyQt5.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QWidget,
+)
 
 from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
+from badger.gui.components.robust_spinbox import RobustSpinBox
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
-
-from gest_api.vocs import ContinuousVariable
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +137,7 @@ class VariableTable(QTableWidget):
         """
         Emit the data_changed signal to notify that the VOCS has been updated.
         """
-        logging.debug("Emitting data_changed signal from VariableTable")
+        logger.debug("Emitting data_changed signal from VariableTable")
         self.data_changed.emit()
 
     def config_logic(self):
@@ -160,7 +159,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             item = cast(QCheckBox, item)
             if not item.isChecked():
                 return False
@@ -176,7 +175,7 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             item = cast(QCheckBox, item)
             # Doing batch update
             item.blockSignals(True)
@@ -188,15 +187,15 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             widget = self.item(i, 1)
             if not widget:
-                raise Exception("Variable name widget not found!")
+                raise RuntimeError("Variable name widget not found!")
             name = widget.text()
 
             sb_lower = self.cellWidget(i, 2)
             if not sb_lower:
-                raise Exception("Variable bound spinbox widget not found!")
+                raise RuntimeError("Variable bound spinbox widget not found!")
             sb_upper = self.cellWidget(i, 3)
             if not sb_upper:
-                raise Exception("Variable bound spinbox widget not found!")
+                raise RuntimeError("Variable bound spinbox widget not found!")
 
             sb_lower = cast(RobustSpinBox, sb_lower)
             sb_upper = cast(RobustSpinBox, sb_upper)
@@ -211,10 +210,10 @@ class VariableTable(QTableWidget):
         """
         sb_lower = self.cellWidget(row, 2)  # Min value spinbox
         if not sb_lower:
-            raise Exception("Variable bound spinbox widget not found!")
+            raise RuntimeError("Variable bound spinbox widget not found!")
         sb_upper = self.cellWidget(row, 3)  # Max value spinbox
         if not sb_upper:
-            raise Exception("Variable bound spinbox widget not found!")
+            raise RuntimeError("Variable bound spinbox widget not found!")
 
         sb_lower = cast(RobustSpinBox, sb_lower)
         sb_upper = cast(RobustSpinBox, sb_upper)
@@ -228,8 +227,8 @@ class VariableTable(QTableWidget):
     def set_bounds(
         self, variables: dict[str, tuple[float, float]], signal: bool = True
     ):
-        for name in variables:
-            self.bounds[name] = variables[name]
+        for name, bounds in variables.items():
+            self.bounds[name] = bounds
 
         if signal:
             self.update_variables(self.variables, 2)
@@ -259,12 +258,12 @@ class VariableTable(QTableWidget):
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             if not _cb:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             _cb = cast(QCheckBox, _cb)
 
             widget = self.item(i, 1)
             if not widget:
-                raise Exception("Variable name widget not found!")
+                raise RuntimeError("Variable name widget not found!")
             name = widget.text()
             is_selected = _cb.isChecked()
             widget.setForeground(QColor("lightgray" if is_selected else "gray"))
@@ -395,7 +394,7 @@ class VariableTable(QTableWidget):
 
             _cb = self.cellWidget(i, 0)
             if not _cb:
-                raise Exception("Checkbox widget not found!")
+                raise RuntimeError("Checkbox widget not found!")
             _cb = cast(QCheckBox, _cb)
 
             _cb.setChecked(self.is_checked(name))
@@ -525,7 +524,7 @@ class VariableTable(QTableWidget):
                     f"Variable {name} cannot be found through the interface!",
                 )
                 return
-            except Exception:
+            except Exception:  # noqa: BLE001 - interface bounds fetch varies
                 # Raised when PV exists but value/hard limits cannot be found
                 # Set to some default values
                 _bounds = [0, 0]
@@ -542,14 +541,14 @@ class VariableTable(QTableWidget):
 
         else:
             # TODO: handle this case? Right now I don't think it should happen
-            raise Exception("Environment cannot be found for new variable bounds!")
+            raise RuntimeError("Environment cannot be found for new variable bounds!")
 
         # Add checkbox only when a PV is entered
         self.setCellWidget(idx, 0, QCheckBox())
 
         _cb = self.cellWidget(idx, 0)
         if not _cb:
-            raise Exception("Checkbox widget not found!")
+            raise RuntimeError("Checkbox widget not found!")
         _cb = cast(QCheckBox, _cb)
 
         # Checked by default when entered

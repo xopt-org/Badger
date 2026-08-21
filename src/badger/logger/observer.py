@@ -1,7 +1,8 @@
 """Base classes for logger observers. Observer defines the update() interface;
 _Tracker adds iteration counting and elapsed-time tracking."""
 
-from datetime import datetime
+from datetime import UTC, datetime
+
 from badger.logger.event import Events
 
 
@@ -10,7 +11,7 @@ class Observer:
         raise NotImplementedError
 
 
-class _Tracker(object):
+class _Tracker:
     def __init__(self):
         self._iterations = 0
 
@@ -22,7 +23,7 @@ class _Tracker(object):
             self._iterations += 1
 
     def _time_metrics(self):
-        now = datetime.now()
+        now = datetime.now(tz=UTC)
         if self._start_time is None:
             self._start_time = now
         if self._previous_time is None:

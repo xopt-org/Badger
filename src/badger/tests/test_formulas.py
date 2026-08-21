@@ -1,11 +1,12 @@
-import pytest
 import numpy as np
+import pytest
+
 from badger.formula import (
-    safe_var_name,
     extract_variable_keys,
     find_used_names,
-    suggest_name,
     interpret_expression,
+    safe_var_name,
+    suggest_name,
 )
 
 

@@ -3,8 +3,7 @@ Users drag items from here into the variable/observable/constraint tables
 when building a routine."""
 
 import logging
-from typing import List
-from PyQt5.QtGui import QDrag, QKeyEvent
+
 from PyQt5.QtCore import (
     QAbstractTableModel,
     QMimeData,
@@ -14,6 +13,7 @@ from PyQt5.QtCore import (
     QVariant,
     pyqtSignal,
 )
+from PyQt5.QtGui import QDrag, QKeyEvent
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from badger.errors import BadgerRoutineError
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ class ArchiveResultsTableModel(QAbstractTableModel):
         self.endInsertRows()
         self.layoutChanged.emit()
 
-    def replace_rows(self, pvs: List[str]) -> None:
+    def replace_rows(self, pvs: list[str]) -> None:
         """Overwrites any existing rows in the table with the input list of variable names"""
         self.beginInsertRows(QModelIndex(), 0, len(pvs) - 1)
         self.results_list = pvs

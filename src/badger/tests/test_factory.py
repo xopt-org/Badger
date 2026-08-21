@@ -1,9 +1,9 @@
 import json
 from copy import deepcopy
 
+from gest_api.vocs import ExploreObjective
 from xopt.generators import get_generator, get_generator_defaults
 from xopt.resources.testing import TEST_VOCS_BASE
-from gest_api.vocs import ExploreObjective
 
 
 class TestFactory:
@@ -39,8 +39,14 @@ class TestFactory:
             elif name == "latin_hypercube":
                 test_vocs = deepcopy(TEST_VOCS_BASE)
                 test_vocs.objectives = {
-                    k: ExploreObjective() for k in test_vocs.objectives.keys()
+                    k: ExploreObjective() for k in test_vocs.objectives
                 }
+                gen_class(vocs=test_vocs, **gen_config)
+            elif name == "bax":
+                test_vocs = deepcopy(TEST_VOCS_BASE)
+                test_vocs.objectives = {}
+                test_vocs.observables = ["f"]
+                json.dumps(gen_config)
                 gen_class(vocs=test_vocs, **gen_config)
             else:
                 json.dumps(gen_config)

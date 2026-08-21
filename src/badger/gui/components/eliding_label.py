@@ -1,7 +1,7 @@
 """QLabel that truncates text with "..." when it doesn't fit. Used for
 long routine names and status messages in tight layouts."""
 
-from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class ElidingLabel(QtWidgets.QLabel):
@@ -106,16 +106,16 @@ class ElidingLabel(QtWidgets.QLabel):
 
 class SimpleElidedLabel(QtWidgets.QLabel):
     def __init__(self, text="", parent=None):
-        super(SimpleElidedLabel, self).__init__(parent)
+        super().__init__(parent)
         self._text = text
 
     def setText(self, text):
         self._text = text
-        super(SimpleElidedLabel, self).setText(self.elidedText())
+        super().setText(self.elidedText())
 
     def resizeEvent(self, event):
-        super(SimpleElidedLabel, self).setText(self.elidedText())
-        super(SimpleElidedLabel, self).resizeEvent(event)
+        super().setText(self.elidedText())
+        super().resizeEvent(event)
 
     def elidedText(self):
         metrics = QtGui.QFontMetrics(self.font())

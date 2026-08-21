@@ -12,23 +12,22 @@ import time
 import traceback
 
 import pandas as pd
-from PyQt5.QtCore import pyqtSignal, QObject, QTimer
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QDialog
 
 from badger.errors import (
-    BadgerRunTerminated,
-    BadgerError,
-    MEASUREMENT_ERROR_TYPE,
-    MEASUREMENT_ACTION_TYPE,
-    MEASUREMENT_ACTION_RETRY,
     MEASUREMENT_ACTION_ABORT,
+    MEASUREMENT_ACTION_RETRY,
+    MEASUREMENT_ACTION_TYPE,
+    MEASUREMENT_ERROR_TYPE,
+    BadgerError,
+    BadgerRunTerminated,
 )
-from badger.tests.utils import get_current_vars
-from badger.routine import calculate_variable_bounds, calculate_initial_points
-from badger.settings import init_settings
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.windows.measurement_retry_dialog import BadgerMeasurementRetryDialog
-from badger.routine import Routine
+from badger.routine import Routine, calculate_initial_points, calculate_variable_bounds
+from badger.settings import init_settings
+from badger.tests.utils import get_current_vars
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ class BadgerRoutineSubprocess:
         self,
         process_manager: ProcessManager,
         routine: Routine = None,
-        routine_filename: str = None,
+        routine_filename: str | None = None,
         save: bool = False,
         verbose: int = 2,
         use_full_ts: bool = False,
@@ -220,7 +219,7 @@ class BadgerRoutineSubprocess:
         except BadgerRunTerminated as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - run worker boundary
             traceback_info = traceback.format_exc()
             e._details = traceback_info
             self.signals.finished.emit()

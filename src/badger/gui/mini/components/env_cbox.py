@@ -7,45 +7,42 @@ Template loading populates every sub-table at once; individual changes in
 vocs tables emit ``vocs_updated`` so the rest of the UI stays in sync.
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
-from PyQt5.QtWidgets import (
-    QFrame,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QStyle,
-    QStyleOptionComboBox,
-    QWidget,
-    QLineEdit,
-    QTreeWidget,
-)
+from gest_api.vocs import ContinuousVariable
+from pydantic_core import ValidationError
+from PyQt5.QtCore import QRegExp, pyqtSignal
 from PyQt5.QtWidgets import (
     QCheckBox,
-    QStyledItemDelegate,
+    QFrame,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QPushButton,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionComboBox,
+    QTreeWidget,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import QRegExp, pyqtSignal
-from badger.gui.components.obs_table import ObservableTable
-from badger.settings import init_settings
-from pydantic_core import ValidationError
+from xopt.vocs import VOCS
 
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
-from badger.gui.components.pydantic_editor import BadgerPydanticEditor
-from badger.gui.mini.components.var_table import VariableTable
-from badger.gui.components.obj_table import ObjectiveTable
 from badger.gui.components.con_table import ConstraintTable
 from badger.gui.components.data_table import init_data_table
+from badger.gui.components.obj_table import ObjectiveTable
+from badger.gui.components.obs_table import ObservableTable
+from badger.gui.components.pydantic_editor import BadgerPydanticEditor
+from badger.gui.mini.components.var_table import VariableTable
 from badger.gui.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
 )
-from xopt.vocs import VOCS
-from gest_api.vocs import ContinuousVariable
-
-import logging
+from badger.settings import init_settings
 
 LABEL_WIDTH = 96
 
@@ -65,8 +62,7 @@ class ArrowOnlyPopupComboBox(NoHoverFocusComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             QComboBox {
                 color: darkGray;
                 background-color: transparent;
@@ -77,8 +73,7 @@ class ArrowOnlyPopupComboBox(NoHoverFocusComboBox):
                 border: none;
                 width: 14px;
             }
-            """
-        )
+            """)
         self.setItemDelegate(QStyledItemDelegate())
         self.installEventFilter(MouseWheelWidgetAdjustmentGuard(self))
 
@@ -231,9 +226,14 @@ class BadgerEnvBox(QWidget):
     def __init__(
         self,
         parent: QWidget | None = None,
-        envs: list[str] = [],
-        generators: list[str] = [],
+        envs: list[str] | None = None,
+        generators: list[str] | None = None,
     ):
+        if envs is None:
+            envs = []
+        if generators is None:
+            generators = []
+
         super().__init__(parent)
 
         self.envs = envs

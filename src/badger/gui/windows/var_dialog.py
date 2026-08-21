@@ -2,17 +2,23 @@
 for finding and adding environment variables by name, querying the environment
 plugin to verify the variable exists and retrieve its current value."""
 
+import logging
+
 from PyQt5.QtWidgets import (
     QDialog,
-    QWidget,
+    QGroupBox,
     QHBoxLayout,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtWidgets import QGroupBox, QMessageBox
-from badger.gui.components.labeled_lineedit import labeled_lineedit
+
 from badger.environment import instantiate_env
+from badger.gui.components.labeled_lineedit import labeled_lineedit
+
+logger = logging.getLogger(__name__)
 
 
 class BadgerVariableDialog(QDialog):
@@ -98,6 +104,7 @@ class BadgerVariableDialog(QDialog):
 
             self.btn_add.setDisabled(False)
         except Exception:
+            logger.exception(f"Variable {name} lookup failed")
             self.edit_value.edit.setText("")
             self.edit_min.edit.setText("")
             self.edit_max.edit.setText("")

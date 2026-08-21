@@ -2,22 +2,24 @@
 objectives (f = x0^2 + x1^2, g = x0 + x1). Useful for testing
 optimizers without needing any hardware."""
 
+from typing import ClassVar
+
 from badger import environment
 
 
 class Environment(environment.Environment):
     name = "sphere_2d"
-    variables = {
+    variables: ClassVar[dict[str, list[float]]] = {
         "x0": [-1, 1],
         "x1": [-1, 1],
     }
-    observables = ["f", "g"]
+    observables: ClassVar[list[str]] = ["f", "g"]
 
-    _variables = {
+    _variables: ClassVar[dict[str, float]] = {
         "x0": 0.5,
         "x1": 0.5,
     }
-    _observations = {
+    _observations: ClassVar[dict[str, float]] = {
         "f": 0.0,
         "g": 0.0,
     }

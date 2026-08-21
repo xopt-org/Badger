@@ -2,22 +2,26 @@
 timestamp formatting, value normalization, run filename generation,
 and platform-specific data directory resolution."""
 
-from importlib import metadata
 import json
 import logging
 import os
-import sys
 import pathlib
-from datetime import datetime
+import sys
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from importlib import metadata
 from types import TracebackType
-from typing import Iterable, Optional, Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
+from PyQt5.QtWidgets import QLayout, QWidget
 
 from badger.errors import BadgerLoadConfigError
-from PyQt5.QtWidgets import QWidget, QLayout
 
-from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+if TYPE_CHECKING:
+    from badger.routine import Routine
+
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
 from gest_api.vocs import ContinuousVariable
 
@@ -43,9 +47,9 @@ class BlockSignalsContext:
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
     ):
         for widget in self.widgets:
             if not widget.signalsBlocked():
@@ -59,7 +63,7 @@ class BlockSignalsContext:
 # https://github.com/yaml/pyyaml/issues/234#issuecomment-765894586
 class Dumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
-        return super(Dumper, self).increase_indent(flow, False)
+        return super().increase_indent(flow, False)
 
 
 def get_yaml_string(content):
@@ -148,7 +152,7 @@ def range_to_str(vranges):
     return vranges_str
 
 
-def ts_to_str(ts, format="lcls-log"):
+def ts_to_str(ts: datetime, format: str = "lcls-log") -> str:
     if format == "lcls-log":
         return ts.strftime("%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -159,31 +163,31 @@ def ts_to_str(ts, format="lcls-log"):
         return ts.isoformat()
 
 
-def str_to_ts(timestr, format="lcls-log"):
+def str_to_ts(timestr: str, format: str = "lcls-log") -> datetime:
     if format == "lcls-log":
-        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S")
+        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S").astimezone(UTC)
     elif format == "lcls-log-full":
-        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S.%f")
+        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S.%f").astimezone(UTC)
     elif format == "lcls-fname":
-        return datetime.strptime(timestr, "%Y-%m-%d-%H%M%S")
+        return datetime.strptime(timestr, "%Y-%m-%d-%H%M%S").astimezone(UTC)
     else:  # ISO format
         return datetime.fromisoformat(timestr)
 
 
-def ts_float_to_str(ts_float, format="lcls-log"):
-    ts = datetime.fromtimestamp(ts_float)
+def ts_float_to_str(ts_float: float, format: str = "lcls-log") -> str:
+    ts = datetime.fromtimestamp(ts_float, tz=UTC)
     return ts_to_str(ts, format)
 
 
-def curr_ts():
-    return datetime.now()
+def curr_ts() -> datetime:
+    return datetime.now(tz=UTC)
 
 
-def curr_ts_to_str(format="lcls-log"):
-    return ts_to_str(datetime.now(), format)
+def curr_ts_to_str(format: str = "lcls-log") -> str:
+    return ts_to_str(datetime.now(tz=UTC), format)
 
 
-def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
+def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") -> str:
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")
@@ -193,29 +197,35 @@ def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
     return fname
 
 
-def get_header(routine):
+def get_header(routine: "Routine") -> list[str]:
     try:
         obj_names = routine.vocs.objective_names
-    except Exception:
+    except AttributeError:
         obj_names = []
     try:
         var_names = routine.vocs.variable_names
-    except Exception:
+    except AttributeError:
         var_names = []
     try:
         con_names = routine.vocs.constraint_names
-    except Exception:
+    except AttributeError:
         con_names = []
     try:
         sta_names = routine.vocs.constant_names
-    except KeyError:
+    except AttributeError:
         sta_names = []
 
-    return obj_names + con_names + var_names + sta_names
+    return list(obj_names) + list(con_names) + list(var_names) + list(sta_names)
 
 
-def run_names_to_dict(run_names):
-    runs = {}
+# FIX: Messy unclear function, should be refactored to be more clear and concise
+def run_names_to_dict(
+    run_names: list[str],
+) -> dict[str, dict[str, dict[str, list[str]]]]:
+    # Convert a list of run filenames to a nested dictionary structure organized by year, month, and day.
+    # Example output:
+    # "2026": {"2026-01": {"2026-01-15": ["run1.yaml", "run2.yaml"]}}
+    runs: dict[str, dict[str, dict[str, list[str]]]] = {}
     for name in run_names:
         name = os.path.basename(
             name
@@ -227,19 +237,19 @@ def run_names_to_dict(run_names):
 
         try:
             year_dict = runs[year]
-        except Exception:
+        except KeyError:
             runs[year] = {}
             year_dict = runs[year]
         key_month = f"{year}-{month}"
         try:
             month_dict = year_dict[key_month]
-        except Exception:
+        except KeyError:
             year_dict[key_month] = {}
             month_dict = year_dict[key_month]
         key_day = f"{year}-{month}-{day}"
         try:
             day_list = month_dict[key_day]
-        except Exception:
+        except KeyError:
             month_dict[key_day] = []
             day_list = month_dict[key_day]
         day_list.append(name)
@@ -247,26 +257,26 @@ def run_names_to_dict(run_names):
     return runs
 
 
-def convert_str_to_value(str):
+def convert_str_to_value(s: str) -> str | int | float | bool:
     try:
-        return int(str)
+        return int(s)
     except ValueError:
         pass
 
     try:
-        return float(str)
+        return float(s)
     except ValueError:
         pass
 
     try:
-        return bool(str)
+        return bool(s)
     except ValueError:
         pass
 
-    return str
+    return s
 
 
-def parse_rule(rule):
+def parse_rule(rule: dict | str) -> dict:
     if type(rule) is str:
         return {
             "direction": rule,
@@ -277,15 +287,15 @@ def parse_rule(rule):
     # rule is a dict
     try:
         direction = rule["direction"]
-    except Exception:
+    except KeyError:
         direction = "MINIMIZE"
     try:
         filter = rule["filter"]
-    except Exception:
+    except KeyError:
         filter = "ignore_nan"
     try:
         reducer = rule["reducer"]
-    except Exception:
+    except KeyError:
         reducer = "percentile_80"
 
     return {
@@ -329,7 +339,7 @@ def state_to_dict(generator, data, include_data=True):
 
 
 # https://stackoverflow.com/a/18472142
-def strtobool(val):
+def strtobool(val: str) -> bool:
     """Convert a string representation of truth to true (1) or false (0).
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
     are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
@@ -345,7 +355,7 @@ def strtobool(val):
     elif val in ("n", "no", "f", "false", "off", "0"):
         return False
     else:
-        raise ValueError("invalid truth value %r" % (val,))
+        raise ValueError(f"invalid truth value {val!r}")
 
 
 # https://stackoverflow.com/a/61901696/4263605

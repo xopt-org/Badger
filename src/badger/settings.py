@@ -8,16 +8,18 @@ a singleton (ConfigSingleton) so all parts of the app see the same state.
 Run `badger config` from the CLI to edit settings interactively.
 """
 
+import logging
 import os
 import platform
-import yaml
 import shutil
 from importlib import resources
-from badger.utils import get_datadir
+from typing import Any
+
+import yaml
 from pydantic import BaseModel, Field, ValidationError
-from typing import Any, Dict, Optional, Union
+
 from badger.errors import BadgerLoadConfigError
-import logging
+from badger.utils import get_datadir
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +41,7 @@ class Setting(BaseModel):
 
     display_name: str
     description: str
-    value: Optional[Union[str, int, bool, None]] = Field(
+    value: None | str | int | bool = Field(
         None, description="The value of the setting which can be of different types."
     )
     is_path: bool
@@ -63,6 +65,8 @@ class BadgerConfig(BaseModel):
         Setting for the logging level.
     BADGER_LOG_DIRECTORY : Setting
         Setting for the location of logfile.
+    BADGER_TEMP_DIRECTORY : Setting
+        Setting for the location of temporary files.
     BADGER_DATA_DUMP_PERIOD : Setting
         Setting for the minimum time interval between data dumps (in seconds).
     BADGER_THEME : Setting
@@ -109,6 +113,12 @@ class BadgerConfig(BaseModel):
         value="logs",
         is_path=True,
     )
+    BADGER_TEMP_DIRECTORY: Setting = Setting(
+        display_name="temp directory",
+        description="Directory where temporary files will be stored",
+        value="temp",
+        is_path=True,
+    )
     BADGER_DATA_DUMP_PERIOD: Setting = Setting(
         display_name="data dump period",
         description="Minimum time interval between data dumps, unit is second",
@@ -144,9 +154,9 @@ class BadgerConfig(BaseModel):
 class ConfigSingleton:
     _instance = None
 
-    def __new__(cls, config_path: str = None, user_flag: bool = False):
+    def __new__(cls, config_path: str | None = None, user_flag: bool = False):
         if cls._instance is None:
-            cls._instance = super(ConfigSingleton, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance.user_flag = user_flag
             cls._instance._config = cls.load_or_create_config(config_path)
             cls._instance.config_path = config_path
@@ -211,7 +221,7 @@ class ConfigSingleton:
     def config(self) -> BadgerConfig:
         return self._config
 
-    def update_and_save_config(self, updates: Dict[str, Any]) -> None:
+    def update_and_save_config(self, updates: dict[str, Any]) -> None:
         """Saves changes to the config file.
 
         Parameters
@@ -232,7 +242,7 @@ class ConfigSingleton:
         self._config = BadgerConfig(**config_data)
 
     def _update_config_by_dot_key(
-        self, config_data: Dict[str, Any], dot_key: str, value: Any
+        self, config_data: dict[str, Any], dot_key: str, value: Any
     ) -> None:
         """Update the config data with the provided value using dot-separated keys."""
         keys = dot_key.split(":")
@@ -245,7 +255,7 @@ class ConfigSingleton:
         else:
             d[last_key] = value
 
-    def list_settings(self) -> Dict[str, Any]:
+    def list_settings(self) -> dict[str, Any]:
         """List all the settings in Badger
 
         Returns
@@ -256,7 +266,7 @@ class ConfigSingleton:
         """
         return self._config.model_dump(by_alias=True)
 
-    def list_path_settings(self) -> Dict[str, Any]:
+    def list_path_settings(self) -> dict[str, Any]:
         """List all the path-related settings in Badger
 
         Returns
@@ -401,8 +411,8 @@ class ConfigSingleton:
         updates = {}
         sub_dict = updates
 
-        for key in keys[:-1]:
-            sub_dict = sub_dict.setdefault(key, {})
+        for k in keys[:-1]:
+            sub_dict = sub_dict.setdefault(k, {})
         sub_dict[keys[-1]] = value
 
         logger.info(f"writing to config file, setting: {key} = {value}")
@@ -417,13 +427,13 @@ class ConfigSingleton:
         )
 
 
-def init_settings(config_arg: str = None) -> ConfigSingleton:
+def init_settings(config_arg: str | None = None) -> ConfigSingleton:
     """
     Builds and returns an instance of the ConfigSingleton class.
 
     Parameters
     ----------
-    config_arg: str
+    config_arg: str | None
         a path to a config file passed through the --config__filepath argument
 
     Returns
@@ -442,7 +452,54 @@ def init_settings(config_arg: str = None) -> ConfigSingleton:
         user_flag = True
 
     config_singleton = ConfigSingleton(file_path, user_flag)
+    get_or_create_temp_directory(config_singleton)
     return config_singleton
+
+
+def get_or_create_temp_directory(config_singleton: ConfigSingleton) -> str:
+    """Resolve BADGER_TEMP_DIRECTORY to an absolute path under the user config
+    folder and ensure the directory exists on disk.
+
+    This migrates older configs that either lack the key or hold the relative
+    default ("temp"): they get rewritten to an absolute path anchored under
+    ``get_user_config_folder()`` so the temp location is OS-appropriate and
+    stable regardless of the current working directory.
+
+    Parameters
+    ----------
+    config_singleton: ConfigSingleton
+        The active configuration singleton.
+
+    Returns
+    -------
+    str
+        The absolute path to the temp directory that now exists on disk.
+    """
+    try:
+        temp_dir = config_singleton.read_value("BADGER_TEMP_DIRECTORY")
+    except KeyError:
+        temp_dir = None
+
+    # Migrate: unset or a relative path -> anchor under the user config folder
+    if not temp_dir or not os.path.isabs(os.path.expanduser(temp_dir)):
+        temp_dir = os.path.join(get_user_config_folder(), "temp")
+        config_singleton.write_value("BADGER_TEMP_DIRECTORY", temp_dir)
+
+    temp_dir = os.path.expanduser(str(temp_dir))
+
+    # Ensure the directory exists, falling back to the config folder on failure
+    try:
+        os.makedirs(temp_dir, exist_ok=True)
+    except (PermissionError, FileExistsError):
+        logger.warning(
+            "Cannot use temp directory %s, falling back to the user config folder",
+            temp_dir,
+        )
+        temp_dir = os.path.join(get_user_config_folder(), "temp")
+        config_singleton.write_value("BADGER_TEMP_DIRECTORY", temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+
+    return temp_dir
 
 
 def apply_pytorch_multiprocess_tensor_sharing_setting(
@@ -513,8 +570,12 @@ def mock_settings():
     os.makedirs(templates_dir, exist_ok=True)
     config_singleton.write_value("BADGER_TEMPLATE_ROOT", templates_dir)
 
+    temp_dir = str(app_data_dir / "temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    config_singleton.write_value("BADGER_TEMP_DIRECTORY", temp_dir)
+
     # Set other settings to the default values
-    for key in config_singleton.config.model_dump(by_alias=True).keys():
+    for key in config_singleton.config.model_dump(by_alias=True):
         config_singleton.write_value(
             key, config_singleton.config.model_dump(by_alias=True)[key]["value"]
         )

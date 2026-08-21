@@ -1,48 +1,47 @@
 """Control panel for the BO visualizer — variable selectors, reference
 point table, grid resolution, and plot option checkboxes."""
 
+import logging
+from typing import ClassVar
+
+import pandas as pd
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QVBoxLayout,
-    QHBoxLayout,
+    QCheckBox,
     QComboBox,
-    QLabel,
     QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
-    QSpinBox,
-    QPushButton,
-    QCheckBox,
-    QHeaderView,
+    QVBoxLayout,
 )
-from PyQt5.QtCore import Qt
 
-from gest_api.vocs import BaseVariable
 from badger.gui.components.bo_visualizer.types import ConfigurableOptions
 from badger.gui.components.extension_utilities import (
-    HandledException,
-    to_precision_float,
+    get_latest_reference_points,
 )
-
-import logging
-
 from badger.utils import BlockSignalsContext
-
 
 logger = logging.getLogger(__name__)
 
 
 class UIComponents:
-    variables: list[str] = []
+    variables: ClassVar[list[str]] = []
 
     def __init__(
         self,
         default_parameters: ConfigurableOptions,
     ):
-        self.variable_checkboxes = {}
+        self.variable_checkboxes: dict[str, QCheckBox] = {}
         self.ref_inputs: list[QTableWidgetItem] = []
-        self.reference_table = None  # Will be initialized later
+        self.reference_table = QTableWidget()
         self.best_point_display = QLabel("")  # Will be initialized later
-        self.set_best_reference_point_button = QPushButton("Set Best Reference Point")
+        self.set_best_reference_point_button = QPushButton("Set Best")
+        self.set_latest_reference_points_button = QPushButton("Set Latest")
 
         # Initialize other UI components
         self.update_button = QPushButton("Update")
@@ -77,7 +76,7 @@ class UIComponents:
 
         self.restrict_selection_variables(default_parameters)
 
-    def restrict_selection_variables(self, parameters: ConfigurableOptions):
+    def restrict_selection_variables(self, parameters: ConfigurableOptions) -> None:
         num_of_variables = len(parameters["variables"])
         if num_of_variables < 2:
             parameters["include_variable_2"] = False
@@ -92,13 +91,13 @@ class UIComponents:
                 self.y_axis_checkbox.setEnabled(True)
                 self.y_axis_combo.setEnabled(True)
 
-    def create_variable_checkboxes(self):
+    def create_variable_checkboxes(self) -> QGroupBox:
         group_box = QGroupBox("Select Variables")
         layout = self.variable_checkboxes_layout or QVBoxLayout()
         group_box.setLayout(layout)
         return group_box
 
-    def create_axis_layout(self):
+    def create_axis_layout(self) -> QVBoxLayout:
         layout = QVBoxLayout()
 
         x_layout = QHBoxLayout()
@@ -127,7 +126,7 @@ class UIComponents:
     def initialize_ui_components(
         self,
         configurable_options: ConfigurableOptions,
-    ):
+    ) -> None:
         self.populate_reference_table(
             configurable_options["variables"],
             configurable_options["reference_points"],
@@ -135,32 +134,32 @@ class UIComponents:
 
     def initialize_variables(
         self,
+        data: pd.DataFrame | None,
         configurable_options: ConfigurableOptions,
-        vocs_variables: dict[str, BaseVariable],
-    ):
+        vocs_variables: list[str],
+    ) -> None:
         """Initialize the variable checkboxes with the provided variable names."""
-        # Initialize the parameters with the routine's variables
-        configurable_options["reference_points_range"] = vocs_variables
-        configurable_options["reference_points"] = {
-            var: to_precision_float(
-                (vocs_variables[var].domain[1] - vocs_variables[var].domain[0]) / 2.0
-            )
-            for var in vocs_variables
-        }
 
-    def create_reference_inputs(self):
+        reference_points = get_latest_reference_points(data, vocs_variables)
+
+        configurable_options["reference_points"] = reference_points
+
+    def create_reference_inputs(self) -> QGroupBox:
         group_box = QGroupBox("Reference Points")
         layout = QVBoxLayout()
 
-        self.reference_table = QTableWidget()
         self.reference_table.setColumnCount(2)
         self.reference_table.setHorizontalHeaderLabels(["Variable", "Ref. Point"])
         horizontal_header = self.reference_table.horizontalHeader()
-        if horizontal_header is not None:
-            horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(self.reference_table)
-        layout.addWidget(self.set_best_reference_point_button)
+
+        btn_group = QHBoxLayout()
+        btn_group.addWidget(self.set_latest_reference_points_button)
+        btn_group.addWidget(self.set_best_reference_point_button)
+
+        layout.addLayout(btn_group)
         layout.addWidget(self.best_point_display)
         group_box.setLayout(layout)
         return group_box
@@ -169,12 +168,10 @@ class UIComponents:
         self,
         variables: list[str],
         reference_points: dict[str, float],
-    ):
+    ) -> None:
         """Populate the reference table based on the current vocs variable names."""
 
         logger.debug("Populating reference table")
-        if self.reference_table is None:
-            raise HandledException(ValueError, "Reference Table is None")
 
         with BlockSignalsContext(self.reference_table):
             self.reference_table.setRowCount(len(variables))
@@ -195,7 +192,7 @@ class UIComponents:
                 self.ref_inputs.append(reference_point_item)
                 self.reference_table.setItem(i, 1, reference_point_item)
 
-    def create_options_section(self):
+    def create_options_section(self) -> QGroupBox:
         group_box = QGroupBox("Plot Options")
         layout = QVBoxLayout()
 
@@ -213,7 +210,7 @@ class UIComponents:
         group_box.setLayout(layout)
         return group_box
 
-    def create_buttons(self):
+    def create_buttons(self) -> QHBoxLayout:
         layout = QHBoxLayout()
         self.update_button = QPushButton("Update")
 
@@ -226,7 +223,7 @@ class UIComponents:
     def update_variables(
         self,
         configurable_options: ConfigurableOptions,
-    ):
+    ) -> None:
         with BlockSignalsContext([self.x_axis_combo, self.y_axis_combo]):
             self.x_axis_combo.clear()
             self.y_axis_combo.clear()

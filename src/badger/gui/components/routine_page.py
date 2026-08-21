@@ -25,41 +25,62 @@ This page is wrapped by routine_editor.py, which adds the save/cancel/delete
 buttons around it.
 """
 
-from typing import Any
-import warnings
-import traceback
 import copy
-from functools import partial
+import logging
 import os
-import yaml
+import traceback
+import warnings
+from datetime import UTC, datetime
+from functools import partial
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+import yaml
 from coolname import generate_slug
-from xopt import VOCS
-from xopt.vocs import random_inputs
-from xopt.generators import (
-    get_generator_defaults,
-    all_generator_names,
-    get_generator_dynamic,
-)
-from xopt.vocs import get_local_region
 from gest_api.vocs import (
     BaseConstraint,
     BaseObjective,
     GreaterThanConstraint,
     LessThanConstraint,
-    MinimizeObjective,
     MaximizeObjective,
+    MinimizeObjective,
 )
 from pydantic import ValidationError
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QScrollArea,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+from xopt import VOCS
+from xopt.generators import (
+    all_generator_names,
+    get_generator_defaults,
+    get_generator_dynamic,
+)
+from xopt.vocs import get_local_region, random_inputs
 
-from badger.gui.components.generator_cbox import BadgerAlgoBox
+from badger.archive import update_run
+from badger.environment import instantiate_env
+from badger.errors import (
+    BadgerEnvInstantiationError,
+    BadgerEnvNotFoundError,
+    BadgerEnvVarError,
+    BadgerRoutineError,
+    VariableRangeError,
+)
+from badger.factory import get_env, list_env, list_generators
+from badger.gui.components.archive_search import ArchiveSearchWidget
 from badger.gui.components.data_panel import BadgerDataPanel
 from badger.gui.components.data_table import (
     get_table_content_as_dict,
@@ -68,41 +89,27 @@ from badger.gui.components.data_table import (
 )
 from badger.gui.components.env_cbox import BadgerEnvBox
 from badger.gui.components.filter_cbox import BadgerFilterBox
+from badger.gui.components.generator_cbox import BadgerAlgoBox
+from badger.gui.utils import filter_generator_config
+from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.docs_window import BadgerDocsWindow
 from badger.gui.windows.edit_script_dialog import BadgerEditScriptDialog
-from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.ind_lim_vrange_dialog import (
     BadgerIndividualLimitVariableRangeDialog,
 )
-from badger.gui.windows.review_dialog import BadgerReviewDialog
-from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
+from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.utils import filter_generator_config
-from badger.gui.components.archive_search import ArchiveSearchWidget
-from badger.archive import update_run
-from badger.environment import instantiate_env
-from badger.errors import (
-    BadgerEnvNotFoundError,
-    BadgerRoutineError,
-    BadgerEnvVarError,
-    BadgerEnvInstantiationError,
-    VariableRangeError,
-)
-from badger.factory import list_generators, list_env, get_env
+from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.routine import Routine
 from badger.settings import init_settings
-from datetime import datetime
 from badger.utils import (
     BlockSignalsContext,
-    load_config,
-    strtobool,
     get_badger_version,
     get_xopt_version,
+    load_config,
+    strtobool,
     ts_float_to_str,
 )
-
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +149,7 @@ def extract_objective_symbol(objective: BaseObjective) -> str:
     if isinstance(objective, MaximizeObjective):
         return "MAXIMIZE"
     else:
-        raise ValueError(f"Unknown objective type: {objective}")
+        raise TypeError(f"Unknown objective type: {objective}")
 
 
 class BadgerRoutinePage(QWidget):
@@ -150,7 +157,7 @@ class BadgerRoutinePage(QWidget):
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info("Initializing BadgerRoutinePage.")
         super().__init__()
 
@@ -292,8 +299,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box = BadgerEnvBox(env_dict, None, self.envs)
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QScrollArea.NoFrame)
-        scroll_area.setStyleSheet(
-            """
+        scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;  /* Remove border */
                 margin: 0px;   /* Remove margin */
@@ -302,8 +308,7 @@ class BadgerRoutinePage(QWidget):
             QScrollArea > QWidget {
                 margin: 0px;   /* Remove margin inside */
             }
-        """
-        )
+        """)
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
         scroll_layout_env.setContentsMargins(0, 0, 15, 0)
@@ -680,28 +685,27 @@ class BadgerRoutinePage(QWidget):
         Filter which generator parameters get saved to template
         """
 
-        if generator_name in ["expected_improvement", "upper_confidence_bound"]:
-            if (
-                "turbo_controller" in generator_config
-                and generator_config["turbo_controller"] is not None
-                and isinstance(generator_config["turbo_controller"], dict)
-            ):
-                turbo = generator_config["turbo_controller"]
-                generator_config["turbo_controller"] = {
-                    k: v
-                    for k, v in turbo.items()
-                    if k
-                    in {
-                        "name",
-                        "length",
-                        "length_max",
-                        "length_min",
-                        "failure_tolerance",
-                        "success_tolerance",
-                        "scale_factor",
-                        "restrict_model_data",
-                    }
+        if generator_name in ["expected_improvement", "upper_confidence_bound"] and (
+            "turbo_controller" in generator_config
+            and generator_config["turbo_controller"] is not None
+            and isinstance(generator_config["turbo_controller"], dict)
+        ):
+            turbo = generator_config["turbo_controller"]
+            generator_config["turbo_controller"] = {
+                k: v
+                for k, v in turbo.items()
+                if k
+                in {
+                    "name",
+                    "length",
+                    "length_max",
+                    "length_min",
+                    "failure_tolerance",
+                    "success_tolerance",
+                    "scale_factor",
+                    "restrict_model_data",
                 }
+            }
 
         return generator_config
 
@@ -717,7 +721,7 @@ class BadgerRoutinePage(QWidget):
         # Suggest a filename based on the routine name or placeholder
         routine_name = self.edit_save.text() or self.edit_save.placeholderText()
         if not routine_name:
-            routine_name = "template_" + datetime.now().strftime("%y%m%d_%H%M%S")
+            routine_name = "template_" + datetime.now(tz=UTC).strftime("%y%m%d_%H%M%S")
         suggested_filename = f"{routine_name}.yaml"
         template_path, _ = QFileDialog.getSaveFileName(
             self,
@@ -740,7 +744,7 @@ class BadgerRoutinePage(QWidget):
             logger.error(f"Error saving template: {e}")
             return
 
-    def refresh_ui(self, routine: Routine | None = None, silent: bool = False):
+    def refresh_ui(self, routine: Routine | None = None, silent: bool = False) -> None:
         logger.info(
             f"Refreshing UI for routine: {getattr(routine, 'name', None)} (silent={silent})"
         )
@@ -997,7 +1001,7 @@ class BadgerRoutinePage(QWidget):
         self.edit_save.setText(routine.name)
         self.edit_descr.setPlainText(routine.description)
 
-        self.generator_box.check_use_script.setChecked(not not self.script)
+        self.generator_box.check_use_script.setChecked(bool(self.script))
 
     def set_routine(self, routine: Routine, silent: bool = False):
         self.refresh_ui(routine, silent=silent)
@@ -1030,7 +1034,7 @@ class BadgerRoutinePage(QWidget):
         # Get vocs
         try:
             vocs, _ = self.env_box.compose_vocs()
-        except Exception:
+        except BadgerRoutineError:
             vocs = None
         self.generator_box.edit.set_params_from_generator(name, filtered_config, vocs)
 
@@ -1081,7 +1085,9 @@ class BadgerRoutinePage(QWidget):
         try:
             env = instantiate_env(self.env, configs)
         except Exception as e:
-            raise BadgerEnvInstantiationError(f"Failed to instantiate environment: {e}")
+            raise BadgerEnvInstantiationError(
+                f"Failed to instantiate environment: {e}"
+            ) from e
 
         return env
 
@@ -1091,10 +1097,11 @@ class BadgerRoutinePage(QWidget):
 
         try:
             tmp = {}
-            exec(self.script, tmp)
+            # User-provided script must define a `generate` function, so exec is required here.
+            exec(self.script, tmp)  # noqa: S102
             try:
                 tmp["generate"]  # test if generate function is defined
-            except Exception as e:
+            except KeyError as e:
                 QMessageBox.warning(
                     self, "Please define a valid generate function!", str(e)
                 )
@@ -1104,14 +1111,14 @@ class BadgerRoutinePage(QWidget):
             # Get vocs
             try:
                 vocs, _ = self.env_box.compose_vocs()
-            except Exception:
+            except BadgerRoutineError:
                 vocs = None
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
             self.generator_box.edit.set_params_from_generator(
                 self.routine.generator.name, params_generator, vocs
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - runs user-provided generator script
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     def select_env(self, i: int):
@@ -1150,7 +1157,7 @@ class BadgerRoutinePage(QWidget):
             self.env_box.btn_refresh.setDisabled(False)
             if self.generator_box.check_use_script.isChecked():
                 self.refresh_params_generator()
-        except Exception:
+        except Exception:  # noqa: BLE001 - env selection rollback on any failure
             self.configs = None
             self.env = None
             self.env_box.cb.setCurrentIndex(-1)
@@ -1265,7 +1272,7 @@ class BadgerRoutinePage(QWidget):
             raise BadgerEnvVarError(
                 f"Failed to get current variable values : {e}\n"
                 "Please ensure the environment is properly configured."
-            )
+            ) from e
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -1300,7 +1307,7 @@ class BadgerRoutinePage(QWidget):
         # get small region around current point to sample
         try:
             vocs, _ = self.env_box.compose_vocs()
-        except Exception:
+        except BadgerRoutineError:
             # Switch to manual mode to allow the user fixing the vocs issue
             QMessageBox.warning(
                 self,
@@ -1470,7 +1477,7 @@ class BadgerRoutinePage(QWidget):
             raise BadgerEnvVarError(
                 f"Failed to get current variable values : {e}\n"
                 "Please ensure the environment is properly configured."
-            )
+            ) from e
 
         option_idx = self.limit_option["limit_option_idx"]
         # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
@@ -1507,7 +1514,7 @@ class BadgerRoutinePage(QWidget):
         self.update_init_table()  # auto populate if option is set
 
         # remember user selection for applying limit changes
-        if not self.lim_apply_to_vars == 2:
+        if self.lim_apply_to_vars != 2:
             # Check if lim_apply_to_vars has been initialized
             # It will be set to 2 until the btn_lim_vrange is clicked
             self.lim_apply_to_vars = set_all
@@ -1664,7 +1671,7 @@ class BadgerRoutinePage(QWidget):
         if checked:
             try:
                 _ = self.env_box.compose_vocs()
-            except Exception:
+            except BadgerRoutineError:
                 logger.warning("Variable range is not valid, switching to manual mode.")
                 QTimer.singleShot(0, lambda: self.env_box.relative_to_curr.click())
                 QMessageBox.warning(
@@ -1817,7 +1824,10 @@ class BadgerRoutinePage(QWidget):
         if not vocs.variables:
             logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
-        if not vocs.objectives:
+
+        NO_OBJECTIVE_GENERATORS = ["bax"]
+
+        if not vocs.objectives and generator_name not in NO_OBJECTIVE_GENERATORS:
             logger.error("No objectives selected.")
             raise BadgerRoutineError("no objectives selected")
 
@@ -1878,7 +1888,9 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
-                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
+                creation_ts=ts_float_to_str(
+                    datetime.now(tz=UTC).timestamp(), "lcls-fname"
+                ),
                 # Xopt part
                 generator=generator,
                 # Badger part
@@ -1917,7 +1929,7 @@ class BadgerRoutinePage(QWidget):
     def review(self):
         try:
             routine = self._compose_routine()
-        except Exception:
+        except Exception:  # noqa: BLE001 - routine compose reports via dialog
             return QMessageBox.critical(
                 self, "Invalid routine!", traceback.format_exc()
             )
@@ -1937,5 +1949,23 @@ class BadgerRoutinePage(QWidget):
                 "Update success!",
                 f"Routine {self.routine.name} description was updated!",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 - update reports via dialog
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
+
+    def set_default_generator(self, generator_name: str) -> None:
+        """
+        Set the default generator for the routine page.
+
+        Parameters
+        ----------
+        generator_name : str
+            The name of the generator to set as default.
+        """
+        if generator_name not in self.generators:
+            logger.error(
+                f"Generator {generator_name} not found in available generators."
+            )
+            raise ValueError(f"Generator {generator_name} not found.")
+
+        index = self.generators.index(generator_name)
+        self.generator_box.cb.setCurrentIndex(index)

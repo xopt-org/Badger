@@ -1,12 +1,15 @@
+from typing import ClassVar
+
 import torch
+
 from badger import environment
 from badger.errors import BadgerNoInterfaceError
 
 
 class Environment(environment.Environment):
     name = "multiobjective_test"
-    variables = {f"x{i}": [-1, 1] for i in range(20)}
-    observables = ["f1", "f2"]
+    variables: ClassVar[dict[str, list[float]]] = {f"x{i}": [-1, 1] for i in range(20)}
+    observables: ClassVar[list[str]] = ["f1", "f2"]
 
     flag: int = 0
 

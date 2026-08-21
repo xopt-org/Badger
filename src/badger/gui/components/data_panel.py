@@ -1,30 +1,31 @@
 """Panel for viewing and managing pre-loaded optimization data. Lets
 users load data from archived runs or clear the buffer before starting."""
 
-from PyQt5.QtWidgets import (
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QWidget,
-    QMessageBox,
-)
 import pandas as pd
-from PyQt5.QtWidgets import QGroupBox, QCheckBox, QLabel
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+from xopt.vocs import VOCS
+
 from badger.gui.components.data_table import (
     TableWithCopy,
-)
-from badger.gui.components.data_table import (
     data_table,
     get_horizontal_header_as_list,
-    update_table,
     get_table_content_as_dict,
+    update_table,
 )
 from badger.gui.windows.load_data_from_run_dialog import (
     BadgerLoadDataFromRunDialog,
 )
 from badger.routine import Routine
-from xopt.vocs import VOCS
 
 LABEL_WIDTH = 96
 
@@ -172,7 +173,7 @@ class BadgerDataPanel(QWidget):
 
         if not vocs.variable_names or not vocs.objective_names:
             dialog = QMessageBox(
-                text=str("Select Environment + VOCS before adding data!"),
+                text="Select Environment + VOCS before adding data!",
                 parent=self,
             )
             dialog.setIcon(QMessageBox.Information)
@@ -300,7 +301,7 @@ class BadgerDataPanel(QWidget):
         # This happens here if selected VOCS have been changed but old data is still in the table.
         if self.has_data and set(data_keys) != set(filtered_table_keys):
             dialog = QMessageBox(
-                text=str(
+                text=(
                     "Keys in loaded data do not match current table!"
                     "\nTry clearing the table before adding new data."
                 ),

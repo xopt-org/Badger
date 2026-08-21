@@ -10,17 +10,16 @@ the same logic but runs it in a child process for the GUI.
 """
 
 import time
-from typing import Callable
+from collections.abc import Callable
 
-from pandas import concat, DataFrame
+from pandas import DataFrame, concat
+from xopt.vocs import select_best
 
 from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
-
-from xopt.vocs import select_best
 
 
 def check_run_status(active_callback):
@@ -78,7 +77,7 @@ def run_routine(
     generate_callback: Callable,
     evaluate_callback: Callable,
     states_callback: Callable,
-    dump_file_callback: Callable = None,
+    dump_file_callback: Callable | None = None,
     verbose: int = 2,
 ) -> None:
     """
@@ -186,6 +185,6 @@ def run_routine(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
-    except Exception as e:
+    except Exception:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
-        raise e
+        raise
