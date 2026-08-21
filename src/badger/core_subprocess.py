@@ -10,6 +10,8 @@ stays responsive. Communication with the main process happens through:
 See core.py for the simpler in-process version of the same loop.
 """
 
+from __future__ import annotations
+
 import logging
 import multiprocessing as mp
 import os

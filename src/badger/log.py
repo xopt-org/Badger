@@ -9,6 +9,8 @@ We make use of the logging.handlers classes from the python standard library, ma
 For example usage (in a simple context), see src/badger/tests/test_multiprocess_logging.py
 """
 
+from __future__ import annotations
+
 import atexit
 import logging
 import os
