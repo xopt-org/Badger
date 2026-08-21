@@ -239,7 +239,9 @@ class BadgerOptMonitor(QWidget):
         self.cb_plot_y.currentIndexChanged.connect(self.select_x_plot_y_axis)
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
 
-    def init_plots(self, routine: Routine = None, run_filename: str = None) -> None:
+    def init_plots(
+        self, routine: Routine = None, run_filename: str | None = None
+    ) -> None:
         """
         Initialize and configure the plots and related components in the application.
 
@@ -297,8 +299,8 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_obs)
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No observables plot to remove", exc_info=True)
 
             # if no routine is loaded set button to disabled
             self.sig_lock_action.emit()
@@ -328,7 +330,7 @@ class BadgerOptMonitor(QWidget):
         # Configure constraint plots
         if constraint_names:
             try:
-                self.plot_con
+                _ = self.plot_con
             except:
                 self.plot_con = plot_con = add_axes(
                     self.monitor,
@@ -355,7 +357,7 @@ class BadgerOptMonitor(QWidget):
         # Configure state plots
         if sta_names:
             try:
-                self.plot_obs
+                _ = self.plot_obs
             except:
                 self.plot_obs = plot_obs = add_axes(
                     self.monitor,

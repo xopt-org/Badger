@@ -17,6 +17,7 @@ from types import NoneType
 from typing import (
     Annotated,
     Any,
+    ClassVar,
     Optional,
     TypeVar,
     Union,
@@ -79,7 +80,7 @@ class CustomSafeLoader(yaml.SafeLoader):
             try:
                 return ast.literal_eval(value)
             except Exception:
-                pass
+                logger.warning(f"Failed to parse tuple from string: {value}")
         return value
 
 
@@ -97,7 +98,7 @@ def _set_value_for_basic_widget(
     value: str | float | bool | None,
 ) -> None:
     nullable = bool(widget.property("badger_nullable"))
-    if isinstance(widget, QLabel) or isinstance(widget, QLineEdit):
+    if isinstance(widget, (QLabel, QLineEdit)):
         widget.setText("null" if value is None else str(value))
     elif isinstance(widget, QDoubleSpinBox):
         if value is None and nullable:
@@ -238,9 +239,12 @@ class BadgerResolvedType:
 
             if default is None:
                 default = {"name": "null"}
-            if isinstance(default, dict) and "name" in default:
-                if (index := widget.findText(default["name"])) >= 0:
-                    widget.setCurrentIndex(index)
+            if (
+                isinstance(default, dict)
+                and "name" in default
+                and (index := widget.findText(default["name"])) >= 0
+            ):
+                widget.setCurrentIndex(index)
         elif resolved_type.main == NoneType:
             widget = QLabel()
             widget.setText("null")
@@ -391,7 +395,7 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
         return None
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_yaml()
-    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
         if widget.property("badger_nullable") and widget.value() == widget.minimum():
             return "null"
         return str(widget.value())
@@ -454,7 +458,7 @@ def _qt_widget_to_value(widget: Any) -> Any:
         return None
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_dict()
-    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
         if widget.property("badger_nullable") and widget.value() == widget.minimum():
             return None
         return widget.value()
@@ -661,7 +665,7 @@ class BadgerListEditor(QWidget):
 
 class BadgerPydanticEditor(QTreeWidget):
     vocs: VOCS = VOCS(variables={})
-    defaults: dict[str, Any] = {}
+    defaults: ClassVar[dict[str, Any]] = {}
     generator_name: str = ""
     model_class: type[BaseModel] | None = None
 
@@ -676,7 +680,7 @@ class BadgerPydanticEditor(QTreeWidget):
     # the generator's ``name`` field). The effective set is the union of both,
     # resolved by ``get_excluded_fields``.
     COMMON_EXCLUDED_FIELDS: frozenset[str] = frozenset({"computation_time"})
-    GENERATOR_EXCLUDED_FIELDS: dict[str, frozenset[str]] = {
+    GENERATOR_EXCLUDED_FIELDS: ClassVar[dict[str, frozenset[str]]] = {
         # "bax": frozenset({"algorithm_results"}),
     }
 
@@ -1066,12 +1070,17 @@ class BadgerPydanticEditor(QTreeWidget):
     @staticmethod
     def filter_class_fields(
         pydantic_class: type[BaseModel],
-        fields_to_remove: list[str] = [],
-        defaults: dict[str, Any] = {},
+        fields_to_remove: list[str] | None = None,
+        defaults: dict[str, Any] | None = None,
         include_defaults: bool = False,
         excluded_fields: frozenset[str] = frozenset(),
     ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
         condition: Callable[[str], bool]
+
+        if fields_to_remove is None:
+            fields_to_remove = []
+        if defaults is None:
+            defaults = {}
 
         def include_condition(k: str) -> bool:
             return k in defaults and k not in fields_to_remove
@@ -1101,7 +1110,7 @@ class BadgerPydanticEditor(QTreeWidget):
     @staticmethod
     def get_defaults_from_type(pydantic_class: type[Any]) -> dict[str, Any]:
         if not issubclass(pydantic_class, BaseModel):
-            raise ValueError("Provided class is not a Pydantic model")
+            raise TypeError("Provided class is not a Pydantic model")
         defaults: dict[str, Any] = {}
         for field_name, field_info in pydantic_class.model_fields.items():
             if field_info.default is not PydanticUndefined:
@@ -1287,7 +1296,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 # Convert str-encoded dicts (and lists) back into actual dict objects."""
                 if isinstance(val, str):
                     stripped = val.strip()
-                    if stripped.startswith("{") or stripped.startswith("["):
+                    if stripped.startswith(("{", "[")):
                         try:
                             return ast.literal_eval(stripped)
                         except (ValueError, SyntaxError):

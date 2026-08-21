@@ -27,7 +27,16 @@ LABEL_WIDTH = 96
 
 
 class BadgerAlgoBox(QWidget):
-    def __init__(self, parent=None, generators=[], scaling_functions=[]):
+    def __init__(
+        self,
+        parent=None,
+        generators: list | None = None,
+        scaling_functions: list | None = None,
+    ):
+        if generators is None:
+            generators = []
+        if scaling_functions is None:
+            scaling_functions = []
         super().__init__(parent)
 
         self.generators = generators

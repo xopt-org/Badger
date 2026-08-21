@@ -28,5 +28,5 @@ def show_intf(args):
             # The exception could carry the configs information
             configs = e.configs
             yprint(configs)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to retrieve interface configs from exception: {e}")

@@ -507,10 +507,10 @@ class BOPlotWidget(AnalysisWidget):
                 self.generator.train_model(self.routine.data)
             except HandledException as he:
                 logger.error(str(he))
-                raise he
+                raise
             except Exception as e:
                 logger.error(str(e))
-                raise e
+                raise
 
     def set_best_reference_points(
         self,

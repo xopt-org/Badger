@@ -8,7 +8,7 @@ import time
 import traceback
 from importlib import resources
 from types import TracebackType
-from typing import NoReturn, Type
+from typing import NoReturn
 
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont, QIcon

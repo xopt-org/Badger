@@ -111,10 +111,10 @@ class PlottingArea(QWidget):
                     # Add the new canvas to the layout
                     layout.addWidget(canvas)
                     layout.addWidget(toolbar)
-        except HandledException as he:
-            raise he
+        except HandledException:
+            raise
         except Exception as e:
             logger.error(f"Error updating plot: {e}")
-            raise e
+            raise
         # Update the last updated time
         self.last_updated = time.time()

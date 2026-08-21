@@ -30,7 +30,7 @@ import logging
 import os
 import traceback
 import warnings
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import partial
 from typing import Any
 
@@ -149,7 +149,7 @@ def extract_objective_symbol(objective: BaseObjective) -> str:
     if isinstance(objective, MaximizeObjective):
         return "MAXIMIZE"
     else:
-        raise ValueError(f"Unknown objective type: {objective}")
+        raise TypeError(f"Unknown objective type: {objective}")
 
 
 class BadgerRoutinePage(QWidget):
@@ -685,28 +685,27 @@ class BadgerRoutinePage(QWidget):
         Filter which generator parameters get saved to template
         """
 
-        if generator_name in ["expected_improvement", "upper_confidence_bound"]:
-            if (
-                "turbo_controller" in generator_config
-                and generator_config["turbo_controller"] is not None
-                and isinstance(generator_config["turbo_controller"], dict)
-            ):
-                turbo = generator_config["turbo_controller"]
-                generator_config["turbo_controller"] = {
-                    k: v
-                    for k, v in turbo.items()
-                    if k
-                    in {
-                        "name",
-                        "length",
-                        "length_max",
-                        "length_min",
-                        "failure_tolerance",
-                        "success_tolerance",
-                        "scale_factor",
-                        "restrict_model_data",
-                    }
+        if generator_name in ["expected_improvement", "upper_confidence_bound"] and (
+            "turbo_controller" in generator_config
+            and generator_config["turbo_controller"] is not None
+            and isinstance(generator_config["turbo_controller"], dict)
+        ):
+            turbo = generator_config["turbo_controller"]
+            generator_config["turbo_controller"] = {
+                k: v
+                for k, v in turbo.items()
+                if k
+                in {
+                    "name",
+                    "length",
+                    "length_max",
+                    "length_min",
+                    "failure_tolerance",
+                    "success_tolerance",
+                    "scale_factor",
+                    "restrict_model_data",
                 }
+            }
 
         return generator_config
 
@@ -722,7 +721,7 @@ class BadgerRoutinePage(QWidget):
         # Suggest a filename based on the routine name or placeholder
         routine_name = self.edit_save.text() or self.edit_save.placeholderText()
         if not routine_name:
-            routine_name = "template_" + datetime.now().strftime("%y%m%d_%H%M%S")
+            routine_name = "template_" + datetime.now(tz=UTC).strftime("%y%m%d_%H%M%S")
         suggested_filename = f"{routine_name}.yaml"
         template_path, _ = QFileDialog.getSaveFileName(
             self,
@@ -1096,7 +1095,8 @@ class BadgerRoutinePage(QWidget):
 
         try:
             tmp = {}
-            exec(self.script, tmp)
+            # User-provided script must define a `generate` function, so exec is required here.
+            exec(self.script, tmp)  # noqa: S102
             try:
                 tmp["generate"]  # test if generate function is defined
             except Exception as e:
@@ -1512,7 +1512,7 @@ class BadgerRoutinePage(QWidget):
         self.update_init_table()  # auto populate if option is set
 
         # remember user selection for applying limit changes
-        if not self.lim_apply_to_vars == 2:
+        if self.lim_apply_to_vars != 2:
             # Check if lim_apply_to_vars has been initialized
             # It will be set to 2 until the btn_lim_vrange is clicked
             self.lim_apply_to_vars = set_all
@@ -1825,10 +1825,9 @@ class BadgerRoutinePage(QWidget):
 
         NO_OBJECTIVE_GENERATORS = ["bax"]
 
-        if not vocs.objectives:
-            if generator_name not in NO_OBJECTIVE_GENERATORS:
-                logger.error("No objectives selected.")
-                raise BadgerRoutineError("no objectives selected")
+        if not vocs.objectives and generator_name not in NO_OBJECTIVE_GENERATORS:
+            logger.error("No objectives selected.")
+            raise BadgerRoutineError("no objectives selected")
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
@@ -1887,7 +1886,9 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
-                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
+                creation_ts=ts_float_to_str(
+                    datetime.now(tz=UTC).timestamp(), "lcls-fname"
+                ),
                 # Xopt part
                 generator=generator,
                 # Badger part

@@ -106,7 +106,7 @@ class EditableTable(QTableWidget):
         self.itemChanged.connect(self.on_edit_table_item)
 
     def update_vocs(self) -> None:
-        logging.debug("Emitting data_changed signal from editable_table")
+        logger.debug("Emitting data_changed signal from editable_table")
         self.data_changed.emit()
 
     def default_info(self) -> list[Any]:

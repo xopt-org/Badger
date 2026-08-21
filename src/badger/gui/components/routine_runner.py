@@ -51,7 +51,7 @@ class BadgerRoutineSubprocess:
         self,
         process_manager: ProcessManager,
         routine: Routine = None,
-        routine_filename: str = None,
+        routine_filename: str | None = None,
         save: bool = False,
         verbose: int = 2,
         use_full_ts: bool = False,

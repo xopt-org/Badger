@@ -10,8 +10,8 @@ Decorators defined here handle bounds-checking on setpoints and formula
 evaluation on computed observables (see formula.py).
 """
 
+import logging
 from abc import abstractmethod
-from logging import warning
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
@@ -24,8 +24,11 @@ from badger.errors import (
 
 if TYPE_CHECKING:
     from badger.factory import BadgerPluginConfig
+
 from badger.formula import extract_variable_keys, interpret_expression
 from badger.interface import Interface
+
+logger = logging.getLogger(__name__)
 
 
 def validate_setpoints(func):
@@ -351,7 +354,7 @@ def instantiate_env(
     except KeyError:
         intf_name = None
     except Exception as e:
-        warning(e)
+        logger.warning(e)
         intf_name = None
 
     if intf_name is not None:

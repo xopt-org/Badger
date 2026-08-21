@@ -77,7 +77,7 @@ def run_routine(
     generate_callback: Callable,
     evaluate_callback: Callable,
     states_callback: Callable,
-    dump_file_callback: Callable = None,
+    dump_file_callback: Callable | None = None,
     verbose: int = 2,
 ) -> None:
     """
@@ -185,6 +185,6 @@ def run_routine(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
-    except Exception as e:
+    except Exception:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
-        raise e
+        raise

@@ -11,7 +11,7 @@ import os
 import sqlite3
 import uuid
 import warnings
-from datetime import datetime
+from datetime import UTC, datetime
 
 import yaml
 
@@ -91,8 +91,8 @@ def filter_routines(records, tags):
             _tags = yaml.safe_load(record[3])["config"]["tags"]
             if tags.items() <= _tags.items():
                 records_filtered.append(record)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to extract tags from routine {record[0]}: {e}")
 
     return records_filtered
 
@@ -125,7 +125,7 @@ def save_routine(routine: Routine):
     routine.id = id
     cur.execute(
         "insert into routine values (?, ?, ?, ?)",
-        (routine.id, routine.name, routine.yaml(), datetime.now()),
+        (routine.id, routine.name, routine.yaml(), datetime.now(tz=UTC)),
     )
 
     con.commit()
@@ -146,7 +146,7 @@ def update_routine(routine: Routine):
     if record:  # update the record
         cur.execute(
             "update routine set name = ?, config = ?, savedAt = ? where id = ?",
-            (routine.name, routine.yaml(), datetime.now(), routine.id),
+            (routine.name, routine.yaml(), datetime.now(tz=UTC), routine.id),
         )
 
     con.commit()
@@ -215,26 +215,25 @@ def load_routine(id: str):
 
 
 @ensure_routines_db_exists
-def list_routine(keyword="", tags={}):
+def list_routine(keyword="", tags: dict[str, str] | None = None):
+    if tags is None:
+        tags = {}
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
-
     # check if id column is in database
     # if not, add it and update routine and run entries accordingly
     cur.execute("pragma table_info(routine)")
     columns = [row[1] for row in cur.fetchall()]
     if "id" not in columns:
-        cur.execute(
-            """
+        cur.execute("""
         create table new_table (
             id text primary key,
             name text,
             config,
             savedAt timestamp
         )
-        """
-        )
+        """)
         db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
         con_run = sqlite3.connect(db_run)
         cur_run = con_run.cursor()
@@ -318,8 +317,8 @@ def save_run(run):
     routine_id = run["routine"].id
     run_filename = run["filename"]
     timestamps = run["data"]["timestamp"]
-    time_start = datetime.fromtimestamp(timestamps[0])
-    time_finish = datetime.fromtimestamp(timestamps[-1])
+    time_start = datetime.fromtimestamp(timestamps[0], tz=UTC)
+    time_finish = datetime.fromtimestamp(timestamps[-1], tz=UTC)
 
     # Check if the record exist (same filename)
     cur.execute("select id from run where filename = ?", (run_filename,))

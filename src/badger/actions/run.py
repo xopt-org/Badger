@@ -91,7 +91,7 @@ def run_n_archive(
                     os.path.join(path, filename)
                 )
             except Exception:
-                pass
+                logger.warning("Failed to dump interface logs")
 
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
@@ -121,7 +121,7 @@ def run_n_archive(
             filename = _run["filename"][:-4] + "pickle"
             routine.environment.interface.stop_recording(os.path.join(path, filename))
         except Exception:
-            pass
+            logger.warning("Failed to dump interface logs")
 
 
 def run_routine(args):

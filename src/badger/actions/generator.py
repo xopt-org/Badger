@@ -28,5 +28,5 @@ def show_generator(args):
             # The exception could carry the configs information
             configs = e.configs
             yprint(configs)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to retrieve generator configs from exception: {e}")

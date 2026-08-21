@@ -196,7 +196,7 @@ def load_plugin(
     return plugin
 
 
-def load_badger_docs(name: str, ptype: str = None) -> str:
+def load_badger_docs(name: str, ptype: str | None = None) -> str:
     """
     Load general Badger documentation from Badger/documentation/docs/guides.
 
@@ -204,8 +204,8 @@ def load_badger_docs(name: str, ptype: str = None) -> str:
     __________
     name : str
         Name of the .md file to open
-    subdir : str (None)
-        Name of subdirectory if file is not in main guides directory
+    ptype : str | None (None)
+        Type of plugin (e.g., 'generator', 'interface', 'environment')
 
     Returns
     _______
@@ -356,7 +356,7 @@ _MD_IMG = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 
 def _md_images_to_html(
     text: str,
-    base_prefix: str = None,
+    base_prefix: str | None = None,
     width: int = 575,
 ) -> str:
     """

@@ -140,11 +140,10 @@ def list_run():
 def get_runs():
     runs = list_run()
     run_list = []
-    for year, months in runs.items():
-        for month, days in months.items():
-            for day, files in days.items():
-                for run_fname in files:
-                    run_list.append(run_fname)
+    for months in runs.values():
+        for days in months.values():
+            for files in days.values():
+                run_list.extend(files)
 
     return run_list
 

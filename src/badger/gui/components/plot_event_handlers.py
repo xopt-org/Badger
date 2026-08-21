@@ -354,8 +354,8 @@ class MatplotlibInteractionHandler:
                 xy=point,
                 xytext=(0, 0),  # Initial position of the tooltip
                 textcoords="offset pixels",
-                bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->"),
+                bbox={"boxstyle": "round", "fc": "w"},
+                arrowprops={"arrowstyle": "->"},
             )
 
             # Adjust tooltip position based on the region and the size of the text

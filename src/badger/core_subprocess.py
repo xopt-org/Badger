@@ -146,9 +146,9 @@ def run_routine_subprocess(
     stop_process: mp.Event,
     pause_process: mp.Event,
     wait_event: mp.Event,
-    config_path: str = None,
-    log_queue: mp.Queue = None,
-    dialog_action_queue: mp.Queue = None,
+    config_path: str | None = None,
+    log_queue: mp.Queue | None = None,
+    dialog_action_queue: mp.Queue | None = None,
 ) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
@@ -210,17 +210,16 @@ def run_routine_subprocess(
             routine.environment.variables.update(routine.vrange_hard_limit)
 
         # Reset data if run_data option is False
-        if not args["run_data"]:
-            if routine.data is not None:
-                logger.info("Resetting routine data")
-                routine.data = routine.data.iloc[0:0]  # reset the data
+        if not args["run_data"] and routine.data is not None:
+            logger.info("Resetting routine data")
+            routine.data = routine.data.iloc[0:0]  # reset the data
 
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
         logger.error(f"Error initializing routine: {error_title}\n{error_traceback}")
         queue.put((error_title, error_traceback))
-        raise e
+        raise
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
     # Patch for converting dtype str to torch object
@@ -357,10 +356,9 @@ def run_routine_subprocess(
                 logger.debug("Sending evaluation data to evaluate_queue.")
                 evaluate_queue[0].send((routine.data, generator_copy))
 
-            if archive:
-                if not testing:
-                    logger.info("Archiving run state.")
-                    archive_run(routine)
+            if archive and not testing:
+                logger.info("Archiving run state.")
+                archive_run(routine)
 
     except BadgerRunTerminated:
         logger.info("Optimization terminated by BadgerRunTerminated.")
@@ -382,4 +380,4 @@ def run_routine_subprocess(
         error_traceback = traceback.format_exc()
         queue.put((error_title, error_traceback))
         evaluate_queue[0].close()
-        raise e
+        raise

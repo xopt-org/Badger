@@ -35,10 +35,10 @@ class AnalysisExtension(QWidget):
     def update_window(self, routine: Routine) -> None:
         try:
             self.update_extension(routine)
-        except Exception as e:
+        except Exception:
             # This will make sure that the extension window closes if an error occurs
             self.close()
-            raise e
+            raise
 
     def initialize_extension(
         self,

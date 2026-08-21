@@ -4,7 +4,7 @@ Defines the interface for receiving routine updates and rendering plots."""
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Any
+from typing import Any, ClassVar
 
 from PyQt5.QtWidgets import QWidget
 from xopt import Generator
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class AnalysisWidget(QWidget):
     routine: Routine
     generator: Generator
-    parameters: dict[str, Any] = {}
+    parameters: ClassVar[dict[str, Any]] = {}
     df_length: float = float("inf")
     initialized: bool = False
     routine_identifier: str = ""

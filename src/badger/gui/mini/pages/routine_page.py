@@ -1045,8 +1045,8 @@ class BadgerRoutinePage(QWidget):
 
         try:
             tmp = {}
-            # FIX: exec() is dangerous and should be looked into if `ast.literal_eval()` can be used instead.
-            exec(self.script, tmp)
+            # User-provided script must define a `generate` function, so exec is required here.
+            exec(self.script, tmp)  # noqa: S102
             try:
                 tmp["generate"]  # test if generate function is defined
             except Exception as e:
