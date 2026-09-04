@@ -28,13 +28,12 @@ jobs:
       DISPLAY: ':99.0'
       QT_MAC_WANTS_LAYER: 1  # PyQT gui tests involving qtbot interaction on macOS will fail without this
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Miniforge
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           miniforge-version: latest
-          mamba-version: "2.0.5"
           activate-environment: badger-dev
           python-version: ${{ matrix.python-version }}
 
@@ -63,11 +62,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30 # timeout should apply to each test run, so get 30 min for each of 3.10, 3.11, 3.12 python runs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install pypa/build

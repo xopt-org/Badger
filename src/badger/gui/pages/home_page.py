@@ -82,7 +82,14 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager=None):
+    def __init__(
+        self,
+        process_manager=None,
+        routine=None,
+        auto_run=False,
+        watch_routine=None,
+        watch_stop=None,
+    ):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
@@ -91,11 +98,219 @@ class BadgerHomePage(QWidget):
         self.process_manager = process_manager
         self.current_routine = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
+        # Watch-routine state (campaign-mode reload trigger)
+        self._watch_routine_path = watch_routine
+        self._watch_stop_path = watch_stop
+        self._watch_auto_run = auto_run
+        self._watch_fs_watcher = None
+        self._watch_stop_fs_watcher = None
         self.init_ui()
         self.config_logic()
 
         self.load_all_runs()
         self.init_home_page()
+
+        # Auto-load routine from CLI if provided
+        if routine is not None:
+            from PyQt5.QtCore import QTimer
+
+            QTimer.singleShot(
+                100, lambda: self.load_routine_from_cli(routine, auto_run)
+            )
+
+        # Install file-system watcher for campaign-mode routine swaps
+        if self._watch_routine_path:
+            from PyQt5.QtCore import QTimer
+
+            QTimer.singleShot(200, self._install_routine_watcher)
+
+        # Install file-system watcher for campaign-mode stop sentinel
+        if self._watch_stop_path:
+            from PyQt5.QtCore import QTimer
+
+            QTimer.singleShot(250, self._install_stop_watcher)
+
+    def _install_routine_watcher(self):
+        """
+        Install a QFileSystemWatcher on `self._watch_routine_path`. When
+        the file changes (an external agent has written a new routine
+        YAML in place), stop the currently-running optimization (if any),
+        reload the routine, and (if --auto-run was set) restart.
+        """
+        from PyQt5.QtCore import QFileSystemWatcher
+
+        path = self._watch_routine_path
+        if not path or not os.path.isfile(path):
+            logger.warning(
+                "watch-routine: file does not exist yet (%s); "
+                "watcher will be (re)installed on first change.",
+                path,
+            )
+        self._watch_fs_watcher = QFileSystemWatcher(
+            [path] if os.path.isfile(path) else [], self
+        )
+        self._watch_fs_watcher.fileChanged.connect(self._on_watch_routine_changed)
+        # Also watch the parent dir so file-replacement (atomic mv) is caught
+        parent = os.path.dirname(path) or "."
+        if os.path.isdir(parent):
+            self._watch_fs_watcher.addPath(parent)
+            self._watch_fs_watcher.directoryChanged.connect(self._on_watch_dir_changed)
+        logger.info("watch-routine: watching %s", path)
+
+    def _on_watch_dir_changed(self, _changed_dir):
+        # Re-add the file path in case it was atomically replaced
+        # (replacement deletes the inode → fileChanged stops firing).
+        path = self._watch_routine_path
+        if path and os.path.isfile(path):
+            if path not in self._watch_fs_watcher.files():
+                self._watch_fs_watcher.addPath(path)
+                # Trigger a reload too — directory changed because the
+                # file appeared / was replaced.
+                self._on_watch_routine_changed(path)
+
+    def _on_watch_routine_changed(self, path):
+        """
+        File-watcher callback: stop any running routine, load the new
+        YAML, and (if auto-run was requested at launch) start it.
+        Debounced so editors that save in multiple writes don't trigger
+        a thrash.
+        """
+        from PyQt5.QtCore import QTimer
+
+        if not hasattr(self, "_watch_pending"):
+            self._watch_pending = False
+        if self._watch_pending:
+            return
+        self._watch_pending = True
+        # 300ms debounce — long enough to absorb an editor's atomic save,
+        # short enough to feel responsive to a deliberate "swap routine".
+        QTimer.singleShot(300, lambda: self._do_watch_reload(path))
+
+    def _do_watch_reload(self, path):
+        self._watch_pending = False
+        try:
+            if not os.path.isfile(path):
+                logger.warning("watch-routine: %s no longer exists; skip reload", path)
+                return
+
+            # Stop any active run, gracefully.
+            try:
+                if self.run_monitor is not None and getattr(
+                    self.run_monitor, "running", False
+                ):
+                    logger.info("watch-routine: stopping current run before reload")
+                    self.run_monitor.sig_stop.emit()
+            except Exception as exc:
+                logger.warning("watch-routine: stop emit failed: %s", exc)
+
+            # Defensive cleanup of leftover state from the prior run.
+            # `routine_finished` does NOT reset routine_runner — its call
+            # is intentionally commented out in run_monitor.py — so when
+            # we reload mid-session, the old subprocess wrapper lingers.
+            # Disconnect its signals and drop the reference so the next
+            # `run_monitor.start()` can wire fresh signal connections
+            # without colliding with the dead routine_runner's slots.
+            try:
+                rm = self.run_monitor
+                if rm is not None and getattr(rm, "routine_runner", None) is not None:
+                    for sig in (
+                        getattr(rm, "sig_pause", None),
+                        getattr(rm, "sig_stop", None),
+                    ):
+                        if sig is not None:
+                            try:
+                                sig.disconnect()
+                            except Exception:
+                                pass  # already disconnected
+                    rm.routine_runner = None
+                    rm.running = False
+            except Exception as exc:
+                logger.warning("watch-routine: stale runner cleanup failed: %s", exc)
+
+            # Make sure the watcher is still watching `path` — Qt sometimes
+            # drops files from QFileSystemWatcher after one event when the
+            # inode briefly disappeared during a write.
+            try:
+                if (
+                    self._watch_fs_watcher is not None
+                    and path not in self._watch_fs_watcher.files()
+                    and os.path.isfile(path)
+                ):
+                    self._watch_fs_watcher.addPath(path)
+            except Exception:
+                pass
+
+            # Load the new routine
+            from badger.utils import load_template_smart
+            from badger.routine import Routine
+
+            config = load_template_smart(path)
+            routine = Routine(**config)
+            logger.info("watch-routine: loaded new routine %r", routine.name)
+
+            # Reuse the CLI loader (handles routine view + auto-run)
+            self.load_routine_from_cli(routine, self._watch_auto_run)
+        except Exception as exc:
+            logger.error("watch-routine: reload failed: %s", exc, exc_info=True)
+
+    def _install_stop_watcher(self):
+        """
+        Install a QFileSystemWatcher on `self._watch_stop_path`. When the
+        sentinel file appears (or is modified), emit sig_stop — which is
+        exactly what clicking the Stop button does. This stops the
+        optimization subprocess via the multiprocessing stop_event, lets
+        the run_monitor handle its normal `finished` signal flow (so the
+        UI updates to "Stopped"), and keeps the GUI window open ready
+        for the next routine.
+        """
+        from PyQt5.QtCore import QFileSystemWatcher
+
+        path = self._watch_stop_path
+        parent = os.path.dirname(path) or "."
+        # Watch the parent dir so the sentinel can appear from nothing
+        # and we still notice (QFileSystemWatcher can't watch a path
+        # that doesn't exist yet).
+        self._watch_stop_fs_watcher = QFileSystemWatcher([], self)
+        # Connect handlers ONCE; addPath later as needed.
+        self._watch_stop_fs_watcher.fileChanged.connect(self._on_stop_signal)
+        self._watch_stop_fs_watcher.directoryChanged.connect(self._on_stop_dir_changed)
+        if os.path.isfile(path):
+            self._watch_stop_fs_watcher.addPath(path)
+        if os.path.isdir(parent):
+            self._watch_stop_fs_watcher.addPath(parent)
+        logger.info("watch-stop: sentinel = %s", path)
+
+    def _on_stop_dir_changed(self, _changed_dir):
+        path = self._watch_stop_path
+        if path and os.path.isfile(path):
+            if path not in self._watch_stop_fs_watcher.files():
+                self._watch_stop_fs_watcher.addPath(path)
+            # Sentinel appeared — fire the stop handler.
+            self._on_stop_signal(path)
+
+    def _on_stop_signal(self, path):
+        """Sentinel file detected: emit sig_stop, then delete the file."""
+        try:
+            if not os.path.isfile(path):
+                return  # already cleaned up by a parallel event
+            try:
+                if self.run_monitor is not None and getattr(
+                    self.run_monitor, "running", False
+                ):
+                    logger.info("watch-stop: gracefully stopping current run")
+                    self.run_monitor.sig_stop.emit()
+                else:
+                    logger.info("watch-stop: no active run; nothing to stop")
+            except Exception as exc:
+                logger.warning("watch-stop: stop emit failed: %s", exc)
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            except Exception as exc:
+                logger.warning("watch-stop: sentinel delete failed: %s", exc)
+        except Exception as exc:
+            logger.error("watch-stop: handler error: %s", exc, exc_info=True)
 
     def init_ui(self):
         logger.info("Initializing UI for BadgerHomePage.")
@@ -652,3 +867,42 @@ class BadgerHomePage(QWidget):
             self.overlay.hide()
         except AttributeError:  # in test mode
             pass
+
+    def load_routine_from_cli(self, routine, auto_run):
+        """
+        Load routine from CLI and optionally auto-start optimization.
+
+        This method is called when a routine is provided via CLI.
+        It loads the routine into the editor and optionally triggers a run.
+
+        Args:
+            routine: Routine object to load
+            auto_run: If True, automatically start optimization
+        """
+        # Set the routine in the editor (existing method)
+        self.routine_editor.set_routine(routine, silent=True)
+
+        # Populate initial points table based on actions (like "Load Template" does)
+        # This ensures actions like "add_curr" and "add_rand" are executed
+        if (
+            hasattr(self.routine_editor, "init_table_actions")
+            and self.routine_editor.init_table_actions
+        ):
+            self.routine_editor.clear_init_table(reset_actions=False)
+            self.routine_editor.update_init_table(force=True)
+
+        # Update current routine
+        self.current_routine = routine
+
+        # Initialize plots and monitor (reuse existing logic)
+        self.run_monitor.init_plots(routine)
+
+        # Update data table if routine has data
+        if routine.data is not None and len(routine.data) > 0:
+            update_table(self.run_table, routine.sorted_data, routine.vocs)
+
+        # If auto-run requested, start optimization after short delay
+        if auto_run:
+            from PyQt5.QtCore import QTimer
+
+            QTimer.singleShot(500, self.start_run)
