@@ -151,7 +151,7 @@ def range_to_str(vranges):
     return vranges_str
 
 
-def ts_to_str(ts, format="lcls-log"):
+def ts_to_str(ts: datetime, format: str = "lcls-log") -> str:
     if format == "lcls-log":
         return ts.strftime("%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -162,7 +162,7 @@ def ts_to_str(ts, format="lcls-log"):
         return ts.isoformat()
 
 
-def str_to_ts(timestr, format="lcls-log"):
+def str_to_ts(timestr: str, format: str = "lcls-log") -> datetime:
     if format == "lcls-log":
         return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -173,16 +173,16 @@ def str_to_ts(timestr, format="lcls-log"):
         return datetime.fromisoformat(timestr)
 
 
-def ts_float_to_str(ts_float, format="lcls-log"):
+def ts_float_to_str(ts_float: float, format: str = "lcls-log") -> str:
     ts = datetime.fromtimestamp(ts_float)
     return ts_to_str(ts, format)
 
 
-def curr_ts():
+def curr_ts() -> datetime:
     return datetime.now()
 
 
-def curr_ts_to_str(format="lcls-log"):
+def curr_ts_to_str(format: str = "lcls-log") -> str:
     return ts_to_str(datetime.now(), format)
 
 
@@ -190,8 +190,11 @@ def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") 
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")
-    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
-    suffix = ts_float_to_str(ts_float, format)
+    if hasattr(routine, "creation_ts"):
+        suffix = routine.creation_ts
+    else:  # compatibility with old routines
+        ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
+        suffix = ts_float_to_str(ts_float, format)
     fname = f"{env_name}-{suffix}.yaml"
     return fname
 

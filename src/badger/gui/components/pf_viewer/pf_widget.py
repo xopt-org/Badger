@@ -462,7 +462,7 @@ class ParetoFrontWidget(AnalysisWidget):
 
         num_of_points = len(raw_data)
 
-        color_map = plt.cm.get_cmap("viridis")
+        color_map = plt.get_cmap("viridis")
         norm = Normalize(0, num_of_points - 1)
 
         # Map the indices to the colormap, normalizing by the total number of points

@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from xopt import Generator
+from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.mobo import MOBOGenerator
 
@@ -35,10 +36,10 @@ class AnalysisExtension(QWidget):
     def update_window(self, routine: Routine) -> None:
         try:
             self.update_extension(routine)
-        except Exception as e:
+        except Exception:
             # This will make sure that the extension window closes if an error occurs
             self.close()
-            raise e
+            raise
 
     def initialize_extension(
         self,
@@ -126,5 +127,5 @@ class BaxVisualizer(AnalysisExtension):
                 routine=routine,
             ),
             extension_name="Bax Visualizer",
-            generator_type=cast(type[Generator], BayesianGenerator),
+            generator_type=cast(type[Generator], BaxGenerator),
         )

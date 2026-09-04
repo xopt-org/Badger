@@ -14,6 +14,9 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from xopt.generators.bayesian.bax_generator import BaxGenerator
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
+from xopt.generators.bayesian.mobo import MOBOGenerator
 
 from badger.gui.components.analysis_extensions import (
     AnalysisExtension,
@@ -130,9 +133,24 @@ class ExtensionsPalette(QMainWindow):
             )
             return
 
-        self.add_child_window_to_monitor(
-            ParetoFrontViewer(routine=self.run_monitor.routine, parent=self)
-        )
+        if not isinstance(self.run_monitor.routine.generator, MOBOGenerator):
+            QMessageBox.warning(
+                self,
+                "Invalid Routine Error",
+                "The Pareto Front Viewer can only be used with a MOBOGenerator.",
+            )
+            return
+
+        try:
+            self.add_child_window_to_monitor(
+                ParetoFrontViewer(routine=self.run_monitor.routine, parent=self)
+            )
+        except HandledException as e:
+            QMessageBox.critical(self, "Handled Exception Error", str(e))
+        except Exception:
+            QMessageBox.critical(
+                self, "Unhandled Exception Error", traceback.format_exc()
+            )
 
     def add_bo_visualizer(self) -> None:
         """
@@ -147,9 +165,24 @@ class ExtensionsPalette(QMainWindow):
             )
             return
 
-        self.add_child_window_to_monitor(
-            BOVisualizer(routine=self.run_monitor.routine, parent=self)
-        )
+        if not isinstance(self.run_monitor.routine.generator, BayesianGenerator):
+            QMessageBox.warning(
+                self,
+                "Invalid Routine Error",
+                "The BO Visualizer can only be used with a BayesianGenerator.",
+            )
+            return
+
+        try:
+            self.add_child_window_to_monitor(
+                BOVisualizer(routine=self.run_monitor.routine, parent=self)
+            )
+        except HandledException as e:
+            QMessageBox.critical(self, "Handled Exception Error", str(e))
+        except Exception:
+            QMessageBox.critical(
+                self, "Unhandled Exception Error", traceback.format_exc()
+            )
 
     def add_bax_visualizer(self) -> None:
         """
@@ -164,9 +197,24 @@ class ExtensionsPalette(QMainWindow):
             )
             return
 
-        self.add_child_window_to_monitor(
-            BaxVisualizer(routine=self.run_monitor.routine, parent=self)
-        )
+        if not isinstance(self.run_monitor.routine.generator, BaxGenerator):
+            QMessageBox.warning(
+                self,
+                "Invalid Routine Error",
+                "The Bax Visualizer can only be used with a BaxGenerator.",
+            )
+            return
+
+        try:
+            self.add_child_window_to_monitor(
+                BaxVisualizer(routine=self.run_monitor.routine, parent=self)
+            )
+        except HandledException as e:
+            QMessageBox.critical(self, "Handled Exception Error", str(e))
+        except Exception:
+            QMessageBox.critical(
+                self, "Unhandled Exception Error", traceback.format_exc()
+            )
 
     def add_child_window_to_monitor(self, child_window: AnalysisExtension) -> None:
         """

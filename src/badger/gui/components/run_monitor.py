@@ -502,7 +502,12 @@ class BadgerOptMonitor(QWidget):
         self.extensions_palette.show()
 
     def extension_window_closed(self, child_window: AnalysisExtension) -> None:
-        self.active_extensions.remove(child_window)
+        try:
+            self.active_extensions.remove(child_window)
+        except ValueError:
+            logger.warning(
+                f"Attempted to remove child window that was not in active extensions list. Child window: {child_window}"
+            )
         self.extensions_palette.update_palette()
 
     def extract_timestamp(self, data: pd.DataFrame | None = None) -> np.ndarray:

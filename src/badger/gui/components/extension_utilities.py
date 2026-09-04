@@ -83,6 +83,9 @@ def to_precision_float(value: Any, precision: int = 4) -> float:
 def get_latest_reference_points(
     data: pd.DataFrame | None, variable_names: list[str]
 ) -> dict[str, float]:
+    # Get the latest reference points from the generator's data
+    # This function assumes that the generator's data is a DataFrame with columns corresponding to the variable names in the VOCS.
+    # The latest reference points are taken from the last row of the DataFrame.
 
     if data is None or data.empty:
         raise ValueError("No data available to extract the latest reference point.")

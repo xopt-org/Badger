@@ -127,6 +127,11 @@ def filter_generator_config(name: str, config: dict[str, Any]) -> dict[str, Any]
     else:
         filtered_config = config
 
+    # Filter out all supports_* keys from the config dictionary
+    filtered_config = {
+        k: v for k, v in filtered_config.items() if not k.startswith("supports_")
+    }
+
     return copy.deepcopy(filtered_config)
 
 
