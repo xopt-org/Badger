@@ -177,9 +177,7 @@ def run_routine(args):
     # run_n_archive(routine, args.yes, args.save, args.verbose)
 
 
-def run_routine_gui(
-    routine, auto_run=False, watch_routine=None, watch_stop=None
-):
+def run_routine_gui(routine, auto_run=False, watch_routine=None, watch_stop=None):
     """
     Launch Badger GUI with pre-loaded routine.
 
@@ -194,6 +192,7 @@ def run_routine_gui(
             active run (keeping the window alive) and deletes the file.
     """
     from badger.gui import launch_gui
+
     launch_gui(
         routine=routine,
         auto_run=auto_run,
@@ -217,7 +216,7 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
     from badger.settings import init_settings
 
     # Display routine summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Routine: {routine.name}")
     print(f"Environment: {routine.environment.name}")
     print(f"Generator: {routine.generator.name}")
@@ -225,13 +224,13 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
     print(f"Objectives: {list(routine.vocs.objectives.keys())}")
     if routine.vocs.constraints:
         print(f"Constraints: {list(routine.vocs.constraints.keys())}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Ask for confirmation if not auto_run
     if not auto_run:
         try:
             response = input("Start optimization? [y/N]: ")
-            if response.lower() != 'y':
+            if response.lower() != "y":
                 print("Cancelled.")
                 return
         except (EOFError, KeyboardInterrupt):
@@ -257,7 +256,7 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
             pause_event,
             wait_event,
             config_path,
-        )
+        ),
     )
     process.start()
 
@@ -287,7 +286,7 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
 
     # Prepare arguments to send to subprocess
     arg_dict = {
-        "routine_id": routine.id if hasattr(routine, 'id') else None,
+        "routine_id": routine.id if hasattr(routine, "id") else None,
         "routine_filename": routine_filename,
         "routine_name": routine.name,
         "variable_ranges": routine.vocs.variables,
@@ -306,12 +305,12 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
 
     # Signal subprocess to begin execution
     pause_event.set()  # Start unpaused
-    wait_event.set()   # Signal subprocess to begin
+    wait_event.set()  # Signal subprocess to begin
 
     # Monitor progress with pause/resume support using signal handler (like old run_n_archive)
     print("Optimization started. Press Ctrl+C to pause.\n")
     iteration = 0
-    last_data = None
+    # last_data = None
 
     # Storage for signal handler state
     storage = {"paused": False, "should_exit": False}
@@ -340,11 +339,15 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
             print("")  # new line
 
             try:
-                res = input("Optimization paused. Press Enter to resume or Ctrl+C to terminate: ")
+                res = input(
+                    "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
+                )
                 while res != "":
                     # Invalid input, ask again
                     sys.stdout.write("\033[F")  # Move cursor up to erase line
-                    res = input("Invalid choice. Press Enter to resume or Ctrl+C to terminate: ")
+                    res = input(
+                        "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
+                    )
             except KeyboardInterrupt:
                 # Ctrl+C pressed during input - signal handler already set should_exit=True
                 pass
@@ -367,7 +370,7 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
                 df = results[0]  # First element is the data DataFrame
                 if len(df) > iteration:
                     iteration = len(df)
-                    last_data = df
+                    # last_data = df
 
         # Check for errors in data_queue
         if not data_queue.empty():
@@ -390,10 +393,10 @@ def run_routine_headless(routine, auto_run=False, verbose=2):
 
     # Final status
     elapsed = time.time() - start_time
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Optimization completed in {elapsed:.2f}s")
     print(f"Total iterations: {iteration}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 def run_routine_cli(args):
@@ -406,6 +409,7 @@ def run_routine_cli(args):
     try:
         # Load template using smart detection
         from badger.utils import load_template_smart
+
         config = load_template_smart(args.template)
 
         # Create routine from template
@@ -430,5 +434,6 @@ def run_routine_cli(args):
         logger.error(f"Error running routine: {e}")
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

@@ -113,16 +113,21 @@ class BadgerHomePage(QWidget):
         # Auto-load routine from CLI if provided
         if routine is not None:
             from PyQt5.QtCore import QTimer
-            QTimer.singleShot(100, lambda: self.load_routine_from_cli(routine, auto_run))
+
+            QTimer.singleShot(
+                100, lambda: self.load_routine_from_cli(routine, auto_run)
+            )
 
         # Install file-system watcher for campaign-mode routine swaps
         if self._watch_routine_path:
             from PyQt5.QtCore import QTimer
+
             QTimer.singleShot(200, self._install_routine_watcher)
 
         # Install file-system watcher for campaign-mode stop sentinel
         if self._watch_stop_path:
             from PyQt5.QtCore import QTimer
+
             QTimer.singleShot(250, self._install_stop_watcher)
 
     def _install_routine_watcher(self):
@@ -133,6 +138,7 @@ class BadgerHomePage(QWidget):
         reload the routine, and (if --auto-run was set) restart.
         """
         from PyQt5.QtCore import QFileSystemWatcher
+
         path = self._watch_routine_path
         if not path or not os.path.isfile(path):
             logger.warning(
@@ -140,15 +146,15 @@ class BadgerHomePage(QWidget):
                 "watcher will be (re)installed on first change.",
                 path,
             )
-        self._watch_fs_watcher = QFileSystemWatcher([path] if os.path.isfile(path) else [], self)
+        self._watch_fs_watcher = QFileSystemWatcher(
+            [path] if os.path.isfile(path) else [], self
+        )
         self._watch_fs_watcher.fileChanged.connect(self._on_watch_routine_changed)
         # Also watch the parent dir so file-replacement (atomic mv) is caught
         parent = os.path.dirname(path) or "."
         if os.path.isdir(parent):
             self._watch_fs_watcher.addPath(parent)
-            self._watch_fs_watcher.directoryChanged.connect(
-                self._on_watch_dir_changed
-            )
+            self._watch_fs_watcher.directoryChanged.connect(self._on_watch_dir_changed)
         logger.info("watch-routine: watching %s", path)
 
     def _on_watch_dir_changed(self, _changed_dir):
@@ -170,6 +176,7 @@ class BadgerHomePage(QWidget):
         a thrash.
         """
         from PyQt5.QtCore import QTimer
+
         if not hasattr(self, "_watch_pending"):
             self._watch_pending = False
         if self._watch_pending:
@@ -188,9 +195,8 @@ class BadgerHomePage(QWidget):
 
             # Stop any active run, gracefully.
             try:
-                if (
-                    self.run_monitor is not None
-                    and getattr(self.run_monitor, "running", False)
+                if self.run_monitor is not None and getattr(
+                    self.run_monitor, "running", False
                 ):
                     logger.info("watch-routine: stopping current run before reload")
                     self.run_monitor.sig_stop.emit()
@@ -207,8 +213,10 @@ class BadgerHomePage(QWidget):
             try:
                 rm = self.run_monitor
                 if rm is not None and getattr(rm, "routine_runner", None) is not None:
-                    for sig in (getattr(rm, "sig_pause", None),
-                                getattr(rm, "sig_stop", None)):
+                    for sig in (
+                        getattr(rm, "sig_pause", None),
+                        getattr(rm, "sig_stop", None),
+                    ):
                         if sig is not None:
                             try:
                                 sig.disconnect()
@@ -223,9 +231,11 @@ class BadgerHomePage(QWidget):
             # drops files from QFileSystemWatcher after one event when the
             # inode briefly disappeared during a write.
             try:
-                if (self._watch_fs_watcher is not None
-                        and path not in self._watch_fs_watcher.files()
-                        and os.path.isfile(path)):
+                if (
+                    self._watch_fs_watcher is not None
+                    and path not in self._watch_fs_watcher.files()
+                    and os.path.isfile(path)
+                ):
                     self._watch_fs_watcher.addPath(path)
             except Exception:
                 pass
@@ -233,6 +243,7 @@ class BadgerHomePage(QWidget):
             # Load the new routine
             from badger.utils import load_template_smart
             from badger.routine import Routine
+
             config = load_template_smart(path)
             routine = Routine(**config)
             logger.info("watch-routine: loaded new routine %r", routine.name)
@@ -253,6 +264,7 @@ class BadgerHomePage(QWidget):
         for the next routine.
         """
         from PyQt5.QtCore import QFileSystemWatcher
+
         path = self._watch_stop_path
         parent = os.path.dirname(path) or "."
         # Watch the parent dir so the sentinel can appear from nothing
@@ -282,9 +294,8 @@ class BadgerHomePage(QWidget):
             if not os.path.isfile(path):
                 return  # already cleaned up by a parallel event
             try:
-                if (
-                    self.run_monitor is not None
-                    and getattr(self.run_monitor, "running", False)
+                if self.run_monitor is not None and getattr(
+                    self.run_monitor, "running", False
                 ):
                     logger.info("watch-stop: gracefully stopping current run")
                     self.run_monitor.sig_stop.emit()
@@ -873,7 +884,10 @@ class BadgerHomePage(QWidget):
 
         # Populate initial points table based on actions (like "Load Template" does)
         # This ensures actions like "add_curr" and "add_rand" are executed
-        if hasattr(self.routine_editor, 'init_table_actions') and self.routine_editor.init_table_actions:
+        if (
+            hasattr(self.routine_editor, "init_table_actions")
+            and self.routine_editor.init_table_actions
+        ):
             self.routine_editor.clear_init_table(reset_actions=False)
             self.routine_editor.update_init_table(force=True)
 
@@ -890,4 +904,5 @@ class BadgerHomePage(QWidget):
         # If auto-run requested, start optimization after short delay
         if auto_run:
             from PyQt5.QtCore import QTimer
+
             QTimer.singleShot(500, self.start_run)
