@@ -1,0 +1,566 @@
+"""
+Main page of the Badger mini GUI that ties routine editing to live run monitoring.
+
+Left side: routine editor (configure variables, objectives, algorithm).
+Right side: run monitor (live plots, data table).
+Bottom (action bar): start/stop controls, logging, reset, checkpointing, and other run actions.
+"""
+
+import gc
+import os
+import traceback
+from importlib import resources
+
+from pandas import DataFrame
+from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (
+    QMessageBox,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+    QLabel,
+)
+
+from badger.archive import (
+    delete_run,
+    get_base_run_filename,
+    load_run,
+    get_runs,
+    save_tmp_run,
+)
+from badger.gui.components.data_table import (
+    add_row,
+    data_table,
+    reset_table,
+    update_table,
+)
+from badger.gui.mini.pages.routine_page import BadgerRoutinePage
+
+from badger.gui.components.navigators import TemplateNavigator
+from badger.gui.components.run_monitor import BadgerOptMonitor
+from badger.gui.components.status_bar import BadgerStatusBar
+from badger.gui.components.action_bar import BadgerActionBar
+from badger.utils import get_header
+from badger.settings import init_settings
+
+# from PyQt5.QtGui import QBrush, QColor
+from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.windows.terminition_condition_dialog import (
+    BadgerTerminationConditionDialog,
+)
+from badger.gui.utils import ModalOverlay
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+stylesheet = """
+QPushButton:hover:pressed
+{
+    background-color: #C7737B;
+}
+QPushButton:hover
+{
+    background-color: #BF616A;
+}
+QPushButton
+{
+    background-color: #A9444E;
+}
+"""
+
+
+class BadgerHomePage(QWidget):
+    sig_routine_activated = pyqtSignal(bool)
+    sig_routine_invalid = pyqtSignal()
+
+    def __init__(self, process_manager=None):
+        logger.info("Initializing BadgerHomePage.")
+        super().__init__()
+
+        self.process_manager = process_manager
+        self.current_routine = None  # current routine
+        self.go_run_failed = False  # flag to indicate go_run failed
+
+        self.init_ui()
+        self.config_logic()
+
+        self.load_all_runs()
+        self.init_home_page()
+
+    def init_ui(self):
+        logger.info("Initializing UI for BadgerHomePage.")
+        self.config_singleton = init_settings()
+
+        # load images
+        icon_ref = resources.files(__package__) / "../images/add.png"
+        with resources.as_file(icon_ref) as icon_path:
+            self.icon_add = QIcon(str(icon_path))
+        icon_ref = resources.files(__package__) / "../images/import.png"
+        with resources.as_file(icon_ref) as icon_path:
+            self.icon_import = QIcon(str(icon_path))
+        icon_ref = resources.files(__package__) / "../images/export.png"
+        with resources.as_file(icon_ref) as icon_path:
+            self.icon_export = QIcon(str(icon_path))
+
+        # Set up the layout
+        vbox = QVBoxLayout(self)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
+
+        # History run browser
+        # self.history_browser = history_browser = HistoryNavigator()
+        # history_browser.setFixedWidth(360)
+
+        # Template browser
+        self.template_browser = template_browser = TemplateNavigator()
+        template_browser.setFixedWidth(360)
+
+        # Splitter
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+
+        vbox.addWidget(splitter, 1)
+
+        # Monitor panel
+        panel_monitor = QWidget()
+        vbox_monitor = QVBoxLayout(panel_monitor)
+        vbox_monitor.setContentsMargins(8, 0, 8, 0)
+
+        # Run monitor
+        self.run_view = run_view = QWidget()  # for consistent bg
+        vbox_monitor.addWidget(run_view)
+        vbox_run_view = QVBoxLayout(run_view)
+        vbox_run_view.setContentsMargins(0, 0, 0, 10)
+        self.run_monitor = run_monitor = BadgerOptMonitor(self.process_manager)
+        vbox_run_view.addWidget(run_monitor)
+
+        # Data table
+        panel_table = QWidget()
+        panel_table.setMinimumHeight(180)
+        vbox_table = QVBoxLayout(panel_table)
+        vbox_table.setContentsMargins(0, 0, 0, 0)
+        title_label = QLabel("Run Data")
+        title_label.setStyleSheet(
+            """
+            background-color: #455364;
+            font-weight: bold;
+            padding: 4px;
+        """
+        )
+        title_label.setAlignment(Qt.AlignCenter)  # Center-align the title
+        vbox_table.addWidget(title_label, 0)
+        self.run_table = run_table = data_table()
+        run_table.set_uneditable()  # should not be editable
+        vbox_table.addWidget(run_table, 1)
+
+        # Routine view
+        routine_view = QWidget()
+        routine_view.setMinimumWidth(640)
+        vbox_routine_view = QVBoxLayout(routine_view)
+        vbox_routine_view.setContentsMargins(0, 0, 0, 10)
+        self.routine_editor = BadgerRoutinePage()
+        vbox_routine_view.addWidget(self.routine_editor)
+
+        self.history_browser = self.routine_editor.history_browser
+
+        # Add action bar
+        self.run_action_bar = run_action_bar = BadgerActionBar()
+        run_action_bar.docs_name = "minimode"
+
+        # Run panel (routine editor + run monitor + data table + action bar)
+        panel_run = QWidget()
+        vbox_run = QVBoxLayout(panel_run)
+        vbox_run.setContentsMargins(0, 0, 0, 0)
+        vbox_run.setSpacing(0)
+
+        splitter_run = QSplitter(Qt.Horizontal)
+        splitter_run.setStretchFactor(0, 1)
+        splitter_run.setStretchFactor(1, 1)
+        vbox_run.addWidget(splitter_run, 1)
+        # splitter_run.hide()
+
+        splitter_data = QSplitter(Qt.Vertical)
+        splitter_data.setStretchFactor(0, 1)
+        splitter_data.setStretchFactor(1, 0)
+        splitter_data.addWidget(panel_monitor)
+        splitter_data.addWidget(panel_table)
+        # splitter_data.hide()
+
+        splitter_run.addWidget(routine_view)
+        splitter_run.addWidget(splitter_data)
+
+        vbox_run.addWidget(run_action_bar, 0)
+
+        # tabs for history and Templates
+        # tabs_left = QTabWidget(self)
+        # tabs_left.addTab(history_browser, "History")
+        # tabs_left.addTab(template_browser, "Templates")
+        # tabs_left.setFixedWidth(360)
+
+        # Add panels to splitter
+        # splitter.addWidget(tabs_left)
+        splitter.addWidget(panel_run)
+
+        # Set initial sizes (left fixed, middle and right equal)
+        splitter.setSizes([1, 1])
+        splitter_run.setSizes([1, 1])
+        splitter_data.setSizes([600, 0])  # hide data table by default
+
+        self.status_bar = status_bar = BadgerStatusBar()
+        status_bar.set_summary("Badger is ready!")
+        vbox.addWidget(status_bar)
+
+    def config_logic(self):
+        logger.info("Configuring logic for BadgerHomePage.")
+        self.colors = ["c", "g", "m", "y", "b", "r", "w"]
+        self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
+
+        self.run_table.cellClicked.connect(self.solution_selected)
+        self.run_table.itemSelectionChanged.connect(self.table_selection_changed)
+
+        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+            self.go_run
+        )
+
+        self.template_browser.template_tree_view.clicked.connect(self.go_template)
+
+        self.routine_editor.sig_load_template.connect(self.update_status)
+        self.routine_editor.sig_save_template.connect(self.update_status)
+        self.routine_editor.sig_go_run.connect(self.go_run)
+
+        self.run_monitor.sig_inspect.connect(self.inspect_solution)
+        self.run_monitor.sig_lock.connect(self.toggle_lock)
+        self.run_monitor.sig_new_run.connect(self.new_run)
+        self.run_monitor.sig_run_started.connect(self.uncover_page)
+        self.run_monitor.sig_run_name.connect(self.run_name)
+        self.run_monitor.sig_status.connect(self.update_status)
+        self.run_monitor.sig_progress.connect(self.progress)
+        self.run_monitor.sig_del.connect(self.delete_run)
+        self.run_monitor.sig_stop_run.connect(self.cover_page)
+        self.run_monitor.sig_run_started.connect(self.run_action_bar.run_start)
+        self.run_monitor.sig_routine_finished.connect(
+            self.run_action_bar.routine_finished
+        )
+        self.run_monitor.sig_lock_action.connect(self.run_action_bar.lock)
+        self.run_monitor.sig_toggle_reset.connect(self.run_action_bar.toggle_reset)
+        self.run_monitor.sig_toggle_run.connect(self.run_action_bar.toggle_run)
+        self.run_monitor.sig_toggle_other.connect(self.run_action_bar.toggle_other)
+        self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
+        self.run_monitor.sig_env_ready.connect(self.update_saved_values_from_monitor)
+
+        self.run_action_bar.sig_start.connect(self.start_run)
+        self.run_action_bar.sig_start_until.connect(self.start_run_until)
+        self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
+        self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
+        self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
+        self.run_action_bar.sig_reset_env.connect(self.run_monitor.reset_env)
+        self.run_action_bar.sig_reset_env.connect(
+            self.routine_editor.env_box.var_table.refresh_current_values
+        )
+        self.run_action_bar.sig_save_checkpoint.connect(
+            self.run_monitor.save_checkpoint
+        )
+        self.run_action_bar.sig_edit_checkpoint.connect(
+            self.run_monitor.edit_checkpoint
+        )
+        self.run_action_bar.sig_load_checkpoint.connect(
+            self.run_monitor.load_checkpoint
+        )
+        self.run_action_bar.sig_jump_to_optimal.connect(
+            self.run_monitor.jump_to_optimal
+        )
+        self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
+        self.run_action_bar.sig_dial_in.connect(
+            self.routine_editor.env_box.var_table.refresh_current_values
+        )
+        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
+        self.run_action_bar.sig_open_extensions_palette.connect(
+            self.run_monitor.open_extensions_palette
+        )
+
+        self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
+
+    def update_saved_values_from_monitor(self):
+        """
+        Sync Saved column values to match run monitor reset_env targets.
+
+        Called from run_monitor.sig_env_ready
+        """
+        variable_names = list(self.run_monitor.vocs.variable_names)
+        init_vars = list(self.run_monitor.init_vars)
+
+        self.routine_editor.set_saved_values_from_init_vars(variable_names, init_vars)
+
+    def load_all_runs(self):
+        logger.info("Loading all runs into history browser.")
+        runs = get_runs()
+        self.history_browser.updateItems(runs)
+
+    def init_home_page(self):
+        logger.info("Initializing home page.")
+        # Load the default generator
+        # self.routine_editor.env_box.algo_cb.setCurrentIndex(-1)
+        idx = self.routine_editor.env_box.algo_cb.findText("neldermead")
+        self.routine_editor.env_box.algo_cb.setCurrentIndex(idx)
+        self.routine_editor.select_generator(idx)
+
+    def go_run(self, i: int = None):
+        logger.info(f"Activating run: {i}")
+        gc.collect()
+
+        # if self.cb_history.itemText(0) == "Optimization in progress...":
+        #     return
+
+        if i == -1:
+            update_table(self.run_table)
+            try:
+                self.current_routine.data = None  # reset the data
+            except AttributeError:  # current routine is None
+                pass
+            self.run_monitor.init_plots(self.current_routine)
+            if not self.current_routine:
+                self.routine_editor.set_routine(None)
+                self.status_bar.set_summary("No active routine")
+            else:
+                self.status_bar.set_summary(
+                    f"Current routine: {self.current_routine.name}"
+                )
+            return
+
+        run_filename = get_base_run_filename(self.history_browser.currentText())
+        try:
+            routine = load_run(run_filename)
+            self.run_monitor.routine_filename = run_filename
+        except IndexError:
+            return
+        except Exception as e:  # failed to load the run
+            details = traceback.format_exc()
+            dialog = BadgerScrollableMessageBox(
+                title="Error!", text=str(e), parent=self
+            )
+            dialog.setIcon(QMessageBox.Critical)
+            dialog.setDetailedText(details)
+            dialog.exec_()
+            self.go_run_failed = True
+
+            # Show info in the nav bar
+            # red_brush = QBrush(QColor(255, 0, 0))  # red color
+            # self.cb_history.changeCurrentItem(
+            #     f"{run_filename} (failed to load)",
+            #     # color=red_brush)
+            #     color=None,
+            # )
+
+            return
+
+        self.current_routine = routine  # update the current routine
+        update_table(self.run_table, routine.sorted_data, routine.vocs)
+        self.run_monitor.init_plots(routine, run_filename)
+        self.routine_editor.set_routine(routine, silent=True)
+        self.status_bar.set_summary(f"Current routine: {self.current_routine.name}")
+
+        self.run_monitor.update_analysis_extensions()
+
+    def go_template(self, index: QModelIndex):
+        path = self.template_browser.file_sys_model.filePath(index)
+        # if directory, expand it.
+        if os.path.isdir(path):
+            expanded = self.template_browser.template_tree_view.isExpanded(index)
+            self.template_browser.template_tree_view.setExpanded(index, not expanded)
+            return
+
+        # otherwise, open the template
+        self.routine_editor.load_template_yaml(False, template_path=path)
+        self.status_bar.set_summary(f"Current template {path}")
+        return
+
+    def inspect_solution(self, idx):
+        logger.info(f"Inspecting solution at index: {idx}")
+        self.run_table.selectRow(idx)
+
+    def solution_selected(self, r, c):
+        logger.info(f"Solution selected at row {r}, column {c}")
+        self.run_monitor.jump_to_solution(r)
+
+    def table_selection_changed(self):
+        logger.info("Table selection changed.")
+        indices = self.run_table.selectedIndexes()
+        if len(indices) == 1:  # let other method handles it
+            return
+
+        row = -1
+        for index in indices:
+            _row = index.row()
+            if _row == row:
+                continue
+
+            if row == -1:
+                row = _row
+                continue
+
+            return
+
+        if row == -1:
+            return
+
+        self.run_monitor.jump_to_solution(row)
+
+    def toggle_lock(self, lock, lock_tab=1):
+        logger.info(f"Toggling lock: {lock}, tab: {lock_tab}")
+        if lock:
+            self.history_browser.setDisabled(True)
+        else:
+            self.history_browser.setDisabled(False)
+
+            self.uncover_page()
+
+    def prepare_run(self):
+        """
+        Prepares the run by composing the routine, validating data if present,
+        saving created routine to a yaml file, and passing the routine to
+        the run monitor to initialize plots.
+
+        Args:
+            data (DataFrame) : Optional data to be loaded into the run, if provided
+            init_points_flag (bool) : Optional flag for init points, default value is True. Used to
+                confirm that initial points are being sampled if there are new columns in
+                the dataframe. If there are new columns and the flag is false, this function
+                raises an error.
+
+        Notes
+        _____
+        Removed data loading implementation from mini GUI,
+        """
+        logger.info("Preparing new run.")
+        try:
+            routine = self.routine_editor._compose_routine()
+        except Exception as e:
+            self.sig_routine_invalid.emit()
+            raise e
+
+        self.current_routine = routine
+
+        # Save routine as a temp file
+        # since routine runner subprocess needs to load routine from file
+        run_filename = save_tmp_run(routine)
+        self.run_monitor.routine_filename = run_filename
+
+        # Tell monitor to start the run
+        self.run_monitor.init_plots(routine)
+
+    def start_run(self, use_termination_condition: bool = False):
+        """
+        Prepares and starts optimization run with provided options.
+        - Termination Condition is provided when called via BadgerTerminationConditionDialog
+        - Data Options are collected from BadgerDataPanel
+
+        Args:
+            use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog.
+
+        Notes:
+            Removed data loading implementation and data_panel from mini GUI
+        """
+        logger.info("Starting run.")
+
+        self.prepare_run()
+
+        self.run_monitor.start(
+            use_termination_condition=use_termination_condition,
+            run_data_flag=False,
+            init_points_flag=True,
+        )
+
+    def start_run_until(self):
+        logger.info("Starting run until condition met.")
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            self.start_run,
+            self.run_monitor.save_termination_condition,
+            self.run_monitor.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
+        # self.run_monitor.start_until()
+
+    def new_run(self):
+        logger.info("Creating new run.")
+        self.cover_page()
+
+        # self.cb_history.insertItem(0, "Optimization in progress...")
+        # self.cb_history.setCurrentIndex(0)
+
+        header = get_header(self.current_routine)
+        reset_table(self.run_table, header)
+
+    def run_name(self, name):
+        logger.info(f"Updating run name: {name}")
+        runs = get_runs()
+        self.history_browser.updateItems(runs)
+        self.history_browser._selectItemByRun(name)
+
+    def update_status(self, info):
+        logger.info(f"Updating status: {info}")
+        self.status_bar.set_summary(info)
+
+    def progress(self, solution: DataFrame):
+        vocs = self.current_routine.vocs
+        vars = list(solution[vocs.variable_names].to_numpy()[0])
+        objs = list(solution[vocs.objective_names].to_numpy()[0])
+        cons = list(solution[vocs.constraint_names].to_numpy()[0])
+        stas = list(solution[vocs.observable_names].to_numpy()[0])
+        add_row(self.run_table, objs + cons + vars + stas)
+        # update current values in var table
+        self.routine_editor.env_box.var_table.refresh_current_values(
+            vocs.variable_names, list(solution[vocs.variable_names].to_numpy()[0])
+        )
+
+    def delete_run(self):
+        logger.info("Deleting run.")
+        run_name = get_base_run_filename(self.history_browser.currentText())
+
+        reply = QMessageBox.question(
+            self,
+            "Delete run",
+            f"Are you sure you want to delete run {run_name}?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        delete_run(run_name)
+        runs = get_runs()
+        self.history_browser.history_tree_widget.blockSignals(True)
+        self.history_browser.updateItems(runs)
+        self.history_browser.history_tree_widget.blockSignals(False)
+        self.go_run(-1)
+
+    def cover_page(self):
+        logger.info("Covering page with overlay.")
+        return  # disable overlay for now
+
+        try:
+            self.overlay
+        except AttributeError:
+            # Set parent to the main window
+            try:
+                main_window = self.parent().parent()
+            except AttributeError:  # in test mode
+                return
+            self.overlay = ModalOverlay(main_window)
+        self.overlay.show()
+
+    def uncover_page(self):
+        logger.info("Uncovering page overlay.")
+        return  # disable overlay for now
+
+        try:
+            self.overlay.hide()
+        except AttributeError:  # in test mode
+            pass

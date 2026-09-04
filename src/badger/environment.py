@@ -36,7 +36,7 @@ def validate_setpoints(func):
 
             if value > upper or value < lower:
                 raise BadgerEnvVarError(
-                    f"Input point for {name} is outside "
+                    f"Input point {value} for {name} is outside "
                     + f"its bounds {_bounds[name]}"
                 )
 

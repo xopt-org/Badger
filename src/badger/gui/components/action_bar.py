@@ -106,6 +106,7 @@ class BadgerActionBar(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.docs_name = "gui-usage"
         self.init_ui()
         self.config_logic()
 
@@ -351,7 +352,7 @@ class BadgerActionBar(QWidget):
         self.sig_logbook.emit()
 
     def open_docs(self):
-        self.window_docs.update_docs("gui-usage")
+        self.window_docs.update_docs(self.docs_name)
         self.window_docs.show()
 
     def reset_env(self):

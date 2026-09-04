@@ -28,6 +28,7 @@ from pydantic import (
 )
 from xopt import Evaluator, VOCS, Xopt
 from xopt.generators import get_generator
+
 try:
     # xopt >= 3.1.2 moved get_local_region to xopt.vocs and swapped its arg order
     # to (vocs, center_point, fraction); wrap to preserve our (center_point, vocs,
@@ -268,7 +269,7 @@ def calculate_initial_points(init_actions, vocs, env):
             var_curr = env.get_variables(vnames)
             n_point = action["config"]["n_points"]
             fraction = action["config"]["fraction"]
-            random_sample_region = get_local_region(var_curr, vocs, fraction=fraction)
+            random_sample_region = get_local_region(vocs, var_curr, fraction=fraction)
             random_points = vocs.random_inputs(
                 n_point, custom_bounds=random_sample_region
             )
