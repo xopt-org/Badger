@@ -63,6 +63,8 @@ def evaluate_measurement_with_retry(
     while True:
         try:
             return routine.evaluate_data(point)
+        except BadgerRunTerminated:
+            raise
         except Exception as e:
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
