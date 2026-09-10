@@ -48,11 +48,6 @@ from xopt.vocs import select_best
 logger = logging.getLogger(__name__)
 
 
-def _terminate_on_sigterm(signum, frame):
-    # terminate cleanly if terminate signal comes before reaching stop_process check
-    raise BadgerRunTerminated
-
-
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
@@ -63,8 +58,6 @@ def evaluate_measurement_with_retry(
     while True:
         try:
             return routine.evaluate_data(point)
-        except BadgerRunTerminated:
-            raise
         except Exception as e:
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
@@ -194,6 +187,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
 
 def run_routine_subprocess(
+    args_queue: mp.Queue,
     queue: mp.Queue,
     evaluate_queue: mp.Pipe,
     stop_process: mp.Event,
@@ -245,7 +239,7 @@ def run_routine_subprocess(
 
     args: dict[str, Any] = {}
     try:
-        args = queue.get(timeout=1)
+        args = args_queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
     except Exception as e:
         logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {str(e)}")
@@ -327,9 +321,6 @@ def run_routine_subprocess(
     )
     logger.info("Optimization started")
     opt_logger.update(Events.OPTIMIZATION_START, solution_meta)
-
-    # So a terminate() from the GUI still runs the shutdown path below
-    signal.signal(signal.SIGTERM, _terminate_on_sigterm)
 
     # evaluate initial points:
     # timeout logic will be handled in the specific environment

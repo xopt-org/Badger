@@ -171,6 +171,7 @@ class BadgerRoutineSubprocess:
             self.routine_process = process_with_args["process"]
             self.stop_event = process_with_args["stop_event"]
             self.pause_event = process_with_args["pause_event"]
+            self.args_queue = process_with_args["args_queue"]
             self.data_and_error_queue = process_with_args["data_queue"]
             self.evaluate_queue = process_with_args["evaluate_queue"]
             self.wait_event = process_with_args["wait_event"]
@@ -191,7 +192,7 @@ class BadgerRoutineSubprocess:
                 "init_points": init_points_flag,
             }
 
-            self.data_and_error_queue.put(arg_dict)
+            self.args_queue.put(arg_dict)
             self.wait_event.set()
             self.pause_event.set()
             self.setup_timer()
