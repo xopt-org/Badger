@@ -12,7 +12,6 @@ See core.py for the simpler in-process version of the same loop.
 
 from copy import deepcopy
 import logging
-import signal
 import time
 import traceback
 from typing import Any
