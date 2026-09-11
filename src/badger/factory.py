@@ -9,26 +9,26 @@ both the CLI (e.g. `badger env`) and the GUI combo boxes.
 Also handles loading Markdown docs for the built-in documentation browser.
 """
 
-from typing import Any, TypedDict, cast, TYPE_CHECKING
-from badger.settings import init_settings
-from badger.utils import get_value_or_none
-from badger.errors import (
-    BadgerConfigError,
-    BadgerInvalidPluginError,
-    BadgerInvalidDocsError,
-    BadgerPluginNotFoundError,
-)
-
-from badger.interface import Interface as BadgerInterface
-import sys
-import os
 import importlib
-import yaml
+import logging
+import os
 import re
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+import yaml
 from xopt.generators import generators, get_generator_defaults
 
-import logging
+from badger.errors import (
+    BadgerConfigError,
+    BadgerInvalidDocsError,
+    BadgerInvalidPluginError,
+    BadgerPluginNotFoundError,
+)
+from badger.interface import Interface as BadgerInterface
+from badger.settings import init_settings
+from badger.utils import get_value_or_none
 
 if TYPE_CHECKING:
     from badger.environment import Environment as BadgerEnvironment
@@ -44,7 +44,6 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "nsga2",
-    "bax",
 ]
 
 
@@ -413,7 +412,7 @@ def get_env(name: str):
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 
-def list_generators():
+def list_generators() -> list[str]:
     try:
         from xopt.generators import try_load_all_generators
 

@@ -2,22 +2,25 @@
 timestamp formatting, value normalization, run filename generation,
 and platform-specific data directory resolution."""
 
-from importlib import metadata
 import json
 import logging
 import os
-import sys
 import pathlib
+import sys
 from datetime import datetime
+from importlib import metadata
 from types import TracebackType
-from typing import Iterable, Optional, Any
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 import yaml
+from PyQt5.QtWidgets import QLayout, QWidget
 
 from badger.errors import BadgerLoadConfigError
-from PyQt5.QtWidgets import QWidget, QLayout
 
-from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+if TYPE_CHECKING:
+    from badger.routine import Routine
+
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
 from gest_api.vocs import ContinuousVariable
 
@@ -148,7 +151,7 @@ def range_to_str(vranges):
     return vranges_str
 
 
-def ts_to_str(ts, format="lcls-log"):
+def ts_to_str(ts: datetime, format: str = "lcls-log") -> str:
     if format == "lcls-log":
         return ts.strftime("%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -159,7 +162,7 @@ def ts_to_str(ts, format="lcls-log"):
         return ts.isoformat()
 
 
-def str_to_ts(timestr, format="lcls-log"):
+def str_to_ts(timestr: str, format: str = "lcls-log") -> datetime:
     if format == "lcls-log":
         return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S")
     elif format == "lcls-log-full":
@@ -170,25 +173,28 @@ def str_to_ts(timestr, format="lcls-log"):
         return datetime.fromisoformat(timestr)
 
 
-def ts_float_to_str(ts_float, format="lcls-log"):
+def ts_float_to_str(ts_float: float, format: str = "lcls-log") -> str:
     ts = datetime.fromtimestamp(ts_float)
     return ts_to_str(ts, format)
 
 
-def curr_ts():
+def curr_ts() -> datetime:
     return datetime.now()
 
 
-def curr_ts_to_str(format="lcls-log"):
+def curr_ts_to_str(format: str = "lcls-log") -> str:
     return ts_to_str(datetime.now(), format)
 
 
-def create_archive_run_filename(routine, format: str = "lcls-fname") -> str:
+def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") -> str:
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")
-    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
-    suffix = ts_float_to_str(ts_float, format)
+    if hasattr(routine, "creation_ts"):
+        suffix = routine.creation_ts
+    else:  # compatibility with old routines
+        ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
+        suffix = ts_float_to_str(ts_float, format)
     fname = f"{env_name}-{suffix}.yaml"
     return fname
 

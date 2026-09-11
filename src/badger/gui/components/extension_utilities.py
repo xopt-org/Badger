@@ -1,18 +1,18 @@
 """Shared helpers for analysis extensions: matplotlib figure management,
 update throttling, error-handling decorators, and numeric formatting."""
 
+import logging
 import time
-from functools import wraps
 import traceback
-from typing import Any, Callable, Optional, ParamSpec
+from functools import wraps
 from types import TracebackType
-from PyQt5.QtWidgets import QLayout, QTabWidget
+from typing import Any, Callable, Optional, ParamSpec
 
+import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
-
-import logging
+from PyQt5.QtWidgets import QLayout, QTabWidget
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,21 @@ def to_precision_float(value: Any, precision: int = 4) -> float:
         )
 
 
+def get_latest_reference_points(
+    data: pd.DataFrame | None, variable_names: list[str]
+) -> dict[str, float]:
+    # Get the latest reference points from the generator's data
+    # This function assumes that the generator's data is a DataFrame with columns corresponding to the variable names in the VOCS.
+    # The latest reference points are taken from the last row of the DataFrame.
+
+    if data is None or data.empty:
+        raise ValueError("No data available to extract the latest reference point.")
+
+    reference_points = data[variable_names].iloc[-1].to_dict()
+
+    return {str(k): to_precision_float(v) for k, v in reference_points.items()}
+
+
 class HandledException(Exception):
     """
     Custom exception class to handle exceptions in a way that can be caught and logged.
@@ -124,7 +139,7 @@ class MatplotlibFigureContext:
         else:
             self.ax = ax
 
-    def __enter__(self):
+    def __enter__(self) -> tuple[Figure, Axes]:
         return self.fig, self.ax
 
     def __exit__(
@@ -132,5 +147,5 @@ class MatplotlibFigureContext:
         exc_type: Optional[type[BaseException]],
         exc_value: Optional[BaseException],
         exc_traceback: Optional[TracebackType],
-    ):
+    ) -> None:
         plt.close(self.fig)

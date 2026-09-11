@@ -15,6 +15,7 @@ import logging
 import os
 import traceback
 from importlib import resources
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from pandas import DataFrame
@@ -50,7 +51,7 @@ from badger.gui.components.navigators import HistoryNavigator, TemplateNavigator
 from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
-from badger.gui.utils import ModalOverlay
+from badger.gui.utils import ModalOverlay, build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
@@ -59,6 +60,11 @@ from badger.gui.windows.terminition_condition_dialog import (
 )
 from badger.settings import init_settings
 from badger.utils import get_header
+
+if TYPE_CHECKING:
+    from badger.gui.components.process_manager import ProcessManager
+    from badger.routine import VOCS
+
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +88,7 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager=None):
+    def __init__(self, process_manager: "Optional[ProcessManager]" = None):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
@@ -97,7 +103,7 @@ class BadgerHomePage(QWidget):
         self.load_all_runs()
         self.init_home_page()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         logger.info("Initializing UI for BadgerHomePage.")
         self.config_singleton = init_settings()
         icon_ref = resources.files(__package__) / "../images/add.png"
@@ -216,7 +222,7 @@ class BadgerHomePage(QWidget):
         status_bar.set_summary("Badger is ready!")
         vbox.addWidget(status_bar)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         logger.info("Configuring logic for BadgerHomePage.")
         self.colors = ["c", "g", "m", "y", "b", "r", "w"]
         self.symbols = ["o", "t", "t1", "s", "p", "h", "d"]
@@ -285,21 +291,21 @@ class BadgerHomePage(QWidget):
         self.shortcut_go_search = QShortcut(QKeySequence("Ctrl+L"), self)
         self.shortcut_go_search.activated.connect(self.go_search)
 
-    def go_search(self):
+    def go_search(self) -> None:
         logger.info("Activating search bar.")
         self.sbar.setFocus()
 
-    def load_all_runs(self):
+    def load_all_runs(self) -> None:
         logger.info("Loading all runs into history browser.")
         runs = get_runs()
         self.history_browser.updateItems(runs)
 
-    def init_home_page(self):
+    def init_home_page(self) -> None:
         logger.info("Initializing home page.")
         # Load the default generator
-        self.routine_editor.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.set_default_generator("neldermead")
 
-    def go_run(self, i: int = None):
+    def go_run(self, i: int = None) -> None:
         logger.info(f"Activating run: {i}")
         gc.collect()
 
@@ -358,7 +364,7 @@ class BadgerHomePage(QWidget):
 
         self.run_monitor.update_analysis_extensions()
 
-    def go_template(self, index: QModelIndex):
+    def go_template(self, index: QModelIndex) -> None:
         path = self.template_browser.file_sys_model.filePath(index)
         # if directory, expand it.
         if os.path.isdir(path):
@@ -371,16 +377,16 @@ class BadgerHomePage(QWidget):
         self.status_bar.set_summary(f"Current template {path}")
         return
 
-    def inspect_solution(self, idx):
+    def inspect_solution(self, idx: int) -> None:
         logger.info(f"Inspecting solution at index: {idx}")
         self.run_table.selectRow(idx)
         self.run_table_2.selectRow(idx)
 
-    def solution_selected(self, r, c):
+    def solution_selected(self, r: int, c: int) -> None:
         logger.info(f"Solution selected at row {r}, column {c}")
         self.run_monitor.jump_to_solution(r)
 
-    def table_selection_changed(self):
+    def table_selection_changed(self) -> None:
         logger.info("Table selection changed.")
         indices = self.run_table.selectedIndexes()
         indices = self.run_table_2.selectedIndexes()
@@ -404,7 +410,7 @@ class BadgerHomePage(QWidget):
 
         self.run_monitor.jump_to_solution(row)
 
-    def toggle_lock(self, lock, lock_tab=1):
+    def toggle_lock(self, lock: bool, lock_tab: int = 1) -> None:
         logger.info(f"Toggling lock: {lock}, tab: {lock_tab}")
         if lock:
             self.history_browser.setDisabled(True)
@@ -413,7 +419,7 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def validate_loaded_data_keys(self, vocs):
+    def validate_loaded_data_keys(self, vocs: "VOCS") -> None:
         """
         This function is called when adding historical data to a new routine.
         It makes sure that the keys of data to be loaded from data_panel match the
@@ -465,7 +471,9 @@ class BadgerHomePage(QWidget):
             self.run_action_bar.routine_finished()  # Reset action bar
             raise BadgerRoutineError("Routine initialization cancelled by user.")
 
-    def prepare_run(self, data=None, init_points_flag=True):
+    def prepare_run(
+        self, data: Optional["DataFrame"] = None, init_points_flag: bool = True
+    ) -> None:
         """
         Prepares the run by composing the routine, validating data if present,
         saving created routine to a yaml file, and passing the routine to
@@ -484,6 +492,16 @@ class BadgerHomePage(QWidget):
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
+
+        # Give this run its own results folder, named after the run's archive
+        # name (<env>-<creation_ts>) so the folder used during the run matches
+        # the archived run and stays consistent with the visualizer plots. The
+        # folder is created here, at run start.
+        if routine.generator.name == "bax":
+            archive_name = f"{routine.environment.name}-{routine.creation_ts}"
+            results_file = build_bax_results_file(archive_name, create_dir=True)
+            routine.generator.algorithm_results_file = results_file
+            logger.debug(f"BAX results file set for run: {results_file}")
 
         # Add data to routine before saving tmp file
         if data is not None:
@@ -526,7 +544,7 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, use_termination_condition: bool = False):
+    def start_run(self, use_termination_condition: bool = False) -> None:
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -564,7 +582,7 @@ class BadgerHomePage(QWidget):
             init_points_flag=init_points_flag,
         )
 
-    def start_run_until(self):
+    def start_run_until(self) -> None:
         logger.info("Starting run until condition met.")
         dlg = BadgerTerminationConditionDialog(
             self,
@@ -579,7 +597,7 @@ class BadgerHomePage(QWidget):
             self.tc_dialog = None
         # self.run_monitor.start_until()
 
-    def new_run(self):
+    def new_run(self) -> None:
         logger.info("Creating new run.")
         self.cover_page()
 
@@ -589,17 +607,17 @@ class BadgerHomePage(QWidget):
         header = get_header(self.current_routine)
         reset_table(self.run_table, header)
 
-    def run_name(self, name):
+    def run_name(self, name: str) -> None:
         logger.info(f"Updating run name: {name}")
         runs = get_runs()
         self.history_browser.updateItems(runs)
         self.history_browser._selectItemByRun(name)
 
-    def update_status(self, info):
+    def update_status(self, info: str) -> None:
         logger.info(f"Updating status: {info}")
         self.status_bar.set_summary(info)
 
-    def progress(self, solution: DataFrame):
+    def progress(self, solution: DataFrame) -> None:
         vocs = self.current_routine.vocs
         vars = list(solution[vocs.variable_names].to_numpy()[0])
         objs = list(solution[vocs.objective_names].to_numpy()[0])
@@ -608,7 +626,7 @@ class BadgerHomePage(QWidget):
         add_row(self.run_table, objs + cons + vars + stas)
         self.data_panel.add_live_data(solution)
 
-    def delete_run(self):
+    def delete_run(self) -> None:
         logger.info("Deleting run.")
         run_name = get_base_run_filename(self.history_browser.currentText())
 
@@ -629,7 +647,7 @@ class BadgerHomePage(QWidget):
         self.history_browser.history_tree_widget.blockSignals(False)
         self.go_run(-1)
 
-    def cover_page(self):
+    def cover_page(self) -> None:
         logger.info("Covering page with overlay.")
         return  # disable overlay for now
 
@@ -644,7 +662,7 @@ class BadgerHomePage(QWidget):
             self.overlay = ModalOverlay(main_window)
         self.overlay.show()
 
-    def uncover_page(self):
+    def uncover_page(self) -> None:
         logger.info("Uncovering page overlay.")
         return  # disable overlay for now
 
