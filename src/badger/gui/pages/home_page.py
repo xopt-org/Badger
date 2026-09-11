@@ -257,6 +257,12 @@ class BadgerHomePage(QWidget):
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
+        self.run_action_bar.sig_run_with_data.connect(
+            lambda: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=True,
+            )
+        )
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -526,7 +532,11 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, use_termination_condition: bool = False):
+    def start_run(
+        self,
+        use_termination_condition: bool = False,
+        load_displayed_data: bool = False,
+    ):
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -538,7 +548,7 @@ class BadgerHomePage(QWidget):
         """
         logger.info("Starting run.")
         # Set data options based on checkbox states from data_panel
-        run_data_flag = self.data_panel.use_data
+        run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points
 
         if run_data_flag:

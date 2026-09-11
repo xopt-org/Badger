@@ -1,13 +1,47 @@
 """Toolbar with run-control buttons (start, pause, stop), logbook submission,
 docs access, and the extensions palette launcher."""
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QStyle, QStyleOptionToolButton, QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QToolButton, QMenu, QAction
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import pyqtSignal, QSize
+from PyQt5.QtCore import QEvent, pyqtSignal, QSize
 from importlib import resources
 from badger.gui.utils import create_button
 from badger.gui.windows.docs_window import BadgerDocsWindow
+
+
+class SplitTooltipToolButton(QToolButton):
+    """
+    QToolButton that shows a separate tooltip over the dropdown-arrow area.
+    Use arg menu_tooltip="desired tooltip" to set the menu tooltip
+    """
+
+    def __init__(self, menu_tooltip="", parent=None):
+        """
+        Parameters
+        ----------
+        menu_tooltip (str)
+            tooltip for menu
+        """
+        super().__init__(parent)
+        self.menu_tooltip = menu_tooltip
+
+    def _over_menu_arrow(self, pos):
+        opt = QStyleOptionToolButton()
+        self.initStyleOption(opt)
+        rect = self.style().subControlRect(
+            QStyle.CC_ToolButton, opt, QStyle.SC_ToolButtonMenu, self
+        )
+        return rect.contains(pos)
+
+    def event(self, event):
+        if event.type() == QEvent.ToolTip and self._over_menu_arrow(event.pos()):
+            from PyQt5.QtWidgets import QToolTip
+
+            QToolTip.showText(event.globalPos(), self.menu_tooltip, self)
+            return True
+        return super().event(event)
+
 
 stylesheet_del = """
 QPushButton:hover:pressed
@@ -89,7 +123,9 @@ QToolButton
 
 class BadgerActionBar(QWidget):
     sig_start = pyqtSignal()
-    sig_start_until = pyqtSignal()
+    sig_start_until = pyqtSignal(
+        bool
+    )  # bool True launches termination condition dialog menu
     sig_stop = pyqtSignal()
 
     sig_delete_run = pyqtSignal()
@@ -98,6 +134,7 @@ class BadgerActionBar(QWidget):
     sig_jump_to_optimal = pyqtSignal()
     sig_dial_in = pyqtSignal()
     sig_ctrl = pyqtSignal(bool)
+    sig_run_with_data = pyqtSignal()
     sig_open_extensions_palette = pyqtSignal()
 
     sig_save_checkpoint = pyqtSignal()
@@ -160,7 +197,7 @@ class BadgerActionBar(QWidget):
         self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
-        self.btn_stop = QToolButton()
+        self.btn_stop = SplitTooltipToolButton(menu_tooltip="Run Options Menu")
         self.btn_stop.setFixedSize(96, 32)
         self.btn_stop.setFont(cool_font)
         self.btn_stop.setStyleSheet(stylesheet_run)
@@ -198,15 +235,24 @@ class BadgerActionBar(QWidget):
         run_action.setIcon(self.icon_play)
         self.run_until_action = run_until_action = QAction("Run until", self)
         run_until_action.setIcon(self.icon_play)
+        self.run_until_menu_action = run_until_menu_action = QAction("Run until", self)
+        run_until_menu_action.setIcon(self.icon_play)
+        self.run_with_data_action = run_with_data_action = QAction("Resume", self)
+        run_with_data_action.setIcon(self.icon_play)
         menu.addAction(run_action)
-        menu.addAction(run_until_action)
+        menu.addAction(run_until_menu_action)
+        menu.addAction(run_with_data_action)
+        # Note: run_until_menu_action is triggered by selecting "run until" from the menu
+        # It emits sig_start_until(True) to launch the BadgerTerminationConditionDialog
+        # and sets the default run action to run_until_action. Pressing the play/stop button
+        # will then emit sig_start_until(False) and skip the dialog popup.
 
         # Set the menu as the run button's dropdown menu
         self.btn_stop.setMenu(menu)
         self.btn_stop.setDefaultAction(run_action)
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
         self.btn_stop.setDisabled(False)
-        # btn_stop.setToolTip('')
+        run_action.setToolTip("Run")
 
         # Config button
         self.btn_config = btn_config = create_button("tools.png", "Configure run")
@@ -244,8 +290,14 @@ class BadgerActionBar(QWidget):
         self.btn_opt.clicked.connect(self.jump_to_optimal)
         self.btn_set.clicked.connect(self.dial_in)
         self.btn_ctrl.clicked.connect(self.ctrl_routine)
-        self.run_action.triggered.connect(self.set_run_action)
-        self.run_until_action.triggered.connect(self.set_run_until_action)
+        self.run_action.triggered.connect(self._on_run_action_triggered)
+        self.run_until_action.triggered.connect(self._on_run_until_action_triggered)
+        self.run_until_menu_action.triggered.connect(
+            self._on_run_until_menu_action_triggered
+        )
+        self.run_with_data_action.triggered.connect(
+            lambda: self.sig_run_with_data.emit()
+        )
         self.save_checkpoint_action.triggered.connect(
             lambda: self.sig_save_checkpoint.emit()
         )
@@ -293,6 +345,8 @@ class BadgerActionBar(QWidget):
         self.run_action.setIcon(self.icon_play)
         self.run_until_action.setText("Run until")
         self.run_until_action.setIcon(self.icon_play)
+        self.run_until_menu_action.setText("Run until")
+        self.run_until_menu_action.setIcon(self.icon_play)
         # self.btn_stop.setToolTip('')
         self.btn_stop.setDisabled(False)
 
@@ -320,6 +374,8 @@ class BadgerActionBar(QWidget):
         self.run_action.setIcon(self.icon_stop)
         self.run_until_action.setText("Stop")
         self.run_until_action.setIcon(self.icon_stop)
+        self.run_until_menu_action.setText("Stop")
+        self.run_until_menu_action.setIcon(self.icon_stop)
         self.btn_checkpoint.setDisabled(False)
         self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
@@ -335,15 +391,24 @@ class BadgerActionBar(QWidget):
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
 
-    def set_run_until_action(self):
+    def set_run_until_action(self, from_menu=False):
         if self.btn_stop.defaultAction() is not self.run_until_action:
             self.btn_stop.setDefaultAction(self.run_until_action)
 
         if self.run_until_action.text() == "Run until":
-            self.sig_start_until.emit()
+            self.sig_start_until.emit(from_menu)
         else:
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
+
+    def _on_run_action_triggered(self):
+        self.set_run_action()
+
+    def _on_run_until_action_triggered(self):
+        self.set_run_until_action(from_menu=False)
+
+    def _on_run_until_menu_action_triggered(self):
+        self.set_run_until_action(from_menu=True)
 
     def delete_run(self):
         self.sig_delete_run.emit()
@@ -382,3 +447,16 @@ class BadgerActionBar(QWidget):
     def env_ready(self):
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
+
+    def update_run_tooltip(self, tc=None):
+        """Update btn_stop tooltip: tc dict for run-until mode, or None."""
+        if tc is None:
+            self.run_action.setToolTip("Run")
+        else:
+            tc_idx = tc.get("tc_idx", 0)
+            if tc_idx == 0:
+                tip = f"Run until: n iterations = {tc.get('max_eval')}"
+            elif tc_idx == 1:
+                tip = f"Run until: timeout = {tc.get('max_time')}s"
+            self.run_until_action.setToolTip(tip)
+            self.run_until_menu_action.setToolTip(tip)

@@ -121,3 +121,10 @@ MEASUREMENT_ERROR_TYPE = "measurement_error"
 MEASUREMENT_ACTION_TYPE = "measurement_action"
 MEASUREMENT_ACTION_RETRY = "retry"
 MEASUREMENT_ACTION_ABORT = "abort"
+
+# Constants for run-until termination dialog feature.
+# Used in communication between routine runner and subprocess.
+TERMINATION_REACHED_TYPE = "termination_reached"
+TERMINATION_ACTION_TYPE = "termination_action"
+TERMINATION_ACTION_CONTINUE = "continue"
+TERMINATION_ACTION_END = "end"
