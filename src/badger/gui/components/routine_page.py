@@ -1121,6 +1121,9 @@ class BadgerRoutinePage(QWidget):
         logger.info(f"Environment selected: {self.env_box.cb.itemText(i)} (index={i})")
 
         self.sig_status.emit("Loading variables...")
+        # We need this for the text to actually get drawn in the GUI at the time we want,
+        # since select_env() is a slot function so the Qt main event loop is paused while it runs
+        # and the text drawing won't be processed immediately.
         QApplication.processEvents()
 
         # Reset the initial table actions and ratio var ranges

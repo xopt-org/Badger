@@ -1074,6 +1074,9 @@ class BadgerRoutinePage(QWidget):
         logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
 
         self.sig_status.emit("Loading variables...")
+        # We need this for the text to actually get drawn in the GUI at the time we want,
+        # since select_env() is a slot function so the Qt main event loop is paused while it runs
+        # and the text drawing won't be processed immediately.
         QApplication.processEvents()
 
         # Reset the initial table actions and ratio var ranges
@@ -1191,8 +1194,21 @@ class BadgerRoutinePage(QWidget):
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
 
+        self.check_for_nan_vars()
+
         self.sig_status.emit("Variables loaded.")
         QApplication.processEvents()
+
+    def check_for_nan_vars(self) -> None:
+        """Show a warning popup to notify user if any var_table values are NaN"""
+        nan_value_keys = self.env_box.get_nan_vars()
+        if nan_value_keys:
+            nan_vars = "\n".join(f" -  {key}" for key in nan_value_keys)
+            QMessageBox.warning(
+                self,
+                "Variables with invalid values",
+                f"Failed to get values for the following variables:\n{nan_vars}",
+            )
 
     def get_init_table_header(self):
         table = self.env_box.init_table
