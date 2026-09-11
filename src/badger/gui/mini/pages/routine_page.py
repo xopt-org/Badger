@@ -1184,6 +1184,19 @@ class BadgerRoutinePage(QWidget):
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
 
+        self.check_for_nan_vars()
+
+    def check_for_nan_vars(self) -> None:
+        """Show a warning popup to notify user if any var_table values are NaN"""
+        nan_value_keys = self.env_box.get_nan_vars()
+        if nan_value_keys:
+            nan_vars = "\n".join(f" -  {key}" for key in nan_value_keys)
+            QMessageBox.warning(
+                self,
+                "Variables with invalid values",
+                f"Failed to get values for the following variables:\n{nan_vars}",
+            )
+
     def get_init_table_header(self):
         table = self.env_box.init_table
         header_list = []
