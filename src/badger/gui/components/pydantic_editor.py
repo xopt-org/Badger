@@ -814,17 +814,24 @@ class BadgerPydanticEditor(QTreeWidget):
 
         self.initialize_combo_widget(widget, selections)
 
-        special_item_dict: dict[str, Any] | None = defaults.get(field, {})
+        # Get value without default - if key doesn't exist, get() returns None
+        # If key exists but value is None (from null in YAML), it's also None
+        # We need to distinguish these cases for the warning
+        special_item_dict: dict[str, Any] | None = defaults.get(field)
 
         if special_item_dict is None:
-            logger.warning(
-                f"Generator has {field} set but no compatible {field} exists."
-            )
+            # Check if key exists in dict - if not, warn; if yes, it's explicitly null
+            if field not in defaults:
+                logger.warning(
+                    f"Generator has {field} set but no compatible {field} exists in defaults. "
+                    "Item has likely been filtered out from not being included in defaults."
+                )
             special_item_dict = {}
 
         special_item_dict["vocs"] = self.vocs.model_dump()
 
-        name = special_item_dict.get("name", "")
+        # Use the name from dict, or "null" if dict is empty (null was set)
+        name = special_item_dict.get("name", "null" if not special_item_dict else "")
 
         # Update combo box selection with name
         if (index := widget.findText(name) if name else widget.findText("null")) >= 0:
