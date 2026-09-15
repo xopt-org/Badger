@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from gest_api.vocs import ContinuousVariable
+from gest_api.vocs import VOCS, ContinuousVariable
 from pydantic_core import ValidationError
 from PyQt5.QtCore import QRegExp, pyqtSignal
 from PyQt5.QtWidgets import (
@@ -29,7 +29,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
