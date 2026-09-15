@@ -58,7 +58,7 @@ class BadgerTerminationReachedDialog(QDialog):
 
         tc_type = tc_condition["type"]
         if tc_type == "max_eval":
-            tc_type_text = "Max evaluation"
+            tc_type_text = "N iterations"
             state = tc_condition["state"]
         else:
             tc_type_text = "Timeout"
@@ -70,20 +70,15 @@ class BadgerTerminationReachedDialog(QDialog):
         text_column = QVBoxLayout()
         text_column.setSpacing(3)
 
-        title_label = QLabel("Termination condition reached")
-        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        title_label.setStyleSheet("font-size: 14px; font-weight: 600;")
-        text_column.addWidget(title_label)
-
-        body_label = QLabel("Badger optimization stopped.")
-        body_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        text_column.addWidget(body_label)
-
-        summary_label = QLabel(f"{tc_type_text}: {state}/{tc_condition['config']}")
+        summary_label = QLabel(f"{tc_type_text}: {state} / {tc_condition['config']}")
         summary_label.setWordWrap(True)
-        summary_label.setAlignment(Qt.AlignLeft)
-        summary_label.setStyleSheet("color: #8A949E;")
+        summary_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        #  summary_label.setStyleSheet("color: #8A949E;")
         text_column.addWidget(summary_label)
+
+        body_label = QLabel("Badger optimization paused")
+        body_label.setAlignment(Qt.AlignLeft)
+        text_column.addWidget(body_label)
 
         content_row.addLayout(text_column)
         layout.addLayout(content_row)
