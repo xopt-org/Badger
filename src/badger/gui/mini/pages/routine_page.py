@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import QLineEdit, QPushButton, QFileDialog
 from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+from PyQt5.QtWidgets import QApplication
 from badger.gui.components.navigators import HistoryNavigator
 from coolname import generate_slug
 from xopt import VOCS
@@ -126,6 +127,7 @@ class BadgerRoutinePage(QWidget):
     sig_save_template = pyqtSignal(str)  # template path
     sig_go_run = pyqtSignal()
     sig_select_env = pyqtSignal(str)
+    sig_status = pyqtSignal(str)
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")
@@ -1070,6 +1072,13 @@ class BadgerRoutinePage(QWidget):
     @with_busy_cursor
     def select_env(self, i: int):
         logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
+
+        self.sig_status.emit("Loading variables...")
+        # We need this for the text to actually get drawn in the GUI at the time we want,
+        # since select_env() is a slot function so the Qt main event loop is paused while it runs
+        # and the text drawing won't be processed immediately.
+        QApplication.processEvents()
+
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1184,6 +1193,22 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
+
+        self.check_for_nan_vars()
+
+        self.sig_status.emit("Variables loaded.")
+        QApplication.processEvents()
+
+    def check_for_nan_vars(self) -> None:
+        """Show a warning popup to notify user if any var_table values are NaN"""
+        nan_value_keys = self.env_box.get_nan_vars()
+        if nan_value_keys:
+            nan_vars = "\n".join(f" -  {key}" for key in nan_value_keys)
+            QMessageBox.warning(
+                self,
+                "Variables with invalid values",
+                f"Failed to get values for the following variables:\n{nan_vars}",
+            )
 
     def get_init_table_header(self):
         table = self.env_box.init_table

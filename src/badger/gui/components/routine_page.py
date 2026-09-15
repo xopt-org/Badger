@@ -40,6 +40,7 @@ from PyQt5.QtWidgets import QLineEdit, QLabel, QPushButton, QFileDialog
 from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
+from PyQt5.QtWidgets import QApplication
 from coolname import generate_slug
 from xopt import VOCS
 from xopt.vocs import random_inputs
@@ -77,7 +78,7 @@ from badger.gui.windows.ind_lim_vrange_dialog import (
 from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.utils import filter_generator_config
+from badger.gui.utils import filter_generator_config, with_busy_cursor
 from badger.gui.components.archive_search import ArchiveSearchWidget
 from badger.archive import update_run
 from badger.environment import instantiate_env
@@ -149,6 +150,7 @@ class BadgerRoutinePage(QWidget):
     sig_updated = pyqtSignal(str, str)  # routine name, routine description
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
+    sig_status = pyqtSignal(str)
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")
@@ -1114,8 +1116,16 @@ class BadgerRoutinePage(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Invalid script!", str(e))
 
+    @with_busy_cursor
     def select_env(self, i: int):
         logger.info(f"Environment selected: {self.env_box.cb.itemText(i)} (index={i})")
+
+        self.sig_status.emit("Loading variables...")
+        # We need this for the text to actually get drawn in the GUI at the time we want,
+        # since select_env() is a slot function so the Qt main event loop is paused while it runs
+        # and the text drawing won't be processed immediately.
+        QApplication.processEvents()
+
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1240,6 +1250,9 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
+
+        self.sig_status.emit("Variables loaded.")
+        QApplication.processEvents()
 
     def get_init_table_header(self):
         table = self.env_box.init_table

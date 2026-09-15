@@ -230,6 +230,8 @@ class BadgerHomePage(QWidget):
         self.routine_editor.sig_load_template.connect(self.update_status)
         self.routine_editor.sig_save_template.connect(self.update_status)
         self.routine_editor.sig_go_run.connect(self.go_run)
+        self.routine_editor.sig_status.connect(self.update_status)
+        self.routine_editor.env_box.var_table.sig_status.connect(self.update_status)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
