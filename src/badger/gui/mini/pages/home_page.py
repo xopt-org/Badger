@@ -299,7 +299,7 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.btn_stop.setDefaultAction(
             self.run_action_bar.run_until_action
         )
-        # configure default to max_eval (tc_idx=0), 50 iterations
+        # configure default to max_eval (tc_idx=0), 100 iterations
         initial_tc = {"tc_idx": 0, "max_eval": 100, "max_time": 300, "ftol": 0}
         self.run_monitor.save_termination_condition(initial_tc)
         self.run_action_bar.update_run_tooltip(initial_tc)
@@ -438,6 +438,20 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
+    def loaded_data_keys_compatible(self, vocs) -> bool:
+        """True if the displayed routine has data whose variable/objective keys match vocs."""
+        routine = self.current_routine
+
+        if routine is None or routine.data is None or routine.data.empty:
+            return False
+
+        loaded_data_vars_objs_names = (
+            routine.vocs.variable_names + routine.vocs.objective_names
+        )
+        return set(loaded_data_vars_objs_names) == set(
+            vocs.variable_names + vocs.objective_names
+        )
+
     def validate_loaded_data_keys(self, vocs, open_dialog: bool = True):
         """
         This function is called when adding historical data to a new routine.
@@ -452,19 +466,13 @@ class BadgerHomePage(QWidget):
         # get routine selected from data_panel
         routine = self.current_routine
 
-        # Want to compare variables, objectives
-        loaded_data_vars_objs_names = (
-            routine.vocs.variable_names + routine.vocs.objective_names
-        )
-
-        # Raise error if loaded data keys do not match selected vocs
-        if set(loaded_data_vars_objs_names) != set(
-            vocs.variable_names + vocs.objective_names
-        ):
+        if not self.loaded_data_keys_compatible(vocs):
             self.run_action_bar.routine_finished()  # Reset action bar
+            if routine is None or routine.data is None or routine.data.empty:
+                raise BadgerRoutineError("The displayed routine has no data to load.")
             raise BadgerRoutineError(
                 "Keys in loaded data do not match selected VOCS:\n\n"
-                + f"Keys in data to load:\n {loaded_data_vars_objs_names}\n\n"
+                + f"Keys in data to load:\n {routine.vocs.variable_names + routine.vocs.objective_names}\n\n"
                 + f"Selected VOCS:\n {vocs.variable_names + vocs.objective_names}"
             )
 
