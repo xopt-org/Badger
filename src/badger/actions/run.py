@@ -10,17 +10,17 @@ Note: the CLI runner is deprecated — most users should use the GUI instead.
 
 import logging
 import os
+import signal
 import sys
 import time
-import signal
 
 from pandas import DataFrame
 
-from badger.utils import curr_ts
 from badger.core import run_routine as run
+from badger.errors import BadgerRunTerminated
 from badger.routine import Routine
 from badger.settings import init_settings
-from badger.errors import BadgerRunTerminated
+from badger.utils import curr_ts
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def run_n_archive(
 ):
     try:
         from badger.archive import archive_run
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit
         logger.error(e)
         return
 
@@ -43,7 +43,7 @@ def run_n_archive(
 
     def handler(*args):
         if storage["paused"]:
-            print("")  # start a new line
+            print()  # start a new line
             if flush_prompt:  # erase the last prompt
                 sys.stdout.write("\033[F")
             raise BadgerRunTerminated
@@ -90,8 +90,8 @@ def run_n_archive(
                 routine.environment.interface.dump_recording(
                     os.path.join(path, filename)
                 )
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 - interface dump is best-effort
+                logger.warning("Failed to dump interface logs")
 
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
@@ -109,7 +109,7 @@ def run_n_archive(
         )
     except BadgerRunTerminated as e:
         logger.info(e)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CLI run boundary
         logger.error(e)
 
     # Save the run when at least one solution has been evaluated
@@ -120,8 +120,8 @@ def run_n_archive(
             path = _run["path"]
             filename = _run["filename"][:-4] + "pickle"
             routine.environment.interface.stop_recording(os.path.join(path, filename))
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 - interface dump is best-effort
+            logger.warning("Failed to dump interface logs")
 
 
 def run_routine(args):
@@ -130,7 +130,6 @@ def run_routine(args):
         "Please use 'badger -g' to launch the Badger GUI "
         "and run an optimization."
     )
-    return
 
     # try:
     #     from ..factory import get_algo, get_env

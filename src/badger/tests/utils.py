@@ -1,8 +1,9 @@
 import os
+
 import pandas as pd
 from xopt import VOCS
-from xopt.generators.bayesian import UpperConfidenceBoundGenerator
 from xopt.generators import RandomGenerator
+from xopt.generators.bayesian import UpperConfidenceBoundGenerator
 
 
 def create_routine():
@@ -186,8 +187,8 @@ def get_vars_in_row(routine, idx=0):
 
 
 def fix_path_issues():
-    from badger.settings import init_settings
     from badger.archive import BADGER_ARCHIVE_ROOT
+    from badger.settings import init_settings
 
     config_singleton = init_settings()
     BADGER_TEMPLATE_ROOT = config_singleton.read_value("BADGER_TEMPLATE_ROOT")

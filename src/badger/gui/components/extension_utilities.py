@@ -1,18 +1,19 @@
 """Shared helpers for analysis extensions: matplotlib figure management,
 update throttling, error-handling decorators, and numeric formatting."""
 
+import logging
 import time
-from functools import wraps
 import traceback
-from typing import Any, Callable, Optional, ParamSpec
+from collections.abc import Callable
+from functools import wraps
 from types import TracebackType
-from PyQt5.QtWidgets import QLayout, QTabWidget
+from typing import Any, ParamSpec
 
+import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
-
-import logging
+from PyQt5.QtWidgets import QLayout, QTabWidget
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ def clear_tabs(tab_widget: QTabWidget) -> None:
 
 
 def requires_update(
-    last_updated: Optional[float], interval: int = 1000, requires_rebuild: bool = False
+    last_updated: float | None, interval: int = 1000, requires_rebuild: bool = False
 ) -> bool:
     # Check if the plot was updated recently
     if last_updated is not None and not requires_rebuild:
@@ -73,11 +74,23 @@ def requires_update(
 def to_precision_float(value: Any, precision: int = 4) -> float:
     try:
         return float(f"{value:.{precision}g}")
-    except Exception:
+    except (ValueError, TypeError) as e:
         raise HandledException(
             ValueError,
             f"Value {value} cannot be converted to float with precision {precision}",
-        )
+        ) from e
+
+
+def get_latest_reference_points(
+    data: pd.DataFrame | None, variable_names: list[str]
+) -> dict[str, float]:
+
+    if data is None or data.empty:
+        raise ValueError("No data available to extract the latest reference point.")
+
+    reference_points = data[variable_names].iloc[-1].to_dict()
+
+    return {str(k): to_precision_float(v) for k, v in reference_points.items()}
 
 
 class HandledException(Exception):
@@ -124,13 +137,13 @@ class MatplotlibFigureContext:
         else:
             self.ax = ax
 
-    def __enter__(self):
+    def __enter__(self) -> tuple[Figure, Axes]:
         return self.fig, self.ax
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
-    ):
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ) -> None:
         plt.close(self.fig)

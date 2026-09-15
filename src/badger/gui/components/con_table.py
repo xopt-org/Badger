@@ -3,12 +3,13 @@
 reordering."""
 
 from typing import Any
+
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QStyledItemDelegate,
     QDoubleSpinBox,
     QMessageBox,
+    QStyledItemDelegate,
     QWidget,
 )
 

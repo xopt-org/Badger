@@ -153,11 +153,15 @@ class BadgerEnvBox(QWidget):
         self,
         env_dict: dict[str, Any],
         parent: QWidget | None = None,
-        envs: list[str] = [],
+        envs: list[str] | None = None,
     ):
+        if envs is None:
+            envs = []
+
         super().__init__(parent)
 
         self.envs = envs
+
         self.env_dict = env_dict
 
         self.init_ui()

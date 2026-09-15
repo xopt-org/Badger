@@ -9,26 +9,26 @@ both the CLI (e.g. `badger env`) and the GUI combo boxes.
 Also handles loading Markdown docs for the built-in documentation browser.
 """
 
-from typing import Any, TypedDict, cast, TYPE_CHECKING
-from badger.settings import init_settings
-from badger.utils import get_value_or_none
-from badger.errors import (
-    BadgerConfigError,
-    BadgerInvalidPluginError,
-    BadgerInvalidDocsError,
-    BadgerPluginNotFoundError,
-)
-
-from badger.interface import Interface as BadgerInterface
-import sys
-import os
 import importlib
-import yaml
+import logging
+import os
 import re
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypedDict, cast
+
+import yaml
 from xopt.generators import generators, get_generator_defaults
 
-import logging
+from badger.errors import (
+    BadgerConfigError,
+    BadgerInvalidDocsError,
+    BadgerInvalidPluginError,
+    BadgerPluginNotFoundError,
+)
+from badger.interface import Interface as BadgerInterface
+from badger.settings import init_settings
+from badger.utils import get_value_or_none
 
 if TYPE_CHECKING:
     from badger.environment import Environment as BadgerEnvironment
@@ -44,7 +44,6 @@ ALGO_EXCLUDED = [
     "time_dependent_upper_confidence_bound",
     "multi_fidelity",
     "nsga2",
-    "bax",
 ]
 
 
@@ -97,7 +96,7 @@ def scan_plugins(root: str):
                 for fname in os.listdir(proot)
                 if os.path.exists(os.path.join(proot, fname, "__init__.py"))
             ]
-        except:
+        except OSError:
             plugins = []
 
         for pname in plugins:
@@ -137,11 +136,10 @@ def load_plugin(
     try:
         module = importlib.import_module(f"{ptype}s.{pname}")
     except ImportError as e:
-        _e = BadgerInvalidPluginError(
-            f"{ptype} {pname} is not available due to missing dependencies: {e}"
-        )
-        _e.configs = configs  # attach information to the exception
-        raise _e
+        raise BadgerInvalidPluginError(
+            f"{ptype} {pname} is not available due to missing dependencies: {e}",
+            configs=configs,
+        ) from e
 
     if ptype == "generator":
         plugin = (module.optimize, configs)
@@ -173,7 +171,7 @@ def load_plugin(
                 intf = cast(BadgerInterface, Interface())
         except KeyError:
             intf = None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - interface plugin load best-effort
             logger.warning(e)
             intf = None
         env = m_env(interface=intf, params=configs)
@@ -197,7 +195,7 @@ def load_plugin(
     return plugin
 
 
-def load_badger_docs(name: str, ptype: str = None) -> str:
+def load_badger_docs(name: str, ptype: str | None = None) -> str:
     """
     Load general Badger documentation from Badger/documentation/docs/guides.
 
@@ -205,8 +203,8 @@ def load_badger_docs(name: str, ptype: str = None) -> str:
     __________
     name : str
         Name of the .md file to open
-    subdir : str (None)
-        Name of subdirectory if file is not in main guides directory
+    ptype : str | None (None)
+        Type of plugin (e.g., 'generator', 'interface', 'environment')
 
     Returns
     _______
@@ -237,7 +235,7 @@ def load_badger_docs(name: str, ptype: str = None) -> str:
         try:
             with open(docs_dir / f"{name}.md", "r") as f:
                 readme = f.read()
-        except:
+        except OSError:
             readme = f"# {name}\nNo documentation found.\n"
 
         if ptype == "generator":
@@ -296,10 +294,10 @@ def load_plugin_docs(pname: str, ptype: str) -> str:
             docstring = module.Environment.__doc__
 
         return _format_docs_str(readme, docstring, ptype)
-    except:
+    except Exception as e:
         raise BadgerInvalidDocsError(
             f"Error loading docs for {ptype} {pname}: docs not found"
-        )
+        ) from e
 
 
 def _format_docs_str(readme: str, docstring: str, ptype: str) -> str:
@@ -357,7 +355,7 @@ _MD_IMG = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 
 def _md_images_to_html(
     text: str,
-    base_prefix: str = None,
+    base_prefix: str | None = None,
     width: int = 575,
 ) -> str:
     """
@@ -413,7 +411,7 @@ def get_env(name: str):
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 
-def list_generators():
+def list_generators() -> list[str]:
     try:
         from xopt.generators import try_load_all_generators
 

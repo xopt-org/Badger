@@ -1,15 +1,18 @@
 """Creates a single constraint row widget: observable selector, relation
 combo (>, <, =), threshold spinbox, criticality checkbox, and remove button."""
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
+    QAbstractSpinBox,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
     QHBoxLayout,
     QPushButton,
+    QStyledItemDelegate,
     QWidget,
-    QDoubleSpinBox,
-    QAbstractSpinBox,
 )
-from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate
-from PyQt5.QtCore import Qt
+
 from badger.gui.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
@@ -30,7 +33,7 @@ def constraint_item(
     cb_obs.addItems(options)
     try:
         idx = options.index(name)
-    except:
+    except ValueError:
         idx = 0
     cb_obs.setCurrentIndex(idx)
 

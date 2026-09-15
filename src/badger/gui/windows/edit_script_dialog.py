@@ -2,9 +2,16 @@
 Python code editor for writing custom generator scripts that execute as part
 of an optimization routine."""
 
-from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout, QWidget
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton
 from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
 from badger.gui.components.syntax import PythonHighlighter
 
 

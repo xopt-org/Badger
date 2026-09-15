@@ -1,14 +1,16 @@
 import os
 import platform
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
 import yaml
-from unittest.mock import patch, MagicMock, mock_open
+
 from badger.settings import (
-    init_settings,
-    get_user_config_folder,
-    ConfigSingleton,
     BadgerConfig,
+    ConfigSingleton,
     Setting,
+    get_user_config_folder,
+    init_settings,
 )
 
 
@@ -101,164 +103,186 @@ class TestBadgerConfig:
 
     def test_init_settings(self):
         mock_config_singleton = MagicMock(spec=ConfigSingleton)
-        with patch(
-            "badger.settings.get_user_config_folder", return_value="/mock/config/folder"
+        with (
+            patch(
+                "badger.settings.get_user_config_folder",
+                return_value="/mock/config/folder",
+            ),
+            patch(
+                "badger.settings.ConfigSingleton", return_value=mock_config_singleton
+            ) as mock_config_cls,
         ):
             with patch(
-                "badger.settings.ConfigSingleton", return_value=mock_config_singleton
-            ) as mock_config_cls:
+                "badger.settings.get_or_create_temp_directory"
+            ) as mock_get_or_create_temp_directory:
                 config_singleton = init_settings()
-                mock_config_cls.assert_called_once_with(
-                    "/mock/config/folder/config.yaml", False
-                )
-                assert config_singleton == mock_config_singleton
+            mock_config_cls.assert_called_once_with(
+                "/mock/config/folder/config.yaml", False
+            )
+            mock_get_or_create_temp_directory.assert_called_once_with(
+                mock_config_singleton
+            )
+            assert config_singleton == mock_config_singleton
 
     def test_config_singleton_initialization(self):
         # Patch the open function and ensure it reads the correct mock configuration
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                assert (
-                    config_singleton.config.BADGER_PLUGIN_ROOT.value
-                    == "/mock/plugin/root"
-                )
-                assert (
-                    config_singleton.config.BADGER_TEMPLATE_ROOT.value
-                    == "/mock/template/root"
-                )
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            assert (
+                config_singleton.config.BADGER_PLUGIN_ROOT.value == "/mock/plugin/root"
+            )
+            assert (
+                config_singleton.config.BADGER_TEMPLATE_ROOT.value
+                == "/mock/template/root"
+            )
 
     def test_config_singleton_create_new_config_if_not_exists(self):
-        with patch("os.path.exists", return_value=False):
-            with patch(
-                "badger.settings.BadgerConfig", return_value=self.mock_badger_config
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                assert isinstance(config_singleton.config, BadgerConfig)
+        with (
+            patch("os.path.exists", return_value=False),
+            patch("badger.settings.BadgerConfig", return_value=self.mock_badger_config),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            assert isinstance(config_singleton.config, BadgerConfig)
 
     def test_update_and_save_config(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                updates = {"BADGER_PLUGIN_ROOT": "/new/plugin/root"}
-                config_singleton.update_and_save_config(updates)
-                assert (
-                    config_singleton.config.BADGER_PLUGIN_ROOT.value
-                    == "/new/plugin/root"
-                )
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            updates = {"BADGER_PLUGIN_ROOT": "/new/plugin/root"}
+            config_singleton.update_and_save_config(updates)
+            assert (
+                config_singleton.config.BADGER_PLUGIN_ROOT.value == "/new/plugin/root"
+            )
 
     def test_list_settings(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                settings = config_singleton.list_settings()
-                assert "BADGER_PLUGIN_ROOT" in settings
-                assert settings["BADGER_PLUGIN_ROOT"]["value"] == "/mock/plugin/root"
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            settings = config_singleton.list_settings()
+            assert "BADGER_PLUGIN_ROOT" in settings
+            assert settings["BADGER_PLUGIN_ROOT"]["value"] == "/mock/plugin/root"
 
     def test_read_value(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                value = config_singleton.read_value("BADGER_PLUGIN_ROOT")
-                assert value == "/mock/plugin/root"
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            value = config_singleton.read_value("BADGER_PLUGIN_ROOT")
+            assert value == "/mock/plugin/root"
 
     def test_read_display_name(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                display_name = config_singleton.read_display_name("BADGER_PLUGIN_ROOT")
-                assert display_name == "plugin root"
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            display_name = config_singleton.read_display_name("BADGER_PLUGIN_ROOT")
+            assert display_name == "plugin root"
 
     def test_read_description(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                description = config_singleton.read_description("BADGER_PLUGIN_ROOT")
-                assert description == "Mock plugin root"
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            description = config_singleton.read_description("BADGER_PLUGIN_ROOT")
+            assert description == "Mock plugin root"
 
     def test_read_is_path(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                is_path = config_singleton.read_is_path("BADGER_PLUGIN_ROOT")
-                assert is_path
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            is_path = config_singleton.read_is_path("BADGER_PLUGIN_ROOT")
+            assert is_path
 
     def test_write_value(self):
-        with patch("os.path.exists", return_value=True):
-            with patch(
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
                 "builtins.open",
                 mock_open(
                     read_data=yaml.dump(
                         self.mock_badger_config.model_dump(by_alias=True)
                     )
                 ),
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                config_singleton.write_value("BADGER_PLUGIN_ROOT", "/new/plugin/root")
-                assert (
-                    config_singleton.config.BADGER_PLUGIN_ROOT.value
-                    == "/new/plugin/root"
-                )
+            ),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            config_singleton.write_value("BADGER_PLUGIN_ROOT", "/new/plugin/root")
+            assert (
+                config_singleton.config.BADGER_PLUGIN_ROOT.value == "/new/plugin/root"
+            )
 
     def test_reset_settings(self):
-        with patch("os.path.exists", return_value=False):
-            with patch(
-                "badger.settings.BadgerConfig", return_value=self.mock_badger_config
-            ):
-                config_singleton = ConfigSingleton(self.config_file)
-                with patch.object(
-                    config_singleton, "update_and_save_config"
-                ) as mock_update:
-                    config_singleton.reset_settings()
-                    assert mock_update.called
-                    assert isinstance(config_singleton.config, BadgerConfig)
+        with (
+            patch("os.path.exists", return_value=False),
+            patch("badger.settings.BadgerConfig", return_value=self.mock_badger_config),
+        ):
+            config_singleton = ConfigSingleton(self.config_file)
+            with patch.object(
+                config_singleton, "update_and_save_config"
+            ) as mock_update:
+                config_singleton.reset_settings()
+                assert mock_update.called
+                assert isinstance(config_singleton.config, BadgerConfig)
 
     # TODO: Missing test for mock_settings method

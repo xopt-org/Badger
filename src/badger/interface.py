@@ -4,7 +4,7 @@ utilities for logging channel interactions to disk for post-run analysis."""
 
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, Dict, List, TypedDict
+from typing import Any, ClassVar, TypedDict
 
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ from badger.utils import curr_ts
 def log(func):
     def func_log(*args, **kwargs):
         if func.__name__ == "set_values":
-            if "channel_inputs" in kwargs.keys():
+            if "channel_inputs" in kwargs:
                 channel_inputs = kwargs["channel_inputs"]
             else:
                 channel_inputs = args[1]
@@ -45,8 +45,8 @@ def log(func):
 
 
 class InterfaceInfo(TypedDict):
-    interface: Dict[str, str]
-    vars: List[Dict[str, str]]
+    interface: dict[str, str]
+    vars: list[dict[str, str]]
 
 
 class Interface(BaseModel, ABC):
@@ -55,7 +55,7 @@ class Interface(BaseModel, ABC):
     # params: float = Field(..., description='Example intf parameter')
 
     # Private variables
-    _logs: List[Dict] = []  # TODO: Add a property for it?
+    _logs: list[dict] = []  # TODO: Add a property for it?
 
     def start_recording(self):
         self._logs = []
@@ -82,12 +82,12 @@ class Interface(BaseModel, ABC):
 
     # Environment should only call this method to get channels
     @abstractmethod
-    def get_values(self, channel_names: List[str]) -> Dict[str, Any]:
+    def get_values(self, channel_names: list[str]) -> dict[str, Any]:
         pass
 
     # Environment should only call this method to set channels
     @abstractmethod
-    def set_values(self, channel_inputs: Dict[str, Any]):
+    def set_values(self, channel_inputs: dict[str, Any]):
         pass
 
     def reset_interface(self):
@@ -95,7 +95,6 @@ class Interface(BaseModel, ABC):
         Called after the application forks (i.e. after spawning a new multiprocess.Process)
         Subclasses should use this to reset any undesirable process wide state
         """
-        pass
 
     def get_value(self, channel_name: str, **kwargs) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]
@@ -103,7 +102,7 @@ class Interface(BaseModel, ABC):
     def set_value(self, channel_name: str, channel_value, **kwargs):
         return self.set_values({channel_name: channel_value}, **kwargs)
 
-    def get_info(self, channels: List[str]) -> InterfaceInfo:
+    def get_info(self, channels: list[str]) -> InterfaceInfo:
         """
         Optional; Returns information about the channels and environment for display
 

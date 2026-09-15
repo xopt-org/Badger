@@ -6,7 +6,7 @@
 
 
 def test_env_api():
-    from badger.factory import list_env, get_env
+    from badger.factory import get_env, list_env
 
     assert len(list_env()) == 2
 
@@ -15,7 +15,7 @@ def test_env_api():
 
 
 def test_intf_api():
-    from badger.factory import list_intf, get_intf
+    from badger.factory import get_intf, list_intf
 
     assert len(list_intf()) == 1
 
