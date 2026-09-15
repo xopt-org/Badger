@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from gest_api.vocs import ContinuousVariable
 from pydantic_core import ValidationError
 from PyQt5.QtCore import QRegExp, pyqtSignal
@@ -658,6 +659,15 @@ class BadgerEnvBox(QWidget):
                 _variables.append(var)
 
         self.var_table.update_variables(_variables, 1)
+
+    def get_nan_vars(self) -> list[str]:
+        """Return keys of var_table entries with NaN values"""
+        current_values = self.var_table.current_values
+        return [
+            key
+            for key, value in current_values.items()
+            if isinstance(value, (float, np.floating)) and np.isnan(value)
+        ]
 
     def toggle_obj_show_mode(self, _):
         self.obj_table.update_show_selected_only(self.check_only_obj.isChecked())
