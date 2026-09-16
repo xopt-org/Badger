@@ -11,7 +11,9 @@ See core.py for the simpler in-process version of the same loop.
 """
 
 from copy import deepcopy
+import json
 import logging
+import signal
 import time
 import traceback
 from typing import Any
@@ -43,6 +45,29 @@ from xopt.vocs import select_best
 logger = logging.getLogger(__name__)
 
 
+def _emit_live_log(routine: "Routine", is_optimal: bool) -> None:
+    """
+    If BADGER_LIVE_LOG_PATH is set in the environment, append a JSONL
+    record describing the most-recent evaluation. Used by external
+    agents (e.g. Otter's auto-tune skill) to monitor a running Badger
+    optimization without screen-scraping the GUI or tailing the run
+    archive YAML.
+
+    Side-effect-free when the env var is unset. Never raises.
+    """
+    live_log = os.environ.get("BADGER_LIVE_LOG_PATH")
+    if not live_log:
+        return
+    try:
+        last = routine.data.iloc[-1].to_dict()
+        last["iteration"] = len(routine.data) - 1
+        last["is_optimal"] = bool(is_optimal)
+        with open(live_log, "a") as f:
+            f.write(json.dumps(last, default=str) + "\n")
+    except Exception as exc:  # never let logging crash the optimizer
+        logger.debug("BADGER_LIVE_LOG_PATH write failed: %s", exc)
+
+
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
@@ -57,6 +82,11 @@ def evaluate_measurement_with_retry(
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
             logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
+            if dialog_action_queue is None:
+                # Headless/CLI runs have no retry dialog to respond to, so
+                # surface the real measurement error instead of blocking on a
+                # queue that will never receive a retry/abort action.
+                raise
             queue.put(
                 {
                     "type": MEASUREMENT_ERROR_TYPE,
@@ -187,12 +217,16 @@ def run_routine_subprocess(
     # Now load the archive would use the correct config
     from badger.archive import load_run, archive_run
 
+    # Ignore SIGINT (Ctrl+C) in subprocess - only parent should handle it
+    # Subprocess is controlled via multiprocessing Events (pause_event, stop_event)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     logger.info("Waiting for wait_event to be set...")
     wait_event.wait()
 
     args: dict[str, Any] = {}
     try:
-        args = queue.get(timeout=1)
+        args = queue.get(timeout=5)
         logger.debug(f"Received args from queue: {args}")
     except Exception as e:
         logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {str(e)}")
@@ -291,6 +325,7 @@ def run_routine_subprocess(
                 if evaluate:
                     time.sleep(0.1)  # give it some break tp catch up
                     evaluate_queue[0].send((routine.data, routine.generator))
+                _emit_live_log(routine, solution[4])
 
         logger.info("Starting optimization loop...")
         while True:
@@ -359,6 +394,7 @@ def run_routine_subprocess(
             if evaluate:
                 logger.debug("Sending evaluation data to evaluate_queue.")
                 evaluate_queue[0].send((routine.data, generator_copy))
+            _emit_live_log(routine, solution[4])
 
             if archive:
                 if not testing:
@@ -367,6 +403,10 @@ def run_routine_subprocess(
 
     except BadgerRunTerminated:
         logger.info("Optimization terminated by BadgerRunTerminated.")
+        opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
+        evaluate_queue[0].close()
+    except KeyboardInterrupt:
+        # Clean exit on user interrupt - don't print traceback
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         evaluate_queue[0].close()
     except XoptError as e:

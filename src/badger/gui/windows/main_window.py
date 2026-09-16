@@ -15,13 +15,23 @@ logger = logging.getLogger(__name__)
 
 
 class BadgerMainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        routine=None,
+        auto_run=False,
+        watch_routine=None,
+        watch_stop=None,
+    ) -> None:
         logger.info("Initializing BadgerMainWindow.")
         super().__init__()
         self.thread_list = []
         self.process_manager = ProcessManager()
         self.process_manager.processQueueUpdated.connect(self.addSubprocess)
         self.addSubprocess()
+        self.routine = routine
+        self.auto_run = auto_run
+        self.watch_routine = watch_routine
+        self.watch_stop = watch_stop
         self.init_ui()
         self.config_logic()
 
@@ -84,7 +94,13 @@ class BadgerMainWindow(QMainWindow):
         # edit_menu.addAction('New')
 
         # Add pages
-        self.home_page = BadgerHomePage(self.process_manager)
+        self.home_page = BadgerHomePage(
+            self.process_manager,
+            routine=self.routine,
+            auto_run=self.auto_run,
+            watch_routine=self.watch_routine,
+            watch_stop=self.watch_stop,
+        )
 
         self.stacks = stacks = QStackedWidget()
         stacks.addWidget(self.home_page)
