@@ -567,15 +567,6 @@ class BadgerHomePage(QWidget):
 
         # Add data to routine before saving tmp file
         if data is not None:
-            # Make sure selected generator is compatible with prior data
-            if routine.generator.name in ["neldermead"]:
-                self.run_action_bar.routine_finished()  # Reset action bar
-                # TODO: update error message and/or support neldermead for resume function
-                raise BadgerRoutineError(
-                    "Neldermead algorithm is not compatible with data loading. "
-                    + "\nPlease uncheck 'Load displayed data into routine' "
-                    + "or select a different algorithm."
-                )
             # Check that routine variables and objectives match loaded data
             self.validate_loaded_data_keys(routine.vocs, open_dialog=False)
             data["live"] = 0  # reset live data indicator for loaded data
