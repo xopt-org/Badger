@@ -42,6 +42,7 @@ from badger.routine import Routine
 from badger.log import configure_process_logging
 from xopt.errors import FeasibilityError, XoptError
 from xopt.vocs import select_best
+from xopt.generators.sequential import SequentialGenerator
 
 
 logger = logging.getLogger(__name__)
@@ -332,6 +333,9 @@ def run_routine_subprocess(
             if routine.data is not None:
                 logger.info("Resetting routine data")
                 routine.data = routine.data.iloc[0:0]  # reset the data
+        else:
+            if isinstance(routine.generator, SequentialGenerator):
+                routine.generator.add_data(routine.data.copy())
 
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
