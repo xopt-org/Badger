@@ -118,6 +118,11 @@ class BadgerMainWindow(QMainWindow):
             self.process_manager.close_proccesses()
             monitor.destroy_unused_env()
             return
+        elif monitor.paused:
+            monitor.routine_runner.stop_routine()
+            self.process_manager.close_proccesses()
+            monitor.destroy_unused_env()
+            return
 
         reply = QMessageBox.question(
             self,
