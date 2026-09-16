@@ -437,6 +437,12 @@ def run_routine_subprocess(
                 #    termination_condition, original_termination_condition
                 # )
                 termination_condition = None
+                queue.put(
+                    {
+                        "type": "termination_extended",
+                        "termination_condition": termination_condition,
+                    }
+                )
                 continue
 
             candidates = routine.generator.generate(1)[0]

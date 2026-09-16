@@ -531,9 +531,30 @@ class BadgerOptMonitor(QWidget):
         self.extensions_palette.update_palette()
 
         self.sig_progress.emit(self.routine.data.tail(1))
+        self.update_status_with_tc()
 
         # Check critical condition
         self.check_critical()
+
+    def update_status_with_tc(self):
+        termination_condition = self.routine_runner.active_tc
+        if termination_condition:
+            idx = self.termination_condition["tc_idx"]
+            if idx == 0:
+                max_eval = termination_condition["max_eval"]
+                data = self.routine.data
+                if data is not None:
+                    if "live" in data.columns:
+                        # Only count number of live data points
+                        count = sum(1 for live_val in data["live"] if live_val == 1)
+                    else:
+                        count = len(data)
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{count}/{max_eval}]"
+                    )
+        else:
+            self.sig_status.emit(f"Running routine {self.routine.name}...")
 
     def update_curves(self, results=None):
         use_time_axis = self.plot_x_axis == 1
