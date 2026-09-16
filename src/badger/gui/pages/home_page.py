@@ -280,7 +280,6 @@ class BadgerHomePage(QWidget):
             self.run_monitor.jump_to_optimal
         )
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
-        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )

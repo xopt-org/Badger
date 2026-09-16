@@ -187,8 +187,6 @@ class BadgerActionBar(QWidget):
         )
         self.btn_opt = create_button("star.png", "Jump to optimum")
         self.btn_set = create_button("set.png", "Dial in solution")
-        self.btn_ctrl = create_button("pause.png", "Pause")
-        self.btn_ctrl._status = "pause"
 
         self.btn_del.setDisabled(True)
         self.btn_log.setDisabled(True)
@@ -196,7 +194,6 @@ class BadgerActionBar(QWidget):
         self.btn_checkpoint.setDisabled(True)
         self.btn_opt.setDisabled(True)
         self.btn_set.setDisabled(True)
-        self.btn_ctrl.setDisabled(True)
 
         # self.btn_stop = btn_stop = QPushButton('Run')
         self.btn_stop = SplitTooltipToolButton(menu_tooltip="Run Options Menu")
@@ -279,7 +276,6 @@ class BadgerActionBar(QWidget):
         hbox_bg.addWidget(self.btn_help)
         hbox_bg.addStretch(1)
         hbox_bg.addWidget(self.btn_reset)
-        hbox_bg.addWidget(self.btn_ctrl)
         hbox_bg.addWidget(self.btn_stop)
         hbox_bg.addWidget(self.btn_checkpoint)
         hbox_bg.addWidget(self.btn_opt)
@@ -301,7 +297,6 @@ class BadgerActionBar(QWidget):
         self.btn_reset.clicked.connect(self.reset_env)
         self.btn_opt.clicked.connect(self.jump_to_optimal)
         self.btn_set.clicked.connect(self.dial_in)
-        self.btn_ctrl.clicked.connect(self.ctrl_routine)
         self.run_action.triggered.connect(self._on_run_action_triggered)
         self.run_until_action.triggered.connect(self._on_run_until_action_triggered)
         self.run_until_menu_action.triggered.connect(
@@ -328,7 +323,6 @@ class BadgerActionBar(QWidget):
         self.btn_log.setDisabled(True)
         self.btn_reset.setDisabled(True)
         self.btn_checkpoint.setDisabled(True)
-        self.btn_ctrl.setDisabled(True)
         self.btn_stop.setDisabled(True)
         self.btn_opt.setDisabled(True)
         self.btn_set.setDisabled(True)
@@ -338,7 +332,6 @@ class BadgerActionBar(QWidget):
         self.btn_log.setDisabled(False)
         self.btn_reset.setDisabled(False)
         self.btn_checkpoint.setDisabled(False)
-        self.btn_ctrl.setDisabled(False)
         self.btn_stop.setDisabled(False)
         self.btn_opt.setDisabled(False)
         self.btn_set.setDisabled(False)
@@ -347,11 +340,6 @@ class BadgerActionBar(QWidget):
         self.btn_stop.setDisabled(False)
 
     def routine_finished(self):
-        self.btn_ctrl.setIcon(self.icon_pause)
-        self.btn_ctrl.setToolTip("Pause")
-        self.btn_ctrl._status = "pause"
-        self.btn_ctrl.setDisabled(True)
-
         # Note the order of the following two lines cannot be changed!
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
         self.btn_stop.setStyleSheet(stylesheet_run)
@@ -395,7 +383,6 @@ class BadgerActionBar(QWidget):
         self.smart_run_action.setText("Pause")
         self.smart_run_action.setIcon(self.icon_pause)
         self.btn_checkpoint.setDisabled(False)
-        self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
 
     def set_run_action(self):
@@ -473,7 +460,6 @@ class BadgerActionBar(QWidget):
             self.smart_run_action.setIcon(self.icon_pause)
             self.btn_stop.setDisabled(False)
             self.btn_checkpoint.setDisabled(False)
-            self.btn_ctrl.setDisabled(False)
             self.btn_set.setDisabled(True)
             self.btn_reset.setDisabled(True)
 
@@ -499,18 +485,6 @@ class BadgerActionBar(QWidget):
             self.run_menu.clear()
             self.run_menu.addAction(self.stop_run_action)
             self.run_menu.addAction(self.smart_run_action)
-
-    def ctrl_routine(self):
-        if self.btn_ctrl._status == "pause":
-            self.sig_ctrl.emit(True)
-            self.btn_ctrl.setIcon(self.icon_play)
-            self.btn_ctrl.setToolTip("Resume")
-            self.btn_ctrl._status = "play"
-        else:
-            self.sig_ctrl.emit(False)
-            self.btn_ctrl.setIcon(self.icon_pause)
-            self.btn_ctrl.setToolTip("Pause")
-            self.btn_ctrl._status = "pause"
 
     def open_extensions_palette(self):
         self.sig_open_extensions_palette.emit()

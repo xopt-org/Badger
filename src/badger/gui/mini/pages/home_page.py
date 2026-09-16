@@ -296,7 +296,6 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_dial_in.connect(
             self.run_controller.set_restart_override_flag
         )
-        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
         self.run_action_bar.sig_smart_run_ctrl.connect(self.smart_run_with_data)
         self.run_action_bar.sig_run_with_data.connect(
             lambda: self.start_run(
