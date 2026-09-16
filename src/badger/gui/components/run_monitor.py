@@ -94,7 +94,8 @@ class BadgerOptMonitor(QWidget):
 
         # Run optimization
         self.routine_runner = None
-        self.running = False
+        self.running = False  # is subprocess running
+        self.paused = False  # is optimization paused
 
         # Termination condition for the run
         self.termination_condition = None
@@ -480,6 +481,7 @@ class BadgerOptMonitor(QWidget):
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
+        self.paused = False
         self.routine_runner.run(
             run_data_flag=run_data_flag, init_points_flag=init_points_flag
         )
@@ -645,6 +647,7 @@ class BadgerOptMonitor(QWidget):
 
     def routine_finished(self) -> None:
         self.running = False
+        self.paused = False
         self.sig_routine_finished.emit()
 
         self.sig_lock.emit(False)
@@ -725,6 +728,7 @@ class BadgerOptMonitor(QWidget):
         #     self, 'Success!', f'')
 
     def ctrl_routine(self, status):
+        self.paused = status
         self.sig_pause.emit(status)
 
     def ins_obj_dragged(self, ins_obj):
