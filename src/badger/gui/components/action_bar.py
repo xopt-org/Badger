@@ -135,14 +135,16 @@ class BadgerActionBar(QWidget):
     sig_dial_in = pyqtSignal()
     sig_ctrl = pyqtSignal(bool)
     sig_run_with_data = pyqtSignal()
+    sig_smart_run_ctrl = pyqtSignal()
     sig_open_extensions_palette = pyqtSignal()
 
     sig_save_checkpoint = pyqtSignal()
     sig_edit_checkpoint = pyqtSignal()
     sig_load_checkpoint = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, minimode: bool = False):
         super().__init__(parent)
+        self.mini_mode = minimode
         self.docs_name = "gui-usage"
         self.init_ui()
         self.config_logic()
@@ -231,7 +233,7 @@ class BadgerActionBar(QWidget):
         # Create a menu and add options
         self.run_menu = menu = QMenu(self)
         menu.setFixedWidth(128)
-        self.run_action = run_action = QAction("Run", self)
+        self.run_action = run_action = QAction("Run (restart)", self)
         run_action.setIcon(self.icon_play)
         self.run_until_action = run_until_action = QAction("Run until", self)
         run_until_action.setIcon(self.icon_play)
@@ -239,13 +241,23 @@ class BadgerActionBar(QWidget):
         run_until_menu_action.setIcon(self.icon_play)
         self.run_with_data_action = run_with_data_action = QAction("Resume", self)
         run_with_data_action.setIcon(self.icon_play)
+        self.smart_run_action = smart_run_action = QAction("Smart run", self)
+        smart_run_action.setIcon(self.icon_play)
+        self.stop_run_action = QAction("Stop", self)
+        self.stop_run_action.setIcon(self.icon_stop)
         menu.addAction(run_action)
         menu.addAction(run_until_menu_action)
         menu.addAction(run_with_data_action)
-        # Note: run_until_menu_action is triggered by selecting "run until" from the menu
+        if self.mini_mode:
+            menu.addAction(smart_run_action)
+        # Note:
+        # run_until_menu_action is triggered by selecting "run until" from the menu
         # It emits sig_start_until(True) to launch the BadgerTerminationConditionDialog
         # and sets the default run action to run_until_action. Pressing the play/stop button
         # will then emit sig_start_until(False) and skip the dialog popup.
+        #
+        # smart_run_action will pause an active run, and triggers logic to resume,
+        # stop and run with data, or restart (see gui/mini/components/run_controller.py)
 
         # Set the menu as the run button's dropdown menu
         self.btn_stop.setMenu(menu)
@@ -295,6 +307,8 @@ class BadgerActionBar(QWidget):
         self.run_until_menu_action.triggered.connect(
             self._on_run_until_menu_action_triggered
         )
+        self.smart_run_action.triggered.connect(self._on_smart_run_action_triggered)
+        self.stop_run_action.triggered.connect(lambda: self.sig_stop.emit())
         self.run_with_data_action.triggered.connect(
             lambda: self.sig_run_with_data.emit()
         )
@@ -341,12 +355,14 @@ class BadgerActionBar(QWidget):
         # Note the order of the following two lines cannot be changed!
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
         self.btn_stop.setStyleSheet(stylesheet_run)
-        self.run_action.setText("Run")
+        self.run_action.setText("Run (restart)")
         self.run_action.setIcon(self.icon_play)
         self.run_until_action.setText("Run until")
         self.run_until_action.setIcon(self.icon_play)
         self.run_until_menu_action.setText("Run until")
         self.run_until_menu_action.setIcon(self.icon_play)
+        self.smart_run_action.setText("Smart run")
+        self.smart_run_action.setIcon(self.icon_play)
         # self.btn_stop.setToolTip('')
         self.btn_stop.setDisabled(False)
 
@@ -368,7 +384,7 @@ class BadgerActionBar(QWidget):
 
     def run_start(self):
         self.btn_stop.setStyleSheet(stylesheet_stop)
-        self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
+        # self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.btn_stop.setDisabled(False)
         self.run_action.setText("Stop")
         self.run_action.setIcon(self.icon_stop)
@@ -376,6 +392,8 @@ class BadgerActionBar(QWidget):
         self.run_until_action.setIcon(self.icon_stop)
         self.run_until_menu_action.setText("Stop")
         self.run_until_menu_action.setIcon(self.icon_stop)
+        self.smart_run_action.setText("Pause")
+        self.smart_run_action.setIcon(self.icon_pause)
         self.btn_checkpoint.setDisabled(False)
         self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
@@ -384,7 +402,7 @@ class BadgerActionBar(QWidget):
         if self.btn_stop.defaultAction() is not self.run_action:
             self.btn_stop.setDefaultAction(self.run_action)
 
-        if self.run_action.text() == "Run":
+        if self.run_action.text() == "Run (restart)":
             self.btn_stop.setDisabled(True)
             self.sig_start.emit()
         else:
@@ -401,6 +419,12 @@ class BadgerActionBar(QWidget):
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
 
+    def set_smart_run_action(self):
+        if self.btn_stop.defaultAction() is not self.smart_run_action:
+            self.btn_stop.setDefaultAction(self.smart_run_action)
+
+        self.sig_smart_run_ctrl.emit()
+
     def _on_run_action_triggered(self):
         self.set_run_action()
 
@@ -409,6 +433,9 @@ class BadgerActionBar(QWidget):
 
     def _on_run_until_menu_action_triggered(self):
         self.set_run_until_action(from_menu=True)
+
+    def _on_smart_run_action_triggered(self):
+        self.set_smart_run_action()
 
     def delete_run(self):
         self.sig_delete_run.emit()
@@ -428,6 +455,50 @@ class BadgerActionBar(QWidget):
 
     def dial_in(self):
         self.sig_dial_in.emit()
+
+    def handle_pause_action(self, status: bool):
+        """
+        Enable/disable buttons for pause (true)/resume (false) optimization
+        """
+        if status:
+            self.btn_stop.setStyleSheet(stylesheet_run)
+            self.smart_run_action.setIcon(self.icon_play)
+            self.btn_stop.setDisabled(False)
+            self.btn_reset.setDisabled(False)
+            self.btn_set.setDisabled(False)
+            self.btn_del.setDisabled(False)
+
+        else:
+            self.btn_stop.setStyleSheet(stylesheet_stop)
+            self.smart_run_action.setIcon(self.icon_pause)
+            self.btn_stop.setDisabled(False)
+            self.btn_checkpoint.setDisabled(False)
+            self.btn_ctrl.setDisabled(False)
+            self.btn_set.setDisabled(True)
+            self.btn_reset.setDisabled(True)
+
+        self.update_stop_menu(status)
+
+    def update_stop_menu(self, status: bool):
+        """Update run menu options when routine is paused (true)/running (false)"""
+        if status:
+            self.run_menu.clear()
+            self.run_action.setText("Run (restart)")
+            self.run_action.setIcon(self.icon_play)
+            self.run_until_action.setText("Run until")
+            self.run_until_action.setIcon(self.icon_play)
+            self.run_until_menu_action.setText("Run until")
+            self.run_until_menu_action.setIcon(self.icon_play)
+            self.smart_run_action.setText("Smart run")
+            self.smart_run_action.setIcon(self.icon_play)
+            self.run_menu.addAction(self.run_action)
+            self.run_menu.addAction(self.run_until_menu_action)
+            self.run_menu.addAction(self.run_with_data_action)
+            self.run_menu.addAction(self.smart_run_action)
+        else:
+            self.run_menu.clear()
+            self.run_menu.addAction(self.stop_run_action)
+            self.run_menu.addAction(self.smart_run_action)
 
     def ctrl_routine(self):
         if self.btn_ctrl._status == "pause":
