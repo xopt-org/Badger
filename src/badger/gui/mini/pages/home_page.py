@@ -39,7 +39,7 @@ from badger.gui.components.data_table import (
     update_table,
 )
 from badger.gui.mini.pages.routine_page import BadgerRoutinePage
-
+from badger.gui.mini.components.run_controller import SmartRunController
 from badger.gui.components.navigators import TemplateNavigator
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
@@ -85,6 +85,8 @@ class BadgerHomePage(QWidget):
         self.process_manager = process_manager
         self.current_routine = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
+
+        self.run_controller = SmartRunController()  # handle stop/start/resume
 
         self.init_ui()
         self.config_logic()
@@ -227,10 +229,16 @@ class BadgerHomePage(QWidget):
         self.history_browser.history_tree_widget.itemSelectionChanged.connect(
             self.go_run
         )
+        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+            self.run_controller.set_restart_override_flag
+        )
 
         self.template_browser.template_tree_view.clicked.connect(self.go_template)
 
         self.routine_editor.sig_load_template.connect(self.update_status)
+        self.routine_editor.sig_load_template.connect(
+            self.run_controller.set_restart_override_flag
+        )
         self.routine_editor.sig_save_template.connect(self.update_status)
         self.routine_editor.sig_go_run.connect(self.go_run)
 
@@ -246,6 +254,9 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_run_started.connect(self.run_action_bar.run_start)
         self.run_monitor.sig_routine_finished.connect(
             self.run_action_bar.routine_finished
+        )
+        self.run_monitor.sig_routine_finished.connect(
+            self.run_controller.notify_routine_finished
         )
         self.run_monitor.sig_lock_action.connect(self.run_action_bar.lock)
         self.run_monitor.sig_toggle_reset.connect(self.run_action_bar.toggle_reset)
@@ -263,6 +274,9 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_reset_env.connect(
             self.routine_editor.env_box.var_table.refresh_current_values
         )
+        self.run_action_bar.sig_reset_env.connect(
+            self.run_controller.set_restart_override_flag
+        )
         self.run_action_bar.sig_save_checkpoint.connect(
             self.run_monitor.save_checkpoint
         )
@@ -279,7 +293,11 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_dial_in.connect(
             self.routine_editor.env_box.var_table.refresh_current_values
         )
+        self.run_action_bar.sig_dial_in.connect(
+            self.run_controller.set_restart_override_flag
+        )
         self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
+        self.run_action_bar.sig_smart_run_ctrl.connect(self.smart_run_with_data)
         self.run_action_bar.sig_run_with_data.connect(
             lambda: self.start_run(
                 use_termination_condition=bool(self.run_monitor.termination_condition),
@@ -292,12 +310,21 @@ class BadgerHomePage(QWidget):
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 
+        self.run_controller.sig_pause_ctrl.connect(self.handle_pause)
+        self.run_controller.sig_stop.connect(self.run_monitor.stop)
+        self.run_controller.sig_start.connect(
+            lambda load_displayed_data: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=load_displayed_data,  # arg from signal
+            )
+        )
+
         self._configure_default_run_action()
 
     def _configure_default_run_action(self):
         """Set the default run action as run_until_action"""
         self.run_action_bar.btn_stop.setDefaultAction(
-            self.run_action_bar.run_until_action
+            self.run_action_bar.smart_run_action
         )
         # configure default to max_eval (tc_idx=0), 100 iterations
         initial_tc = {"tc_idx": 0, "max_eval": 100, "max_time": 300, "ftol": 0}
@@ -500,6 +527,24 @@ class BadgerHomePage(QWidget):
                 self.run_action_bar.routine_finished()  # Reset action bar
                 raise BadgerRoutineError("Routine initialization cancelled by user.")
 
+    def smart_run_with_data(self):
+        # get current routine_page parameters
+        routine_editor_snapshot = self.routine_editor.get_routine_snapshot()
+        vocs = self.routine_editor.env_box.compose_vocs()[0]
+        data_compatible = self.loaded_data_keys_compatible(vocs)
+
+        self.run_controller.smart_run(
+            routine_params_dict=routine_editor_snapshot,
+            is_running=self.run_monitor.running,  # is a subprocess active
+            is_paused=self.run_monitor.paused,  # is optimization loop paused
+            data_compatible=data_compatible,
+        )
+
+    def handle_pause(self, pause: bool):
+        self.run_monitor.ctrl_routine(pause)
+        self.run_action_bar.handle_pause_action(pause)
+        self.toggle_lock(not pause)
+
     def prepare_run(self, data=None, init_points_flag=True):
         """
         Prepares the run by composing the routine, validating data if present,
@@ -575,6 +620,11 @@ class BadgerHomePage(QWidget):
             Removed data loading implementation and data_panel from mini GUI
         """
         logger.info("Starting run.")
+
+        if self.run_monitor.running:
+            # make sure stopped before starting new one
+            # this could happen if switching run modes from smart_run to normal while routine is paused
+            self.run_monitor.stop()
 
         # flags for loading data
         run_data_flag = load_displayed_data
