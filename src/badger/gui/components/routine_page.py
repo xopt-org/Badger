@@ -49,6 +49,7 @@ from gest_api.vocs import (
 from pydantic import ValidationError
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -99,18 +100,7 @@ from badger.gui.windows.ind_lim_vrange_dialog import (
 )
 from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.utils import filter_generator_config, with_busy_cursor
-from badger.gui.components.archive_search import ArchiveSearchWidget
-from badger.archive import update_run
-from badger.environment import instantiate_env
-from badger.errors import (
-    BadgerEnvNotFoundError,
-    BadgerRoutineError,
-    BadgerEnvVarError,
-    BadgerEnvInstantiationError,
-    VariableRangeError,
-)
-from badger.factory import list_generators, list_env, get_env
+from badger.gui.utils import with_busy_cursor
 from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.routine import Routine
 from badger.settings import init_settings
