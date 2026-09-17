@@ -1835,9 +1835,13 @@ class BadgerRoutinePage(QWidget):
         if not vocs.variables:
             logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
+
+        NO_OBJECTIVE_GENERATORS = ["bax"]
+
         if not vocs.objectives:
-            logger.error("No objectives selected.")
-            raise BadgerRoutineError("no objectives selected")
+            if generator_name not in NO_OBJECTIVE_GENERATORS:
+                logger.error("No objectives selected.")
+                raise BadgerRoutineError("no objectives selected")
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(

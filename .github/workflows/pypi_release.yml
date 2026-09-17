@@ -13,11 +13,11 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        os: [ ubuntu-latest ] # TODO: add windows and macos to matrix
-        python-version: [ "3.11", "3.12", "3.13" ]
+        os: [ubuntu-latest] # TODO: add windows and macos to matrix
+        python-version: ["3.11", "3.12", "3.13"]
     env:
-      DISPLAY: ':99.0'
-      QT_MAC_WANTS_LAYER: 1  # PyQT gui tests involving qtbot interaction on macOS will fail without this
+      DISPLAY: ":99.0"
+      QT_MAC_WANTS_LAYER: 1 # PyQT gui tests involving qtbot interaction on macOS will fail without this
     steps:
       - uses: actions/checkout@v7
 
