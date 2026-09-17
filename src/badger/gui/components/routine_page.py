@@ -1251,7 +1251,7 @@ class BadgerRoutinePage(QWidget):
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
 
-        self.sig_status.emit("Variables loaded.")
+        self.sig_status.emit(f"Badger Environment '{env.name}' loaded")
         QApplication.processEvents()
 
     def get_init_table_header(self):

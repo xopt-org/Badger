@@ -1196,7 +1196,7 @@ class BadgerRoutinePage(QWidget):
 
         self.check_for_nan_vars()
 
-        self.sig_status.emit("Variables loaded.")
+        self.sig_status.emit(f"Badger Environment '{env.name}' loaded")
         QApplication.processEvents()
 
     def check_for_nan_vars(self) -> None:
