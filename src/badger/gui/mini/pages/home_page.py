@@ -511,7 +511,7 @@ class BadgerHomePage(QWidget):
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
-        
+
         # Give this run its own results folder, named after the run's archive
         # name (<env>-<creation_ts>) so the folder used during the run matches
         # the archived run and stays consistent with the visualizer plots. The
