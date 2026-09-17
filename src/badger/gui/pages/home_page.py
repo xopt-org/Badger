@@ -541,7 +541,7 @@ class BadgerHomePage(QWidget):
 
         if self.run_monitor.running:
             self.run_monitor.stop()
-        
+
         # Set data options based on checkbox states from data_panel
         run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points
