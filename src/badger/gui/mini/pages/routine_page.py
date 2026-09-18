@@ -1188,6 +1188,19 @@ class BadgerRoutinePage(QWidget):
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
 
+        self.check_for_nan_vars()
+
+    def check_for_nan_vars(self) -> None:
+        """Show a warning popup to notify user if any var_table values are NaN"""
+        nan_value_keys = self.env_box.get_nan_vars()
+        if nan_value_keys:
+            nan_vars = "\n".join(f" -  {key}" for key in nan_value_keys)
+            QMessageBox.warning(
+                self,
+                "Variables with invalid values",
+                f"Failed to get values for the following variables:\n{nan_vars}",
+            )
+
     def get_init_table_header(self):
         table = self.env_box.init_table
         header_list = []
@@ -1826,9 +1839,13 @@ class BadgerRoutinePage(QWidget):
         if not vocs.variables:
             logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
+
+        NO_OBJECTIVE_GENERATORS = ["bax"]
+
         if not vocs.objectives:
-            logger.error("No objectives selected.")
-            raise BadgerRoutineError("no objectives selected")
+            if generator_name not in NO_OBJECTIVE_GENERATORS:
+                logger.error("No objectives selected.")
+                raise BadgerRoutineError("no objectives selected")
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(

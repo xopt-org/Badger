@@ -39,7 +39,7 @@ All tests should pass. GUI tests use `pytest-qt` and require a display server (t
 
 - **Disabled tests use `x-` prefix.** Files like `x-test_db.py` are excluded from pytest collection (they don't match the `test_*.py` pattern). These require `BADGER_DB_ROOT` to be configured.
 
-- **Coverage reports show warnings.** The `--cov=badger/` in `pyproject.toml` doesn't align with the `src/` layout. Tests pass but coverage data isn't collected. This is a known issue.
+- **Coverage targets the `badger` module.** `pyproject.toml` uses `--cov=badger` (module name, not a path), which resolves correctly under the `src/` layout.
 
 ## Linting and Formatting
 

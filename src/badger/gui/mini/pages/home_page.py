@@ -52,7 +52,7 @@ from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
-from badger.gui.utils import ModalOverlay
+from badger.gui.utils import ModalOverlay, build_bax_results_file
 
 import logging
 
@@ -563,6 +563,16 @@ class BadgerHomePage(QWidget):
         except Exception as e:
             self.sig_routine_invalid.emit()
             raise e
+
+        # Give this run its own results folder, named after the run's archive
+        # name (<env>-<creation_ts>) so the folder used during the run matches
+        # the archived run and stays consistent with the visualizer plots. The
+        # folder is created here, at run start.
+        if routine.generator.name == "bax":
+            archive_name = f"{routine.environment.name}-{routine.creation_ts}"
+            results_file = build_bax_results_file(archive_name, create_dir=True)
+            routine.generator.algorithm_results_file = results_file
+            logger.debug(f"BAX results file set for run: {results_file}")
 
         # Add data to routine before saving tmp file
         if data is not None:
