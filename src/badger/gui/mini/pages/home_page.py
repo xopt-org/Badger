@@ -11,6 +11,7 @@ import os
 import traceback
 from importlib import resources
 
+import numpy as np
 from pandas import DataFrame
 from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt5.QtGui import QIcon
@@ -29,6 +30,8 @@ from badger.archive import (
     get_runs,
     save_tmp_run,
 )
+from badger.errors import BadgerRoutineError
+from badger.gui.components.data_panel import filter_metadata
 from badger.gui.components.data_table import (
     add_row,
     data_table,
@@ -36,7 +39,7 @@ from badger.gui.components.data_table import (
     update_table,
 )
 from badger.gui.mini.pages.routine_page import BadgerRoutinePage
-
+from badger.gui.mini.components.run_controller import SmartRunController
 from badger.gui.components.navigators import TemplateNavigator
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
@@ -82,6 +85,8 @@ class BadgerHomePage(QWidget):
         self.process_manager = process_manager
         self.current_routine = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
+
+        self.run_controller = SmartRunController()  # handle stop/start/resume
 
         self.init_ui()
         self.config_logic()
@@ -167,7 +172,7 @@ class BadgerHomePage(QWidget):
         self.history_browser = self.routine_editor.history_browser
 
         # Add action bar
-        self.run_action_bar = run_action_bar = BadgerActionBar()
+        self.run_action_bar = run_action_bar = BadgerActionBar(minimode=True)
         run_action_bar.docs_name = "minimode"
 
         # Run panel (routine editor + run monitor + data table + action bar)
@@ -224,10 +229,16 @@ class BadgerHomePage(QWidget):
         self.history_browser.history_tree_widget.itemSelectionChanged.connect(
             self.go_run
         )
+        self.history_browser.history_tree_widget.itemSelectionChanged.connect(
+            self.run_controller.set_restart_override_flag
+        )
 
         self.template_browser.template_tree_view.clicked.connect(self.go_template)
 
         self.routine_editor.sig_load_template.connect(self.update_status)
+        self.routine_editor.sig_load_template.connect(
+            self.run_controller.set_restart_override_flag
+        )
         self.routine_editor.sig_save_template.connect(self.update_status)
         self.routine_editor.sig_go_run.connect(self.go_run)
 
@@ -243,6 +254,9 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_run_started.connect(self.run_action_bar.run_start)
         self.run_monitor.sig_routine_finished.connect(
             self.run_action_bar.routine_finished
+        )
+        self.run_monitor.sig_routine_finished.connect(
+            self.run_controller.notify_routine_finished
         )
         self.run_monitor.sig_lock_action.connect(self.run_action_bar.lock)
         self.run_monitor.sig_toggle_reset.connect(self.run_action_bar.toggle_reset)
@@ -260,6 +274,9 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_reset_env.connect(
             self.routine_editor.env_box.var_table.refresh_current_values
         )
+        self.run_action_bar.sig_reset_env.connect(
+            self.run_controller.set_restart_override_flag
+        )
         self.run_action_bar.sig_save_checkpoint.connect(
             self.run_monitor.save_checkpoint
         )
@@ -276,12 +293,42 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_dial_in.connect(
             self.routine_editor.env_box.var_table.refresh_current_values
         )
-        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
+        self.run_action_bar.sig_dial_in.connect(
+            self.run_controller.set_restart_override_flag
+        )
+        self.run_action_bar.sig_smart_run_ctrl.connect(self.smart_run_with_data)
+        self.run_action_bar.sig_run_with_data.connect(
+            lambda: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=True,
+            )
+        )
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
+
+        self.run_controller.sig_pause_ctrl.connect(self.handle_pause)
+        self.run_controller.sig_stop.connect(self.run_monitor.stop)
+        self.run_controller.sig_start.connect(
+            lambda load_displayed_data: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=load_displayed_data,  # arg from signal
+            )
+        )
+
+        self._configure_default_run_action()
+
+    def _configure_default_run_action(self):
+        """Set the default run action as run_until_action"""
+        self.run_action_bar.btn_stop.setDefaultAction(
+            self.run_action_bar.smart_run_action
+        )
+        # configure default to max_eval (tc_idx=0), 100 iterations
+        initial_tc = {"tc_idx": 0, "max_eval": 100, "max_time": 300, "ftol": 0}
+        self.run_monitor.save_termination_condition(initial_tc)
+        self.run_action_bar.update_run_tooltip(initial_tc)
 
     def update_saved_values_from_monitor(self):
         """
@@ -417,7 +464,87 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def prepare_run(self):
+    def loaded_data_keys_compatible(self, vocs) -> bool:
+        """True if the displayed routine has data whose variable/objective keys match vocs."""
+        routine = self.current_routine
+
+        if routine is None or routine.data is None or routine.data.empty:
+            return False
+
+        loaded_data_vars_objs_names = (
+            routine.vocs.variable_names + routine.vocs.objective_names
+        )
+        return set(loaded_data_vars_objs_names) == set(
+            vocs.variable_names + vocs.objective_names
+        )
+
+    def validate_loaded_data_keys(self, vocs, open_dialog: bool = True):
+        """
+        This function is called when adding historical data to a new routine.
+        It makes sure that the keys of data to be loaded match the
+        selected variables and objectives in VOCS. If they do not, raises an error.
+        If the set of data keys matches provided VOCS variables
+        and objectives, opens a dialog to inform user that data has been added.
+
+        Args:
+            vocs: VOCS
+        """
+        # get routine selected from data_panel
+        routine = self.current_routine
+
+        if not self.loaded_data_keys_compatible(vocs):
+            self.run_action_bar.routine_finished()  # Reset action bar
+            if routine is None or routine.data is None or routine.data.empty:
+                raise BadgerRoutineError("The displayed routine has no data to load.")
+            raise BadgerRoutineError(
+                "Keys in loaded data do not match selected VOCS:\n\n"
+                + f"Keys in data to load:\n {routine.vocs.variable_names + routine.vocs.objective_names}\n\n"
+                + f"Selected VOCS:\n {vocs.variable_names + vocs.objective_names}"
+            )
+
+        df = routine.sorted_data
+        data = df.to_dict(orient="list")
+        data = filter_metadata(data)
+        data_keys = data.keys()
+
+        if open_dialog:
+            # Notify user that data has been added to the routine
+            dialog = QMessageBox(
+                text=str(
+                    "Data loaded into routine for the following VOCS:\n\n"
+                    + f"{list(data_keys)}\n\n"
+                    + "Click OK to continue!"
+                ),
+                parent=self,
+            )
+            dialog.setIcon(QMessageBox.Information)
+            dialog.setWindowTitle("Data added to routine")
+            dialog.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            result = dialog.exec_()
+
+            if result == QMessageBox.Cancel:
+                self.run_action_bar.routine_finished()  # Reset action bar
+                raise BadgerRoutineError("Routine initialization cancelled by user.")
+
+    def smart_run_with_data(self):
+        # get current routine_page parameters
+        routine_editor_snapshot = self.routine_editor.get_routine_snapshot()
+        vocs = self.routine_editor.env_box.compose_vocs()[0]
+        data_compatible = self.loaded_data_keys_compatible(vocs)
+
+        self.run_controller.smart_run(
+            routine_params_dict=routine_editor_snapshot,
+            is_running=self.run_monitor.running,  # is a subprocess active
+            is_paused=self.run_monitor.paused,  # is optimization loop paused
+            data_compatible=data_compatible,
+        )
+
+    def handle_pause(self, pause: bool):
+        self.run_monitor.ctrl_routine(pause)
+        self.run_action_bar.handle_pause_action(pause)
+        self.toggle_lock(not pause)
+
+    def prepare_run(self, data=None, init_points_flag=True):
         """
         Prepares the run by composing the routine, validating data if present,
         saving created routine to a yaml file, and passing the routine to
@@ -429,10 +556,6 @@ class BadgerHomePage(QWidget):
                 confirm that initial points are being sampled if there are new columns in
                 the dataframe. If there are new columns and the flag is false, this function
                 raises an error.
-
-        Notes
-        _____
-        Removed data loading implementation from mini GUI,
         """
         logger.info("Preparing new run.")
         try:
@@ -451,6 +574,26 @@ class BadgerHomePage(QWidget):
             routine.generator.algorithm_results_file = results_file
             logger.debug(f"BAX results file set for run: {results_file}")
 
+        # Add data to routine before saving tmp file
+        if data is not None:
+            # Check that routine variables and objectives match loaded data
+            self.validate_loaded_data_keys(routine.vocs, open_dialog=False)
+            data["live"] = 0  # reset live data indicator for loaded data
+            for name in routine.vocs.output_names:
+                if name not in data.columns:
+                    # Add null datapoints for new constraints or observables
+                    data[name] = np.nan
+
+            # Raise error if there are new columns (all NaN) and no initial points selected
+            if data.isna().all().any() and not init_points_flag:
+                self.run_action_bar.routine_finished()  # Reset action bar
+                raise BadgerRoutineError(
+                    "Must select at least one initial point in order to add"
+                    + " new constraints to routine!"
+                )
+
+            routine.data = data
+
         self.current_routine = routine
 
         # Save routine as a temp file
@@ -461,7 +604,9 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, use_termination_condition: bool = False):
+    def start_run(
+        self, use_termination_condition: bool = False, load_displayed_data: bool = False
+    ):
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -469,34 +614,79 @@ class BadgerHomePage(QWidget):
 
         Args:
             use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog.
+            load_displayed_data (bool): If True loads data from the currently displayed routine.
 
         Notes:
             Removed data loading implementation and data_panel from mini GUI
         """
         logger.info("Starting run.")
 
-        self.prepare_run()
+        if self.run_monitor.running:
+            # make sure stopped before starting new one
+            # this could happen if switching run modes from smart_run to normal while routine is paused
+            self.run_monitor.stop()
+
+        # flags for loading data
+        run_data_flag = load_displayed_data
+        init_points_flag = True
+        if run_data_flag:
+            init_points_flag = False
+
+        if run_data_flag:
+            data_to_load = self.load_data_from_run()
+            self.prepare_run(
+                data=data_to_load,
+                init_points_flag=init_points_flag,
+            )  # Pass data to prepare run, to be saved to tmp file and loaded into plots
+            self.run_monitor.init_plots(self.current_routine)
+
+            # Add routine and generator data back to the routine
+            self.current_routine.data = data_to_load
+            if self.current_routine.generator.data is None:
+                self.current_routine.generator.data = data_to_load
+        else:
+            # run data flag is False
+
+            self.prepare_run()
 
         self.run_monitor.start(
             use_termination_condition=use_termination_condition,
-            run_data_flag=False,
-            init_points_flag=True,
+            run_data_flag=run_data_flag,
+            init_points_flag=init_points_flag,
         )
 
-    def start_run_until(self):
+    def load_data_from_run(self):
+        return self.current_routine.sorted_data
+
+    def start_run_until(self, dialog: bool = True):
+        """
+        Starts run with termination condition.
+
+        Args:
+            dialog (bool): If True, opens dialog popup for selecting termination condition.
+                If False skips dialog and uses the tc_config which
+                was previously saved in the run_monitor.
+
+        Notes: If no tc_config is found, opens popup regardless of dialog flag.
+        """
         logger.info("Starting run until condition met.")
-        dlg = BadgerTerminationConditionDialog(
-            self,
-            self.start_run,
-            self.run_monitor.save_termination_condition,
-            self.run_monitor.termination_condition,
-        )
-        self.tc_dialog = dlg
-        try:
-            dlg.exec()
-        finally:
-            self.tc_dialog = None
-        # self.run_monitor.start_until()
+        if dialog or not self.run_monitor.termination_condition:
+            dlg = BadgerTerminationConditionDialog(
+                self,
+                self.start_run,
+                self.run_monitor.save_termination_condition,
+                self.run_monitor.termination_condition,
+            )
+            self.tc_dialog = dlg
+            try:
+                dlg.exec()
+            finally:
+                self.tc_dialog = None
+            self.run_action_bar.update_run_tooltip(
+                self.run_monitor.termination_condition
+            )
+        else:
+            self.start_run(use_termination_condition=True)
 
     def new_run(self):
         logger.info("Creating new run.")
@@ -505,14 +695,25 @@ class BadgerHomePage(QWidget):
         # self.cb_history.insertItem(0, "Optimization in progress...")
         # self.cb_history.setCurrentIndex(0)
 
+        if self.current_routine.data is not None:
+            update_table(
+                self.run_table,
+                self.current_routine.sorted_data,
+                self.current_routine.vocs,
+            )
+            return
+
         header = get_header(self.current_routine)
         reset_table(self.run_table, header)
 
     def run_name(self, name):
         logger.info(f"Updating run name: {name}")
         runs = get_runs()
+        # block signals on update after routine finished, since the selected run is already diplayed
+        self.history_browser.history_tree_widget.blockSignals(True)
         self.history_browser.updateItems(runs)
         self.history_browser._selectItemByRun(name)
+        self.history_browser.history_tree_widget.blockSignals(False)
 
     def update_status(self, info):
         logger.info(f"Updating status: {info}")

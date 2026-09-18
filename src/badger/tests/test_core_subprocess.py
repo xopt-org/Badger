@@ -78,10 +78,9 @@ class TestCore:
         }
         process_with_args = process_manager.remove_from_queue()
         pause_event = process_with_args["pause_event"]
-        data_queue = process_with_args["data_queue"]
+        args_queue = process_with_args["args_queue"]
         wait_event = process_with_args["wait_event"]
         routine_process = process_with_args["process"]
-        data_queue = process_with_args["data_queue"]
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
@@ -95,7 +94,7 @@ class TestCore:
             "start_time": time.time(),
         }
 
-        data_queue.put(arg_dict)
+        args_queue.put(arg_dict)
         wait_event.set()
         pause_event.set()
 
@@ -165,10 +164,9 @@ class TestCore:
         }
         process_with_args = process_manager.remove_from_queue()
         pause_event = process_with_args["pause_event"]
-        data_queue = process_with_args["data_queue"]
+        args_queue = process_with_args["args_queue"]
         wait_event = process_with_args["wait_event"]
         routine_process = process_with_args["process"]
-        data_queue = process_with_args["data_queue"]
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
@@ -178,7 +176,7 @@ class TestCore:
             "start_time": time.time(),
         }
 
-        data_queue.put(arg_dict)
+        args_queue.put(arg_dict)
         wait_event.set()
         pause_event.set()
 

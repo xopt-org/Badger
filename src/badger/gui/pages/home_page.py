@@ -263,6 +263,12 @@ class BadgerHomePage(QWidget):
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
+        self.run_action_bar.sig_run_with_data.connect(
+            lambda: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=True,
+            )
+        )
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -280,7 +286,6 @@ class BadgerHomePage(QWidget):
             self.run_monitor.jump_to_optimal
         )
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
-        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )
@@ -505,14 +510,6 @@ class BadgerHomePage(QWidget):
 
         # Add data to routine before saving tmp file
         if data is not None:
-            # Make sure selected generator is compatible with prior data
-            if routine.generator.name in ["neldermead"]:
-                self.run_action_bar.routine_finished()  # Reset action bar
-                raise BadgerRoutineError(
-                    "Neldermead algorithm is not compatible with data loading. "
-                    + "\nPlease uncheck 'Load displayed data into routine' "
-                    + "or select a different algorithm."
-                )
             # Check that routine variables and objectives match loaded data
             self.validate_loaded_data_keys(routine.vocs)
             self.data_panel.set_routine(routine)
@@ -544,7 +541,11 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, use_termination_condition: bool = False) -> None:
+    def start_run(
+        self,
+        use_termination_condition: bool = False,
+        load_displayed_data: bool = False,
+    ) -> None:
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -555,8 +556,12 @@ class BadgerHomePage(QWidget):
 
         """
         logger.info("Starting run.")
+
+        if self.run_monitor.running:
+            self.run_monitor.stop()
+
         # Set data options based on checkbox states from data_panel
-        run_data_flag = self.data_panel.use_data
+        run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points
 
         if run_data_flag:

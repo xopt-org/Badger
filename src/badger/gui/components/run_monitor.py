@@ -94,7 +94,8 @@ class BadgerOptMonitor(QWidget):
 
         # Run optimization
         self.routine_runner = None
-        self.running = False
+        self.running = False  # is subprocess running
+        self.paused = False  # is optimization paused
 
         # Termination condition for the run
         self.termination_condition = None
@@ -454,6 +455,7 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
+        routine_runner.signals.sig_status.connect(self.sig_status.emit)
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
@@ -479,6 +481,7 @@ class BadgerOptMonitor(QWidget):
         if use_termination_condition:
             self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
+        self.paused = False
         self.routine_runner.run(
             run_data_flag=run_data_flag, init_points_flag=init_points_flag
         )
@@ -533,9 +536,30 @@ class BadgerOptMonitor(QWidget):
         self.extensions_palette.update_palette()
 
         self.sig_progress.emit(self.routine.data.tail(1))
+        self.update_status_with_tc()
 
         # Check critical condition
         self.check_critical()
+
+    def update_status_with_tc(self):
+        termination_condition = self.routine_runner.active_tc
+        if termination_condition:
+            idx = self.termination_condition["tc_idx"]
+            if idx == 0:
+                max_eval = termination_condition["max_eval"]
+                data = self.routine.data
+                if data is not None:
+                    if "live" in data.columns:
+                        # Only count number of live data points
+                        count = sum(1 for live_val in data["live"] if live_val == 1)
+                    else:
+                        count = len(data)
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{count}/{max_eval}]"
+                    )
+        else:
+            self.sig_status.emit(f"Running routine {self.routine.name}...")
 
     def update_curves(self, results: pd.DataFrame | None = None) -> None:
         use_time_axis = self.plot_x_axis == 1
@@ -649,6 +673,7 @@ class BadgerOptMonitor(QWidget):
 
     def routine_finished(self) -> None:
         self.running = False
+        self.paused = False
         self.sig_routine_finished.emit()
 
         self.sig_lock.emit(False)
@@ -729,6 +754,7 @@ class BadgerOptMonitor(QWidget):
         #     self, 'Success!', f'')
 
     def ctrl_routine(self, status) -> None:
+        self.paused = status
         self.sig_pause.emit(status)
 
     def ins_obj_dragged(self, ins_obj) -> None:
