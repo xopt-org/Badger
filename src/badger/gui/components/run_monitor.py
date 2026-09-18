@@ -454,6 +454,7 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
+        routine_runner.signals.sig_status.connect(self.sig_status.emit)
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
