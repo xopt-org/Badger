@@ -13,6 +13,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
+from badger.gui.utils import unset_busy_cursor
+
 
 class ExpandableMessageBox(QDialog):
     def __init__(
@@ -20,6 +22,8 @@ class ExpandableMessageBox(QDialog):
     ):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
+
+        unset_busy_cursor()
 
         # Main layout
         mainLayout = QVBoxLayout(self)

@@ -49,6 +49,7 @@ from gest_api.vocs import (
 from pydantic import ValidationError
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
+    QApplication,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -90,7 +91,7 @@ from badger.gui.components.data_table import (
 from badger.gui.components.env_cbox import BadgerEnvBox
 from badger.gui.components.filter_cbox import BadgerFilterBox
 from badger.gui.components.generator_cbox import BadgerAlgoBox
-from badger.gui.utils import filter_generator_config
+from badger.gui.utils import filter_generator_config, with_busy_cursor
 from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.docs_window import BadgerDocsWindow
 from badger.gui.windows.edit_script_dialog import BadgerEditScriptDialog
@@ -156,6 +157,7 @@ class BadgerRoutinePage(QWidget):
     sig_updated = pyqtSignal(str, str)  # routine name, routine description
     sig_load_template = pyqtSignal(str)  # template path
     sig_save_template = pyqtSignal(str)  # template path
+    sig_status = pyqtSignal(str)
 
     def __init__(self) -> None:
         logger.info("Initializing BadgerRoutinePage.")
@@ -1121,8 +1123,16 @@ class BadgerRoutinePage(QWidget):
         except Exception as e:  # noqa: BLE001 - runs user-provided generator script
             QMessageBox.warning(self, "Invalid script!", str(e))
 
+    @with_busy_cursor
     def select_env(self, i: int):
         logger.info(f"Environment selected: {self.env_box.cb.itemText(i)} (index={i})")
+
+        self.sig_status.emit("Loading variables...")
+        # We need this for the text to actually get drawn in the GUI at the time we want,
+        # since select_env() is a slot function so the Qt main event loop is paused while it runs
+        # and the text drawing won't be processed immediately.
+        QApplication.processEvents()
+
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1247,6 +1257,9 @@ class BadgerRoutinePage(QWidget):
 
         # Update the docs
         self.window_env_docs.update_docs(env.name, "environment")
+
+        self.sig_status.emit(f"Badger Environment '{env.name}' loaded")
+        QApplication.processEvents()
 
     def get_init_table_header(self):
         table = self.env_box.init_table

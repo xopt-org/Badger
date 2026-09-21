@@ -16,7 +16,7 @@ The extension can be used both statically and dynamically during or after a Badg
 
 The BAX visualizer extension is only available when conducting a Badger optimization that satisfies all of the following conditions:
 
-- The optimization uses a Bayesian Generator that performs Bayesian Algorithm Execution (a `BayesianGenerator`).
+- The optimization uses a BAX Generator.
 
 - The routine has **no objectives** defined. BAX uses observations to visualize the optimization process, so it cannot be used with routines that have objectives defined. If objectives are present, remove them from the routine and try again.
 

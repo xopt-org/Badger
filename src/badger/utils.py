@@ -191,8 +191,11 @@ def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") 
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")
-    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
-    suffix = ts_float_to_str(ts_float, format)
+    if hasattr(routine, "creation_ts"):
+        suffix = routine.creation_ts
+    else:  # compatibility with old routines
+        ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
+        suffix = ts_float_to_str(ts_float, format)
     fname = f"{env_name}-{suffix}.yaml"
     return fname
 

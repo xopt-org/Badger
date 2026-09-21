@@ -5,6 +5,8 @@ utilities."""
 import copy
 import logging
 import os
+from collections.abc import Callable
+from functools import wraps
 from importlib import resources
 from typing import Any
 
@@ -12,6 +14,7 @@ from PyQt5.QtCore import QEvent, QObject, QSize, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QAbstractSpinBox,
+    QApplication,
     QComboBox,
     QDialog,
     QLabel,
@@ -127,6 +130,11 @@ def filter_generator_config(name: str, config: dict[str, Any]) -> dict[str, Any]
     else:
         filtered_config = config
 
+    # Filter out all supports_* keys from the config dictionary
+    filtered_config = {
+        k: v for k, v in filtered_config.items() if not k.startswith("supports_")
+    }
+
     return copy.deepcopy(filtered_config)
 
 
@@ -164,3 +172,23 @@ class ModalOverlay(QDialog):
         self.setLayout(layout)
         # Semi-transparent background
         self.setStyleSheet("background-color: rgba(0, 0, 0, 80);")
+
+
+def set_busy_cursor() -> None:
+    QApplication.setOverrideCursor(Qt.BusyCursor)
+
+
+def unset_busy_cursor() -> None:
+    QApplication.restoreOverrideCursor()
+
+
+def with_busy_cursor(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        set_busy_cursor()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            unset_busy_cursor()
+
+    return wrapped

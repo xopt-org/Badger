@@ -31,6 +31,7 @@ from gest_api.vocs import (
 from pydantic import ValidationError
 from PyQt5.QtCore import QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
+    QApplication,
     QFileDialog,
     QLineEdit,
     QMessageBox,
@@ -67,7 +68,7 @@ from badger.gui.components.data_table import (
 )
 from badger.gui.components.navigators import HistoryNavigator
 from badger.gui.mini.components.env_cbox import BadgerEnvBox
-from badger.gui.utils import filter_generator_config
+from badger.gui.utils import filter_generator_config, with_busy_cursor
 from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.docs_window import BadgerDocsWindow
 from badger.gui.windows.ind_lim_vrange_dialog import (
@@ -130,6 +131,7 @@ class BadgerRoutinePage(QWidget):
     sig_save_template = pyqtSignal(str)  # template path
     sig_go_run = pyqtSignal()
     sig_select_env = pyqtSignal(str)
+    sig_status = pyqtSignal(str)
 
     def __init__(self):
         logger.info("Initializing BadgerRoutinePage.")
@@ -1071,8 +1073,16 @@ class BadgerRoutinePage(QWidget):
         except Exception as e:  # noqa: BLE001 - runs user-provided generator script
             QMessageBox.warning(self, "Invalid script!", str(e))
 
+    @with_busy_cursor
     def select_env(self, i: int):
         logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
+
+        self.sig_status.emit("Loading variables...")
+        # We need this for the text to actually get drawn in the GUI at the time we want,
+        # since select_env() is a slot function so the Qt main event loop is paused while it runs
+        # and the text drawing won't be processed immediately.
+        QApplication.processEvents()
+
         # Reset the initial table actions and ratio var ranges
         self.init_table_actions = []
         self.ratio_var_ranges = {}
@@ -1189,6 +1199,9 @@ class BadgerRoutinePage(QWidget):
         self.window_env_docs.update_docs(env.name, "environment")
 
         self.check_for_nan_vars()
+
+        self.sig_status.emit(f"Badger Environment '{env.name}' loaded")
+        QApplication.processEvents()
 
     def check_for_nan_vars(self) -> None:
         """Show a warning popup to notify user if any var_table values are NaN"""
@@ -1839,7 +1852,10 @@ class BadgerRoutinePage(QWidget):
         if not vocs.variables:
             logger.error("No variables selected.")
             raise BadgerRoutineError("no variables selected")
-        if not vocs.objectives:
+
+        NO_OBJECTIVE_GENERATORS = ["bax"]
+
+        if not vocs.objectives and generator_name not in NO_OBJECTIVE_GENERATORS:
             logger.error("No objectives selected.")
             raise BadgerRoutineError("no objectives selected")
 

@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 
 from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 from xopt.generators.bayesian.bax_generator import BaxGenerator
-from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 
 from badger.gui.components.analysis_widget import AnalysisWidget
 from badger.gui.components.bax_visualizer.ui import UI
@@ -323,9 +322,9 @@ class BaxWidget(AnalysisWidget):
         self.update_plots(requires_rebuild=True, interval=0)
 
     def isValidRoutine(self, routine: Routine) -> None:
-        if not isinstance(routine.generator, BayesianGenerator):
+        if not isinstance(routine.generator, BaxGenerator):
             raise HandledException(
-                ValueError, "Bax Visualizer can only be used with a BayesianGenerator."
+                ValueError, "Bax Visualizer can only be used with a BaxGenerator."
             )
         if len(routine.vocs.objective_names) > 0:
             raise HandledException(
