@@ -42,7 +42,7 @@ vocs:               # XOPT VOCS
 vrange_limit_options: {}
 
                     # for each variable:
-                    #   variable: {limit_option_idx: 0 or 1 or 2, ratio_curr: ratio (float), ratio_full: ratio (float), delta: abs value (float)}
+                    #   variable: {limit_option_idx: 0 or 1 or 2 or 3, ratio_curr: ratio (float), ratio_full: ratio (float), delta: abs value (float), exact_bounds: [lower, upper] (list[float, float])}
                     #
                     # For example:
                     #   QUAD:LTUH:620:BCTRL:
@@ -50,14 +50,18 @@ vrange_limit_options: {}
                     #     ratio_curr: 0.1
                     #     ratio_full: 0.1
                     #     delta: 1.2
+                    #     exact_bounds: [45.0, 57.0]
                     # Will set the variable range for QUAD:LTUH:620:BCTRL to a delta (option 2) of +- 1.2 from the current value of the variable.
                     #
                     # Note that ratio_curr is the ratio with respect to the current value,
                     # ratio_full is the ratio with respect to the full variable range, and
-                    # delta is an absolute delta around the current value. Include values
-                    # for all three options even if you do not plan to use them.
+                    # delta is an absolute delta around the current value.
                     # limit_option_idx sets the desired option: 0 will use ratio_curr,
-                    # 1 is ratio_full, 2 is delta.
+                    # 1 is ratio_full, 2 is delta, 3 will use exact_bounds
+                    #
+                    # The first three methods will calculate bounds around the current variable value when the template
+                    # is loaded based on the selected option. If limit_option_idx == 3 for exact_bounds,
+                    # the specified bounds will be used regardless of the current value of the variable.
 
 relative_to_current: true  # (bool) true or false. If true, variable ranges will be set
                     # for each variable based on vrange_limit_options. If False, variable

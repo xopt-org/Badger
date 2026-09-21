@@ -1511,9 +1511,20 @@ class BadgerRoutinePage(QWidget):
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
         self.env_box.var_table.set_scan_range_options()
 
-    def adjust_variable_range_options(self, ratio: float, var_name: str = None):
+    def adjust_variable_range_options(
+        self, ratio: float, var_name: str | None = None
+    ) -> None:
         """
         Scale variable ranges by ratio and recalculate bounds
+
+        Variable range options:
+        - `option_idx == 1`, bounds are calculated as a fraction of the full
+        variable range.
+        - `option_idx == 2`, bounds are calculated as a delta on either side of the
+        current value.
+        - `option_idx == 3`, the stored exact numerical bounds are used.
+        - Otherwise, (`option_idx == 0`) the ratio_curr mode calculated bounds as a
+        fraction of the current value around the current point.
 
         Parameters
         ----------
@@ -1617,7 +1628,32 @@ class BadgerRoutinePage(QWidget):
         self.clear_init_table(reset_actions=False)
         self._fill_init_table()
 
-    def calc_auto_bounds(self):
+    def calc_auto_bounds(self) -> tuple[dict, dict]:
+        """
+        Compute auto-derived bounds for all selected variables.
+
+        Returns
+        -------
+        vrange, clipped: tuple[dict[str, list[float, float]], dict[str, bool]]
+            A tuple of dictionaires. Each dictionary is keyed by variable name.
+            `vrange` is a dict of [low, high] bounds for each variable.
+            `clipped` gives a bool for each variable indicating whether or not the
+            calculated bounds were clipped by hard limits.
+
+
+        The method of calculation is determined for each variable by that variable's
+        configured `limit_option_idx`, stored in `self.ratio_var_ranges[var_name]`.
+        - For `option_idx == 1`, bounds are calculated as a fraction of the full
+        variable range.
+        - For `option_idx == 2`, bounds are calculated as a delta on either side of the
+        current value.
+        - For `option_idx == 3`, the stored exact numerical bounds are used.
+        - Otherwise, (`option_idx == 0`) the ratio_curr mode calculated bounds as a
+        fraction of the current value around the current point.
+        In every case, the resulting bounds are
+        clipped to the variable's hard limits and the `clipped` dictionary records
+        whether a bound was reduced by that clip.
+        """
         logger.info("Calculating auto bounds for selected variables.")
         vname_selected = []
         vrange = {}
@@ -1642,6 +1678,8 @@ class BadgerRoutinePage(QWidget):
 
             option_idx = limit_option["limit_option_idx"]
             # 0: ratio with current value, 1: ratio with full range, 2: delta around current value, 3: exact bounds
+            # Note that options 0, 1, and 2 are recalculated relative to current variable value, option 3 will not
+            # recalculate, this function just makes sure they are within the hard limits for the variable.
             if option_idx == 1:
                 ratio = limit_option["ratio_full"]
                 hard_bounds = vrange[name]

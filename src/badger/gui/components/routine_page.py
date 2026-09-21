@@ -1612,6 +1612,23 @@ class BadgerRoutinePage(QWidget):
         self._fill_init_table()
 
     def calc_auto_bounds(self):
+        """
+        Compute auto-derived bounds for all selected variables.
+
+        The method of calculation is determined for each variable by that variable's
+        configured `limit_option_idx`, stored in `self.ratio_var_ranges[var_name]`.
+        - For `option_idx == 1`, bounds are calculated as a fraction of the full
+        variable range.
+        - For `option_idx == 2`, bounds are calculated as a delta on either side of the
+        current value.
+        - For `option_idx == 3`, the stored exact numerical bounds are used.
+        - Otherwise, (`option_idx == 0`) the ratio_curr mode calculated bounds as a
+        fraction of the current value around the current point.
+        In every case, the resulting bounds are
+        clipped to the variable's hard limits and the `clipped` dictionary records
+        whether a bound was reduced by that clip.
+        """
+
         logger.info("Calculating auto bounds for selected variables.")
         vname_selected = []
         vrange = {}
