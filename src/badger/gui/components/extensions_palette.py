@@ -147,7 +147,7 @@ class ExtensionsPalette(QMainWindow):
             )
         except HandledException as e:
             QMessageBox.critical(self, "Handled Exception Error", str(e))
-        except Exception:  # noqa: BLE001 - Last resort for unhandled exceptions
+        except Exception:  # noqa: BLE001 - explicit unhandled-exception fallback
             QMessageBox.critical(
                 self, "Unhandled Exception Error", traceback.format_exc()
             )
@@ -179,7 +179,7 @@ class ExtensionsPalette(QMainWindow):
             )
         except HandledException as e:
             QMessageBox.critical(self, "Handled Exception Error", str(e))
-        except Exception:  # noqa: BLE001 - Last resort for unhandled exceptions
+        except Exception:  # noqa: BLE001 - explicit unhandled-exception fallback
             QMessageBox.critical(
                 self, "Unhandled Exception Error", traceback.format_exc()
             )
@@ -211,7 +211,7 @@ class ExtensionsPalette(QMainWindow):
             )
         except HandledException as e:
             QMessageBox.critical(self, "Handled Exception Error", str(e))
-        except Exception:  # noqa: BLE001 - Last resort for unhandled exceptions
+        except Exception:  # noqa: BLE001 - explicit unhandled-exception fallback
             QMessageBox.critical(
                 self, "Unhandled Exception Error", traceback.format_exc()
             )
