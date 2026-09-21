@@ -36,8 +36,10 @@ vocs:               # XOPT VOCS
 
                     # Important note about variable bounds: the bounds set here will be used
                     # if relative_to_current is set to false. If relative_to_current is true,
-                    # these bounds will not be used and the bounds for each variable will be
-                    # determined based on the vrange_limit_options below.
+                    # the bounds for each variable will be determined based on the
+                    # vrange_limit_options below and the value of each variable when the template
+                    # is loaded. In that case, bounds specified here will be used as hard
+                    # variable limits.
 
 vrange_limit_options: {}
 
@@ -66,7 +68,9 @@ vrange_limit_options: {}
                     # the GUI will use the hard bounds defined above in vocs/variables as a fallback.
 
 relative_to_current: true  # (bool) true or false. If true, variable ranges will be set
-                    # for each variable based on vrange_limit_options. If False, variable
+                    # for each variable based on vrange_limit_options, and initial points will be calculated
+                    # automatically when the variable is added. The upper and lower bounds specified in the
+                    # vocs/variables dictionary will be used as hard bounds. If False, variable
                     # ranges will be set to the specified upper and lower bounds from the
                     # variables dictionary in vocs.
 initial_point_actions: [{}]  # list of dictionaries
