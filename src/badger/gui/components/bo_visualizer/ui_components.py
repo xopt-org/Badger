@@ -2,7 +2,6 @@
 point table, grid resolution, and plot option checkboxes."""
 
 import logging
-from typing import ClassVar
 
 import pandas as pd
 from PyQt5.QtCore import Qt
@@ -30,12 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 class UIComponents:
-    variables: ClassVar[list[str]] = []
-
     def __init__(
         self,
         default_parameters: ConfigurableOptions,
     ):
+        self.variables: list[str] = []
         self.variable_checkboxes: dict[str, QCheckBox] = {}
         self.ref_inputs: list[QTableWidgetItem] = []
         self.reference_table = QTableWidget()

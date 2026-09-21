@@ -665,7 +665,7 @@ class BadgerListEditor(QWidget):
 
 class BadgerPydanticEditor(QTreeWidget):
     vocs: VOCS = VOCS(variables={})
-    defaults: ClassVar[dict[str, Any]] = {}
+
     generator_name: str = ""
     model_class: type[BaseModel] | None = None
 
@@ -710,6 +710,8 @@ class BadgerPydanticEditor(QTreeWidget):
         value_col: int = 1,
         update_callback: Callable[["BadgerPydanticEditor"], None] | None = None,
     ):
+        self.defaults: dict[str, Any] = {}
+
         QTreeWidget.__init__(self, parent)
         value_col = max(value_col, 1)
         self.value_col = value_col

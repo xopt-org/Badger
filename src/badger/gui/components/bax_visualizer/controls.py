@@ -4,7 +4,7 @@ This module provides the ControlsWidget class which manages the UI controls
 for variable selection and visualization updates in the BAX visualizer.
 """
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -34,14 +34,13 @@ logger = logging.getLogger(__name__)
 
 
 class ControlsWidget(QWidget):
-    ref_inputs: ClassVar[list[QTableWidgetItem]] = []
-
     def __init__(
         self,
         routine: Routine,
         parameters: "Parameters",
         parent: QWidget | None = None,
     ) -> None:
+        self.ref_inputs: list[QTableWidgetItem] = []
         super().__init__(parent=parent)
         self.routine = routine
         self.parameters = parameters

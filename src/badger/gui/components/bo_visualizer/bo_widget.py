@@ -59,7 +59,7 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 
 class BOPlotWidget(AnalysisWidget):
     generator: BayesianGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
+
     df_length: float = float("inf")
     initialized: bool = False
 
@@ -69,6 +69,8 @@ class BOPlotWidget(AnalysisWidget):
         parent: QWidget | None = None,
     ):
         logger.debug("Initializing BOPlotWidget")
+
+        self.parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
         super().__init__(routine, parent)
 
         self.create_ui()
