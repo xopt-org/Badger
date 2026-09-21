@@ -77,24 +77,23 @@ from badger import environment
 
 
 class Environment(environment.Environment):
-
-    name = 'sphere_3d'  # name of the environment
+    name = "sphere_3d"  # name of the environment
     variables = {  # variables and their hard-limited ranges
-        'x0': [-1, 1],
-        'x1': [-1, 1],
-        'x2': [-1, 1],
+        "x0": [-1, 1],
+        "x1": [-1, 1],
+        "x2": [-1, 1],
     }
-    observables = ['f']  # measurements
+    observables = ["f"]  # measurements
 
     # Internal variables to store the current values of
     # the variables and observables
     _variables = {
-        'x0': 0.0,
-        'x1': 0.0,
-        'x2': 0.0,
+        "x0": 0.0,
+        "x1": 0.0,
+        "x2": 0.0,
     }
     _observations = {
-        'f': None,
+        "f": None,
     }
 
     # Variable getter -- tells Badger how to get current values of the variables
@@ -109,10 +108,13 @@ class Environment(environment.Environment):
             self._variables[var] = x
 
         # Filling up the observations
-        f = self._variables['x0'] ** 2 + self._variables['x1'] ** 2 + \
-            self._variables['x2'] ** 2
+        f = (
+            self._variables["x0"] ** 2
+            + self._variables["x1"] ** 2
+            + self._variables["x2"] ** 2
+        )
 
-        self._observations['f'] = [f]
+        self._observations["f"] = [f]
 
     # Observable getter -- how to get current values of the observables
     def get_observables(self, observable_names):
