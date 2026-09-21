@@ -1100,7 +1100,7 @@ class BadgerRoutinePage(QWidget):
         try:
             tmp = {}
             # User-provided script must define a `generate` function, so exec is required here.
-            exec(self.script, tmp)  # noqa: S102
+            exec(self.script, tmp)  # noqa: S102 - runs user-provided generator script
             try:
                 tmp["generate"]  # test if generate function is defined
             except KeyError as e:
