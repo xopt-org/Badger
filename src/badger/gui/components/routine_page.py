@@ -1120,7 +1120,7 @@ class BadgerRoutinePage(QWidget):
             self.generator_box.edit.set_params_from_generator(
                 self.routine.generator.name, params_generator, vocs
             )
-        except Exception as e:  # noqa: BLE001 - runs user-provided generator script
+        except Exception as e:  # noqa: BLE001 - explicit unhandled-exception fallback
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     @with_busy_cursor
@@ -1942,7 +1942,7 @@ class BadgerRoutinePage(QWidget):
     def review(self):
         try:
             routine = self._compose_routine()
-        except Exception:  # noqa: BLE001 - routine compose reports via dialog
+        except Exception:  # noqa: BLE001 - explicit unhandled-exception fallback
             return QMessageBox.critical(
                 self, "Invalid routine!", traceback.format_exc()
             )
@@ -1962,7 +1962,7 @@ class BadgerRoutinePage(QWidget):
                 "Update success!",
                 f"Routine {self.routine.name} description was updated!",
             )
-        except Exception:  # noqa: BLE001 - update reports via dialog
+        except Exception:  # noqa: BLE001 - catch all exceptions during routine update
             return QMessageBox.critical(self, "Update failed!", traceback.format_exc())
 
     def set_default_generator(self, generator_name: str) -> None:
