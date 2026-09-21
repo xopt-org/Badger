@@ -292,7 +292,7 @@ class BadgerOptMonitor(QWidget):
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
             except AttributeError:
-                logger.debug("No constraints plot to remove", exc_info=True)
+                logger.debug("No constraints plot to remove")
 
             # if statics exist delete that plot
             try:
@@ -300,7 +300,7 @@ class BadgerOptMonitor(QWidget):
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
             except AttributeError:
-                logger.debug("No observables plot to remove", exc_info=True)
+                logger.debug("No observables plot to remove")
 
             # if no routine is loaded set button to disabled
             self.sig_lock_action.emit()
@@ -352,7 +352,7 @@ class BadgerOptMonitor(QWidget):
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
             except AttributeError:
-                logger.debug("No constraints plot to remove", exc_info=True)
+                logger.debug("No constraints plot to remove")
 
         # Configure state plots
         if sta_names:
@@ -378,7 +378,7 @@ class BadgerOptMonitor(QWidget):
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
             except AttributeError:
-                logger.debug("No observables plot to remove", exc_info=True)
+                logger.debug("No observables plot to remove")
 
         # Reset inspectors
         self.inspector_objective.setValue(0)
@@ -668,7 +668,7 @@ class BadgerOptMonitor(QWidget):
             try:
                 env.interface.stop_recording(os.path.join(path, filename))
             except AttributeError:  # recording was not enabled
-                pass
+                logger.debug("Recording was not enabled")
 
             self.sig_run_name.emit(run["filename"])
             self.sig_status.emit(
@@ -696,12 +696,12 @@ class BadgerOptMonitor(QWidget):
             try:
                 del self.routine_runner.routine.environment
             except AttributeError:  # env already destroyed
-                pass
+                logger.debug("Environment already destroyed")
 
             try:
                 del self.routine.environment
             except AttributeError:  # env already destroyed
-                pass
+                logger.debug("Environment already destroyed")
 
     def on_error(self, error: Exception) -> None:
         details = error._details if hasattr(error, "_details") else None
