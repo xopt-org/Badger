@@ -1447,7 +1447,27 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
         self.env_box.var_table.set_scan_range_options()
 
-    def set_ind_vrange(self, vname, config):
+    def set_ind_vrange(self, vname: str, config: dict) -> None:
+        """
+        Apply a variable-specific range policy to a single environment variable.
+
+        The selected mode is determined by ``config["limit_option_idx"]`` and can
+        represent a fixed percentage of the current value, a percentage of the full
+        hard-range width, a fixed absolute delta around the current value, or an exact
+        bound pair. The method reads the live environment value for ``vname``, computes
+        the candidate bounds, clips them to the hard limits from ``config["lower_bound"]``
+        and ``config["upper_bound"]``, and applies the result to the GUI variable table.
+        Initial points for that variable are recalculated with the new bounds.
+
+        Parameters
+        ----------
+        vname : str
+            Name of the variable whose bounds should be updated.
+        config : dict
+            Bounds configuration for the variable, including the hard limits,
+            ``limit_option_idx``, ``ratio_full``, ``ratio_curr``, ``delta``, and
+            ``exact_bounds``.
+        """
         logger.info(
             f"Setting individual variable range for {vname} with config: {config}"
         )

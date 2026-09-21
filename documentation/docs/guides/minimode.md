@@ -105,7 +105,7 @@ Clicking the gear icon on a variable row opens a dialog with:
     - ratio wrt current value: Bounds are calculated as a fraction of the current value on either side of the current value
     - ratio wrt full range: Bounds are calculated as a fraction of the full range on either side of the current value
     - delta around current value: Bounds are calculated as a delta on either side of the current value
-    - exact bounds: the input numerical bounds are used
+    - exact bounds: the input numerical bounds are used.
 - A **bounds preview bar** showing what the resulting bounds will be
 - Hard limits displayed (but not editable)
 

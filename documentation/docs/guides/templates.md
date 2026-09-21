@@ -61,7 +61,9 @@ vrange_limit_options: {}
                     #
                     # The first three methods will calculate bounds around the current variable value when the template
                     # is loaded based on the selected option. If limit_option_idx == 3 for exact_bounds,
-                    # the specified bounds will be used regardless of the current value of the variable.
+                    # the specified bounds will be used regardless of the current value of the variable. If the
+                    # exact_bounds option is selected without specifying numerical bounds in vrange_limit_options,
+                    # the GUI will use the hard bounds defined above in vocs/variables as a fallback.
 
 relative_to_current: true  # (bool) true or false. If true, variable ranges will be set
                     # for each variable based on vrange_limit_options. If False, variable
