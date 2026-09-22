@@ -35,9 +35,11 @@ def archive_run(routine, states=None):
 
     data = routine.sorted_data
     data_dict = data.to_dict("list")
-    if hasattr(routine, "creation_ts"):
-        suffix = routine.creation_ts
-    else:  # compatibility with old routines
+    # creation_ts is an Optional[str] field on Routine, so hasattr() is
+    # always True — routines built from YAML templates (badger run /
+    # agent-proposed drafts) carry None and need the timestamp fallback.
+    suffix = getattr(routine, "creation_ts", None)
+    if not suffix:  # old routines or template-built routines
         ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
         suffix = ts_float_to_str(ts_float, "lcls-fname")
     tokens = suffix.split("-")

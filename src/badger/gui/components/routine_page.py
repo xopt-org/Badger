@@ -38,6 +38,24 @@ import numpy as np
 import pandas as pd
 import yaml
 from coolname import generate_slug
+from xopt import VOCS
+from xopt.vocs import random_inputs
+from xopt.generators import (
+    get_generator_defaults,
+    all_generator_names,
+    get_generator_dynamic,
+)
+
+try:
+    # xopt >= 3.1.2 moved get_local_region to xopt.vocs and swapped its arg order
+    # to (vocs, center_point, fraction); wrap to preserve our (center_point, vocs,
+    # fraction) call convention.
+    from xopt.vocs import get_local_region as _get_local_region
+
+    def get_local_region(center_point, vocs, fraction=0.1):
+        return _get_local_region(vocs, center_point, fraction)
+except ImportError:  # older xopt
+    from xopt.utils import get_local_region
 from gest_api.vocs import (
     BaseConstraint,
     BaseObjective,

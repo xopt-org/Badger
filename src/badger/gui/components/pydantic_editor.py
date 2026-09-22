@@ -217,11 +217,14 @@ class BadgerResolvedType:
     @classmethod
     def resolve_qt(
         cls,
-        annotation: type[Any] | Union[Any, None] | None,
+        annotation: "type[Any] | Union[Any, None] | BadgerResolvedType | None",
         default: float | int | bool | dict[str, Any] | list[Any] | None = None,
         editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem] | None = None,
     ) -> QWidget | None:
-        resolved_type = BadgerResolvedType.resolve(annotation)
+        if isinstance(annotation, BadgerResolvedType):
+            resolved_type = annotation
+        else:
+            resolved_type = BadgerResolvedType.resolve(annotation)
         widget: QWidget | None = None
         property_name = editor_info[1].text(0) if editor_info is not None else ""
 
@@ -267,7 +270,7 @@ class BadgerResolvedType:
                     f"Property name {property_name}: Dict subtypes must be basic types"
                 )
 
-            widget = BadgerListEditor(primary_type.main, secondary_type.main)
+            widget = BadgerListEditor(primary_type, secondary_type)
 
             if default is not None and isinstance(default, dict):
                 for k, v in default.items():
@@ -296,7 +299,7 @@ class BadgerResolvedType:
                     f"Property name {property_name}: List subtype must be a basic type"
                 )
             widget = BadgerListEditor(
-                primary_type.main, secondary_type.main if secondary_type else None
+                primary_type, secondary_type if secondary_type else None
             )
 
             if default is not None and isinstance(default, list):
@@ -579,8 +582,8 @@ class BadgerListEditor(QWidget):
 
     def __init__(
         self,
-        widget_type: type[Any],
-        widget_type2: type[Any] | None = None,
+        widget_type: "type[Any] | BadgerResolvedType",
+        widget_type2: "type[Any] | BadgerResolvedType | None" = None,
         parent: QWidget | None = None,
     ):
         super().__init__(parent)

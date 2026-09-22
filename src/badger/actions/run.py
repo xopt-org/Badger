@@ -175,3 +175,265 @@ def run_routine(args):
     # }
 
     # run_n_archive(routine, args.yes, args.save, args.verbose)
+
+
+def run_routine_gui(routine, auto_run=False, watch_routine=None, watch_stop=None):
+    """
+    Launch Badger GUI with pre-loaded routine.
+
+    Args:
+        routine: Routine object to load
+        auto_run: If True, automatically start optimization after loading
+        watch_routine: Optional path to a YAML file the GUI should watch
+            for changes; on file modification the GUI stops any active
+            run, reloads, and re-starts (auto_run=True only).
+        watch_stop: Optional path to a sentinel file the GUI should watch
+            for existence; when it appears, the GUI gracefully stops the
+            active run (keeping the window alive) and deletes the file.
+    """
+    from badger.gui import launch_gui
+
+    launch_gui(
+        routine=routine,
+        auto_run=auto_run,
+        watch_routine=watch_routine,
+        watch_stop=watch_stop,
+    )
+
+
+def run_routine_headless(routine, auto_run=False, verbose=2):
+    """
+    Run routine in headless mode using subprocess.
+
+    Args:
+        routine: Routine object to run
+        auto_run: If True, skip confirmation prompt
+        verbose: Verbosity level (0, 1, or 2)
+    """
+    from multiprocessing import Process, Queue, Event, Pipe
+    from badger.core_subprocess import run_routine_subprocess
+    from badger.archive import save_tmp_run
+    from badger.settings import init_settings
+
+    # Display routine summary
+    print(f"\n{'=' * 60}")
+    print(f"Routine: {routine.name}")
+    print(f"Environment: {routine.environment.name}")
+    print(f"Generator: {routine.generator.name}")
+    print(f"Variables: {list(routine.vocs.variables.keys())}")
+    print(f"Objectives: {list(routine.vocs.objectives.keys())}")
+    if routine.vocs.constraints:
+        print(f"Constraints: {list(routine.vocs.constraints.keys())}")
+    print(f"{'=' * 60}\n")
+
+    # Ask for confirmation if not auto_run
+    if not auto_run:
+        try:
+            response = input("Start optimization? [y/N]: ")
+            if response.lower() != "y":
+                print("Cancelled.")
+                return
+        except (EOFError, KeyboardInterrupt):
+            print("\nCancelled.")
+            return
+
+    # Set up subprocess communication (matching GUI architecture)
+    # CRITICAL: Must create these BEFORE starting subprocess with 'spawn'
+    data_queue = Queue()
+    evaluate_queue = Pipe()
+    stop_event = Event()
+    pause_event = Event()
+    wait_event = Event()
+    config_path = init_settings()._instance.config_path
+
+    # Start subprocess FIRST (matching GUI pattern)
+    process = Process(
+        target=run_routine_subprocess,
+        args=(
+            data_queue,
+            evaluate_queue,
+            stop_event,
+            pause_event,
+            wait_event,
+            config_path,
+        ),
+    )
+    process.start()
+
+    # Give subprocess time to start and reach wait_event.wait()
+    # With 'spawn' on macOS, starting Python interpreter takes time
+    time.sleep(3)
+
+    # NOW calculate initial points and prepare data
+    from badger.routine import calculate_initial_points
+    import pandas as pd
+
+    if routine.initial_points is None or len(routine.initial_points) == 0:
+        init_points = calculate_initial_points(
+            routine.initial_point_actions,
+            routine.vocs,
+            routine.environment,
+        )
+        try:
+            init_points = pd.DataFrame(init_points)
+        except (IndexError, ValueError):
+            init_points = pd.DataFrame(init_points, index=[0])
+        routine.initial_points = init_points
+
+    # Record start time and save routine
+    start_time = time.time()
+    routine_filename = save_tmp_run(routine)
+
+    # Prepare arguments to send to subprocess
+    arg_dict = {
+        "routine_id": routine.id if hasattr(routine, "id") else None,
+        "routine_filename": routine_filename,
+        "routine_name": routine.name,
+        "variable_ranges": routine.vocs.variables,
+        "initial_points": routine.initial_points,
+        "evaluate": True,
+        "archive": True,
+        "termination_condition": None,
+        "start_time": start_time,
+        "testing": False,
+        "run_data": False,
+        "init_points": True,
+    }
+
+    # NOW put data in queue (subprocess is already running and waiting)
+    data_queue.put(arg_dict)
+
+    # Signal subprocess to begin execution
+    pause_event.set()  # Start unpaused
+    wait_event.set()  # Signal subprocess to begin
+
+    # Monitor progress with pause/resume support using signal handler (like old run_n_archive)
+    print("Optimization started. Press Ctrl+C to pause.\n")
+    iteration = 0
+    # last_data = None
+
+    # Storage for signal handler state
+    storage = {"paused": False, "should_exit": False}
+
+    def sigint_handler(*args):
+        """Signal handler for Ctrl+C - sets pause flag or raises to exit"""
+        if storage["paused"]:
+            # Second Ctrl+C while paused - raise to interrupt input() and exit
+            print("")  # new line
+            storage["should_exit"] = True
+            raise KeyboardInterrupt  # Interrupt the input() call
+        else:
+            # First Ctrl+C - request pause
+            storage["paused"] = True
+
+    # Install signal handler
+    signal.signal(signal.SIGINT, sigint_handler)
+
+    # Main monitoring loop - check pause flag instead of using try-except
+    while process.is_alive() and not storage["should_exit"]:
+        time.sleep(0.1)
+
+        # Check if paused - handle pause prompt
+        if storage["paused"]:
+            pause_event.clear()  # Pause subprocess
+            print("")  # new line
+
+            try:
+                res = input(
+                    "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
+                )
+                while res != "":
+                    # Invalid input, ask again
+                    sys.stdout.write("\033[F")  # Move cursor up to erase line
+                    res = input(
+                        "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
+                    )
+            except KeyboardInterrupt:
+                # Ctrl+C pressed during input - signal handler already set should_exit=True
+                pass
+
+            # Check if exit was requested during pause
+            if storage["should_exit"]:
+                print("\nStopping optimization...")
+                stop_event.set()
+                break
+
+            # Resume
+            print("Resuming optimization...\n")
+            storage["paused"] = False
+            pause_event.set()  # Resume subprocess
+
+        # Check for data from subprocess via evaluate_queue (Pipe)
+        if evaluate_queue[1].poll():
+            while evaluate_queue[1].poll():
+                results = evaluate_queue[1].recv()
+                df = results[0]  # First element is the data DataFrame
+                if len(df) > iteration:
+                    iteration = len(df)
+                    # last_data = df
+
+        # Check for errors in data_queue
+        if not data_queue.empty():
+            try:
+                error_title, error_traceback = data_queue.get()
+                print(f"\n❌ Error: {error_title}")
+                print(error_traceback)
+                break
+            except ValueError:
+                pass
+
+    # Restore default signal handler
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+    # Wait for completion
+    process.join(timeout=5)
+    if process.is_alive():
+        process.terminate()
+        process.join()
+
+    # Final status
+    elapsed = time.time() - start_time
+    print(f"\n{'=' * 60}")
+    print(f"Optimization completed in {elapsed:.2f}s")
+    print(f"Total iterations: {iteration}")
+    print(f"{'=' * 60}\n")
+
+
+def run_routine_cli(args):
+    """
+    Main CLI handler for running routines from templates.
+
+    Args:
+        args: Parsed command-line arguments
+    """
+    try:
+        # Load template using smart detection
+        from badger.utils import load_template_smart
+
+        config = load_template_smart(args.template)
+
+        # Create routine from template
+        routine = Routine(**config)
+
+        # Determine mode (default to GUI if neither specified)
+        if args.headless:
+            # Headless subprocess mode
+            run_routine_headless(routine, auto_run=args.auto_run)
+        else:
+            # GUI mode (default)
+            watch_routine = getattr(args, "watch_routine", None)
+            watch_stop = getattr(args, "watch_stop", None)
+            run_routine_gui(
+                routine,
+                auto_run=args.auto_run,
+                watch_routine=watch_routine,
+                watch_stop=watch_stop,
+            )
+
+    except Exception as e:
+        logger.error(f"Error running routine: {e}")
+        print(f"Error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
