@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+from PyQt5.QtWidgets import QDialog
 
 
 @pytest.fixture(autouse=True)
@@ -9,6 +10,10 @@ def suppress_popups(mocker):
     mocker.patch(
         "badger.gui.windows.expandable_message_box.ExpandableMessageBox.exec_",
         return_value=None,
+    )
+    mocker.patch(
+        "badger.gui.windows.termination_reached_dialog.BadgerTerminationReachedDialog.exec_",
+        return_value=QDialog.Rejected,
     )
 
 

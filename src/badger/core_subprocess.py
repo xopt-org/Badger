@@ -31,6 +31,10 @@ from badger.errors import (
     MEASUREMENT_ACTION_TYPE,
     MEASUREMENT_ACTION_RETRY,
     MEASUREMENT_ACTION_ABORT,
+    TERMINATION_REACHED_TYPE,
+    TERMINATION_ACTION_TYPE,
+    TERMINATION_ACTION_CONTINUE,
+    TERMINATION_ACTION_END,
 )
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
@@ -89,6 +93,47 @@ def evaluate_measurement_with_retry(
                     )
 
 
+def pause_for_termination_dialog_action(
+    queue: mp.Queue,
+    stop_process: mp.Event,
+    pause_process: mp.Event,
+    dialog_action_queue: mp.Queue,
+    tc_condition: dict,
+) -> None:
+    """Pause the run and wait for user action when run-until condition is reached."""
+    queue.put(
+        {
+            "type": TERMINATION_REACHED_TYPE,
+            "tc_condition": tc_condition,
+        }
+    )
+
+    while True:
+        if stop_process.is_set():
+            raise BadgerRunTerminated
+
+        try:
+            msg = dialog_action_queue.get(
+                timeout=0.1
+            )  # short timeout here, so we can make checks for stop_process
+        except Empty:
+            continue
+
+        if (
+            isinstance(msg, dict)
+            and msg.get("type") == TERMINATION_ACTION_TYPE
+            and msg.get("action")
+            in [TERMINATION_ACTION_CONTINUE, TERMINATION_ACTION_END]
+        ):
+            if msg["action"] == TERMINATION_ACTION_CONTINUE:
+                pause_process.set()
+                return
+
+            raise BadgerRunTerminated(
+                "Run terminated after termination condition reached"
+            )
+
+
 def convert_to_solution(result: DataFrame, routine: Routine):
     """
     This method is passed the latest evaluated solution and converts that to a printable format for the terminal.
@@ -141,6 +186,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
 
 def run_routine_subprocess(
+    args_queue: mp.Queue,
     queue: mp.Queue,
     evaluate_queue: mp.Pipe,
     stop_process: mp.Event,
@@ -192,7 +238,7 @@ def run_routine_subprocess(
 
     args: dict[str, Any] = {}
     try:
-        args = queue.get(timeout=1)
+        args = args_queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
     except Exception as e:
         logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {str(e)}")
@@ -323,16 +369,46 @@ def run_routine_subprocess(
 
                     if count >= max_eval:
                         logger.info(
-                            "Max evaluations reached. Terminating optimization."
+                            "Max evaluations reached. Pausing optimization and waiting for user action."
                         )
-                        raise BadgerRunTerminated
+                        pause_process.clear()
+                        pause_for_termination_dialog_action(
+                            queue=queue,
+                            stop_process=stop_process,
+                            pause_process=pause_process,
+                            dialog_action_queue=dialog_action_queue,
+                            tc_condition={
+                                "type": "max_eval",
+                                "config": max_eval,
+                                "state": count,
+                            },
+                        )
+                        # reset termination condition
+                        termination_condition = None
+                        continue
                 elif idx == 1:
                     max_time = tc_config["max_time"]
                     dt = time.time() - start_time
                     logger.debug(f"Checking max_time termination: {dt} >= {max_time}")
                     if dt >= max_time:
-                        logger.info("Max time reached. Terminating optimization.")
-                        raise BadgerRunTerminated
+                        logger.info(
+                            "Max time reached. Pausing optimization and waiting for user action."
+                        )
+                        pause_process.clear()
+                        pause_for_termination_dialog_action(
+                            queue=queue,
+                            stop_process=stop_process,
+                            pause_process=pause_process,
+                            dialog_action_queue=dialog_action_queue,
+                            tc_condition={
+                                "type": "max_time",
+                                "config": max_time,
+                                "state": dt,
+                            },
+                        )
+                        # reset termination condition
+                        termination_condition = None
+                        continue
 
             candidates = routine.generator.generate(1)[0]
             logger.debug(f"Generated candidates: {candidates}")

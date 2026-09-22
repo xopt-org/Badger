@@ -22,12 +22,19 @@ from badger.errors import (
     MEASUREMENT_ACTION_TYPE,
     MEASUREMENT_ACTION_RETRY,
     MEASUREMENT_ACTION_ABORT,
+    TERMINATION_REACHED_TYPE,
+    TERMINATION_ACTION_TYPE,
+    TERMINATION_ACTION_CONTINUE,
+    TERMINATION_ACTION_END,
 )
 from badger.tests.utils import get_current_vars
 from badger.routine import calculate_variable_bounds, calculate_initial_points
 from badger.settings import init_settings
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.windows.measurement_retry_dialog import BadgerMeasurementRetryDialog
+from badger.gui.windows.termination_reached_dialog import (
+    BadgerTerminationReachedDialog,
+)
 from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
@@ -40,6 +47,7 @@ class BadgerRoutineSignals(QObject):
     error = pyqtSignal(Exception)
     info = pyqtSignal(str)
     states = pyqtSignal(str)
+    sig_status = pyqtSignal(str)  # status message information
 
 
 class BadgerRoutineSubprocess:
@@ -163,6 +171,7 @@ class BadgerRoutineSubprocess:
             self.routine_process = process_with_args["process"]
             self.stop_event = process_with_args["stop_event"]
             self.pause_event = process_with_args["pause_event"]
+            self.args_queue = process_with_args["args_queue"]
             self.data_and_error_queue = process_with_args["data_queue"]
             self.evaluate_queue = process_with_args["evaluate_queue"]
             self.wait_event = process_with_args["wait_event"]
@@ -183,7 +192,7 @@ class BadgerRoutineSubprocess:
                 "init_points": init_points_flag,
             }
 
-            self.data_and_error_queue.put(arg_dict)
+            self.args_queue.put(arg_dict)
             self.wait_event.set()
             self.pause_event.set()
             self.setup_timer()
@@ -261,6 +270,17 @@ class BadgerRoutineSubprocess:
                             "action": action,
                         }
                     )
+                elif (
+                    isinstance(msg, dict)
+                    and msg.get("type") == TERMINATION_REACHED_TYPE
+                ):
+                    action = self.handle_termination_reached(msg)
+                    self.dialog_action_queue.put(
+                        {
+                            "type": TERMINATION_ACTION_TYPE,
+                            "action": action,
+                        }
+                    )
                 else:
                     error_title, error_traceback = msg
                     BadgerError(error_title, error_traceback)
@@ -280,6 +300,33 @@ class BadgerRoutineSubprocess:
         if result == QDialog.Accepted:
             return MEASUREMENT_ACTION_RETRY
         return MEASUREMENT_ACTION_ABORT
+
+    def handle_termination_reached(self, msg: dict) -> str:
+        # update status
+        tc_condition = msg.get("tc_condition")
+        status_str = self._format_tc_status_str(tc_condition)
+        self.signals.sig_status.emit(status_str)
+
+        # launch dialog
+        dialog = BadgerTerminationReachedDialog(
+            tc_condition=tc_condition,
+            text=msg.get("title"),
+        )
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
+            return TERMINATION_ACTION_CONTINUE
+        return TERMINATION_ACTION_END
+
+    def _format_tc_status_str(self, tc_condition: dict) -> str:
+        tc_type = tc_condition["type"]
+        if tc_type == "max_eval":
+            tc_type_text = "N iterations"
+            state = tc_condition["state"]
+        else:
+            tc_type_text = "timeout"
+            state = f"{tc_condition['state']:.2f} s"
+        return f"Routine {self.routine.name} paused: Condition {tc_type_text} = {state} reached"
 
     def after_evaluate(self, results: pd.DataFrame) -> None:
         logger.debug("Received evaluation results from subprocess.")
@@ -329,8 +376,10 @@ class BadgerRoutineSubprocess:
         pause : bool
         """
         if pause:
+            self.signals.sig_status.emit(f"Routine {self.routine.name} paused")
             self.pause_event.clear()
         else:
+            self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             self.pause_event.set()
 
     def close(self) -> None:
