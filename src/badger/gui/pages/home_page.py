@@ -287,7 +287,6 @@ class BadgerHomePage(QWidget):
             self.run_monitor.jump_to_optimal
         )
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
-        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )
@@ -512,14 +511,6 @@ class BadgerHomePage(QWidget):
 
         # Add data to routine before saving tmp file
         if data is not None:
-            # Make sure selected generator is compatible with prior data
-            if routine.generator.name in ["neldermead"]:
-                self.run_action_bar.routine_finished()  # Reset action bar
-                raise BadgerRoutineError(
-                    "Neldermead algorithm is not compatible with data loading. "
-                    + "\nPlease uncheck 'Load displayed data into routine' "
-                    + "or select a different algorithm."
-                )
             # Check that routine variables and objectives match loaded data
             self.validate_loaded_data_keys(routine.vocs)
             self.data_panel.set_routine(routine)
@@ -566,6 +557,10 @@ class BadgerHomePage(QWidget):
 
         """
         logger.info("Starting run.")
+
+        if self.run_monitor.running:
+            self.run_monitor.stop()
+
         # Set data options based on checkbox states from data_panel
         run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points

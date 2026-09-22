@@ -93,6 +93,7 @@ class BadgerRoutineSubprocess:
         self.termination_condition = (
             None  # additional option to control the optimization flow
         )
+        self.active_tc = None
         self.start_time = None  # track the time cost of the run
         self.last_dump_time = None  # track the time the run data got dumped
         self.data_and_error_queue = None
@@ -114,6 +115,7 @@ class BadgerRoutineSubprocess:
         termination_condition : dict
         """
         self.termination_condition = termination_condition
+        self.active_tc = termination_condition
 
     def run(self, run_data_flag: bool = False, init_points_flag: bool = False) -> None:
         """
@@ -281,6 +283,11 @@ class BadgerRoutineSubprocess:
                             "action": action,
                         }
                     )
+                elif (
+                    isinstance(msg, dict) and msg.get("type") == "termination_extended"
+                ):
+                    # check whether termination condition has been updated in subprocess
+                    self.active_tc = msg["termination_condition"]
                 else:
                     error_title, error_traceback = msg
                     BadgerError(error_title, error_traceback)
