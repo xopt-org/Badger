@@ -286,24 +286,29 @@ class TestRunMonitor:
 
     def test_pause_play(self, qtbot, home_page):
         monitor = home_page.run_monitor
-        action_bar = home_page.run_action_bar
-
         monitor.termination_condition = {
             "tc_idx": 0,
             "max_eval": 10,
         }
         spy = QSignalSpy(monitor.sig_pause)
 
+        # Start a real run so pause and resume are tested against an active monitor.
         monitor.start(True)
-        # qtbot.wait(500)
-
-        qtbot.mouseClick(action_bar.btn_ctrl, Qt.MouseButton.LeftButton)
-        assert len(spy) == 1
-
         qtbot.wait(500)
 
-        qtbot.mouseClick(action_bar.btn_ctrl, Qt.MouseButton.LeftButton)
+        monitor.ctrl_routine(True)
+        # The state, signal, and cleared event confirm that the active run paused.
+        assert monitor.paused is True
+        assert monitor.routine_runner.pause_event.is_set() is False
+        assert len(spy) == 1
+        assert spy[0][0] is True
+
+        monitor.ctrl_routine(False)
+        # The state, signal, and set event confirm that the active run resumed.
+        assert monitor.paused is False
+        assert monitor.routine_runner.pause_event.is_set() is True
         assert len(spy) == 2
+        assert spy[1][0] is False
 
         while monitor.running:
             qtbot.wait(100)

@@ -42,6 +42,7 @@ from badger.routine import Routine
 from badger.log import configure_process_logging
 from xopt.errors import FeasibilityError, XoptError
 from xopt.vocs import select_best
+from xopt.generators.sequential import SequentialGenerator
 
 
 logger = logging.getLogger(__name__)
@@ -132,6 +133,78 @@ def pause_for_termination_dialog_action(
             raise BadgerRunTerminated(
                 "Run terminated after termination condition reached"
             )
+
+
+def check_termination_condition(
+    termination_condition: dict,
+    start_time: float,
+    routine: Routine,
+    queue: mp.Queue,
+    stop_process: mp.Event,
+    pause_process: mp.Event,
+    dialog_action_queue: mp.Queue,
+) -> bool:
+    """
+    Check whether termination conditon has been reached.
+    Pause for user action when a configured termination condition is reached.
+    """
+    if not termination_condition or not start_time:
+        return False
+
+    tc_config = termination_condition
+    idx = tc_config["tc_idx"]
+    if idx == 0:
+        max_eval = tc_config["max_eval"]
+        if routine.data is not None:
+            if "live" in routine.data.columns:
+                # Only count number of live data points
+                count = sum(1 for live_val in routine.data["live"] if live_val == 1)
+            else:
+                count = len(routine.data)
+            logger.debug(f"Checking max_eval termination: {count} >= {max_eval}")
+        else:
+            count = 0
+
+        if count >= max_eval:
+            logger.info(
+                "Max evaluations reached. Pausing optimization and waiting for user action."
+            )
+            pause_process.clear()
+            pause_for_termination_dialog_action(
+                queue=queue,
+                stop_process=stop_process,
+                pause_process=pause_process,
+                dialog_action_queue=dialog_action_queue,
+                tc_condition={
+                    "type": "max_eval",
+                    "config": max_eval,
+                    "state": count,
+                },
+            )
+            return True
+    elif idx == 1:
+        max_time = tc_config["max_time"]
+        dt = time.time() - start_time
+        logger.debug(f"Checking max_time termination: {dt} >= {max_time}")
+        if dt >= max_time:
+            logger.info(
+                "Max time reached. Pausing optimization and waiting for user action."
+            )
+            pause_process.clear()
+            pause_for_termination_dialog_action(
+                queue=queue,
+                stop_process=stop_process,
+                pause_process=pause_process,
+                dialog_action_queue=dialog_action_queue,
+                tc_condition={
+                    "type": "max_time",
+                    "config": max_time,
+                    "state": dt,
+                },
+            )
+            return True
+
+    return False
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
@@ -260,6 +333,9 @@ def run_routine_subprocess(
             if routine.data is not None:
                 logger.info("Resetting routine data")
                 routine.data = routine.data.iloc[0:0]  # reset the data
+        else:
+            if isinstance(routine.generator, SequentialGenerator):
+                routine.generator.add_data(routine.data.copy())
 
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
@@ -348,67 +424,26 @@ def run_routine_subprocess(
                 logger.info("Pause process not set. Waiting...")
                 pause_process.wait()
 
-            if termination_condition and start_time:
-                tc_config = termination_condition
-                idx = tc_config["tc_idx"]
-                if idx == 0:
-                    max_eval = tc_config["max_eval"]
-                    if routine.data is not None:
-                        if "live" in routine.data.columns:
-                            # Only count number of live data points
-                            count = sum(
-                                1 for live_val in routine.data["live"] if live_val == 1
-                            )
-                        else:
-                            count = len(routine.data)
-                        logger.debug(
-                            f"Checking max_eval termination: {count} >= {max_eval}"
-                        )
-                    else:
-                        count = 0
-
-                    if count >= max_eval:
-                        logger.info(
-                            "Max evaluations reached. Pausing optimization and waiting for user action."
-                        )
-                        pause_process.clear()
-                        pause_for_termination_dialog_action(
-                            queue=queue,
-                            stop_process=stop_process,
-                            pause_process=pause_process,
-                            dialog_action_queue=dialog_action_queue,
-                            tc_condition={
-                                "type": "max_eval",
-                                "config": max_eval,
-                                "state": count,
-                            },
-                        )
-                        # reset termination condition
-                        termination_condition = None
-                        continue
-                elif idx == 1:
-                    max_time = tc_config["max_time"]
-                    dt = time.time() - start_time
-                    logger.debug(f"Checking max_time termination: {dt} >= {max_time}")
-                    if dt >= max_time:
-                        logger.info(
-                            "Max time reached. Pausing optimization and waiting for user action."
-                        )
-                        pause_process.clear()
-                        pause_for_termination_dialog_action(
-                            queue=queue,
-                            stop_process=stop_process,
-                            pause_process=pause_process,
-                            dialog_action_queue=dialog_action_queue,
-                            tc_condition={
-                                "type": "max_time",
-                                "config": max_time,
-                                "state": dt,
-                            },
-                        )
-                        # reset termination condition
-                        termination_condition = None
-                        continue
+            if check_termination_condition(
+                termination_condition,
+                start_time,
+                routine,
+                queue,
+                stop_process,
+                pause_process,
+                dialog_action_queue,
+            ):
+                # termination_condition = extend_termination_condition(
+                #    termination_condition, original_termination_condition
+                # )
+                termination_condition = None
+                queue.put(
+                    {
+                        "type": "termination_extended",
+                        "termination_condition": termination_condition,
+                    }
+                )
+                continue
 
             candidates = routine.generator.generate(1)[0]
             logger.debug(f"Generated candidates: {candidates}")
