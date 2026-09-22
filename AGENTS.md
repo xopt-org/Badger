@@ -171,3 +171,45 @@ A pre-commit hook (`check-module-docstrings`) enforces presence. Empty `__init__
 4. **The `db.py` module is semi-deprecated** — it requires `BADGER_DB_ROOT` config which is not in the default `BadgerConfig` model. The `x_test_db.py` and `x_test_routine_id.py` files test this functionality but are excluded from normal test runs.
 
 5. **`utils.py` has Qt dependencies** — `BlockSignalsContext` and related utilities import from `PyQt5.QtWidgets` at the module level, so `badger.utils` cannot be imported without PyQt5 installed.
+
+## Conforming to Ruff linting rules
+
+Ruff adds many rules to the pre-commit python linting. Any of these rules can be ignored on a case-by-case basis going forward if given a valid reasoning behind the inclusion using the following format: `# noqa: <RUFF_ERROR_CODE> - <REASON FOR EXCEPTION>`
+
+Common Ruff errors going forward.
+
+### BLE001 - blind-except
+
+```python
+try:
+    foo()
+except Exception:
+    ...
+```
+
+Use instead:
+
+```python
+try:
+    foo()
+except FileNotFoundError:  # specific expected error to be thrown
+    ...
+```
+
+There are valid reasons to catch just the base exception in certain cases; however, catching the specific expected error will be preferred, and catching the base exception should now always include the reason for doing so.
+
+```python
+try:
+    foo()
+except Exception:  # noqa: BLE001 - Reason for exception
+    ...
+```
+
+Alternatively, re-raising the error or exceptions logged with `exc_info` will not be flagged.
+
+```python
+try:
+    foo()
+except BaseException:
+    logger.exception("Something went wrong")
+```
