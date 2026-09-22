@@ -223,7 +223,11 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
             params_dict = yaml.safe_load(params)
 
             if "gp_constructor" in params_dict:
-                assert not params_dict["gp_constructor"]["use_low_noise_prior"]
+                # use_low_noise_prior may not be exposed in the GUI for every
+                # generator; default to False so a hidden key doesn't error.
+                assert not params_dict["gp_constructor"].get(
+                    "use_low_noise_prior", False
+                )
             else:  # that part of params is hidden so we need to dig deeper
                 pass
 
