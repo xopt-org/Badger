@@ -7,30 +7,32 @@ Bottom (action bar): start/stop controls, logging, reset, checkpointing, and oth
 """
 
 import gc
+import logging
 import os
 import traceback
 from importlib import resources
 
 import numpy as np
 from pandas import DataFrame
-from PyQt5.QtCore import pyqtSignal, Qt, QModelIndex
+from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
+    QLabel,
     QMessageBox,
     QSplitter,
     QVBoxLayout,
     QWidget,
-    QLabel,
 )
 
 from badger.archive import (
     delete_run,
     get_base_run_filename,
-    load_run,
     get_runs,
+    load_run,
     save_tmp_run,
 )
 from badger.errors import BadgerRoutineError
+from badger.gui.components.action_bar import BadgerActionBar
 from badger.gui.components.data_panel import filter_metadata
 from badger.gui.components.data_table import (
     add_row,
@@ -38,23 +40,19 @@ from badger.gui.components.data_table import (
     reset_table,
     update_table,
 )
-from badger.gui.mini.pages.routine_page import BadgerRoutinePage
-
 from badger.gui.components.navigators import TemplateNavigator
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
-from badger.gui.components.action_bar import BadgerActionBar
-from badger.utils import get_header
-from badger.settings import init_settings
+from badger.gui.mini.pages.routine_page import BadgerRoutinePage
+from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
-from badger.gui.utils import ModalOverlay, build_bax_results_file
-
-import logging
+from badger.settings import init_settings
+from badger.utils import get_header
 
 logger = logging.getLogger(__name__)
 
@@ -146,13 +144,11 @@ class BadgerHomePage(QWidget):
         vbox_table = QVBoxLayout(panel_table)
         vbox_table.setContentsMargins(0, 0, 0, 0)
         title_label = QLabel("Run Data")
-        title_label.setStyleSheet(
-            """
+        title_label.setStyleSheet("""
             background-color: #455364;
             font-weight: bold;
             padding: 4px;
-        """
-        )
+        """)
         title_label.setAlignment(Qt.AlignCenter)  # Center-align the title
         vbox_table.addWidget(title_label, 0)
         self.run_table = run_table = data_table()
@@ -329,7 +325,7 @@ class BadgerHomePage(QWidget):
         self.routine_editor.env_box.algo_cb.setCurrentIndex(idx)
         self.routine_editor.select_generator(idx)
 
-    def go_run(self, i: int = None):
+    def go_run(self, i: int | None = None):
         logger.info(f"Activating run: {i}")
         gc.collect()
 
@@ -358,7 +354,7 @@ class BadgerHomePage(QWidget):
             self.run_monitor.routine_filename = run_filename
         except IndexError:
             return
-        except Exception as e:  # failed to load the run
+        except Exception as e:  # noqa: BLE001 - run load boundary
             details = traceback.format_exc()
             dialog = BadgerScrollableMessageBox(
                 title="Error!", text=str(e), parent=self
@@ -509,9 +505,9 @@ class BadgerHomePage(QWidget):
         logger.info("Preparing new run.")
         try:
             routine = self.routine_editor._compose_routine()
-        except Exception as e:
+        except Exception:
             self.sig_routine_invalid.emit()
-            raise e
+            raise
 
         # Give this run its own results folder, named after the run's archive
         # name (<env>-<creation_ts>) so the folder used during the run matches
@@ -707,18 +703,17 @@ class BadgerHomePage(QWidget):
 
     def cover_page(self):
         logger.info("Covering page with overlay.")
-        return  # disable overlay for now
 
-        try:
-            self.overlay
-        except AttributeError:
-            # Set parent to the main window
-            try:
-                main_window = self.parent().parent()
-            except AttributeError:  # in test mode
-                return
-            self.overlay = ModalOverlay(main_window)
-        self.overlay.show()
+        # try:
+        #     self.overlay
+        # except AttributeError:
+        #     # Set parent to the main window
+        #     try:
+        #         main_window = self.parent().parent()
+        #     except AttributeError:  # in test mode
+        #         return
+        #     self.overlay = ModalOverlay(main_window)
+        # self.overlay.show()
 
     def uncover_page(self):
         logger.info("Uncovering page overlay.")

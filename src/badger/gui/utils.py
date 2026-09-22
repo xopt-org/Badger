@@ -5,21 +5,22 @@ utilities."""
 import copy
 import logging
 import os
-from importlib import resources
-from typing import Any, Callable
+from collections.abc import Callable
 from functools import wraps
+from importlib import resources
+from typing import Any
 
 from PyQt5.QtCore import QEvent, QObject, QSize, Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QAbstractSpinBox,
+    QApplication,
     QComboBox,
     QDialog,
     QLabel,
     QPushButton,
     QToolButton,
     QVBoxLayout,
-    QApplication,
 )
 
 from badger.errors import BadgerConfigError

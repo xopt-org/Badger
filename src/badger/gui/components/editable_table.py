@@ -21,8 +21,9 @@ back only the checked rows.
 """
 
 import logging
+from collections.abc import Callable
 from functools import partial, wraps
-from typing import Any, Callable, Dict, List, ParamSpec, cast
+from typing import Any, ParamSpec, cast
 
 from pyparsing import TypeVar
 from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
@@ -86,9 +87,9 @@ class EditableTable(QTableWidget):
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.setColumnWidth(0, 20)  # width for checkboxes
 
-        self.data: List[Dict[str, Any]] = []
-        self.status: Dict[str, bool] = {}  # track selection
-        self.formulas: Dict[str, Dict[str, Any]] = {}  # track formula item
+        self.data: list[dict[str, Any]] = []
+        self.status: dict[str, bool] = {}  # track selection
+        self.formulas: dict[str, dict[str, Any]] = {}  # track formula item
 
         self.show_selected_only = False
         self.keyword = ""
@@ -105,7 +106,7 @@ class EditableTable(QTableWidget):
         self.itemChanged.connect(self.on_edit_table_item)
 
     def update_vocs(self) -> None:
-        logging.debug("Emitting data_changed signal from editable_table")
+        logger.debug("Emitting data_changed signal from editable_table")
         self.data_changed.emit()
 
     def default_info(self) -> list[Any]:
@@ -262,7 +263,7 @@ class EditableTable(QTableWidget):
             event.ignore()
 
     @property
-    def item_names(self) -> List[str]:
+    def item_names(self) -> list[str]:
         """
         Get the names of all items in the table.
 
@@ -430,7 +431,7 @@ class EditableTable(QTableWidget):
     def add_plain_item(self, name: str):
         self.add_formula_item((name, "", {}))
 
-    def get_visible_items(self) -> List[str]:
+    def get_visible_items(self) -> list[str]:
         """
         Get a list of visible item names based on the current keyword filter.
 
@@ -550,7 +551,7 @@ class EditableTable(QTableWidget):
         item.setForeground(QColor("gray"))
         self.setItem(row, 1, item)
 
-    def get_item_by_name(self, name: str) -> Dict[str, Any]:
+    def get_item_by_name(self, name: str) -> dict[str, Any]:
         """
         Retrieve the item dictionary from the items list that matches the given name.
 
@@ -688,7 +689,7 @@ class EditableTable(QTableWidget):
         # Add an empty row for new constraints
         self.add_empty_row()
 
-    def export_data(self) -> List[Dict[str, Any]]:
+    def export_data(self) -> list[dict[str, Any]]:
         """
         Export the items as a list of dictionaries.
 

@@ -1,7 +1,6 @@
 """UI layout definitions for the BAX visualizer widget."""
 
-from typing import TYPE_CHECKING, Optional
-
+from typing import TYPE_CHECKING
 
 from badger.gui.components.bax_visualizer.controls import ControlsWidget
 from badger.gui.components.extension_utilities import (
@@ -22,7 +21,7 @@ class UI(QWidget):
         self,
         routine: Routine,
         parameters: "Parameters",
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 

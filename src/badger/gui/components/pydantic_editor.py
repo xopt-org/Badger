@@ -10,15 +10,15 @@ validated against the Pydantic schema in real time.
 import ast
 import logging
 import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from inspect import isclass
 from types import NoneType
 from typing import (
     Annotated,
     Any,
-    Callable,
+    ClassVar,
     Optional,
-    Sequence,
     TypeVar,
     Union,
     cast,
@@ -27,6 +27,8 @@ from typing import (
 )
 
 import yaml
+from bax_algorithms.emittance import PathwiseMinimizeEmittance
+from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, PydanticUndefinedType
@@ -47,18 +49,15 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from torch import Tensor
 from xopt.errors import VOCSError
 from xopt.generators import get_generator
 from xopt.generators.bayesian.bax.algorithms import Algorithm
 from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
-from torch import Tensor
 from xopt.numerical_optimizer import NumericalOptimizer
 from xopt.vocs import VOCS
-
-from bax_algorithms.emittance import PathwiseMinimizeEmittance
-from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +79,8 @@ class CustomSafeLoader(yaml.SafeLoader):
         if TUPLE_PATTERN.match(value):
             try:
                 return ast.literal_eval(value)
-            except Exception:
-                pass
+            except (ValueError, SyntaxError):
+                logger.warning(f"Failed to parse tuple from string: {value}")
         return value
 
 
@@ -96,10 +95,10 @@ def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
 
 def _set_value_for_basic_widget(
     widget: QWidget,
-    value: str | float | int | bool | None,
+    value: str | float | bool | None,
 ) -> None:
     nullable = bool(widget.property("badger_nullable"))
-    if isinstance(widget, QLabel) or isinstance(widget, QLineEdit):
+    if isinstance(widget, (QLabel, QLineEdit)):
         widget.setText("null" if value is None else str(value))
     elif isinstance(widget, QDoubleSpinBox):
         if value is None and nullable:
@@ -151,10 +150,8 @@ class BadgerResolvedType:
         return resolved[0]
 
     @classmethod
-    def resolve(
-        cls, annotation: type[Any] | Union[Any, None] | None
-    ) -> "BadgerResolvedType":
-        origin: type[Any] | Union[Any, None] | None = get_origin(annotation)
+    def resolve(cls, annotation: type[Any] | Any | None) -> "BadgerResolvedType":
+        origin: type[Any] | Any | None = get_origin(annotation)
         args = get_args(annotation)
         nullable = False
 
@@ -217,8 +214,8 @@ class BadgerResolvedType:
     @classmethod
     def resolve_qt(
         cls,
-        annotation: type[Any] | Union[Any, None] | None,
-        default: float | int | bool | dict[str, Any] | list[Any] | None = None,
+        annotation: type[Any] | Any | None,
+        default: float | bool | dict[str, Any] | list[Any] | None = None,
         editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem] | None = None,
     ) -> QWidget | None:
         resolved_type = BadgerResolvedType.resolve(annotation)
@@ -229,11 +226,11 @@ class BadgerResolvedType:
             widget = QLineEdit()
             widget.setText("null")
         elif issubclass(resolved_type.main, BaseModel):
-            if issubclass(resolved_type.main, TurboController):
-                widget = QComboBox()
-            elif issubclass(resolved_type.main, NumericalOptimizer):
-                widget = QComboBox()
-            elif issubclass(resolved_type.main, Algorithm):
+            if (
+                issubclass(resolved_type.main, TurboController)
+                or issubclass(resolved_type.main, NumericalOptimizer)
+                or issubclass(resolved_type.main, Algorithm)
+            ):
                 widget = QComboBox()
             else:
                 return None
@@ -242,9 +239,12 @@ class BadgerResolvedType:
 
             if default is None:
                 default = {"name": "null"}
-            if isinstance(default, dict) and "name" in default:
-                if (index := widget.findText(default["name"])) >= 0:
-                    widget.setCurrentIndex(index)
+            if (
+                isinstance(default, dict)
+                and "name" in default
+                and (index := widget.findText(default["name"])) >= 0
+            ):
+                widget.setCurrentIndex(index)
         elif resolved_type.main == NoneType:
             widget = QLabel()
             widget.setText("null")
@@ -395,7 +395,7 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
         return None
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_yaml()
-    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
         if widget.property("badger_nullable") and widget.value() == widget.minimum():
             return "null"
         return str(widget.value())
@@ -458,7 +458,7 @@ def _qt_widget_to_value(widget: Any) -> Any:
         return None
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_dict()
-    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
         if widget.property("badger_nullable") and widget.value() == widget.minimum():
             return None
         return widget.value()
@@ -665,7 +665,7 @@ class BadgerListEditor(QWidget):
 
 class BadgerPydanticEditor(QTreeWidget):
     vocs: VOCS = VOCS(variables={})
-    defaults: dict[str, Any] = {}
+
     generator_name: str = ""
     model_class: type[BaseModel] | None = None
 
@@ -680,7 +680,7 @@ class BadgerPydanticEditor(QTreeWidget):
     # the generator's ``name`` field). The effective set is the union of both,
     # resolved by ``get_excluded_fields``.
     COMMON_EXCLUDED_FIELDS: frozenset[str] = frozenset({"computation_time"})
-    GENERATOR_EXCLUDED_FIELDS: dict[str, frozenset[str]] = {
+    GENERATOR_EXCLUDED_FIELDS: ClassVar[dict[str, frozenset[str]]] = {
         # "bax": frozenset({"algorithm_results"}),
     }
 
@@ -710,9 +710,10 @@ class BadgerPydanticEditor(QTreeWidget):
         value_col: int = 1,
         update_callback: Callable[["BadgerPydanticEditor"], None] | None = None,
     ):
+        self.defaults: dict[str, Any] = {}
+
         QTreeWidget.__init__(self, parent)
-        if value_col < 1:
-            value_col = 1
+        value_col = max(value_col, 1)
         self.value_col = value_col
         self.update_callback = update_callback
         self.setColumnCount(self.value_col + 1)
@@ -720,7 +721,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self.setHeaderLabels(
             [
                 "Parameter" if i == 0 else "Value" if i == self.value_col else ""
-                for i in range(0, self.value_col + 1)
+                for i in range(self.value_col + 1)
             ]
         )
 
@@ -728,14 +729,14 @@ class BadgerPydanticEditor(QTreeWidget):
 
     def _set_params_recurse(
         self,
-        parent: Optional[QTreeWidgetItem],
+        parent: QTreeWidgetItem | None,
         fields: dict[str, FieldInfo],
         defaults: dict[str, Any] | None,
         hidden: bool,
     ) -> None:
         for field_name, field_info in fields.items():
             child = QTreeWidgetItem(
-                [field_name if i == 0 else "" for i in range(0, self.value_col + 1)]
+                [field_name if i == 0 else "" for i in range(self.value_col + 1)]
             )
 
             if parent is None:
@@ -1078,12 +1079,17 @@ class BadgerPydanticEditor(QTreeWidget):
     @staticmethod
     def filter_class_fields(
         pydantic_class: type[BaseModel],
-        fields_to_remove: list[str] = [],
-        defaults: dict[str, Any] = {},
+        fields_to_remove: list[str] | None = None,
+        defaults: dict[str, Any] | None = None,
         include_defaults: bool = False,
         excluded_fields: frozenset[str] = frozenset(),
     ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
         condition: Callable[[str], bool]
+
+        if fields_to_remove is None:
+            fields_to_remove = []
+        if defaults is None:
+            defaults = {}
 
         def include_condition(k: str) -> bool:
             return k in defaults and k not in fields_to_remove
@@ -1113,7 +1119,7 @@ class BadgerPydanticEditor(QTreeWidget):
     @staticmethod
     def get_defaults_from_type(pydantic_class: type[Any]) -> dict[str, Any]:
         if not issubclass(pydantic_class, BaseModel):
-            raise ValueError("Provided class is not a Pydantic model")
+            raise TypeError("Provided class is not a Pydantic model")
         defaults: dict[str, Any] = {}
         for field_name, field_info in pydantic_class.model_fields.items():
             if field_info.default is not PydanticUndefined:
@@ -1263,11 +1269,11 @@ class BadgerPydanticEditor(QTreeWidget):
                     continue
                 try:
                     parameters_dict[cf_name] = getattr(instance, cf_name)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - computed field runs model code
                     logger.debug(
                         f"Could not compute {cf_name} on {model_class.__name__}: {e}"
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - model_construct runs model code
             logger.debug(
                 f"Could not model_construct {model_class.__name__} for computed-field injection: {e}"
             )
@@ -1299,7 +1305,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 # Convert str-encoded dicts (and lists) back into actual dict objects."""
                 if isinstance(val, str):
                     stripped = val.strip()
-                    if stripped.startswith("{") or stripped.startswith("["):
+                    if stripped.startswith(("{", "[")):
                         try:
                             return ast.literal_eval(stripped)
                         except (ValueError, SyntaxError):
@@ -1350,9 +1356,7 @@ class BadgerPydanticEditor(QTreeWidget):
                 self.update_error_styles(loc, msg)
 
     def update_error_styles(self, loc: tuple[int | str, ...], msg: str) -> None:
-        error_widget: QTreeWidgetItem | QTreeWidget | "BadgerPydanticEditor" | None = (
-            None
-        )
+        error_widget: QTreeWidgetItem | QTreeWidget | BadgerPydanticEditor | None = None
         if len(loc) > 0:
             error_widget = self.find_widget_at_path(loc)
         else:

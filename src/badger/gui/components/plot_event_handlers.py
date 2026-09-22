@@ -1,24 +1,22 @@
 """Mouse event handlers for matplotlib plots in the analysis extensions.
 Handles click, hover, scroll-zoom, and data-point annotation tooltips."""
 
-from badger.routine import Routine
-from matplotlib.backend_bases import MouseEvent, MouseButton, PickEvent
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+import logging
+from typing import cast
 
-from badger.gui.components.types import ConfigurableOptions
+import pandas as pd
+from matplotlib.backend_bases import MouseButton, MouseEvent, PickEvent
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.collections import PathCollection
+from matplotlib.text import Annotation
+from pyparsing import Callable
+
 from badger.gui.components.extension_utilities import (
     HandledException,
     to_precision_float,
 )
-
-from typing import cast
-
-import logging
-
-from matplotlib.collections import PathCollection
-from matplotlib.text import Annotation
-import pandas as pd
-from pyparsing import Callable
+from badger.gui.components.types import ConfigurableOptions
+from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
 
@@ -356,8 +354,8 @@ class MatplotlibInteractionHandler:
                 xy=point,
                 xytext=(0, 0),  # Initial position of the tooltip
                 textcoords="offset pixels",
-                bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->"),
+                bbox={"boxstyle": "round", "fc": "w"},
+                arrowprops={"arrowstyle": "->"},
             )
 
             # Adjust tooltip position based on the region and the size of the text

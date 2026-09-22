@@ -1,11 +1,20 @@
 """Toolbar with run-control buttons (start, pause, stop), logbook submission,
 docs access, and the extensions palette launcher."""
 
-from PyQt5.QtWidgets import QStyle, QStyleOptionToolButton, QWidget, QHBoxLayout
-from PyQt5.QtWidgets import QToolButton, QMenu, QAction
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import QEvent, pyqtSignal, QSize
 from importlib import resources
+
+from PyQt5.QtCore import QEvent, QSize, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtWidgets import (
+    QAction,
+    QHBoxLayout,
+    QMenu,
+    QStyle,
+    QStyleOptionToolButton,
+    QToolButton,
+    QWidget,
+)
+
 from badger.gui.utils import create_button
 from badger.gui.windows.docs_window import BadgerDocsWindow
 
