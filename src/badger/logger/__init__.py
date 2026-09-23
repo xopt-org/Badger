@@ -1,8 +1,10 @@
-from __future__ import print_function
+"""Loggers that report optimization progress to the terminal (ScreenLogger)
+and to a JSON file (JSONLogger). Both subscribe to lifecycle events
+(start, step, end) from the optimization loop."""
 
 import json
 import os
-from typing import Callable
+from collections.abc import Callable
 
 from badger.logger.event import Events, Solution
 from badger.logger.observer import _Tracker
@@ -26,7 +28,7 @@ class ScreenLogger(_Tracker):
     def verbose(self, v: int) -> None:
         self._verbose = v
 
-    def _format_number(self, x: int | float) -> str:
+    def _format_number(self, x: float) -> str:
         if isinstance(x, int):
             s = "{x:< {s}}".format(
                 x=x,
@@ -140,7 +142,7 @@ class JSONLogger(_Tracker):
                 os.remove(self._path)
             except OSError:
                 pass
-        super(JSONLogger, self).__init__()
+        super().__init__()
 
     def update(self, event: Events, solution: Solution) -> None:
         if event == Events.OPTIMIZATION_STEP:

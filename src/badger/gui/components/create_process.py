@@ -1,6 +1,8 @@
+"""QThread worker that pre-spawns an optimization subprocess in the
+background so it's ready to go when the user hits "start"."""
+
 import logging
 from multiprocessing import Event, Pipe, Process, Queue
-from multiprocessing.connection import Connection
 from typing import Any
 
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -31,10 +33,11 @@ class CreateProcess(QObject):
         """
         self.stop_event = Event()
         self.pause_event = Event()
-        self.data_queue: "Queue[Any]" = Queue()
-        self.evaluate_queue: "tuple[Connection, Connection]" = Pipe()
+        self.args_queue = Queue()
+        self.data_queue = Queue()
+        self.evaluate_queue = Pipe()
         self.wait_event = Event()
-        self.dialog_action_queue: "Queue[Any]" = Queue()
+        self.dialog_action_queue: Queue[Any] = Queue()
 
         config_instance = init_settings()._instance
         config_path = config_instance.config_path if config_instance else None
@@ -47,6 +50,7 @@ class CreateProcess(QObject):
         new_process = Process(
             target=run_routine_subprocess,
             args=(
+                self.args_queue,
                 self.data_queue,
                 self.evaluate_queue,
                 self.stop_event,
@@ -61,6 +65,7 @@ class CreateProcess(QObject):
         self.subprocess_prepared.emit(
             {
                 "process": new_process,
+                "args_queue": self.args_queue,
                 "stop_event": self.stop_event,
                 "pause_event": self.pause_event,
                 "data_queue": self.data_queue,

@@ -1,6 +1,8 @@
 import os
 import shutil
+
 import pytest
+from PyQt5.QtWidgets import QDialog
 
 
 @pytest.fixture(autouse=True)
@@ -8,6 +10,10 @@ def suppress_popups(mocker):
     mocker.patch(
         "badger.gui.windows.expandable_message_box.ExpandableMessageBox.exec_",
         return_value=None,
+    )
+    mocker.patch(
+        "badger.gui.windows.termination_reached_dialog.BadgerTerminationReachedDialog.exec_",
+        return_value=QDialog.Rejected,
     )
 
 
@@ -19,6 +25,7 @@ def config_test_settings(
     mock_archive_root,
     mock_log_directory,
     mock_logging_level,
+    mock_temp_directory,
 ):
     from badger.settings import init_settings
 
@@ -34,6 +41,7 @@ def config_test_settings(
         old_archived = config_singleton.read_value("BADGER_ARCHIVE_ROOT")
         old_log_directory = config_singleton.read_value("BADGER_LOG_DIRECTORY")
         old_logging_level = config_singleton.read_value("BADGER_LOG_LEVEL")
+        old_temp_directory = config_singleton.read_value("BADGER_TEMP_DIRECTORY")
     except KeyError:
         pass
 
@@ -44,7 +52,7 @@ def config_test_settings(
     config_singleton.write_value("BADGER_ARCHIVE_ROOT", mock_archive_root)
     config_singleton.write_value("BADGER_LOG_DIRECTORY", mock_log_directory)
     config_singleton.write_value("BADGER_LOG_LEVEL", mock_logging_level)
-
+    config_singleton.write_value("BADGER_TEMP_DIRECTORY", mock_temp_directory)
     yield
 
     # Restoring the original settings
@@ -55,6 +63,7 @@ def config_test_settings(
         config_singleton.write_value("BADGER_ARCHIVE_ROOT", old_archived)
         config_singleton.write_value("BADGER_LOG_DIRECTORY", old_log_directory)
         config_singleton.write_value("BADGER_LOG_LEVEL", old_logging_level)
+        config_singleton.write_value("BADGER_TEMP_DIRECTORY", old_temp_directory)
     # check if any "old_..." vars didn't get created b/c any of the config values didn't exist in user's config.
     except NameError:
         pass
@@ -62,13 +71,18 @@ def config_test_settings(
 
 @pytest.fixture(scope="module", autouse=True)
 def clean_up(
-    mock_template_root, mock_logbook_root, mock_archive_root, mock_log_directory
+    mock_template_root,
+    mock_logbook_root,
+    mock_archive_root,
+    mock_log_directory,
+    mock_temp_directory,
 ):
     # Clean before tests
     shutil.rmtree(mock_template_root, True)  # ignore errors
     shutil.rmtree(mock_logbook_root, True)
     shutil.rmtree(mock_archive_root, True)
     shutil.rmtree(mock_log_directory, True)
+    shutil.rmtree(mock_temp_directory, True)
 
     yield
 
@@ -77,6 +91,7 @@ def clean_up(
     shutil.rmtree(mock_logbook_root, True)
     shutil.rmtree(mock_archive_root, True)
     shutil.rmtree(mock_log_directory, True)
+    shutil.rmtree(mock_temp_directory, True)
 
 
 @pytest.fixture(scope="module")
@@ -107,6 +122,11 @@ def mock_archive_root(mock_root):
 @pytest.fixture(scope="module")
 def mock_log_directory(mock_root):
     return os.path.join(mock_root, "logs")
+
+
+@pytest.fixture(scope="module")
+def mock_temp_directory(mock_root):
+    return os.path.join(mock_root, "temp")
 
 
 @pytest.fixture(scope="module")

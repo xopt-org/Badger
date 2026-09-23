@@ -1,5 +1,9 @@
+"""Mouse event handlers for matplotlib plots in the analysis extensions.
+Handles click, hover, scroll-zoom, and data-point annotation tooltips."""
+
 import logging
-from typing import Callable, cast
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -313,13 +317,12 @@ class MatplotlibInteractionHandler:
             searched_row = pd.Series(dtype=float)
 
             if x_column and y_column:
-                # Find the true index in the routine data
-                # This is done by finding the row in the routine data that is closest to the picked point
-                x_idx = (routine_data[x_column] - point[0]).abs().idxmin()
-                y_idx = (routine_data[y_column] - point[1]).abs().idxmin()
-                searched_row = pd.Series(
-                    routine_data.loc[x_idx if x_idx == y_idx else x_idx]
-                )
+                # Find the row in the routine data closest to the picked point in both dimensions
+                distances = (routine_data[x_column] - point[0]) ** 2 + (
+                    routine_data[y_column] - point[1]
+                ) ** 2
+                idx = distances.idxmin()
+                searched_row = pd.Series(routine_data.loc[idx])
             elif x_column:
                 idx = (routine_data[x_column] - point[0]).abs().idxmin()
                 searched_row = pd.Series(routine_data.loc[idx])
@@ -352,8 +355,8 @@ class MatplotlibInteractionHandler:
                 xy=point,
                 xytext=(0, 0),  # Initial position of the tooltip
                 textcoords="offset pixels",
-                bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->"),
+                bbox={"boxstyle": "round", "fc": "w"},
+                arrowprops={"arrowstyle": "->"},
             )
 
             # Adjust tooltip position based on the region and the size of the text

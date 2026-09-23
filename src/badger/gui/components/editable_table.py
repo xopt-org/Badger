@@ -1,23 +1,45 @@
-from typing import Any, Callable, List, Dict, ParamSpec, cast
+"""
+Base class for the objective, constraint, and observable tables in the
+routine editor. (The variable table is a separate, parallel implementation —
+see var_table.py — because it needs min/max bound columns.)
+
+EditableTable gives each of those tables the shared behavior:
+    - a checkbox column for selecting which rows are active, with a
+      header-click "toggle all"
+    - drag-and-drop row reordering
+    - dropping text onto the table to add new items
+    - an always-present empty row at the bottom for quick inline adds
+    - keyword filtering and a "show selected only" mode
+    - support for formula items (a name plus its formula string / variables)
+
+Subclasses override create_cell_widgets() to customize what each row looks
+like. Any change to selection or values fires the data_changed signal, which
+env_cbox.py listens to so it can recompose the VOCS.
+
+Useful entry points: update_items() to bulk-load state, export_data() to pull
+back only the checked rows.
+"""
+
+import logging
+from collections.abc import Callable
 from functools import partial, wraps
+from typing import Any, ParamSpec, cast
+
+from pyparsing import TypeVar
+from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
     QAbstractItemView,
     QCheckBox,
     QComboBox,
-    QStyledItemDelegate,
     QDoubleSpinBox,
+    QHeaderView,
     QMessageBox,
+    QStyledItemDelegate,
+    QTableWidget,
+    QTableWidgetItem,
     QWidget,
 )
-from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
-from PyQt5.QtGui import QDropEvent, QDragEnterEvent, QDragMoveEvent, QColor
-
-import logging
-
-from pyparsing import TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +87,9 @@ class EditableTable(QTableWidget):
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.setColumnWidth(0, 20)  # width for checkboxes
 
-        self.data: List[Dict[str, Any]] = []
-        self.status: Dict[str, bool] = {}  # track selection
-        self.formulas: Dict[str, Dict[str, Any]] = {}  # track formula item
+        self.data: list[dict[str, Any]] = []
+        self.status: dict[str, bool] = {}  # track selection
+        self.formulas: dict[str, dict[str, Any]] = {}  # track formula item
 
         self.show_selected_only = False
         self.keyword = ""
@@ -83,8 +105,8 @@ class EditableTable(QTableWidget):
             hheader.sectionClicked.connect(self.header_clicked)
         self.itemChanged.connect(self.on_edit_table_item)
 
-    def update_vocs(self):
-        logging.debug("Emitting data_changed signal from editable_table")
+    def update_vocs(self) -> None:
+        logger.debug("Emitting data_changed signal from editable_table")
         self.data_changed.emit()
 
     def default_info(self) -> list[Any]:
@@ -241,7 +263,7 @@ class EditableTable(QTableWidget):
             event.ignore()
 
     @property
-    def item_names(self) -> List[str]:
+    def item_names(self) -> list[str]:
         """
         Get the names of all items in the table.
 
@@ -409,7 +431,7 @@ class EditableTable(QTableWidget):
     def add_plain_item(self, name: str):
         self.add_formula_item((name, "", {}))
 
-    def get_visible_items(self) -> List[str]:
+    def get_visible_items(self) -> list[str]:
         """
         Get a list of visible item names based on the current keyword filter.
 
@@ -529,7 +551,7 @@ class EditableTable(QTableWidget):
         item.setForeground(QColor("gray"))
         self.setItem(row, 1, item)
 
-    def get_item_by_name(self, name: str) -> Dict[str, Any]:
+    def get_item_by_name(self, name: str) -> dict[str, Any]:
         """
         Retrieve the item dictionary from the items list that matches the given name.
 
@@ -667,7 +689,7 @@ class EditableTable(QTableWidget):
         # Add an empty row for new constraints
         self.add_empty_row()
 
-    def export_data(self) -> List[Dict[str, Any]]:
+    def export_data(self) -> list[dict[str, Any]]:
         """
         Export the items as a list of dictionaries.
 

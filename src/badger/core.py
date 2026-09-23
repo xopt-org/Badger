@@ -1,5 +1,17 @@
+"""
+The main optimization loop that runs inside the current process (no subprocess).
+
+Each iteration asks Xopt to generate a candidate, evaluates it through the
+environment, and passes the result back. User-supplied callbacks control
+pause/resume behavior, state persistence, and progress reporting.
+
+This is the simpler of the two execution paths — core_subprocess.py wraps
+the same logic but runs it in a child process for the GUI.
+"""
+
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from pandas import DataFrame, concat
 from xopt.vocs import select_best
@@ -30,9 +42,7 @@ def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         if best_idx.size > 0:
             best_idx = int(best_idx[0])  # convert numpy array to int
-            if routine.data is None:
-                is_optimal = False
-            elif best_idx != len(routine.data) - 1:
+            if routine.data is None or best_idx != len(routine.data) - 1:
                 is_optimal = False
             else:
                 is_optimal = True
@@ -176,6 +186,6 @@ def run_routine(
                     combined_results = result
 
                 dump_state(dump_file, routine.generator, combined_results)
-    except Exception as e:
+    except Exception:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
-        raise e
+        raise

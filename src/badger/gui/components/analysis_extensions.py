@@ -1,10 +1,14 @@
-import logging
-from typing import Optional, cast
+"""Dialog wrappers for analysis extensions (BO visualizer, Pareto front
+viewer). Each dialog receives live data updates from the run monitor."""
 
-from PyQt5.QtCore import pyqtSignal
+import logging
+from typing import cast
+
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from xopt import Generator
+from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.mobo import MOBOGenerator
 
@@ -22,16 +26,20 @@ class AnalysisExtension(QWidget):
     generator_type: type[Generator]
     widget: AnalysisWidget
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
+        # A parented QWidget is a child widget by default. Setting the Window
+        # flag keeps the palette as the owner (for lifetime/stacking) while
+        # still displaying this as a separate top-level window.
+        self.setWindowFlag(Qt.WindowType.Window)
 
     def update_window(self, routine: Routine) -> None:
         try:
             self.update_extension(routine)
-        except Exception as e:
+        except Exception:
             # This will make sure that the extension window closes if an error occurs
             self.close()
-            raise e
+            raise
 
     def initialize_extension(
         self,
@@ -78,7 +86,7 @@ class ParetoFrontViewer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 
@@ -93,12 +101,14 @@ class BOVisualizer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 
         self.initialize_extension(
-            extension_widget=BOPlotWidget(routine=routine),
+            extension_widget=BOPlotWidget(
+                routine=routine,
+            ),
             extension_name="Bayesian Optimization Visualizer",
             generator_type=cast(type[Generator], BayesianGenerator),
         )
@@ -108,12 +118,14 @@ class BaxVisualizer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 
         self.initialize_extension(
-            extension_widget=BaxWidget(routine=routine),
+            extension_widget=BaxWidget(
+                routine=routine,
+            ),
             extension_name="Bax Visualizer",
-            generator_type=cast(type[Generator], BayesianGenerator),
+            generator_type=cast(type[Generator], BaxGenerator),
         )

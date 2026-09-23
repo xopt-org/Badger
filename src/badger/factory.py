@@ -1,3 +1,14 @@
+"""
+Finds, loads, and serves Badger plugins (environments, interfaces, generators).
+
+On startup, scans BADGER_PLUGIN_ROOT for subdirectories matching the plugin
+layout (configs.yaml + Python module). Plugins are loaded lazily — only
+instantiated when first requested by name. The same accessors are used by
+both the CLI (e.g. `badger env`) and the GUI combo boxes.
+
+Also handles loading Markdown docs for the built-in documentation browser.
+"""
+
 import importlib
 import logging
 import os
@@ -85,7 +96,7 @@ def scan_plugins(root: str) -> dict[str, Any]:
                 for fname in os.listdir(proot)
                 if os.path.exists(os.path.join(proot, fname, "__init__.py"))
             ]
-        except:
+        except OSError:
             plugins = []
 
         for pname in plugins:
@@ -125,11 +136,10 @@ def load_plugin(
     try:
         module = importlib.import_module(f"{ptype}s.{pname}")
     except ImportError as e:
-        _e = BadgerInvalidPluginError(
-            f"{ptype} {pname} is not available due to missing dependencies: {e}"
-        )
-        _e.configs = configs  # type: ignore[attr-defined]  # attach information to the exception
-        raise _e
+        raise BadgerInvalidPluginError(
+            f"{ptype} {pname} is not available due to missing dependencies: {e}",
+            configs=configs,
+        ) from e
 
     if ptype == "generator":
         plugin = (module.optimize, configs)
@@ -161,7 +171,7 @@ def load_plugin(
                 intf = cast(BadgerInterface, Interface())
         except KeyError:
             intf = None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - interface plugin load best-effort
             logger.warning(e)
             intf = None
         env = m_env(interface=intf, params=configs)
@@ -193,8 +203,8 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
     __________
     name : str
         Name of the .md file to open
-    subdir : str (None)
-        Name of subdirectory if file is not in main guides directory
+    ptype : str | None (None)
+        Type of plugin (e.g., 'generator', 'interface', 'environment')
 
     Returns
     _______
@@ -225,7 +235,7 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         try:
             with open(docs_dir / f"{name}.md", "r") as f:
                 readme = f.read()
-        except:
+        except OSError:
             readme = f"# {name}\nNo documentation found.\n"
 
         if ptype == "generator":
@@ -283,11 +293,11 @@ def load_plugin_docs(pname: str, ptype: str) -> str:
         if ptype == "environment":
             docstring = module.Environment.__doc__
 
-        return _format_docs_str(readme, docstring or "", ptype)
-    except:
+        return _format_docs_str(readme, docstring, ptype)
+    except Exception as e:
         raise BadgerInvalidDocsError(
             f"Error loading docs for {ptype} {pname}: docs not found"
-        )
+        ) from e
 
 
 def _format_docs_str(readme: str, docstring: str, ptype: str) -> str:

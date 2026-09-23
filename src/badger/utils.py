@@ -1,12 +1,17 @@
+"""Grab-bag of helpers used throughout Badger: YAML pretty-printing,
+timestamp formatting, value normalization, run filename generation,
+and platform-specific data directory resolution."""
+
 import json
 import logging
 import os
 import pathlib
 import sys
-from datetime import datetime
+from collections.abc import Iterable
+from datetime import UTC, datetime
 from importlib import metadata
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Iterable, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import yaml
 from pandas import DataFrame
@@ -18,6 +23,10 @@ if TYPE_CHECKING:
     from xopt.generators import Generator
 
     from badger.routine import Routine
+
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+
+from gest_api.vocs import ContinuousVariable
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +52,10 @@ class BlockSignalsContext:
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[TracebackType],
-    ) -> None:
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ):
         for widget in self.widgets:
             if not widget.signalsBlocked():
                 logger.warning(
@@ -57,9 +66,9 @@ class BlockSignalsContext:
 
 # https://stackoverflow.com/a/39681672/4263605
 # https://github.com/yaml/pyyaml/issues/234#issuecomment-765894586
-class Dumper(yaml.Dumper):  # type: ignore[misc]
+class Dumper(yaml.Dumper):
     def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
-        super(Dumper, self).increase_indent(flow, False)
+        return super().increase_indent(flow, False)
 
 
 def get_yaml_string(content: Any) -> str:
@@ -165,34 +174,37 @@ def ts_to_str(ts: datetime, format: str = "lcls-log") -> str:
 
 def str_to_ts(timestr: str, format: str = "lcls-log") -> datetime:
     if format == "lcls-log":
-        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S")
+        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S").astimezone(UTC)
     elif format == "lcls-log-full":
-        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S.%f")
+        return datetime.strptime(timestr, "%d-%b-%Y %H:%M:%S.%f").astimezone(UTC)
     elif format == "lcls-fname":
-        return datetime.strptime(timestr, "%Y-%m-%d-%H%M%S")
+        return datetime.strptime(timestr, "%Y-%m-%d-%H%M%S").astimezone(UTC)
     else:  # ISO format
         return datetime.fromisoformat(timestr)
 
 
 def ts_float_to_str(ts_float: float, format: str = "lcls-log") -> str:
-    ts = datetime.fromtimestamp(ts_float)
+    ts = datetime.fromtimestamp(ts_float, tz=UTC)
     return ts_to_str(ts, format)
 
 
 def curr_ts() -> datetime:
-    return datetime.now()
+    return datetime.now(tz=UTC)
 
 
 def curr_ts_to_str(format: str = "lcls-log") -> str:
-    return ts_to_str(datetime.now(), format)
+    return ts_to_str(datetime.now(tz=UTC), format)
 
 
 def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") -> str:
     data = routine.sorted_data
     env_name = routine.environment.name
     data_dict = data.to_dict("list")
-    ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
-    suffix = ts_float_to_str(ts_float, format)
+    if hasattr(routine, "creation_ts"):
+        suffix = routine.creation_ts
+    else:  # compatibility with old routines
+        ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
+        suffix = ts_float_to_str(ts_float, format)
     fname = f"{env_name}-{suffix}.yaml"
     return fname
 
@@ -205,27 +217,31 @@ def get_header(routine: "Routine") -> list[str]:
 
     try:
         obj_names = routine.vocs.objective_names
-    except Exception:
+    except AttributeError:
         obj_names = []
     try:
         var_names = routine.vocs.variable_names
-    except Exception:
+    except AttributeError:
         var_names = []
     try:
         con_names = routine.vocs.constraint_names
-    except Exception:
+    except AttributeError:
         con_names = []
     try:
         sta_names = routine.vocs.constant_names
-    except KeyError:
+    except AttributeError:
         sta_names = []
 
-    return obj_names + con_names + var_names + sta_names
+    return list(obj_names) + list(con_names) + list(var_names) + list(sta_names)
 
 
+# FIX: Messy unclear function, should be refactored to be more clear and concise
 def run_names_to_dict(
     run_names: list[str],
 ) -> dict[str, dict[str, dict[str, list[str]]]]:
+    # Convert a list of run filenames to a nested dictionary structure organized by year, month, and day.
+    # Example output:
+    # "2026": {"2026-01": {"2026-01-15": ["run1.yaml", "run2.yaml"]}}
     runs: dict[str, dict[str, dict[str, list[str]]]] = {}
     for name in run_names:
         name = os.path.basename(
@@ -238,19 +254,19 @@ def run_names_to_dict(
 
         try:
             year_dict = runs[year]
-        except Exception:
+        except KeyError:
             runs[year] = {}
             year_dict = runs[year]
         key_month = f"{year}-{month}"
         try:
             month_dict = year_dict[key_month]
-        except Exception:
+        except KeyError:
             year_dict[key_month] = {}
             month_dict = year_dict[key_month]
         key_day = f"{year}-{month}-{day}"
         try:
             day_list = month_dict[key_day]
-        except Exception:
+        except KeyError:
             month_dict[key_day] = []
             day_list = month_dict[key_day]
         day_list.append(name)
@@ -258,23 +274,23 @@ def run_names_to_dict(
     return runs
 
 
-def convert_str_to_value(str: str) -> Any:
+def convert_str_to_value(s: str) -> str | int | float | bool:
     try:
-        return int(str)
+        return int(s)
     except ValueError:
         pass
 
     try:
-        return float(str)
+        return float(s)
     except ValueError:
         pass
 
     try:
-        return bool(str)
+        return bool(s)
     except ValueError:
         pass
 
-    return str
+    return s
 
 
 class Rule(TypedDict):
@@ -294,15 +310,15 @@ def parse_rule(rule: Rule | str) -> Rule:
     # rule is a dict
     try:
         direction = rule["direction"]
-    except Exception:
+    except KeyError:
         direction = "MINIMIZE"
     try:
         filter = rule["filter"]
-    except Exception:
+    except KeyError:
         filter = "ignore_nan"
     try:
         reducer = rule["reducer"]
-    except Exception:
+    except KeyError:
         reducer = "percentile_80"
 
     return Rule(direction=direction, filter=filter, reducer=reducer)
@@ -360,7 +376,7 @@ def strtobool(val: str) -> bool:
     elif val in ("n", "no", "f", "false", "off", "0"):
         return False
     else:
-        raise ValueError("invalid truth value %r" % (val,))
+        raise ValueError(f"invalid truth value {val!r}")
 
 
 # https://stackoverflow.com/a/61901696/4263605
@@ -391,3 +407,56 @@ def get_badger_version() -> str:
 
 def get_xopt_version() -> str:
     return metadata.version("xopt")
+
+
+def _round_to_sigfig(value: float, sigfigs: int, mode: str) -> float:
+    """
+    Round float to specified number of significant figures.
+    """
+    if sigfigs <= 0:
+        raise ValueError("Significant figures must be greater than 0.")
+    if mode not in ["floor", "ceil"]:
+        raise ValueError(f"Unknown rounding mode: {mode}")
+
+    value = float(value)
+    # Convert to Decimal
+    decimal_value = Decimal(str(value))
+
+    if decimal_value == 0:
+        return 0.0
+
+    # Get the exponent
+    exponent = decimal_value.adjusted()
+    # Compute rounding precision to achieve the desired sig-figs
+    precision = Decimal(f"1e{exponent - sigfigs + 1}")
+    if mode == "floor":
+        rounded = decimal_value.quantize(precision, rounding=ROUND_FLOOR)
+    elif mode == "ceil":
+        rounded = decimal_value.quantize(precision, rounding=ROUND_CEILING)
+
+    return float(rounded)
+
+
+N_BOUND_SIGFIGS = 10
+
+
+def _round_bounds_inward(
+    bounds: tuple[Any, Any] | list[Any], sigfigs: int = N_BOUND_SIGFIGS
+) -> tuple[float, float]:
+    """
+    Round numeric bounds to a set number of significant figures.
+    This avoids unexpected bounds errors due to inconsistent rounding, defaulting to 10 sig-figs
+    """
+    if type(bounds) not in [tuple, list, dict, ContinuousVariable]:
+        raise BadgerLoadConfigError(
+            f"invalid bounds type {type(bounds)}. Must be tuple, dict, or ContinuousVariable"
+        )
+
+    if isinstance(bounds, ContinuousVariable):
+        bounds = bounds.domain
+    elif isinstance(bounds, dict):
+        bounds = bounds["domain"]
+
+    lower = _round_to_sigfig(float(bounds[0]), sigfigs, mode="ceil")
+    upper = _round_to_sigfig(float(bounds[1]), sigfigs, mode="floor")
+    return [lower, upper]

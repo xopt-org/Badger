@@ -25,7 +25,7 @@ Badger is an optimization interface tailored for the Accelerator Control Room (A
 
 The primary goal of Badger is to establish a user-friendly interface bridging the gap between users and the machines undergoing optimization. Users only need to define an environment for each machine or simulation, allowing Badger to take charge of tasks such as connecting the problem and optimization algorithm, implementing control logic, visualizing progress, and archiving data.
 
-Internally, Badger leverages the [Xopt](https://github.com/ChristopherMayes/Xopt/tree/main) optimization library to drive the optimization process. This grants users the advantage of utilizing [a variety of optimization algorithms](https://christophermayes.github.io/Xopt/index.html) available through Xopt.
+Internally, Badger leverages the [Xopt](https://github.com/xopt-org/Xopt/tree/main) optimization library to drive the optimization process. This grants users the advantage of utilizing [a variety of optimization algorithms](https://xopt.xopt.org/algorithms/) available through Xopt.
 
 Badger boasts a range of features designed to enhance your optimization experience:
 
@@ -57,6 +57,18 @@ pip install badger-opt
 
 Currently, Badger only officially supports Linux. Badger on MacOS and
 Windows could be potentially unstable.
+
+## Thread configuration
+
+Badger caps numeric library threads (`OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`) to **4** by default. This prevents performance degradation on high-core-count machines where the default (one thread per core) causes contention for the relatively small matrix operations in Bayesian Optimization workloads.
+
+To override the default, set the environment variable before launching Badger:
+
+```shell
+export OMP_NUM_THREADS=8
+```
+
+Any value you set explicitly will be respected. Badger only fills in the cap when the variable is unset.
 
 ## Run an optimization
 

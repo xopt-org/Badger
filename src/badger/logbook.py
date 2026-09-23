@@ -1,6 +1,10 @@
+"""Sends optimization results to the LCLS electronic logbook. Generates an
+XML entry with run summary (gain, duration, algorithm) and attaches a
+screenshot of the GUI for the facility archive."""
+
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 from PyQt5.QtWidgets import QWidget
 
@@ -51,13 +55,11 @@ def send_to_logbook(routine: Routine, widget: QWidget | None = None) -> None:
     log_text += f"Environment name: {env_name}\n"
     log_text += f"Optimization algorithm: {generator_name}\n"
     log_text += f"Data location: {data_path}\n"
-    try:
-        log_text += f"Log location: {BADGER_LOGBOOK_ROOT}\n"
-    except:
-        pass
+
+    log_text += f"Log location: {BADGER_LOGBOOK_ROOT}\n"
 
     # Generate the xml data
-    curr_time = datetime.now()
+    curr_time = datetime.now(tz=UTC)
     if os.name == "nt":
         timestr = curr_time.strftime("%Y-%m-%dT%H%M%S")
     else:
@@ -93,13 +95,12 @@ def send_to_logbook(routine: Routine, widget: QWidget | None = None) -> None:
 
     fileName = os.path.join(BADGER_LOGBOOK_ROOT, metainfo.text)
     fileName = fileName.rstrip(".xml")
-    xmlFile = open(fileName + ".xml", "w")
-    rawString = ElementTree.tostring(log_entry, "utf-8").decode("utf-8")
-    parsedString = sub(r"(?=<[^/].*>)", "\n", rawString)
-    xmlString = parsedString[1:]
-    xmlFile.write(xmlString)
-    xmlFile.write("\n")  # Close with newline so cron job parses correctly
-    xmlFile.close()
+    with open(fileName + ".xml", "w") as xmlFile:
+        rawString = ElementTree.tostring(log_entry, "utf-8").decode("utf-8")
+        parsedString = sub(r"(?=<[^/].*>)", "\n", rawString)
+        xmlString = parsedString[1:]
+        xmlFile.write(xmlString)
+        xmlFile.write("\n")  # Close with newline so cron job parses correctly
     screenshot(widget, f"{fileName}.png")
 
 

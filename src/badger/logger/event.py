@@ -1,12 +1,15 @@
+"""Event constants (start, step, end) that the optimization loop fires
+to notify loggers and observers of progress."""
+
 from enum import StrEnum
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 
 class Solution(NamedTuple):
-    variables: Optional[list[float]]
-    objectives: Optional[list[float]]
-    constraints: Optional[list[float]]
-    states: Optional[list[float]]
+    variables: list[float] | None
+    objectives: list[float] | None
+    constraints: list[float] | None
+    states: list[float] | None
     is_optimal: bool
     variable_names: list[str]
     objective_names: list[str]

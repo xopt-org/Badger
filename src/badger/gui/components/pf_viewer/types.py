@@ -1,3 +1,6 @@
+"""TypedDict definitions for the Pareto front viewer — plot options and
+objective/variable selection."""
+
 from typing import TypedDict
 
 from PyQt5.QtWidgets import (

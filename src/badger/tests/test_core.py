@@ -1,6 +1,8 @@
 import os
-import pytest
+
 import pandas as pd
+import pytest
+
 from badger.errors import BadgerRunTerminated
 
 
@@ -11,7 +13,7 @@ class TestCore:
 
     @pytest.fixture(autouse=True, scope="function")
     def test_core_setup(self, *args, **kwargs) -> None:
-        super(TestCore, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.count = 0
         self.candidates = None
         self.points_eval_list = []

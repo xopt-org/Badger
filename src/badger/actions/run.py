@@ -1,3 +1,13 @@
+"""
+Runs an optimization routine from the command line and saves results.
+
+The main function here is run_n_archive: it calls core.run_routine in a loop,
+catches Ctrl-C (SIGINT) for pause/resume, periodically dumps data to the
+archive, and logs interface channel values to disk.
+
+Note: the CLI runner is deprecated — most users should use the GUI instead.
+"""
+
 import logging
 import os
 import signal
@@ -6,6 +16,7 @@ import time
 from typing import Any, TypedDict
 
 from pandas import DataFrame
+from typing_extensions import deprecated
 
 from badger.core import run_routine as run
 from badger.errors import BadgerRunTerminated
@@ -32,7 +43,7 @@ def run_n_archive(
 ) -> None:
     try:
         from badger.archive import archive_run
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit
         logger.error(e)
         return
 
@@ -45,7 +56,7 @@ def run_n_archive(
 
     def handler(*args: Any) -> None:
         if storage["paused"]:
-            print("")  # start a new line
+            print()  # start a new line
             if flush_prompt:  # erase the last prompt
                 sys.stdout.write("\033[F")
             raise BadgerRunTerminated
@@ -92,8 +103,8 @@ def run_n_archive(
                 interface = getattr(routine.environment, "interface", None)
                 if interface is not None:
                     interface.dump_recording(os.path.join(path, filename))
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 - interface dump is best-effort
+                logger.warning("Failed to dump interface logs")
 
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
@@ -111,7 +122,7 @@ def run_n_archive(
         )
     except BadgerRunTerminated as e:
         logger.info(e)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CLI run boundary
         logger.error(e)
 
     # Save the run when at least one solution has been evaluated
@@ -122,58 +133,14 @@ def run_n_archive(
             path = _run["path"]
             filename = _run["filename"][:-4] + "pickle"
             routine.environment.interface.stop_recording(os.path.join(path, filename))
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 - interface dump is best-effort
+            logger.warning("Failed to dump interface logs")
 
 
-def run_routine(args: Any) -> None:
+@deprecated("The `badger run` command is deprecated. Please use the GUI.")
+def run_routine(args):
     print(
         "This command is deprecated.\n"
         "Please use 'badger -g' to launch the Badger GUI "
         "and run an optimization."
     )
-    return
-
-    # try:
-    #     from ..factory import get_algo, get_env
-    # except Exception as e:
-    #     logger.error(e)
-    #     return
-
-    # try:
-    #     # Get env params
-    #     _, configs_env = get_env(args.env)
-
-    #     # Get algo params
-    #     _, configs_algo = get_algo(args.algo)
-
-    #     # Normalize the algo and env params
-    #     params_env = load_config(args.env_params)
-    #     params_algo = load_config(args.algo_params)
-    # except Exception as e:
-    #     logger.error(e)
-    #     return
-    # params_env = merge_params(configs_env['params'], params_env)
-    # params_algo = merge_params(configs_algo['params'], params_algo)
-
-    # # Load routine configs
-    # try:
-    #     configs_routine = load_config(args.config)
-    # except Exception as e:
-    #     logger.error(e)
-    #     return
-
-    # # Compose the routine
-    # routine = {
-    #     'name': args.save or generate_slug(2),
-    #     'algo': args.algo,
-    #     'env': args.env,
-    #     'algo_params': params_algo,
-    #     'env_params': params_env,
-    #     # env_vranges is an additional info for the normalization
-    #     # Will be removed after the normalization
-    #     'env_vranges': config_list_to_dict(configs_env['variables']),
-    #     'config': configs_routine,
-    # }
-
-    # run_n_archive(routine, args.yes, args.save, args.verbose)

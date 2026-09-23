@@ -223,9 +223,9 @@ Plus `db.py:33,38,56,61,79,92,210,303,358,375,388,400,432` — straightforward m
 ### H. `core_subprocess.py` — multiprocessing primitives used as types
 
 ```python
-event: multiprocessing.Event   # Event is a factory, not a type
-queue: multiprocessing.Queue   # missing generic param
-pipe: multiprocessing.Pipe     # Pipe returns tuple, not a type
+event: multiprocessing.Event  # Event is a factory, not a type
+queue: multiprocessing.Queue  # missing generic param
+pipe: multiprocessing.Pipe  # Pipe returns tuple, not a type
 ```
 Lines 37–39, 132–139, 179, 281, 285, 287, 289, 291, 329–349, 359–375.
 

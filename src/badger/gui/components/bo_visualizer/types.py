@@ -1,6 +1,7 @@
-from typing import TypedDict
+"""TypedDict definitions for BO visualizer options — grid resolution,
+display toggles, variable selection, and reference points."""
 
-from gest_api.vocs import ContinuousVariable
+from typing import TypedDict
 
 
 class PlotOptions(TypedDict):
@@ -18,5 +19,4 @@ class ConfigurableOptions(TypedDict):
     variable_2: int
     variables: list[str]
     reference_points: dict[str, float]
-    reference_points_range: dict[str, ContinuousVariable]
     include_variable_2: bool

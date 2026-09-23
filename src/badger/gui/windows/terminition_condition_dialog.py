@@ -1,20 +1,21 @@
-from PyQt5.QtWidgets import (
-    QDialog,
-    QWidget,
-    QHBoxLayout,
-    QPushButton,
-    QVBoxLayout,
-    QSpinBox,
-    QDoubleSpinBox,
-)
-from PyQt5.QtWidgets import (
-    QGroupBox,
-    QLabel,
-    QComboBox,
-    QStyledItemDelegate,
-    QStackedWidget,
-)
+"""Termination condition dialog for the Badger GUI. Lets the user configure
+when an optimization run should automatically stop — either after a maximum
+number of evaluations or after a maximum elapsed time."""
 
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QStackedWidget,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
 
 stylesheet_run = """
 QPushButton:hover:pressed

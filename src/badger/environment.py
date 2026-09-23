@@ -1,6 +1,19 @@
+"""
+Base classes that all Badger environment plugins inherit from.
+
+An environment tells the optimizer what variables it can change and what
+observables it can read back. There are two flavors:
+    BaseEnvironment — talks to hardware (or simulation) directly
+    Environment     — delegates get/set calls to an Interface plugin
+
+Decorators defined here handle bounds-checking on setpoints and formula
+evaluation on computed observables (see formula.py).
+"""
+
+import logging
 from abc import abstractmethod
-from logging import warning
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from pydantic._internal._model_construction import ModelMetaclass
@@ -16,6 +29,8 @@ if TYPE_CHECKING:
 from badger.formula import extract_variable_keys, interpret_expression
 from badger.interface import Interface, InterfaceInfo
 
+logger = logging.getLogger(__name__)
+
 
 def validate_setpoints(
     func: Callable[[Any, dict[str, float]], Any],
@@ -28,7 +43,7 @@ def validate_setpoints(
 
             if value > upper or value < lower:
                 raise BadgerEnvVarError(
-                    f"Input point for {name} is outside "
+                    f"Input point {value} for {name} is outside "
                     + f"its bounds {_bounds[name]}"
                 )
 
@@ -45,7 +60,7 @@ def process_formulas(
     to process formulas if they exist in the observable names.
     """
 
-    def process(cls: Any, observable_names: list[str]) -> dict[str, float]:
+    def process(cls, observable_names: list[str]) -> dict[str, float]:
         # get the list of observable names needed by themselves and any formulas
         formula_observables = []
         basic_observables = []
@@ -114,7 +129,7 @@ def validate_bounds(
 class EnvMeta(ModelMetaclass):
     def __new__(
         mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]
-    ) -> "EnvMeta":
+    ) -> Self:
         # Wrap get_bounds with validate_bounds if defined
         if "get_bounds" in namespace:
             namespace["get_bounds"] = validate_bounds(namespace["get_bounds"])
@@ -158,7 +173,6 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         Dict[str, float]
             A dictionary mapping variable names to their values.
         """
-        pass
 
     @abstractmethod
     def set_variables(self, variable_inputs: dict[str, float]) -> None:
@@ -170,7 +184,6 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         variable_inputs : Dict[str, float]
             A dictionary mapping variable names to their values.
         """
-        pass
 
     @abstractmethod
     def get_observables(
@@ -193,14 +206,12 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
             A dictionary mapping observable names to their values.
 
         """
-        pass
 
     def reset_environment(self) -> None:
         """
         Reset the environment to its initial state.
         This method is called at the start of each run.
         """
-        pass
 
     def get_system_states(self) -> dict[str, Any]:
         """
@@ -297,7 +308,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
 
 class Environment(BaseEnvironment):
     # Interface
-    interface: Optional[SerializeAsAny[Interface]] = None
+    interface: SerializeAsAny[Interface] | None = None
     # Put all other env params here
     # params: float = Field(..., description='Example env parameter')
 
@@ -353,8 +364,8 @@ def instantiate_env(
         intf_name = configs["interface"][0]
     except KeyError:
         intf_name = None
-    except Exception as e:
-        warning(e)
+    except (TypeError, IndexError) as e:
+        logger.warning(e)
         intf_name = None
 
     if intf_name is not None:

@@ -1,5 +1,10 @@
+"""Base class for generator extensions — an alternative way to register
+optimization algorithms outside the standard Xopt generator registry.
+Third-party packages can subclass Extension to plug in custom algorithms."""
+
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class Extension(ABC):

@@ -1,3 +1,7 @@
+"""QDoubleSpinBox with configurable precision, scroll-wheel protection,
+and optional read-only mode. Used for variable bounds and constraint
+thresholds."""
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QAbstractSpinBox, QDoubleSpinBox, QWidget
 

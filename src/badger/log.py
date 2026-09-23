@@ -1,15 +1,3 @@
-import atexit
-import datetime
-import logging
-import os
-from argparse import Namespace
-from logging.handlers import QueueHandler, QueueListener
-from multiprocessing import Queue
-
-from badger.settings import get_user_config_folder, init_settings
-
-logger = logging.getLogger(__name__)
-
 """
 Logging system that allows subprocesses to send logs to a central listener
 in the main process, writes logs to both logfile and the terminal.
@@ -20,6 +8,20 @@ We make use of the logging.handlers classes from the python standard library, ma
 
 For example usage (in a simple context), see src/badger/tests/test_multiprocess_logging.py
 """
+
+from __future__ import annotations
+
+import atexit
+import logging
+import os
+from argparse import Namespace
+from datetime import UTC, datetime
+from logging.handlers import QueueHandler, QueueListener
+from multiprocessing import Queue
+
+from badger.settings import get_user_config_folder, init_settings
+
+logger = logging.getLogger(__name__)
 
 
 class LoggingManager:
@@ -163,11 +165,11 @@ class LoggingManager:
         Get name of the logfile for today, which is in form of:
         "log_<month>_<day>.log"
         """
-        today = datetime.date.today()
+        today = datetime.now(tz=UTC).date()
         log_filename = f"log_{today.year:04d}_{today.month:02d}_{today.day:02d}.log"
         return log_filename
 
-    def get_queue(self) -> "Queue[logging.LogRecord] | None":
+    def get_queue(self) -> Queue[logging.LogRecord] | None:
         """Get the logging queue for use by subprocesses."""
         return self.log_queue
 
@@ -201,7 +203,7 @@ class LoggingManager:
 
 
 def configure_process_logging(
-    log_queue: "Queue[logging.LogRecord] | None" = None,
+    log_queue: Queue | None = None,
     logger_name: str = "badger",
     log_level: str = "DEBUG",
     process_name: str | None = None,

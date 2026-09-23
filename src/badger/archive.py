@@ -1,8 +1,18 @@
+"""
+Saves completed optimization runs as YAML files on disk.
+
+Files are organized by date: BADGER_ARCHIVE_ROOT/year/year-month/year-month-day/.
+Each file contains the routine config plus all evaluated data points.
+During an active run, a temporary file is periodically updated so data
+isn't lost if the process crashes.
+"""
+
 import logging
 import os
 import time
 import warnings
-from typing import Any, Hashable, Optional, TypedDict
+from collections.abc import Hashable
+from typing import Any, TypedDict
 
 from badger.errors import BadgerConfigError
 from badger.routine import Routine
@@ -26,12 +36,12 @@ class RunArchive(TypedDict, total=False):
     filename: str
     routine: Routine
     data: dict[Hashable, Any]  # TODO: make this more specific
-    system_states: Optional[Any]  # TODO: make this more specific
+    system_states: Any | None  # TODO: make this more specific
     path: str
 
 
 def archive_run(
-    routine: Routine, states: Optional[Any] = None
+    routine: Routine, states: Any | None = None
 ) -> RunArchive:  # TODO: make states more specific
 
     data = routine.sorted_data
@@ -140,12 +150,11 @@ def list_run() -> dict[str, dict[str, dict[str, list[str]]]]:
 
 def get_runs() -> list[str]:
     runs = list_run()
-    run_list: list[str] = []
-    for year, months in runs.items():
-        for month, days in months.items():
-            for day, files in days.items():
-                for run_fname in files:
-                    run_list.append(run_fname)
+    run_list = []
+    for months in runs.values():
+        for days in months.values():
+            for files in days.values():
+                run_list.extend(files)
 
     return run_list
 

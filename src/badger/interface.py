@@ -1,6 +1,11 @@
+"""Base class for interface plugins — the layer that talks to hardware or
+simulators. Environments delegate get/set channel calls here. Also includes
+utilities for logging channel interactions to disk for post-run analysis."""
+
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, Callable, ClassVar, TypedDict
+from collections.abc import Callable
+from typing import Any, ClassVar, TypedDict
 
 from pydantic import BaseModel
 
@@ -10,7 +15,7 @@ from badger.utils import curr_ts
 def log(func: Callable[..., Any]) -> Callable[..., Any]:
     def func_log(*args: Any, **kwargs: Any) -> Any:
         if func.__name__ == "set_values":
-            if "channel_inputs" in kwargs.keys():
+            if "channel_inputs" in kwargs:
                 channel_inputs = kwargs["channel_inputs"]
             else:
                 channel_inputs = args[1]
@@ -91,7 +96,6 @@ class Interface(BaseModel, ABC):
         Called after the application forks (i.e. after spawning a new multiprocess.Process)
         Subclasses should use this to reset any undesirable process wide state
         """
-        pass
 
     def get_value(self, channel_name: str, **kwargs: Any) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]

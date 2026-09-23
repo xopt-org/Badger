@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64.0", "setuptools_scm[toml]"]
+requires = ["setuptools>=77.0.0", "setuptools_scm[toml]"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,9 +8,10 @@ description = "Interface for optimization of arbitrary problems in Python."
 readme = "README.md"
 authors = [{ name = "Zhe Zhang", email = "zhezhang@slac.stanford.edu" }]
 keywords = ["optimization", "machine learning", "GUI"]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: GNU General Public License (GPL)",
     "Natural Language :: English",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
@@ -27,7 +28,9 @@ dependencies = [
     "qdarkstyle>=3.0",
     "pillow",
     "requests",
-    "xopt>=3.0.0",
+    "xopt>=3.2.1",
+    "bax-algorithms",
+
 ]
 dynamic = ["version"]
 [tool.setuptools_scm]
@@ -54,10 +57,6 @@ Documentation = "https://xopt-org.github.io/Badger/"
 [project.scripts]
 badger = "badger.__main__:main"
 
-
-[project.license]
-file = "LICENSE" # Deprecated as per PEP 639
-
 [tool.setuptools]
 zip-safe = false
 include-package-data = true
@@ -66,10 +65,6 @@ include-package-data = true
 where = ["src"]
 include = ["badger"]
 namespaces = false
-
-[tool.ruff.lint]
-extend-select = ["TID252"] # Defaults + check imports
-ignore = ["E722"]          # Until bare except blocks get fixed
 
 [tool.pytest.ini_options]
 addopts = "--cov=badger/"

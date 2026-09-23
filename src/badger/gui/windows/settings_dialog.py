@@ -1,6 +1,10 @@
+"""Settings dialog for the Badger GUI. Provides controls for configuring the
+application theme (dark/light/default), log level, and log directory, with
+changes applied immediately to the running application."""
+
 import logging
 import os
-from typing import cast
+from typing import ClassVar, cast
 
 from PyQt5.QtCore import Qt
 
@@ -26,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 class BadgerSettingsDialog(QDialog):
-    theme_list = ["default", "light", "dark"]
-    theme_idx_dict = {
+    theme_list: ClassVar[list[str]] = ["default", "light", "dark"]
+    theme_idx_dict: ClassVar[dict[str, int]] = {
         "default": 0,
         "light": 1,
         "dark": 2,
@@ -102,12 +106,21 @@ class BadgerSettingsDialog(QDialog):
         grid.addWidget(archive_root, 4, 0)
         grid.addWidget(archive_root_path, 4, 1)
 
-        self.log_dir_label = QLabel("Log Directory")
-        self.log_dir_path = QLineEdit(
+        # Log directory setting
+        self.log_dir_label = log_dir_label = QLabel("Log Directory")
+        self.log_dir_path = log_dir_path = QLineEdit(
             self.config_singleton.read_value("BADGER_LOG_DIRECTORY")
         )
-        grid.addWidget(self.log_dir_label, 5, 0)
-        grid.addWidget(self.log_dir_path, 5, 1)
+        grid.addWidget(log_dir_label, 5, 0)
+        grid.addWidget(log_dir_path, 5, 1)
+
+        # Temporary directory setting
+        self.temp_dir_label = temp_dir_label = QLabel("Temporary Directory")
+        self.temp_dir_path = temp_dir_path = QLineEdit(
+            self.config_singleton.read_value("BADGER_TEMP_DIRECTORY")
+        )
+        grid.addWidget(temp_dir_label, 6, 0)
+        grid.addWidget(temp_dir_path, 6, 1)
 
         # Log level setting
         self.logging_level = logging_level = QLabel("Logging Level")
@@ -124,8 +137,8 @@ class BadgerSettingsDialog(QDialog):
         ]:
             self.logging_level_setting.setCurrentText(current_level)
 
-        grid.addWidget(logging_level, 6, 0)
-        grid.addWidget(logging_level_setting, 6, 1)
+        grid.addWidget(logging_level, 7, 0)
+        grid.addWidget(logging_level_setting, 7, 1)
 
         # Auto refresh
         # self.auto_refresh = auto_refresh = QLabel("Auto Refresh")
@@ -225,6 +238,12 @@ class BadgerSettingsDialog(QDialog):
         self.config_singleton.write_value(
             "BADGER_ARCHIVE_ROOT", self.archive_root_path.text()
         )
+        self.config_singleton.write_value(
+            "BADGER_LOG_DIRECTORY", self.log_dir_path.text()
+        )
+        self.config_singleton.write_value(
+            "BADGER_TEMP_DIRECTORY", self.temp_dir_path.text()
+        )
         # self.config_singleton.write_value(
         #     "AUTO_REFRESH", self.enable_auto_refresh.isChecked()
         # )
@@ -263,7 +282,7 @@ class BadgerSettingsDialog(QDialog):
         if theme_prev != theme_curr:
             self.set_theme(theme_prev)
 
-        for key in self.settings.keys():
+        for key in self.settings:
             self.config_singleton.write_value(key, self.settings[key]["value"])
 
         self.reject()

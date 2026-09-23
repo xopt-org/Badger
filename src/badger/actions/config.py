@@ -1,9 +1,13 @@
-from badger.settings import init_settings
-import os
+"""Interactive `badger config` command. Walks the user through each setting
+(plugin root, archive root, theme, log level, etc.) and lets them set,
+skip, or reset values from the terminal."""
+
 import logging
+import os
 from typing import Any
 
-from badger.utils import yprint, convert_str_to_value
+from badger.settings import init_settings
+from badger.utils import convert_str_to_value, yprint
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +61,7 @@ def _config_path_var(var_name: str) -> bool:
             if _res == "y":
                 break
             elif (not _res) or (_res == "n"):
-                print("")
+                print()
                 continue
             else:
                 print(f"Invalid choice: {_res}")
@@ -66,7 +70,7 @@ def _config_path_var(var_name: str) -> bool:
         if os.path.isdir(res):
             _res = input(f"Your choice is {res}, proceed ([y]/n)? ")
             if _res == "n":
-                print("")
+                print()
                 continue
             elif (not _res) or (_res == "y"):
                 break
@@ -75,7 +79,7 @@ def _config_path_var(var_name: str) -> bool:
         else:
             _res = input(f"{res} does not exist, do you want to create it ([y]/n)? ")
             if _res == "n":
-                print("")
+                print()
                 continue
             elif (not _res) or (_res == "y"):
                 os.makedirs(res)
@@ -119,7 +123,7 @@ def _config_core_var(var_name: str) -> None:
             if _res == "y":
                 break
             elif (not _res) or (_res == "n"):
-                print("")
+                print()
                 continue
             else:
                 print(f"Invalid choice: {_res}")

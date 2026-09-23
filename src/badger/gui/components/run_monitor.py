@@ -1,8 +1,17 @@
+"""
+The live dashboard shown during and after an optimization run.
+
+Displays pyqtgraph plots that update in real time as new points are evaluated,
+a data table of all solutions, and start/pause/stop controls. When a run
+finishes, it archives the data and hands results off to analysis extensions
+(BO visualizer, Pareto front viewer) if the user has them open.
+"""
+
 import logging
 import os
 import traceback
 from importlib import resources
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -64,7 +73,7 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
 
-    def __init__(self, process_manager: "Optional[ProcessManager]" = None):
+    def __init__(self, process_manager: "ProcessManager | None" = None):
         super().__init__()
         # self.setAttribute(Qt.WA_DeleteOnClose, True)
 
@@ -86,8 +95,7 @@ class BadgerOptMonitor(QWidget):
         # Run optimization
         self.routine_runner = None
         self.running = False
-        # Fix the auto range issue
-        self.eval_count = 0
+
         # Termination condition for the run
         self.termination_condition = None
 
@@ -231,7 +239,9 @@ class BadgerOptMonitor(QWidget):
         self.cb_plot_y.currentIndexChanged.connect(self.select_x_plot_y_axis)
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
 
-    def init_plots(self, routine: Routine = None, run_filename: str = None) -> None:
+    def init_plots(
+        self, routine: Routine = None, run_filename: str | None = None
+    ) -> None:
         """
         Initialize and configure the plots and related components in the application.
 
@@ -281,16 +291,16 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_con)
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No constraints plot to remove")
 
             # if statics exist delete that plot
             try:
                 self.monitor.removeItem(self.plot_obs)
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No observables plot to remove")
 
             # if no routine is loaded set button to disabled
             self.sig_lock_action.emit()
@@ -320,8 +330,8 @@ class BadgerOptMonitor(QWidget):
         # Configure constraint plots
         if constraint_names:
             try:
-                self.plot_con
-            except:
+                _ = self.plot_con
+            except AttributeError:
                 self.plot_con = plot_con = add_axes(
                     self.monitor,
                     "constraints",
@@ -341,14 +351,14 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_con)
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No constraints plot to remove")
 
         # Configure state plots
         if sta_names:
             try:
-                self.plot_obs
-            except:
+                _ = self.plot_obs
+            except AttributeError:
                 self.plot_obs = plot_obs = add_axes(
                     self.monitor,
                     "observables",
@@ -367,8 +377,8 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_obs)
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No observables plot to remove")
 
         # Reset inspectors
         self.inspector_objective.setValue(0)
@@ -379,7 +389,6 @@ class BadgerOptMonitor(QWidget):
         # Switch run button state
         self.sig_toggle_run.emit(False)
 
-        self.eval_count = 0  # reset the evaluation count
         self.enable_auto_range()
 
         # Reset button should only be available if it's the current run
@@ -447,6 +456,7 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
+        routine_runner.signals.sig_status.connect(self.sig_status.emit)
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
@@ -495,7 +505,12 @@ class BadgerOptMonitor(QWidget):
         self.extensions_palette.show()
 
     def extension_window_closed(self, child_window: AnalysisExtension) -> None:
-        self.active_extensions.remove(child_window)
+        try:
+            self.active_extensions.remove(child_window)
+        except ValueError:
+            logger.warning(
+                f"Attempted to remove child window that was not in active extensions list. Child window: {child_window}"
+            )
         self.extensions_palette.update_palette()
 
     def extract_timestamp(self, data: pd.DataFrame | None = None) -> np.ndarray:
@@ -519,11 +534,6 @@ class BadgerOptMonitor(QWidget):
         self.update_curves(results)
         self.update_analysis_extensions()
         self.extensions_palette.update_palette()
-
-        # Quick-n-dirty fix to the auto range issue
-        self.eval_count += 1
-        if self.eval_count < 2:
-            self.enable_auto_range()
 
         self.sig_progress.emit(self.routine.data.tail(1))
 
@@ -659,7 +669,7 @@ class BadgerOptMonitor(QWidget):
             try:
                 env.interface.stop_recording(os.path.join(path, filename))
             except AttributeError:  # recording was not enabled
-                pass
+                logger.debug("Recording was not enabled")
 
             self.sig_run_name.emit(run["filename"])
             self.sig_status.emit(
@@ -670,9 +680,9 @@ class BadgerOptMonitor(QWidget):
             #         self, 'Success!',
             #         f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - archive external call
             self.sig_run_name.emit(None)
-            self.sig_status.emit(f"Archive failed: {str(e)}")
+            self.sig_status.emit(f"Archive failed: {e!s}")
             # if not self.testing:
             #     QMessageBox.critical(self, 'Archive failed!',
             #                          f'Archive failed: {str(e)}')
@@ -687,12 +697,12 @@ class BadgerOptMonitor(QWidget):
             try:
                 del self.routine_runner.routine.environment
             except AttributeError:  # env already destroyed
-                pass
+                logger.debug("Environment already destroyed")
 
             try:
                 del self.routine.environment
             except AttributeError:  # env already destroyed
-                pass
+                logger.debug("Environment already destroyed")
 
     def on_error(self, error: Exception) -> None:
         details = error._details if hasattr(error, "_details") else None
@@ -711,8 +721,8 @@ class BadgerOptMonitor(QWidget):
     def logbook(self) -> None:
         try:
             send_to_logbook(self.routine, self.monitor)
-        except Exception as e:
-            self.sig_status.emit(f"Log failed: {str(e)}")
+        except Exception as e:  # noqa: BLE001 - logbook external call
+            self.sig_status.emit(f"Log failed: {e!s}")
             # QMessageBox.critical(self, 'Log failed!', str(e))
 
             return
@@ -760,7 +770,7 @@ class BadgerOptMonitor(QWidget):
             try:
                 ts = self.extract_timestamp()
                 value = idx = np.clip(np.round(pos), 0, len(ts) - 1)
-            except:  # no data
+            except (IndexError, ValueError):  # no data
                 value = idx = np.round(pos)
         self.inspector_objective.setValue(value)
         if self.vocs and self.vocs.constraint_names:
@@ -813,7 +823,7 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
-    def get_checkpoint(self) -> Optional[dict[str, float]]:
+    def get_checkpoint(self) -> dict[str, float] | None:
         if not self.routine or not self.routine.environment or not self.routine.vocs:
             return None
 
@@ -1090,7 +1100,7 @@ def create_cursor_line() -> pg.InfiniteLine:
     )
 
 
-def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None) -> None:
+def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None) -> None:
     # Split data into live and not live
     live_mask = data["live"].astype(bool)
     live_data = data.loc[live_mask]

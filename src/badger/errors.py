@@ -1,5 +1,10 @@
+"""Badger's exception classes. The base BadgerError pops up a Qt message box
+with the traceback when raised inside the GUI. Subclasses cover config issues,
+database errors, plugin failures, and optimization stop signals."""
+
 import sys
 import traceback
+from typing import Any
 
 from PyQt5.QtWidgets import QMessageBox
 
@@ -83,7 +88,9 @@ class BadgerInterfaceChannelError(Exception):
 
 
 class BadgerInvalidPluginError(Exception):
-    pass
+    def __init__(self, message: str = "", configs: Any = None):
+        super().__init__(message)
+        self.configs = configs
 
 
 class BadgerPluginNotFoundError(Exception):
@@ -118,3 +125,10 @@ MEASUREMENT_ERROR_TYPE = "measurement_error"
 MEASUREMENT_ACTION_TYPE = "measurement_action"
 MEASUREMENT_ACTION_RETRY = "retry"
 MEASUREMENT_ACTION_ABORT = "abort"
+
+# Constants for run-until termination dialog feature.
+# Used in communication between routine runner and subprocess.
+TERMINATION_REACHED_TYPE = "termination_reached"
+TERMINATION_ACTION_TYPE = "termination_action"
+TERMINATION_ACTION_CONTINUE = "continue"
+TERMINATION_ACTION_END = "end"

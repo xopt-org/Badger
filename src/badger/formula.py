@@ -1,7 +1,17 @@
+"""
+Evaluates user-defined math expressions for computed observables.
+
+Users write formulas like `quad1:b`+`quad2:b` or np.sqrt(`signal`) as
+observable names. This module parses backtick-quoted variable references,
+substitutes measured values, and evaluates the expression in a sandboxed
+namespace (numpy only). Includes typo detection for misspelled variable names.
+"""
+
 import ast
 import difflib
 import re
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 
@@ -90,4 +100,4 @@ def interpret_expression(expr: str, variables: dict[str, Any]) -> Any:
     try:
         return eval(expr, {"__builtins__": {}}, safe_namespace)
     except Exception as e:
-        raise ValueError(f"Expression evaluation failed: {e}")
+        raise ValueError(f"Expression evaluation failed: {e}") from e

@@ -1,50 +1,62 @@
+"""
+Turns a Pydantic model schema into an editable widget tree.
+
+Used in the routine editor to let users configure generator and environment
+parameters. Each field becomes the appropriate input widget (spinbox for
+numbers, checkbox for bools, nested tree for sub-models), and changes are
+validated against the Pydantic schema in real time.
+"""
+
+import ast
+import logging
+import re
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from inspect import isclass
 from types import NoneType
 from typing import (
     Annotated,
-    Callable,
-    Optional,
     Any,
-    Sequence,
+    ClassVar,
+    Optional,
     TypeVar,
-    cast,
-    get_origin,
     Union,
+    cast,
     get_args,
+    get_origin,
 )
-from inspect import isclass
 
-from pydantic_core import PydanticUndefined
 import yaml
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
-    QTreeWidget,
-    QTreeWidgetItem,
-    QSpinBox,
-    QDoubleSpinBox,
-    QCheckBox,
-    QLineEdit,
-    QLabel,
-    QWidget,
-    QPushButton,
-    QVBoxLayout,
-    QScrollArea,
-    QHBoxLayout,
-    QComboBox,
-    QSizePolicy,
-)
+from bax_algorithms.emittance import PathwiseMinimizeEmittance
+from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined, PydanticUndefinedType
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpinBox,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+from torch import Tensor
+from xopt.errors import VOCSError
 from xopt.generators import get_generator
+from xopt.generators.bayesian.bax.algorithms import Algorithm
+from xopt.generators.bayesian.bax_generator import BaxGenerator
+from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
-from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
-
-import re
-import ast
-
-import logging
-
 from xopt.vocs import VOCS
 
 logger = logging.getLogger(__name__)
@@ -57,19 +69,19 @@ TUPLE_PATTERN = re.compile(r"\((.*?,.*?)\)")
 
 
 class CustomSafeLoader(yaml.SafeLoader):
-    def tuple_constructor(self, node: yaml.ScalarNode | yaml.MappingNode):
-        value = self.construct_scalar(node)
+    def __init__(self, stream: Any) -> None:
+        super().__init__(stream)
+        self.add_constructor("tag:yaml.org,2002:str", type(self).tuple_constructor)
+
+    @staticmethod
+    def tuple_constructor(loader: Any, node: yaml.ScalarNode) -> Any:
+        value = loader.construct_scalar(node)
         if TUPLE_PATTERN.match(value):
             try:
                 return ast.literal_eval(value)
-            except Exception:
-                pass
+            except (ValueError, SyntaxError):
+                logger.warning(f"Failed to parse tuple from string: {value}")
         return value
-
-
-CustomSafeLoader.add_constructor(
-    "tag:yaml.org,2002:str", CustomSafeLoader.tuple_constructor
-)
 
 
 def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
@@ -82,17 +94,27 @@ def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
 
 
 def _set_value_for_basic_widget(
-    widget: Any,
-    value: str | float | int | bool | None,
-):
-    if isinstance(widget, QLabel) or isinstance(widget, QLineEdit):
+    widget: QWidget,
+    value: str | float | bool | None,
+) -> None:
+    nullable = bool(widget.property("badger_nullable"))
+    if isinstance(widget, (QLabel, QLineEdit)):
         widget.setText("null" if value is None else str(value))
     elif isinstance(widget, QDoubleSpinBox):
-        widget.setValue(convert_to_type(value, float))
+        if value is None and nullable:
+            widget.setValue(widget.minimum())
+        else:
+            widget.setValue(convert_to_type(value, float))
     elif isinstance(widget, QSpinBox):
-        widget.setValue(convert_to_type(value, int))
+        if value is None and nullable:
+            widget.setValue(widget.minimum())
+        else:
+            widget.setValue(convert_to_type(value, int))
     elif isinstance(widget, QCheckBox):
-        widget.setChecked(convert_to_type(value, bool))
+        if value is None and nullable:
+            widget.setCheckState(Qt.CheckState.PartiallyChecked)
+        else:
+            widget.setChecked(convert_to_type(value, bool))
 
 
 @dataclass
@@ -103,7 +125,7 @@ class BadgerResolvedType:
 
     @classmethod
     def find_primary(
-        cls, annotations: list[Any] | tuple[Any, ...]
+        cls, annotations: tuple[Any, ...]
     ) -> Optional["BadgerResolvedType"]:
         if len(annotations) == 0:
             return None
@@ -128,10 +150,8 @@ class BadgerResolvedType:
         return resolved[0]
 
     @classmethod
-    def resolve(
-        cls, annotation: type[Any] | Union[Any, None] | None
-    ) -> "BadgerResolvedType":
-        origin: type[Any] | Union[Any, None] | None = get_origin(annotation)
+    def resolve(cls, annotation: type[Any] | Any | None) -> "BadgerResolvedType":
+        origin: type[Any] | Any | None = get_origin(annotation)
         args = get_args(annotation)
         nullable = False
 
@@ -147,11 +167,11 @@ class BadgerResolvedType:
         if origin == Union:
             if NoneType in args:
                 origin = Optional
-                args = [arg for arg in args if arg != NoneType]
+                args = tuple(arg for arg in args if arg != NoneType)
             else:
                 if len(args) == 1:
                     origin = args[0]
-                    args = []
+                    args = ()
                     nullable = True
 
                     if origin is not None:
@@ -168,7 +188,7 @@ class BadgerResolvedType:
 
         if origin == Optional:
             origin = args[0]
-            args = []
+            args = ()
             nullable = True
 
             if origin is not None:
@@ -194,20 +214,23 @@ class BadgerResolvedType:
     @classmethod
     def resolve_qt(
         cls,
-        annotation: type[Any] | Union[Any, None] | None,
-        default: float | int | bool | dict[str, Any] | list[Any] | None = None,
+        annotation: type[Any] | Any | None,
+        default: float | bool | dict[str, Any] | list[Any] | None = None,
         editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem] | None = None,
     ) -> QWidget | None:
         resolved_type = BadgerResolvedType.resolve(annotation)
-        widget = QLabel()
+        widget: QWidget | None = None
+        property_name = editor_info[1].text(0) if editor_info is not None else ""
 
         if resolved_type.main is None:
             widget = QLineEdit()
             widget.setText("null")
         elif issubclass(resolved_type.main, BaseModel):
-            if issubclass(resolved_type.main, TurboController):
-                widget = QComboBox()
-            elif issubclass(resolved_type.main, NumericalOptimizer):
+            if (
+                issubclass(resolved_type.main, TurboController)
+                or issubclass(resolved_type.main, NumericalOptimizer)
+                or issubclass(resolved_type.main, Algorithm)
+            ):
                 widget = QComboBox()
             else:
                 return None
@@ -216,24 +239,33 @@ class BadgerResolvedType:
 
             if default is None:
                 default = {"name": "null"}
-            if isinstance(default, dict) and "name" in default:
-                if (index := widget.findText(default["name"])) >= 0:
-                    widget.setCurrentIndex(index)
+            if (
+                isinstance(default, dict)
+                and "name" in default
+                and (index := widget.findText(default["name"])) >= 0
+            ):
+                widget.setCurrentIndex(index)
         elif resolved_type.main == NoneType:
             widget = QLabel()
             widget.setText("null")
         elif resolved_type.main is dict:
             subtypes = resolved_type.subtype
             if subtypes is None:
-                raise ValueError("Dict type must have subtypes")
+                raise ValueError(
+                    f"Property name {property_name}: Dict type must have subtypes"
+                )
             if not isinstance(subtypes, list) or len(subtypes) != 2:
-                raise ValueError("Dict type must have two subtypes")
+                raise ValueError(
+                    f"Property name {property_name}: Dict type must have two subtypes"
+                )
 
             primary_type = subtypes[0]
             secondary_type = subtypes[1]
 
             if primary_type.main is None or secondary_type.main is None:
-                raise ValueError("Dict subtypes must be basic types")
+                raise ValueError(
+                    f"Property name {property_name}: Dict subtypes must be basic types"
+                )
 
             widget = BadgerListEditor(primary_type.main, secondary_type.main)
 
@@ -247,7 +279,9 @@ class BadgerResolvedType:
                 widget.listChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is list:
             if resolved_type.subtype is None:
-                raise ValueError("List type must have a subtype")
+                raise ValueError(
+                    f"Property name {property_name}: List type must have a subtype"
+                )
             if isinstance(resolved_type.subtype, list):
                 primary_type = resolved_type.subtype[0]
                 secondary_type = (
@@ -258,7 +292,9 @@ class BadgerResolvedType:
                 primary_type = resolved_type.subtype
                 secondary_type = None
             if primary_type.main is None:
-                raise ValueError("List subtype must be a basic type")
+                raise ValueError(
+                    f"Property name {property_name}: List subtype must be a basic type"
+                )
             widget = BadgerListEditor(
                 primary_type.main, secondary_type.main if secondary_type else None
             )
@@ -274,23 +310,52 @@ class BadgerResolvedType:
             widget = QDoubleSpinBox()
             widget.setRange(float("-inf"), float("inf"))
             widget.setDecimals(6)
-            value = convert_to_type(default, float) if default is not None else 0.0
-            widget.setValue(value)
+            if default is not None and not isinstance(default, PydanticUndefinedType):
+                widget.setValue(convert_to_type(default, float))
+            elif resolved_type.nullable:
+                # The minimum value doubles as the "null" sentinel.
+                widget.setSpecialValueText("null")
+                widget.setValue(widget.minimum())
+            else:
+                raise ValueError(
+                    f"Property name {property_name}: Float type must have a default value"
+                )
 
             if editor_info is not None:
-                widget.valueChanged.connect(lambda: handle_changed(editor_info))
+                # Validate on ``editingFinished`` (focus loss / Enter) rather than
+                # ``valueChanged``: rebuilding the tree on every value change would
+                # destroy this spinbox mid-edit and drop the cursor.
+                widget.editingFinished.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is int:
             widget = QSpinBox()
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
-            value = convert_to_type(default, int) if default is not None else 0
-            widget.setValue(value)
+            if default is not None and not isinstance(default, PydanticUndefinedType):
+                widget.setValue(convert_to_type(default, int))
+            elif resolved_type.nullable:
+                # The minimum value doubles as the "null" sentinel.
+                widget.setSpecialValueText("null")
+                widget.setValue(widget.minimum())
+            else:
+                raise ValueError(
+                    f"Property name {property_name}: Int type must have a default value"
+                )
 
             if editor_info is not None:
-                widget.valueChanged.connect(lambda: handle_changed(editor_info))
+                # Validate on ``editingFinished`` (focus loss / Enter) rather than
+                # ``valueChanged``: rebuilding the tree on every value change would
+                # destroy this spinbox mid-edit and drop the cursor.
+                widget.editingFinished.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is bool:
             widget = QCheckBox()
-            value = convert_to_type(default, bool) if default is not None else False
-            widget.setChecked(value)
+            if default is not None and not isinstance(default, PydanticUndefinedType):
+                widget.setChecked(convert_to_type(default, bool))
+            elif resolved_type.nullable:
+                widget.setTristate(True)
+                widget.setCheckState(Qt.CheckState.PartiallyChecked)
+            else:
+                raise ValueError(
+                    f"Property name {property_name}: Bool type must have a default value"
+                )
 
             if editor_info is not None:
                 widget.stateChanged.connect(lambda: handle_changed(editor_info))
@@ -298,17 +363,29 @@ class BadgerResolvedType:
             widget = QLineEdit()
             if default is None:
                 widget.setText("null")
+            elif isinstance(default, Tensor):
+                # Tensor-typed fields (e.g. ``Tensor | None``) resolve to a bare
+                # union here, so they land in this catch-all. Render them as a plain
+                # nested list string (e.g. "[[1.0, 1.0], [0.0, 1.0]]") rather than
+                # the "tensor(...)" repr, so the value round-trips cleanly through
+                # the model's field validator.
+                widget.setText(str(default.tolist()))
             else:
                 widget.setText(str(default))
 
             if editor_info is not None:
-                widget.textChanged.connect(lambda: handle_changed(editor_info))
+                # Validate on ``editingFinished`` (focus loss / Enter) rather than
+                # ``textChanged``. ``handle_changed`` rebuilds the whole tree, which
+                # destroys and recreates this very QLineEdit; doing that on every
+                # keystroke kills the text cursor and makes the view jump. Waiting
+                # until the user is done editing keeps the cursor active while typing.
+                widget.editingFinished.connect(lambda: handle_changed(editor_info))
 
         widget.setProperty("badger_nullable", resolved_type.nullable)
         return widget
 
 
-def handle_changed(editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem]):
+def handle_changed(editor_info: tuple["BadgerPydanticEditor", QTreeWidgetItem]) -> None:
     tree_widget, _ = editor_info
     tree_widget.validate()
 
@@ -318,23 +395,27 @@ def _qt_widget_to_yaml_value(widget: Any) -> str | None:
         return None
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_yaml()
-    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+        if widget.property("badger_nullable") and widget.value() == widget.minimum():
+            return "null"
         return str(widget.value())
     elif isinstance(widget, QCheckBox):
+        if (
+            widget.property("badger_nullable")
+            and widget.checkState() == Qt.CheckState.PartiallyChecked
+        ):
+            return "null"
         return "true" if widget.isChecked() else "false"
     elif isinstance(widget, QComboBox):
         if widget.currentText() == "null":
             return "null"
         return f'"{widget.currentText()}"'
     elif isinstance(widget, (QLabel, QLineEdit)):
-        if widget.text() == "null" or widget.text() == "None":
-            return '"null"'
+        text = widget.text()
+        if text == "null" or text == "None" or text == "":
+            return "null"
         else:
-            return (
-                ('"' + widget.text() + '"')
-                if isinstance(widget, QLineEdit)
-                else widget.text()
-            )
+            return ('"' + text + '"') if isinstance(widget, QLineEdit) else text
     return "null"
 
 
@@ -377,9 +458,16 @@ def _qt_widget_to_value(widget: Any) -> Any:
         return None
     elif isinstance(widget, BadgerListEditor):
         return widget.get_parameters_dict()
-    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+    elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+        if widget.property("badger_nullable") and widget.value() == widget.minimum():
+            return None
         return widget.value()
     elif isinstance(widget, QCheckBox):
+        if (
+            widget.property("badger_nullable")
+            and widget.checkState() == Qt.CheckState.PartiallyChecked
+        ):
+            return None
         return widget.isChecked()
     elif isinstance(widget, QComboBox):
         return widget.currentText()
@@ -413,6 +501,24 @@ def _qt_widgets_to_values_recurse(
     return out
 
 
+def _default_for_new_row(
+    widget_type: type[Any] | None,
+) -> float | int | bool | None:
+    """Provide a sensible default for a freshly-added list/dict row.
+
+    Numeric and boolean widgets raise if resolved without a default value, so a
+    new (empty) row must supply one. Other types (e.g. str) already handle a
+    missing default gracefully, so ``None`` is returned for them.
+    """
+    if widget_type is float:
+        return 0.0
+    if widget_type is int:
+        return 0
+    if widget_type is bool:
+        return False
+    return None
+
+
 class BadgerListItem(QWidget):
     def __init__(self, editor: "BadgerListEditor", parent: QWidget | None = None):
         super().__init__(parent)
@@ -420,14 +526,13 @@ class BadgerListItem(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.parameter_value = BadgerResolvedType.resolve_qt(
-            editor.widget_type, default=None
+            editor.widget_type, default=_default_for_new_row(editor.widget_type)
         )
         if self.parameter_value:
             self.parameter_value.setSizePolicy(
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
             )
             if isinstance(self.parameter_value, QLineEdit):
-                self.parameter_value = cast(QLineEdit, self.parameter_value)
                 self.parameter_value.editingFinished.connect(
                     lambda: self.editor.listChanged.emit()
                 )
@@ -436,7 +541,7 @@ class BadgerListItem(QWidget):
         self.parameter_value2 = None
         if editor.widget_type2 is not None:
             self.parameter_value2 = BadgerResolvedType.resolve_qt(
-                editor.widget_type2, default=None
+                editor.widget_type2, default=_default_for_new_row(editor.widget_type2)
             )
             if self.parameter_value2:
                 self.parameter_value2.setSizePolicy(
@@ -444,7 +549,6 @@ class BadgerListItem(QWidget):
                 )
 
                 if isinstance(self.parameter_value2, QDoubleSpinBox):
-                    self.parameter_value2 = cast(QDoubleSpinBox, self.parameter_value2)
                     self.parameter_value2.valueChanged.connect(
                         lambda: self.editor.listChanged.emit()
                     )
@@ -458,13 +562,13 @@ class BadgerListItem(QWidget):
         remove_button.clicked.connect(self.remove)
         layout.addWidget(remove_button, alignment=Qt.AlignmentFlag.AlignRight)
 
-    def parameter1(self):
+    def parameter1(self) -> QWidget | None:
         return self.parameter_value
 
-    def parameter2(self):
+    def parameter2(self) -> QWidget | None:
         return self.parameter_value2
 
-    def remove(self):
+    def remove(self) -> None:
         self.setParent(None)
         self.deleteLater()
         self.editor.listChanged.emit()
@@ -504,16 +608,16 @@ class BadgerListEditor(QWidget):
 
         layout.addLayout(button_layout)
 
-    def handle_button_click(self):
+    def handle_button_click(self) -> None:
         self.add_widget()
 
-    def add_widget(self):
+    def add_widget(self) -> BadgerListItem:
         widget = BadgerListItem(self)
         self.list_layout.addWidget(widget)
         self.listChanged.emit()
         return widget
 
-    def get_parameters_yaml(self):
+    def get_parameters_yaml(self) -> str | None:
         child_values: list[str | None] = [
             _qt_widget_to_yaml_value(child.parameter_value)
             for child in self.list_container.children()
@@ -539,7 +643,7 @@ class BadgerListEditor(QWidget):
                 + "}"
             )
 
-    def get_parameters_dict(self):
+    def get_parameters_dict(self) -> dict[str, Any] | None:
         child_values: list[str | None] = [
             _qt_widget_to_value(child.parameter_value)
             for child in self.list_container.children()
@@ -561,9 +665,44 @@ class BadgerListEditor(QWidget):
 
 class BadgerPydanticEditor(QTreeWidget):
     vocs: VOCS = VOCS(variables={})
-    defaults: dict[str, Any] = {}
+
     generator_name: str = ""
     model_class: type[BaseModel] | None = None
+
+    # Fields holding runtime state that has no editable widget representation
+    # (e.g. pandas DataFrames populated during/after optimization). These are
+    # dropped from the tree entirely so their stringified values never reach
+    # validation.
+    #
+    # ``COMMON_EXCLUDED_FIELDS`` applies to every generator. Add generator
+    # specific exclusions to ``GENERATOR_EXCLUDED_FIELDS`` keyed by the
+    # generator name (i.e. the value passed to ``set_params_from_generator`` /
+    # the generator's ``name`` field). The effective set is the union of both,
+    # resolved by ``get_excluded_fields``.
+    COMMON_EXCLUDED_FIELDS: frozenset[str] = frozenset({"computation_time"})
+    GENERATOR_EXCLUDED_FIELDS: ClassVar[dict[str, frozenset[str]]] = {
+        # "bax": frozenset({"algorithm_results"}),
+    }
+
+    def get_excluded_fields(self) -> frozenset[str]:
+        """Return the set of fields to exclude from the tree for the current
+        generator: the common fields plus any generator-specific ones."""
+        excluded: set[str] = set(self.COMMON_EXCLUDED_FIELDS)
+
+        # Resolve the generator name from the loaded model class when available,
+        # falling back to the name provided to ``set_params_from_generator``.
+        names: set[str] = set()
+        if self.generator_name:
+            names.add(self.generator_name)
+        if self.model_class is not None:
+            name_field = self.model_class.model_fields.get("name")
+            if name_field is not None and isinstance(name_field.default, str):
+                names.add(name_field.default)
+
+        for name in names:
+            excluded |= self.GENERATOR_EXCLUDED_FIELDS.get(name, frozenset())
+
+        return frozenset(excluded)
 
     def __init__(
         self,
@@ -571,9 +710,10 @@ class BadgerPydanticEditor(QTreeWidget):
         value_col: int = 1,
         update_callback: Callable[["BadgerPydanticEditor"], None] | None = None,
     ):
+        self.defaults: dict[str, Any] = {}
+
         QTreeWidget.__init__(self, parent)
-        if value_col < 1:
-            value_col = 1
+        value_col = max(value_col, 1)
         self.value_col = value_col
         self.update_callback = update_callback
         self.setColumnCount(self.value_col + 1)
@@ -581,7 +721,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self.setHeaderLabels(
             [
                 "Parameter" if i == 0 else "Value" if i == self.value_col else ""
-                for i in range(0, self.value_col + 1)
+                for i in range(self.value_col + 1)
             ]
         )
 
@@ -589,21 +729,22 @@ class BadgerPydanticEditor(QTreeWidget):
 
     def _set_params_recurse(
         self,
-        parent: Optional[QTreeWidgetItem],
+        parent: QTreeWidgetItem | None,
         fields: dict[str, FieldInfo],
         defaults: dict[str, Any] | None,
         hidden: bool,
-    ):
+    ) -> None:
         for field_name, field_info in fields.items():
             child = QTreeWidgetItem(
-                [field_name if i == 0 else "" for i in range(0, self.value_col + 1)]
+                [field_name if i == 0 else "" for i in range(self.value_col + 1)]
             )
 
             if parent is None:
                 self.addTopLevelItem(child)
             else:
                 parent.addChild(child)
-            child.setToolTip(0, field_info.description)
+            if field_info.description:
+                child.setToolTip(0, field_info.description)
 
             widget = BadgerResolvedType.resolve_qt(
                 annotation=field_info.annotation,
@@ -645,7 +786,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self,
         widget: QComboBox,
         selections: Sequence[type[BaseModel] | None],
-    ):
+    ) -> None:
         # Clear out existing children
         widget.clear()
         for selection in selections:
@@ -654,18 +795,18 @@ class BadgerPydanticEditor(QTreeWidget):
             else:
                 widget.addItem(selection.model_fields["name"].default, selection)
 
-    def set_params_from_class(self, pydantic_class: type[Any]):
+    def set_params_from_class(self, pydantic_class: type[Any]) -> None:
         self.clear()
         self.model_class = pydantic_class
         self._set_params_recurse(None, self.model_class.model_fields, None, False)
         self.set_params_post_setup({})
         self.validate()
 
-    def set_params_from_dict(self, params: dict[str, Any]):
+    def set_params_from_dict(self, params: dict[str, Any]) -> None:
         self.clear()
         field_definitions: dict[str, tuple[type, FieldInfo]] = {
             k: (type(v), Field()) for k, v in params.items()
-        }  # type: ignore
+        }
         if field_definitions == {}:
             logger.warning("No fields found in params dictionary")
             return
@@ -684,7 +825,7 @@ class BadgerPydanticEditor(QTreeWidget):
         defaults: dict[str, Any],
         vocs: VOCS | None = None,
         validate: bool = True,
-    ):
+    ) -> None:
         logger.debug(f"vocs: {vocs}")
         logger.debug(f"defaults: {defaults}")
         self.vocs = vocs or VOCS(variables={})
@@ -698,8 +839,18 @@ class BadgerPydanticEditor(QTreeWidget):
 
         fields_to_remove = ["vocs"]
 
+        if issubclass(self.model_class, BaxGenerator):
+            # The results file is derived, not user-editable: it is assigned at
+            # run start (see prepare_run) to match the run's archive name, so
+            # hide it from the tree rather than exposing a placeholder value.
+            fields_to_remove.append("algorithm_results_file")
+
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
-            self.model_class, fields_to_remove, defaults, include_defaults=True
+            self.model_class,
+            fields_to_remove,
+            defaults,
+            include_defaults=True,
+            excluded_fields=self.get_excluded_fields(),
         )
 
         self._set_params_recurse(
@@ -722,7 +873,7 @@ class BadgerPydanticEditor(QTreeWidget):
         if validate:
             self.validate()
 
-    def set_params_post_setup(self, defaults: dict[str, Any]):
+    def set_params_post_setup(self, defaults: dict[str, Any]) -> None:
         if self.model_class is None:
             raise ValueError("Model class is not set.")
 
@@ -733,7 +884,14 @@ class BadgerPydanticEditor(QTreeWidget):
             if self.model_class.model_fields.get("numerical_optimizer") is not None:
                 self.initialize_special_field(defaults, "numerical_optimizer")
 
-    def initialize_special_field(self, defaults: dict[str, Any], field: str):
+            if issubclass(self.model_class, BaxGenerator):
+                logger.debug(
+                    f"Generator is a {self.model_class.__name__} checking for algorithm field."
+                )
+                if self.model_class.model_fields.get("algorithm") is not None:
+                    self.initialize_special_field(defaults, "algorithm")
+
+    def initialize_special_field(self, defaults: dict[str, Any], field: str) -> None:
         widget_items = self.findItems(field, Qt.MatchFlag.MatchExactly)
 
         if len(widget_items) == 0:
@@ -748,23 +906,29 @@ class BadgerPydanticEditor(QTreeWidget):
         widget = self.itemWidget(special_item, self.value_col)
         if widget is None or not isinstance(widget, QComboBox):
             raise ValueError(f"{field} does not have a combo box widget.")
-        widget = cast(QComboBox, widget)
 
         selections = self.get_all_compatible_classes(field)
 
         self.initialize_combo_widget(widget, selections)
 
-        special_item_dict: dict[str, Any] | None = defaults.get(field, {})
+        # Get value without default - if key doesn't exist, get() returns None
+        # If key exists but value is None (from null in YAML), it's also None
+        # We need to distinguish these cases for the warning
+        special_item_dict: dict[str, Any] | None = defaults.get(field)
 
         if special_item_dict is None:
-            logger.warning(
-                f"Generator has {field} set but no compatible {field} exists."
-            )
+            # Check if key exists in dict - if not, warn; if yes, it's explicitly null
+            if field not in defaults:
+                logger.warning(
+                    f"Generator has {field} set but no compatible {field} exists in defaults. "
+                    "Item has likely been filtered out from not being included in defaults."
+                )
             special_item_dict = {}
 
         special_item_dict["vocs"] = self.vocs.model_dump()
 
-        name = special_item_dict.get("name", "")
+        # Use the name from dict, or "null" if dict is empty (null was set)
+        name = special_item_dict.get("name", "null" if not special_item_dict else "")
 
         # Update combo box selection with name
         if (index := widget.findText(name) if name else widget.findText("null")) >= 0:
@@ -778,10 +942,12 @@ class BadgerPydanticEditor(QTreeWidget):
         )
 
         widget.currentIndexChanged.connect(
-            lambda: self.on_radio_changed(special_item, "turbo_controller")
+            lambda: self.on_radio_changed(special_item, field)
         )
 
-    def get_all_compatible_classes(self, field_name: str):
+    def get_all_compatible_classes(
+        self, field_name: str
+    ) -> Sequence[type[BaseModel] | None]:
         if self.model_class is None:
             raise ValueError("Model class is not set.")
 
@@ -795,6 +961,15 @@ class BadgerPydanticEditor(QTreeWidget):
             if not issubclass(self.model_class, BayesianGenerator):
                 raise ValueError("Generator does not support turbo controllers.")
             compatible_classes = self.model_class.get_compatible_turbo_controllers()
+        elif field_name == "algorithm":
+            if not issubclass(self.model_class, BaxGenerator):
+                raise ValueError("Generator does not support algorithms.")
+            compatible_classes = self.model_class.get_compatible_algorithms()
+            # TODO: Add in additional from BAX algorithms.
+            compatible_classes = list(compatible_classes) + [
+                PathwiseMinimizeEmittance,
+                PathwiseSolenoidAlignment,
+            ]
         else:
             raise ValueError(f"Field name {field_name} is not recognized.")
 
@@ -816,7 +991,7 @@ class BadgerPydanticEditor(QTreeWidget):
 
         if selected_class is None:
             raise ValueError(
-                f"Generator has numerical optimizer set but no compatible numerical optimizer with name {name} exists."
+                f"Generator has {field_name} set but no compatible {field_name} with name {name} exists."
             )
 
         return selected_class
@@ -825,7 +1000,7 @@ class BadgerPydanticEditor(QTreeWidget):
         self,
         tree_widget_item: QTreeWidgetItem,
         field_name: str,
-    ):
+    ) -> None:
         # Clear out existing children
         for cc in tree_widget_item.takeChildren():
             del cc
@@ -833,7 +1008,6 @@ class BadgerPydanticEditor(QTreeWidget):
         widget = self.itemWidget(tree_widget_item, self.value_col)
         if widget is None or not isinstance(widget, QComboBox):
             raise ValueError("tree widget item does not have a combo box widget.")
-        widget = cast(QComboBox, widget)
 
         name = widget.currentText()
         if name == "null":
@@ -857,7 +1031,7 @@ class BadgerPydanticEditor(QTreeWidget):
         name: str,
         field_name: str,
         defaults: dict[str, Any],
-    ):
+    ) -> None:
         try:
             pydantic_class = self.get_compatible_class(name, field_name)
         except ValueError:
@@ -885,16 +1059,37 @@ class BadgerPydanticEditor(QTreeWidget):
             True,
         )
 
+        # ``class_path`` is a Pydantic computed field (absent from ``model_fields``)
+        # so it never becomes a widget on its own. BaxGenerator.validate_algorithm
+        # relies on it to import algorithms that are not registered in the
+        # generator's compatible list (e.g. the vendored BAX algorithms). Render it
+        # as a hidden item so its value is carried through get_parameters_yaml()/
+        # get_parameters_dict() into the final config.
+        if "class_path" in pydantic_class.model_computed_fields:
+            class_path_value = f"{pydantic_class.__module__}.{pydantic_class.__name__}"
+            self._set_params_recurse(
+                tree_widget_item,
+                {"class_path": FieldInfo(annotation=str, default=class_path_value)},
+                {"class_path": class_path_value},
+                True,
+            )
+
         self.expandItem(tree_widget_item)
 
     @staticmethod
     def filter_class_fields(
         pydantic_class: type[BaseModel],
-        fields_to_remove: list[str] = [],
-        defaults: dict[str, Any] = {},
+        fields_to_remove: list[str] | None = None,
+        defaults: dict[str, Any] | None = None,
         include_defaults: bool = False,
+        excluded_fields: frozenset[str] = frozenset(),
     ) -> tuple[dict[str, FieldInfo], dict[str, FieldInfo]]:
         condition: Callable[[str], bool]
+
+        if fields_to_remove is None:
+            fields_to_remove = []
+        if defaults is None:
+            defaults = {}
 
         def include_condition(k: str) -> bool:
             return k in defaults and k not in fields_to_remove
@@ -908,21 +1103,23 @@ class BadgerPydanticEditor(QTreeWidget):
             condition = exclude_condition
 
         filtered_class_fields = {
-            k: v for k, v in pydantic_class.model_fields.items() if condition(k)
+            k: v
+            for k, v in pydantic_class.model_fields.items()
+            if condition(k) and k not in excluded_fields
         }
 
         removed_class_fields = {
             k: v
             for k, v in pydantic_class.model_fields.items()
-            if k in fields_to_remove
+            if k in fields_to_remove and k not in excluded_fields
         }
 
         return filtered_class_fields, removed_class_fields
 
     @staticmethod
-    def get_defaults_from_type(pydantic_class: type[Any]):
+    def get_defaults_from_type(pydantic_class: type[Any]) -> dict[str, Any]:
         if not issubclass(pydantic_class, BaseModel):
-            raise ValueError("Provided class is not a Pydantic model")
+            raise TypeError("Provided class is not a Pydantic model")
         defaults: dict[str, Any] = {}
         for field_name, field_info in pydantic_class.model_fields.items():
             if field_info.default is not PydanticUndefined:
@@ -972,7 +1169,7 @@ class BadgerPydanticEditor(QTreeWidget):
 
         return None
 
-    def remove_style(self, item: QTreeWidgetItem | None):
+    def remove_style(self, item: QTreeWidgetItem | None) -> None:
         # Have to reset border styling in case some errors were fixed
         if item is None:
             return
@@ -984,7 +1181,7 @@ class BadgerPydanticEditor(QTreeWidget):
         for j in range(item.childCount()):
             self.remove_style(item.child(j))
 
-    def update_vocs(self, vocs: VOCS):
+    def update_vocs(self, vocs: VOCS) -> None:
         logger.debug(f"Updating VOCS in BadgerPydanticEditor: {vocs}")
         self.vocs = vocs
 
@@ -996,17 +1193,32 @@ class BadgerPydanticEditor(QTreeWidget):
         self.set_params_from_generator(self.generator_name, defaults, self.vocs)
         self.validate()
 
-    def update_after_validate(self, defaults: dict[str, Any]):
+    def update_after_validate(self, defaults: dict[str, Any]) -> None:
         model_class = self.model_class
         if model_class is None:
             return
+
+        # Rebuilding the tree resets the scrollbars, making the view jump back
+        # to the top on every edit. Capture the current scroll positions so we
+        # can restore them once the tree has been repopulated.
+        h_scroll = self.horizontalScrollBar().value()
+        v_scroll = self.verticalScrollBar().value()
 
         self.clear()
 
         fields_to_remove = ["vocs"]
 
+        if isclass(model_class) and issubclass(model_class, BaxGenerator):
+            # Keep the derived results file hidden after re-rendering; its value
+            # is preserved from the (hidden) tree item via ``defaults``.
+            fields_to_remove.append("algorithm_results_file")
+
         filtered_class_fields, removed_class_fields = self.filter_class_fields(
-            model_class, fields_to_remove, defaults, include_defaults=True
+            model_class,
+            fields_to_remove,
+            defaults,
+            include_defaults=True,
+            excluded_fields=self.get_excluded_fields(),
         )
 
         self._set_params_recurse(
@@ -1026,12 +1238,60 @@ class BadgerPydanticEditor(QTreeWidget):
         # Update parameters with defaults from generator class
         self.set_params_post_setup(defaults)
 
+        # Restore the scroll positions captured before the rebuild. Defer to the
+        # next event-loop iteration so the restore runs after the tree has laid
+        # out its (re)created items and updated the scrollbar ranges.
+        def restore_scroll() -> None:
+            self.horizontalScrollBar().setValue(h_scroll)
+            self.verticalScrollBar().setValue(v_scroll)
+
+        QTimer.singleShot(0, restore_scroll)
+
         if self.update_callback is not None:
             self.update_callback(self)
 
-    def validate(self):
+    def _inject_computed_fields(
+        self,
+        parameters_dict: Any,
+        model_class: type[BaseModel],
+    ) -> None:
+        # Pydantic @computed_field values aren't editable in the form, but some
+        # validators (e.g. Xopt's discriminated-union dispatch on `class_path`)
+        # require them in the input dict. Walk the dict, derive each level's
+        # computed fields from its pydantic class, and inject them.
+        if not isinstance(parameters_dict, dict):
+            return
+
+        try:
+            instance = model_class.model_construct(**parameters_dict)
+            for cf_name in model_class.model_computed_fields:
+                if cf_name in parameters_dict:
+                    continue
+                try:
+                    parameters_dict[cf_name] = getattr(instance, cf_name)
+                except Exception as e:  # noqa: BLE001 - computed field runs model code
+                    logger.debug(
+                        f"Could not compute {cf_name} on {model_class.__name__}: {e}"
+                    )
+        except Exception as e:  # noqa: BLE001 - model_construct runs model code
+            logger.debug(
+                f"Could not model_construct {model_class.__name__} for computed-field injection: {e}"
+            )
+
+        if isclass(model_class) and issubclass(model_class, BayesianGenerator):
+            for sub_field in ("algorithm", "numerical_optimizer", "turbo_controller"):
+                sub = parameters_dict.get(sub_field)
+                if not isinstance(sub, dict) or "name" not in sub:
+                    continue
+                try:
+                    sub_class = self.get_compatible_class(sub["name"], sub_field)
+                except (ValueError, AttributeError):
+                    continue
+                self._inject_computed_fields(sub, sub_class)
+
+    def validate(self) -> None:
         if self.model_class is None:
-            return False
+            raise ValueError("Model class is not set.")
 
         self.setStyleSheet("")
         for i in range(self.topLevelItemCount()):
@@ -1041,11 +1301,11 @@ class BadgerPydanticEditor(QTreeWidget):
             parameters = self.get_parameters_yaml()
             parameters_dict = yaml.load(parameters, Loader=CustomSafeLoader)
 
-            def convert_dict(val):
+            def convert_dict(val: Any) -> Any:
                 # Convert str-encoded dicts (and lists) back into actual dict objects."""
                 if isinstance(val, str):
                     stripped = val.strip()
-                    if stripped.startswith("{") or stripped.startswith("["):
+                    if stripped.startswith(("{", "[")):
                         try:
                             return ast.literal_eval(stripped)
                         except (ValueError, SyntaxError):
@@ -1065,14 +1325,10 @@ class BadgerPydanticEditor(QTreeWidget):
                         parameters_dict["vocs"][key] = convert_dict(
                             parameters_dict["vocs"][key]
                         )
+            else:
+                raise KeyError("vocs field is required in parameters")
 
-            # Not valid unlesss has at least one objective
-            if "vocs" not in parameters_dict:
-                return False
-            obj_data = parameters_dict["vocs"].get("objectives")
-            if not obj_data or len(obj_data) == 0:
-                return False
-
+            self._inject_computed_fields(parameters_dict, self.model_class)
             model = self.model_class.model_validate(parameters_dict)
 
             # After we validate the model, some fields may have been changed due to any validation logic present within the Pydantic model (i.e. field validators changing default values). We need to update the tree to reflect these changes.
@@ -1084,41 +1340,43 @@ class BadgerPydanticEditor(QTreeWidget):
 
             self.update_after_validate(defaults)
 
-            return True
         except KeyError as e:
             logger.error(e)
+        except VOCSError as e:
+            logger.error(e)
+            loc: tuple[int | str, ...] = ("vocs",)
+            msg = e.message if hasattr(e, "message") else str(e)
+            self.update_error_styles(loc, msg)
         except ValidationError as e:
             logger.error(e)
 
             for error in e.errors():
                 loc = error["loc"]
                 msg = error["msg"]
-                if len(loc) > 0:
-                    error_widget = self.find_widget_at_path(loc)
-                else:
-                    error_widget = self
-                if error_widget:
-                    if type(error_widget) is QTreeWidgetItem:
-                        error_widget.setBackground(0, Qt.GlobalColor.red)
-                        widget = self.itemWidget(error_widget, self.value_col)
-                        if widget is not None:
-                            widget.setProperty("error", True)
-                            widget.setStyleSheet(
-                                '*[error="true"] { border: 2px dashed red }'
-                            )
-                            if isinstance(widget, BadgerListEditor):
-                                widget = cast(BadgerListEditor, widget)
-                                widget.list_container.setProperty("error", True)
-                                widget.list_container.setStyleSheet(
-                                    '*[error="true"] { border: 2px dashed red }'
-                                )
+                self.update_error_styles(loc, msg)
 
-                        error_widget.setToolTip(0, msg)
-                    else:
-                        error_widget = cast(QTreeWidget, error_widget)
-                        error_widget.setProperty("error", True)
-                        error_widget.setStyleSheet(
+    def update_error_styles(self, loc: tuple[int | str, ...], msg: str) -> None:
+        error_widget: QTreeWidgetItem | QTreeWidget | BadgerPydanticEditor | None = None
+        if len(loc) > 0:
+            error_widget = self.find_widget_at_path(loc)
+        else:
+            error_widget = self
+        if error_widget:
+            if type(error_widget) is QTreeWidgetItem:
+                error_widget.setBackground(0, Qt.GlobalColor.red)
+                widget = self.itemWidget(error_widget, self.value_col)
+                if widget is not None:
+                    widget.setProperty("error", True)
+                    widget.setStyleSheet('*[error="true"] { border: 2px dashed red }')
+                    if isinstance(widget, BadgerListEditor):
+                        widget.list_container.setProperty("error", True)
+                        widget.list_container.setStyleSheet(
                             '*[error="true"] { border: 2px dashed red }'
                         )
-                        error_widget.setToolTip(msg)
-            return False
+
+                error_widget.setToolTip(0, msg)
+            else:
+                error_widget = cast(QTreeWidget, error_widget)
+                error_widget.setProperty("error", True)
+                error_widget.setStyleSheet('*[error="true"] { border: 2px dashed red }')
+                error_widget.setToolTip(msg)

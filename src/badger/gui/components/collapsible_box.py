@@ -1,6 +1,9 @@
+"""Animated expand/collapse container. Used in the routine editor to
+group environment config, generator parameters, etc. without taking
+up permanent screen space."""
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QLayout
-
 
 stylesheet_toolbutton = """
 QToolButton
@@ -16,13 +19,13 @@ class ScrollArea(QtWidgets.QScrollArea):
 
     def resizeEvent(self, e):
         self.resized.emit()
-        return super(ScrollArea, self).resizeEvent(e)
+        return super().resizeEvent(e)
 
 
 # https://stackoverflow.com/a/52617714/4263605
 class CollapsibleBox(QtWidgets.QWidget):
     def __init__(self, parent=None, title="", duration=100, tooltip=None):
-        super(CollapsibleBox, self).__init__(parent)
+        super().__init__(parent)
 
         self.title = title
         self.duration = duration

@@ -1,8 +1,19 @@
+"""Single row in the routine list — shows the routine name, timestamp,
+and environment with hover/selection styling and a delete button."""
+
 from datetime import datetime
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
-from PyQt5.QtWidgets import QSizePolicy, QMessageBox
+
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from badger.gui.components.eliding_label import ElidingLabel
 from badger.gui.utils import create_button
 

@@ -1,13 +1,16 @@
+import time
+from typing import ClassVar
+
 import torch
+
 from badger import environment
 from badger.errors import BadgerNoInterfaceError
-import time
 
 
 class Environment(environment.Environment):
     name = "test"
-    variables = {f"x{i}": [-1, 1] for i in range(20)}
-    observables = ["f", "c"]
+    variables: ClassVar[dict[str, list[float]]] = {f"x{i}": [-1, 1] for i in range(20)}
+    observables: ClassVar[list[str]] = ["f", "c"]
 
     flag: int = 0
     delay: float = 0.0

@@ -1,3 +1,6 @@
+"""Launches the Badger GUI. Sets up the QApplication (theming, DPI scaling,
+error handling) and opens the main window. Called via `badger -g`."""
+
 import logging
 import signal
 import sys
@@ -5,7 +8,7 @@ import time
 import traceback
 from importlib import resources
 from types import TracebackType
-from typing import Any, Type
+from typing import Any, NoReturn
 
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont, QIcon
@@ -57,8 +60,8 @@ def on_timeout() -> None:
 
 
 def error_handler(
-    etype: Type[BaseException], value: BaseException, tb: TracebackType | None
-) -> None:
+    etype: type[BaseException], value: BaseException, tb: TracebackType
+) -> NoReturn:
     """
     Custom exception handler that formats uncaught exceptions and raises a BadgerError.
 

@@ -1,3 +1,17 @@
+"""
+Subprocess version of the optimization loop, used by the GUI.
+
+Runs the generate-evaluate cycle in a child process so the Qt event loop
+stays responsive. Communication with the main process happens through:
+    multiprocessing.Pipe  — sends evaluated solutions back for live plotting
+    multiprocessing.Event — signals pause, resume, and stop
+    multiprocessing.Queue — routes log records to the central logger (see log.py)
+
+See core.py for the simpler in-process version of the same loop.
+"""
+
+from __future__ import annotations
+
 import logging
 import multiprocessing as mp
 import os
@@ -7,7 +21,7 @@ from copy import deepcopy
 from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Event as EventType
 from queue import Empty
-from typing import Any, Optional
+from typing import Any
 
 from pandas import DataFrame
 from xopt.errors import FeasibilityError, XoptError
@@ -18,6 +32,10 @@ from badger.errors import (
     MEASUREMENT_ACTION_RETRY,
     MEASUREMENT_ACTION_TYPE,
     MEASUREMENT_ERROR_TYPE,
+    TERMINATION_ACTION_CONTINUE,
+    TERMINATION_ACTION_END,
+    TERMINATION_ACTION_TYPE,
+    TERMINATION_REACHED_TYPE,
     BadgerEnvObsError,
     BadgerRunTerminated,
 )
@@ -36,14 +54,14 @@ logger = logging.getLogger(__name__)
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
-    queue: "mp.Queue[Any]",
+    queue: mp.Queue[Any],
     stop_process: EventType,
-    dialog_action_queue: "mp.Queue[Any]",
+    dialog_action_queue: mp.Queue[Any],
 ) -> DataFrame:
     while True:
         try:
             return routine.evaluate_data(point)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - env evaluate can raise anything
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
             logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
@@ -77,6 +95,47 @@ def evaluate_measurement_with_retry(
                     raise BadgerRunTerminated(
                         f"Run terminated after measurement error: {error_title}"
                     )
+
+
+def pause_for_termination_dialog_action(
+    queue: mp.Queue,
+    stop_process: EventType,
+    pause_process: EventType,
+    dialog_action_queue: mp.Queue,
+    tc_condition: dict,
+) -> None:
+    """Pause the run and wait for user action when run-until condition is reached."""
+    queue.put(
+        {
+            "type": TERMINATION_REACHED_TYPE,
+            "tc_condition": tc_condition,
+        }
+    )
+
+    while True:
+        if stop_process.is_set():
+            raise BadgerRunTerminated
+
+        try:
+            msg = dialog_action_queue.get(
+                timeout=0.1
+            )  # short timeout here, so we can make checks for stop_process
+        except Empty:
+            continue
+
+        if (
+            isinstance(msg, dict)
+            and msg.get("type") == TERMINATION_ACTION_TYPE
+            and msg.get("action")
+            in [TERMINATION_ACTION_CONTINUE, TERMINATION_ACTION_END]
+        ):
+            if msg["action"] == TERMINATION_ACTION_CONTINUE:
+                pause_process.set()
+                return
+
+            raise BadgerRunTerminated(
+                "Run terminated after termination condition reached"
+            )
 
 
 def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
@@ -131,27 +190,28 @@ def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
 
 
 def run_routine_subprocess(
-    queue: "mp.Queue[Any]",
+    args_queue: mp.Queue,
+    queue: mp.Queue,
     evaluate_queue: tuple[Connection, Connection],
     stop_process: EventType,
     pause_process: EventType,
     wait_event: EventType,
-    dialog_action_queue: "mp.Queue[Any]",
-    config_path: Optional[str] = None,
-    log_queue: "Optional[mp.Queue[Any]]" = None,
+    config_path: str | None = None,
+    log_queue: mp.Queue | None = None,
+    dialog_action_queue: mp.Queue[Any] | None = None,
 ) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
 
     Parameters
     ----------
-    queue: mp.Queue
-    evaluate_queue: mp.Pipe
-    stop_process: mp.Event
-    pause_process: mp.Event
-    wait_event: mp.Event
-    config_path: str
-    log_queue: mp.Queue
+    queue: mp.Queue[Any] | None = None
+    evaluate_queue: tuple[Connection, Connection],
+    stop_process: EventType
+    pause_process: EventType
+    wait_event: EventType
+    config_path: str | None = None
+    log_queue: mp.Queue[Any] | None = None
     """
     # Setup logging for this subprocess
     if log_queue is not None:
@@ -182,10 +242,10 @@ def run_routine_subprocess(
 
     args: dict[str, Any] = {}
     try:
-        args = queue.get(timeout=1)
+        args = args_queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
-    except Exception as e:
-        logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {str(e)}")
+    except Exception as e:  # noqa: BLE001 - subprocess queue read boundary
+        logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {e!s}")
 
     # set required arguments
     try:
@@ -200,17 +260,16 @@ def run_routine_subprocess(
             routine.environment.variables.update(routine.vrange_hard_limit)
 
         # Reset data if run_data option is False
-        if not args["run_data"]:
-            if routine.data is not None:
-                logger.info("Resetting routine data")
-                routine.data = routine.data.iloc[0:0]  # reset the data
+        if not args["run_data"] and routine.data is not None:
+            logger.info("Resetting routine data")
+            routine.data = routine.data.iloc[0:0]  # reset the data
 
     except Exception as e:
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
         logger.error(f"Error initializing routine: {error_title}\n{error_traceback}")
         queue.put((error_title, error_traceback))
-        raise e
+        raise
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
     # Patch for converting dtype str to torch object
@@ -220,13 +279,10 @@ def run_routine_subprocess(
         routine.generator.turbo_controller.tkwargs["dtype"] = eval(dtype)
     except AttributeError:
         logger.warning("AttributeError when converting turbo_controller dtype")
-        pass
     except KeyError:
         logger.warning("KeyError when converting turbo_controller dtype")
-        pass
     except TypeError:
         logger.warning("TypeError when converting turbo_controller dtype")
-        pass
 
     # Assign the initial points and bounds
     logger.info(f"Setting routine variable ranges: {args['variable_ranges']}")
@@ -313,16 +369,46 @@ def run_routine_subprocess(
 
                     if count >= max_eval:
                         logger.info(
-                            "Max evaluations reached. Terminating optimization."
+                            "Max evaluations reached. Pausing optimization and waiting for user action."
                         )
-                        raise BadgerRunTerminated
+                        pause_process.clear()
+                        pause_for_termination_dialog_action(
+                            queue=queue,
+                            stop_process=stop_process,
+                            pause_process=pause_process,
+                            dialog_action_queue=dialog_action_queue,
+                            tc_condition={
+                                "type": "max_eval",
+                                "config": max_eval,
+                                "state": count,
+                            },
+                        )
+                        # reset termination condition
+                        termination_condition = None
+                        continue
                 elif idx == 1:
                     max_time = tc_config["max_time"]
                     dt = time.time() - start_time
                     logger.debug(f"Checking max_time termination: {dt} >= {max_time}")
                     if dt >= max_time:
-                        logger.info("Max time reached. Terminating optimization.")
-                        raise BadgerRunTerminated
+                        logger.info(
+                            "Max time reached. Pausing optimization and waiting for user action."
+                        )
+                        pause_process.clear()
+                        pause_for_termination_dialog_action(
+                            queue=queue,
+                            stop_process=stop_process,
+                            pause_process=pause_process,
+                            dialog_action_queue=dialog_action_queue,
+                            tc_condition={
+                                "type": "max_time",
+                                "config": max_time,
+                                "state": dt,
+                            },
+                        )
+                        # reset termination condition
+                        termination_condition = None
+                        continue
 
             candidates = routine.generator.generate(1)[0]
             logger.debug(f"Generated candidates: {candidates}")
@@ -350,10 +436,9 @@ def run_routine_subprocess(
                 logger.debug("Sending evaluation data to evaluate_queue.")
                 evaluate_queue[0].send((routine.data, generator_copy))
 
-            if archive:
-                if not testing:
-                    logger.info("Archiving run state.")
-                    archive_run(routine)
+            if archive and not testing:
+                logger.info("Archiving run state.")
+                archive_run(routine)
 
     except BadgerRunTerminated:
         logger.info("Optimization terminated by BadgerRunTerminated.")
@@ -375,4 +460,4 @@ def run_routine_subprocess(
         error_traceback = traceback.format_exc()
         queue.put((error_title, error_traceback))
         evaluate_queue[0].close()
-        raise e
+        raise

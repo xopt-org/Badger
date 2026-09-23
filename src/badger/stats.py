@@ -1,3 +1,6 @@
+"""Reducer functions (mean, median, percentile, etc.) that collapse
+array-valued observations into a single scalar for the optimizer."""
+
 from typing import Any
 
 import numpy as np

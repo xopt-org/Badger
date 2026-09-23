@@ -1,3 +1,23 @@
+"""
+The environment half of the routine editor — pick an environment and define
+what the optimizer is allowed to touch and watch.
+
+BadgerEnvBox holds:
+    - the environment selector (combo box) and a Pydantic editor for that
+      environment's parameters
+    - four VOCS tables: variables, objectives, constraints, observables
+    - the initial points sub-section for the variable table
+    - filter/search controls and an "automatic" vs. manual range toggle
+
+Each table emits its own data_changed signal; the box listens to all of them
+and re-emits a single vocs_updated(VOCS) signal whenever anything changes.
+That's the main way the rest of the GUI (mainly routine_page.py) stays in
+sync — call compose_vocs() to pull the current VOCS object out of the tables.
+
+Environments are loaded through the plugin factory (factory.py); the combo
+box is populated from the list of available environment plugins.
+"""
+
 import logging
 from importlib import resources
 from typing import Any
@@ -133,11 +153,15 @@ class BadgerEnvBox(QWidget):
         self,
         env_dict: dict[str, Any],
         parent: QWidget | None = None,
-        envs: list[str] = [],
+        envs: list[str] | None = None,
     ):
+        if envs is None:
+            envs = []
+
         super().__init__(parent)
 
         self.envs = envs
+
         self.env_dict = env_dict
 
         self.init_ui()

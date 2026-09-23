@@ -1,21 +1,29 @@
+"""Dialog for setting variable range limits on an individual variable. Allows
+the user to configure a per-variable range restriction (as a ratio of the full
+or current range) independently of the global limit settings, providing
+fine-grained control over the optimization search space."""
+
+import math
 from copy import deepcopy
 
-from PyQt5.QtWidgets import (
-    QDialog,
-    QWidget,
-    QHBoxLayout,
-    QPushButton,
-    QVBoxLayout,
-    QDoubleSpinBox,
-    QGroupBox,
-    QLabel,
-    QComboBox,
-    QStyledItemDelegate,
-    QStackedWidget,
-    QLineEdit,
-    QFrame,
-)
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QStackedWidget,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
+
+from badger.gui.components.bounds_preview import BoundsPreviewBar
 
 
 class BadgerIndividualLimitVariableRangeDialog(QDialog):
@@ -38,44 +46,46 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         vbox = QVBoxLayout(self)
 
         # Add the new rows above "Set range by"
-        info_group = QWidget()
+        info_group = QFrame()
         vbox_info = QVBoxLayout(info_group)
-        vbox_info.setContentsMargins(0, 0, 0, 0)
+        vbox_info.setContentsMargins(2, 2, 2, 2)
+        vbox_info.setSpacing(2)
 
         # Current value row
         hbox_current = QHBoxLayout()
-        lbl_current = QLabel("Current value")
+        lbl_current = QLabel("Current value:")
         lbl_current.setFixedWidth(128)
-        self.lbl_current_value = lbl_current_value = QLineEdit(
-            f"{self.configs.get('current_value', 0):.2f}"
+        self.lbl_current_value = lbl_current_value = QLabel(
+            f"{self.configs.get('current_value', 0):.4f}"
         )
+        self.lbl_current_value.setEnabled(False)
+        self.lbl_current_value.setStyleSheet("color: lightgray;")
         hbox_current.addWidget(lbl_current)
-        hbox_current.addWidget(lbl_current_value, 1)
-
-        # Hard lower bound row
-        hbox_lower = QHBoxLayout()
-        lbl_lower = QLabel("Hard lower bound")
-        lbl_lower.setFixedWidth(128)
-        self.lbl_hard_lower = lbl_hard_lower = QLineEdit(
-            f"{self.configs.get('lower_bound', 0):.2f}"
-        )
-        hbox_lower.addWidget(lbl_lower)
-        hbox_lower.addWidget(lbl_hard_lower, 1)
-
-        # Hard upper bound row
-        hbox_upper = QHBoxLayout()
-        lbl_upper = QLabel("Hard upper bound")
-        lbl_upper.setFixedWidth(128)
-        self.lbl_hard_upper = lbl_hard_upper = QLineEdit(
-            f"{self.configs.get('upper_bound', 0):.2f}"
-        )
-        hbox_upper.addWidget(lbl_upper)
-        hbox_upper.addWidget(lbl_hard_upper, 1)
+        hbox_current.addStretch()
+        hbox_current.addWidget(lbl_current_value)
+        hbox_current.addSpacing(8)
+        info_group.setFrameShape(QFrame.Box)
+        info_group.setFrameShadow(QFrame.Plain)
+        info_group.setLineWidth(1)
 
         # Add the rows to the info group
         vbox_info.addLayout(hbox_current)
-        vbox_info.addLayout(hbox_lower)
-        vbox_info.addLayout(hbox_upper)
+
+        if "current_bounds" in self.configs:
+            # Display current bounds
+            hbox_bounds = QHBoxLayout()
+            hbox_bounds.setContentsMargins(0, 0, 0, 0)
+            lbl_bounds = QLabel("Current bounds:")
+            lbl_bounds.setFixedWidth(128)
+            current_bounds = self.configs["current_bounds"]
+            bounds_text = f"[{current_bounds[0]:.5f}, {current_bounds[1]:.5f}]"
+            lbl_current_bounds = QLabel(bounds_text)
+            lbl_current_bounds.setStyleSheet("color: #788D9C;")
+            hbox_bounds.addWidget(lbl_bounds)
+            hbox_bounds.addStretch()
+            hbox_bounds.addWidget(lbl_current_bounds)
+            hbox_bounds.addSpacing(8)
+            vbox_info.addLayout(hbox_bounds)
 
         # Add the info group to the main layout
         vbox.addWidget(info_group)
@@ -111,6 +121,7 @@ will be clipped by the variable range."""
                 "ratio wrt current value",
                 "ratio wrt full range",
                 "delta around current value",
+                "exact bounds",
             ]
         )
         cb.setCurrentIndex(self.configs.get("limit_option_idx", 0))
@@ -130,7 +141,7 @@ will be clipped by the variable range."""
         lbl = QLabel("Ratio")
         self.sb_ratio_curr = sb_ratio_curr = QDoubleSpinBox()
         sb_ratio_curr.setMinimum(0)
-        sb_ratio_curr.setMaximum(1)
+        # sb_ratio_curr.setMaximum(1)
         sb_ratio_curr.setValue(self.configs.get("ratio_curr", 0.1))
         sb_ratio_curr.setDecimals(2)
         sb_ratio_curr.setSingleStep(0.01)
@@ -163,13 +174,86 @@ will be clipped by the variable range."""
         hbox_delta.addWidget(lbl)
         hbox_delta.addWidget(sb_delta, 1)
 
+        # Absolute bounds config (used in non-relative mode)
+        bounds_config = QWidget()
+        vbox_bounds = QVBoxLayout(bounds_config)
+        vbox_bounds.setContentsMargins(0, 0, 0, 0)
+
+        # Get hard limits (full variable range)
+        hard_lower = float(self.configs.get("lower_bound", -1e10))
+        hard_upper = float(self.configs.get("upper_bound", 1e10))
+
+        # Get exact bounds from configs, or use current or hard bounds if not specified.
+        exact_bounds = list(
+            self.configs.get(
+                "exact_bounds",
+                self.configs.get("current_bounds", [hard_lower, hard_upper]),
+            )
+        )
+        self.configs["exact_bounds"] = exact_bounds
+
+        hbox_bounds_lower = QHBoxLayout()
+        hbox_bounds_lower.setContentsMargins(0, 0, 0, 0)
+        lbl_lower = QLabel("Lower")
+        self.sb_bounds_lower = sb_bounds_lower = QDoubleSpinBox()
+        sb_bounds_lower.setMinimum(hard_lower)
+        sb_bounds_lower.setMaximum(hard_upper)
+        sb_bounds_lower.setDecimals(6)
+        sb_bounds_lower.setSingleStep((hard_upper - hard_lower) / 50)
+        sb_bounds_lower.setValue(exact_bounds[0])
+        hbox_bounds_lower.addWidget(lbl_lower)
+        hbox_bounds_lower.addWidget(sb_bounds_lower, 1)
+
+        hbox_bounds_upper = QHBoxLayout()
+        hbox_bounds_upper.setContentsMargins(0, 0, 0, 0)
+        lbl_upper = QLabel("Upper")
+        self.sb_bounds_upper = sb_bounds_upper = QDoubleSpinBox()
+        sb_bounds_upper.setMinimum(hard_lower)
+        sb_bounds_upper.setMaximum(hard_upper)
+        sb_bounds_upper.setDecimals(6)
+        sb_bounds_upper.setSingleStep((hard_upper - hard_lower) / 50)
+        sb_bounds_upper.setValue(exact_bounds[1])
+        hbox_bounds_upper.addWidget(lbl_upper)
+        hbox_bounds_upper.addWidget(sb_bounds_upper, 1)
+
+        vbox_bounds.addLayout(hbox_bounds_lower)
+        vbox_bounds.addLayout(hbox_bounds_upper)
+
         stacks.addWidget(ratio_curr_config)
         stacks.addWidget(ratio_full_config)
         stacks.addWidget(delta_config)
+        stacks.addWidget(bounds_config)
 
         stacks.setCurrentIndex(self.configs.get("limit_option_idx", 0))
         vbox_config.addWidget(stacks)
-        vbox_config.addStretch(1)
+
+        # Bounds preview group
+        group_preview = QGroupBox("Bounds preview")
+        vbox_preview = QVBoxLayout(group_preview)
+        vbox_preview.setContentsMargins(8, 8, 8, 8)
+        vbox_preview.setSpacing(5)
+
+        hbox_preview_lower = QHBoxLayout()
+        lbl_preview_lower = QLabel("Lower")
+        lbl_preview_lower.setFixedWidth(128)
+        self.lbl_preview_lower = lbl_preview_lower_val = QLineEdit("0.000000")
+        lbl_preview_lower_val.setEnabled(False)
+        hbox_preview_lower.addWidget(lbl_preview_lower)
+        hbox_preview_lower.addWidget(lbl_preview_lower_val, 1)
+
+        hbox_preview_upper = QHBoxLayout()
+        lbl_preview_upper = QLabel("Upper")
+        lbl_preview_upper.setFixedWidth(128)
+        self.lbl_preview_upper = lbl_preview_upper_val = QLineEdit("0.000000")
+        lbl_preview_upper_val.setEnabled(False)
+        hbox_preview_upper.addWidget(lbl_preview_upper)
+        hbox_preview_upper.addWidget(lbl_preview_upper_val, 1)
+
+        vbox_preview.addLayout(hbox_preview_lower)
+        vbox_preview.addLayout(hbox_preview_upper)
+        self.bounds_preview_bar = BoundsPreviewBar()
+        self.bounds_preview_bar.setToolTip("Displays a preview of the variable range.")
+        vbox_preview.addWidget(self.bounds_preview_bar)
 
         # Button set
         button_set = QWidget()
@@ -184,7 +268,8 @@ will be clipped by the variable range."""
         hbox_set.addWidget(btn_set)
 
         vbox.addWidget(action_bar)
-        vbox.addWidget(group_config, 1)
+        vbox.addWidget(group_config)
+        vbox.addWidget(group_preview)
         vbox.addWidget(button_set)
 
     def config_logic(self):
@@ -194,13 +279,61 @@ will be clipped by the variable range."""
         self.sb_ratio_curr.valueChanged.connect(self.ratio_curr_changed)
         self.sb_ratio_full.valueChanged.connect(self.ratio_full_changed)
         self.sb_delta.valueChanged.connect(self.delta_changed)
+        self.sb_bounds_lower.valueChanged.connect(self.bounds_lower_changed)
+        self.sb_bounds_upper.valueChanged.connect(self.bounds_upper_changed)
+        self.update_bounds_preview()
+
+    def _clip(self, value: float, lower: float, upper: float) -> float:
+        """Clip value if outside of lower/upper bounds"""
+        return max(lower, min(upper, value))
+
+    def update_bounds_preview(self) -> None:
+        """
+        Calculate bounds preview and display on labels and preview bar
+        """
+        curr = float(self.configs.get("current_value", 0.0))
+        hard_lower = self.configs.get("lower_bound", 0)
+        hard_upper = self.configs.get("upper_bound", 0)
+
+        option_idx = self.cb.currentIndex()
+        if option_idx == 0:
+            ratio = self.sb_ratio_curr.value()
+            sign = math.copysign(1.0, curr) if curr != 0 else 0.0
+            bounds = [
+                curr * (1 - 0.5 * sign * ratio),
+                curr * (1 + 0.5 * sign * ratio),
+            ]
+        elif option_idx == 1:
+            ratio = self.sb_ratio_full.value()
+            delta = 0.5 * ratio * (hard_upper - hard_lower)
+            bounds = [curr - delta, curr + delta]
+        elif option_idx == 2:
+            delta = self.sb_delta.value()
+            bounds = [curr - delta, curr + delta]
+        else:
+            bounds = [
+                float(self.sb_bounds_lower.value()),
+                float(self.sb_bounds_upper.value()),
+            ]
+
+        bounds = [
+            self._clip(bounds[0], hard_lower, hard_upper),
+            self._clip(bounds[1], hard_lower, hard_upper),
+        ]
+        bounds.sort()
+
+        self.lbl_preview_lower.setText(f"{bounds[0]:.6f}")
+        self.lbl_preview_upper.setText(f"{bounds[1]:.6f}")
+        self.bounds_preview_bar.set_values(
+            hard_lower,
+            hard_upper,
+            curr,
+            bounds[0],
+            bounds[1],
+        )
 
     def update_config(self):
         try:
-            lower = float(self.lbl_hard_lower.text())
-            upper = float(self.lbl_hard_upper.text())
-            self.configs["lower_bound"] = lower
-            self.configs["upper_bound"] = upper
             # Fill in default values if not exist
             if "limit_option_idx" not in self.configs:
                 self.configs["limit_option_idx"] = self.cb.currentIndex()
@@ -210,17 +343,32 @@ will be clipped by the variable range."""
                 self.configs["ratio_full"] = self.sb_ratio_full.value()
             if "delta" not in self.configs:
                 self.configs["delta"] = self.sb_delta.value()
+            lower = float(self.sb_bounds_lower.value())
+            upper = float(self.sb_bounds_upper.value())
+            # Keep exact bounds ordered to avoid invalid [lower, upper] ranges.
+            self.configs["exact_bounds"] = [min(lower, upper), max(lower, upper)]
         except ValueError:
             pass  # Optionally handle invalid input
 
     def ratio_curr_changed(self, ratio_curr):
         self.configs["ratio_curr"] = ratio_curr
+        self.update_bounds_preview()
 
     def ratio_full_changed(self, ratio_full):
         self.configs["ratio_full"] = ratio_full
+        self.update_bounds_preview()
 
     def delta_changed(self, delta):
         self.configs["delta"] = delta
+        self.update_bounds_preview()
+
+    def bounds_lower_changed(self, lower):
+        self.configs["exact_bounds"][0] = lower
+        self.update_bounds_preview()
+
+    def bounds_upper_changed(self, upper):
+        self.configs["exact_bounds"][1] = upper
+        self.update_bounds_preview()
 
     def set(self):
         self.update_config()
@@ -232,6 +380,7 @@ will be clipped by the variable range."""
 
         # Update configs
         self.configs["limit_option_idx"] = i
+        self.update_bounds_preview()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:

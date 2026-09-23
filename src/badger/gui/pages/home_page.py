@@ -1,4 +1,17 @@
+"""
+The main view you see when you open Badger.
+
+Left side: routine editor (configure variables, objectives, algorithm).
+Right side: run monitor (live plots, data table, start/stop controls).
+Bottom-left tabs: history navigator and template browser.
+
+This widget coordinates data flow between those panels — e.g. when you
+select a routine from history, it loads into the editor and shows past
+results in the monitor.
+"""
+
 import gc
+import logging
 import os
 import traceback
 from importlib import resources
@@ -38,7 +51,7 @@ from badger.gui.components.navigators import HistoryNavigator, TemplateNavigator
 from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
-from badger.gui.utils import ModalOverlay
+from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
@@ -52,7 +65,6 @@ if TYPE_CHECKING:
     from badger.gui.components.process_manager import ProcessManager
     from badger.routine import VOCS
 
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +88,7 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager: "Optional[ProcessManager]" = None):
+    def __init__(self, process_manager: "ProcessManager | None" = None):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
@@ -229,6 +241,7 @@ class BadgerHomePage(QWidget):
 
         self.routine_editor.sig_load_template.connect(self.update_status)
         self.routine_editor.sig_save_template.connect(self.update_status)
+        self.routine_editor.sig_status.connect(self.update_status)
 
         self.run_monitor.sig_inspect.connect(self.inspect_solution)
         self.run_monitor.sig_lock.connect(self.toggle_lock)
@@ -251,6 +264,12 @@ class BadgerHomePage(QWidget):
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
+        self.run_action_bar.sig_run_with_data.connect(
+            lambda: self.start_run(
+                use_termination_condition=bool(self.run_monitor.termination_condition),
+                load_displayed_data=True,
+            )
+        )
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
@@ -291,9 +310,9 @@ class BadgerHomePage(QWidget):
     def init_home_page(self) -> None:
         logger.info("Initializing home page.")
         # Load the default generator
-        self.routine_editor.generator_box.cb.setCurrentIndex(0)
+        self.routine_editor.set_default_generator("neldermead")
 
-    def go_run(self, i: int = None) -> None:
+    def go_run(self, i: int | None = None) -> None:
         logger.info(f"Activating run: {i}")
         gc.collect()
 
@@ -323,7 +342,7 @@ class BadgerHomePage(QWidget):
             self.run_monitor.routine_filename = run_filename
         except IndexError:
             return
-        except Exception as e:  # failed to load the run
+        except Exception as e:  # noqa: BLE001 - run load boundary
             details = traceback.format_exc()
             dialog = BadgerScrollableMessageBox(
                 title="Error!", text=str(e), parent=self
@@ -477,9 +496,19 @@ class BadgerHomePage(QWidget):
         logger.info("Preparing new run.")
         try:
             routine = self.routine_editor._compose_routine()
-        except Exception as e:
+        except Exception:
             self.sig_routine_invalid.emit()
-            raise e
+            raise
+
+        # Give this run its own results folder, named after the run's archive
+        # name (<env>-<creation_ts>) so the folder used during the run matches
+        # the archived run and stays consistent with the visualizer plots. The
+        # folder is created here, at run start.
+        if routine.generator.name == "bax":
+            archive_name = f"{routine.environment.name}-{routine.creation_ts}"
+            results_file = build_bax_results_file(archive_name, create_dir=True)
+            routine.generator.algorithm_results_file = results_file
+            logger.debug(f"BAX results file set for run: {results_file}")
 
         # Add data to routine before saving tmp file
         if data is not None:
@@ -522,7 +551,11 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, use_termination_condition: bool = False) -> None:
+    def start_run(
+        self,
+        use_termination_condition: bool = False,
+        load_displayed_data: bool = False,
+    ) -> None:
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -534,7 +567,7 @@ class BadgerHomePage(QWidget):
         """
         logger.info("Starting run.")
         # Set data options based on checkbox states from data_panel
-        run_data_flag = self.data_panel.use_data
+        run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points
 
         if run_data_flag:
@@ -627,18 +660,17 @@ class BadgerHomePage(QWidget):
 
     def cover_page(self) -> None:
         logger.info("Covering page with overlay.")
-        return  # disable overlay for now
 
-        try:
-            self.overlay
-        except AttributeError:
-            # Set parent to the main window
-            try:
-                main_window = self.parent().parent()
-            except AttributeError:  # in test mode
-                return
-            self.overlay = ModalOverlay(main_window)
-        self.overlay.show()
+        # try:
+        #     self.overlay
+        # except AttributeError:
+        #     # Set parent to the main window
+        #     try:
+        #         main_window = self.parent().parent()
+        #     except AttributeError:  # in test mode
+        #         return
+        #     self.overlay = ModalOverlay(main_window)
+        # self.overlay.show()
 
     def uncover_page(self) -> None:
         logger.info("Uncovering page overlay.")

@@ -1,3 +1,6 @@
+"""QTableView with drag-and-drop row reordering and a custom drop-indicator
+line style."""
+
 # PyQt Functionality Snippet by Apocalyptech
 # "Licensed" in the Public Domain under CC0 1.0 Universal (CC0 1.0)
 # Public Domain Dedication.  Use it however you like!
@@ -5,7 +8,7 @@
 # https://creativecommons.org/publicdomain/zero/1.0/
 # https://creativecommons.org/publicdomain/zero/1.0/legalcode
 
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtGui, QtWidgets
 
 
 class MyModel(QtGui.QStandardItemModel):
@@ -52,7 +55,7 @@ class MyTableView(QtWidgets.QTableView):
         self.setModel(self.model)
 
         for idx, data in enumerate(["foo", "bar", "baz"]):
-            item_1 = QtGui.QStandardItem("Item {}".format(idx))
+            item_1 = QtGui.QStandardItem(f"Item {idx}")
             item_1.setEditable(False)
             item_1.setDropEnabled(False)
 
