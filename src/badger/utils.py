@@ -28,6 +28,11 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
 from gest_api.vocs import ContinuousVariable
 
+if TYPE_CHECKING:
+    from xopt.generators import Generator
+
+    from badger.routine import Routine
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,7 +97,9 @@ def denorm(x: float, lb: float, ub: float) -> float:
     return (1 - x) * lb + x * ub
 
 
-def config_list_to_dict(config_list: list[dict[str, Any]]) -> dict[str, Any]:
+def config_list_to_dict(
+    config_list: Iterable[dict[str, Any]] | None,
+) -> dict[str, Any]:
     if not config_list:
         return {}
 
@@ -342,11 +349,17 @@ def dump_state(dump_file: str | None, generator: "Generator", data: DataFrame) -
         logger.debug(f"Dumped state to YAML file: {dump_file}")
 
 
+class StateDict(TypedDict, total=False):
+    generator: dict[str, Any]
+    vocs: dict[str, Any]
+    data: dict[str, Any] | None
+
+
 def state_to_dict(
     generator: "Generator", data: DataFrame, include_data: bool = True
-) -> dict[str, Any]:
+) -> StateDict:
     # dump data to dict with config metadata
-    output = {
+    output: StateDict = {
         "generator": {
             "name": type(generator).name,
             type(generator).name: json.loads(generator.model_dump_json()),
@@ -354,7 +367,7 @@ def state_to_dict(
         "vocs": json.loads(generator.vocs.model_dump_json()),
     }
     if include_data:
-        output["data"] = json.loads(data.to_json())
+        output["data"] = json.loads(data.to_json())  # type: ignore
 
     return output
 

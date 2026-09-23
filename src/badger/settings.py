@@ -13,7 +13,7 @@ import os
 import platform
 import shutil
 from importlib import resources
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError
@@ -163,7 +163,7 @@ class ConfigSingleton:
             cls._instance.user_flag = user_flag
             cls._instance._config = cls.load_or_create_config(config_path)
             cls._instance.config_path = config_path
-        return cls._instance
+        return cast(Self, cls._instance)
 
     @classmethod
     def load_or_create_config(cls, config_path: str | None) -> BadgerConfig:

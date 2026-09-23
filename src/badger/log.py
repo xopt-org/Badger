@@ -17,7 +17,7 @@ import os
 from argparse import Namespace
 from datetime import UTC, datetime
 from logging.handlers import QueueHandler, QueueListener
-from multiprocessing import Queue
+from multiprocessing import Queue, current_process
 
 from badger.settings import get_user_config_folder, init_settings
 
@@ -51,7 +51,7 @@ class LoggingManager:
         # Queue for sending all the logs to
         self.log_queue = Queue()
 
-        self.handlers = []
+        self.handlers: list[logging.Handler] = []
         # File handler
         file_handler = logging.FileHandler(log_filepath, mode="a")
         file_formatter = logging.Formatter(
@@ -76,9 +76,9 @@ class LoggingManager:
         )  # '*' unpacks the array for us (unpacking operator)
         self.listener.start()
 
-        logger.info(
-            f"Centralized logging listener started with level {logging.getLevelName(log_level)}"
-        )
+        log_level_name = logging.getLevelName(log_level)
+
+        logger.info(f"Centralized logging listener started with level {log_level_name}")
 
     def stop_listener(self) -> None:
         if self.listener:
@@ -109,9 +109,10 @@ class LoggingManager:
             if isinstance(logger_obj, logging.Logger) and name.startswith("badger"):
                 logger_obj.setLevel(log_level)
 
-        logger.info(
-            f"Log level updated to {logging.getLevelName(log_level)} for badger namespace."
-        )
+        # deprecated, getLevelNamesMapping()[log_level] is the replacement
+        log_level_name = logging.getLevelName(log_level)
+
+        logger.info(f"Log level updated to {log_level_name} for badger namespace.")
 
     def update_logfile_path(self, new_logfile_path: str) -> None:
         """
@@ -130,6 +131,11 @@ class LoggingManager:
         if file_handler is None:
             logger.error("No file handler found, cannot update logfile path")
             return
+
+        if file_handler is None:
+            raise ValueError(
+                "No file handler found in handlers list. Cannot update logfile path."
+            )
 
         # We want to keep using same formatter and loglevel
         formatter = file_handler.formatter
@@ -181,7 +187,7 @@ class LoggingManager:
             log_dir: directory to potentially create.
         """
         # If not set, empty, or invalid, use default (/logs dir in root of repo)
-        if log_dir is None:
+        if log_dir == "":
             log_dir = "logs"
 
         # Expand user home directory if needed
@@ -203,9 +209,9 @@ class LoggingManager:
 
 
 def configure_process_logging(
-    log_queue: Queue | None = None,
+    log_queue: Queue[str] | None = None,
     logger_name: str = "badger",
-    log_level: str = "DEBUG",
+    log_level: str | int = "DEBUG",
     process_name: str | None = None,
 ) -> None:
     """
@@ -223,9 +229,7 @@ def configure_process_logging(
 
     # Set custom process name if provided
     if process_name:
-        import multiprocessing as mp
-
-        mp.current_process().name = process_name
+        current_process().name = process_name
 
     # Get top level logger for this namespace
     logger = logging.getLogger(logger_name)
@@ -246,9 +250,9 @@ def configure_process_logging(
         if isinstance(logger_obj, logging.Logger) and name.startswith(logger_name):
             logger_obj.setLevel(log_level)
 
-    logger.info(
-        f"process logger configured with level {logging.getLevelName(log_level)}"
-    )
+    log_level_name = logging.getLevelName(log_level)
+
+    logger.info(f"process logger configured with level {log_level_name}")
 
 
 def setup_logging(args: Namespace) -> None:

@@ -4,7 +4,7 @@ skip, or reset values from the terminal."""
 
 import logging
 import os
-from typing import Any
+from argparse import Namespace
 
 from badger.settings import init_settings
 from badger.utils import convert_str_to_value, yprint
@@ -12,13 +12,13 @@ from badger.utils import convert_str_to_value, yprint
 logger = logging.getLogger(__name__)
 
 
-def config_settings(args: Any) -> Any:
+def config_settings(args: Namespace) -> bool | None:
     config_singleton = init_settings()
     key = args.key
 
     if key is None:
         yprint(config_singleton.list_path_settings())
-        return
+        return None
 
     try:
         try:
@@ -30,9 +30,10 @@ def config_settings(args: Any) -> Any:
     except IndexError:
         pass
     except KeyboardInterrupt:
-        return
+        return None
 
     logger.error(f"{key} is not a valid Badger config key!")
+    return None
 
 
 def _config_path_var(var_name: str) -> bool:
@@ -101,7 +102,7 @@ def _config_path_var(var_name: str) -> bool:
         return False
 
 
-def _config_core_var(var_name: str) -> None:
+def _config_core_var(var_name: str) -> bool:
     config_singleton = init_settings()
 
     display_name = config_singleton.read_display_name(var_name)
@@ -133,6 +134,11 @@ def _config_core_var(var_name: str) -> None:
     if res == "R":
         config_singleton.write_value(var_name, default)
         print(f"You reset the {display_name} setting")
+        return False  # fault value
     elif res != "S":
         config_singleton.write_value(var_name, convert_str_to_value(res))
         print(f"You set {display_name} to {res}")
+        return True  # success value
+    else:
+        print(f"You skipped the {display_name} setting")
+        return False

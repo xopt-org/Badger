@@ -520,7 +520,9 @@ def _default_for_new_row(
 
 
 class BadgerListItem(QWidget):
-    def __init__(self, editor: "BadgerListEditor", parent: QWidget | None = None):
+    def __init__(
+        self, editor: "BadgerListEditor", parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self.editor = editor
         layout = QHBoxLayout(self)
@@ -582,7 +584,7 @@ class BadgerListEditor(QWidget):
         widget_type: type[Any],
         widget_type2: type[Any] | None = None,
         parent: QWidget | None = None,
-    ):
+    ) -> None:
         super().__init__(parent)
         self.widget_type = widget_type
         self.widget_type2 = widget_type2
@@ -660,6 +662,8 @@ class BadgerListEditor(QWidget):
                 for child in self.list_container.children()
                 if isinstance(child, BadgerListItem)
             ]
+            # TODO: handle key in dictionary being None
+
             return {k: v for k, v in zip(child_values, child_values2)}
 
 

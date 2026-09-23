@@ -15,9 +15,10 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import yaml
+from xopt.generator import Generator
 from xopt.generators import generators, get_generator_defaults
 
 from badger.errors import (
@@ -47,7 +48,7 @@ ALGO_EXCLUDED = [
 ]
 
 
-class BadgerPluginConfig(TypedDict):
+class BadgerPluginConfig(TypedDict, total=False):
     name: str
     description: str
     version: str
@@ -75,10 +76,21 @@ else:
 sys.path.append(BADGER_PLUGIN_ROOT)
 
 
-def scan_plugins(root: str) -> dict[str, Any]:
-    factory: dict[str, Any] = {}
+class BadgerFactoryType(TypedDict):
+    generator: dict[str, dict[str, tuple[type[Generator], BadgerPluginConfig | None]]]
+    interface: dict[
+        str, dict[str, tuple[type["BadgerInterface"], BadgerPluginConfig | None]]
+    ]
+    environment: dict[
+        str, dict[str, tuple[type["BadgerEnvironment"], BadgerPluginConfig | None]]
+    ]
+
+
+def scan_plugins(root: str) -> BadgerFactoryType:
+    factory: BadgerFactoryType = {"environment": {}, "interface": {}, "generator": {}}
 
     # Do not scan local generators if option disabled
+    ptype_list: list[Literal["generator", "interface", "environment"]]
     if LOAD_LOCAL_ALGO:
         ptype_list = ["generator", "interface", "environment"]
     else:
@@ -86,7 +98,7 @@ def scan_plugins(root: str) -> dict[str, Any]:
         factory["generator"] = {}
 
     for ptype in ptype_list:
-        factory[ptype] = {}
+        factory[ptype] = {}  # type: ignore
 
         proot = os.path.join(root, f"{ptype}s")
 
@@ -102,14 +114,14 @@ def scan_plugins(root: str) -> dict[str, Any]:
         for pname in plugins:
             # TODO: Also load the configs here
             # So that list plugins can access the metadata of the plugins
-            factory[ptype][pname] = None
+            factory[ptype][pname] = None  # type: ignore
 
     return factory
 
 
 def load_plugin(
-    root: str, pname: str, ptype: str
-) -> tuple[Any | None, BadgerPluginConfig | None]:
+    root: str, pname: str, ptype: Literal["environment", "interface", "generator"]
+) -> "tuple[type[BadgerEnvironment | BadgerInterface | Generator] | None, BadgerPluginConfig | None]":
     assert ptype in [
         "generator",
         "interface",
@@ -212,6 +224,7 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         Formatted markdown string containing both the README content
         and the plugin class docstring if applicable in a code block.
     """
+
     # .../Badger/src/badger/factory.py
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
     BADGER_GUIDES_DIR = PROJECT_ROOT / "documentation" / "docs" / "guides"
@@ -222,6 +235,12 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         subdir = docs_dir / f"{ptype}s"
         if subdir.is_dir():
             docs_dir = subdir
+
+    assert ptype in [
+        "generator",
+        "interface",
+        "environment",
+    ], f"Invalid plugin type {ptype}"
 
     # Create header with links to other guides
     files = [x.stem for x in BADGER_GUIDES_DIR.iterdir() if str(x).endswith(".md")]
@@ -375,7 +394,9 @@ def _md_images_to_html(
     return _MD_IMG.sub(repl, text)
 
 
-def get_plug(root: str, name: str, ptype: str) -> tuple[Any, Any]:
+def get_plug(
+    root: str, name: str, ptype: Literal["environment", "interface", "generator"]
+) -> "tuple[type[BadgerEnvironment | BadgerInterface | Generator] | None, BadgerPluginConfig | None]":
     try:
         plug = BADGER_FACTORY[ptype][name]
         if plug is None:  # lazy loading
