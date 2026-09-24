@@ -8,7 +8,7 @@ import os
 from collections.abc import Callable
 from functools import wraps
 from importlib import resources
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from PyQt5.QtCore import QEvent, QObject, QSize, Qt
 from PyQt5.QtGui import QIcon
@@ -37,6 +37,9 @@ from PyQt5.QtGui import QFocusEvent, QMouseEvent
 from PyQt5.QtWidgets import (
     QWidget,
 )
+
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class MouseWheelWidgetAdjustmentGuard(QObject):
@@ -184,9 +187,9 @@ def unset_busy_cursor() -> None:
     QApplication.restoreOverrideCursor()
 
 
-def with_busy_cursor(func: Callable) -> Callable:
+def with_busy_cursor(func: Callable[P, T]) -> Callable[P, T]:
     @wraps(func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
         set_busy_cursor()
         try:
             return func(*args, **kwargs)

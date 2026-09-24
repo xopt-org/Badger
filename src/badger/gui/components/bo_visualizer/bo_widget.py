@@ -57,7 +57,7 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 }
 
 
-class BOPlotWidget(AnalysisWidget):
+class BOPlotWidget(AnalysisWidget[ConfigurableOptions]):
     generator: BayesianGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
 
     df_length: float = float("inf")

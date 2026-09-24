@@ -84,18 +84,19 @@ class Interface(BaseModel, ABC):
     # Environment should only call this method to get channels
     @abstractmethod
     def get_values(self, channel_names: list[str]) -> dict[str, float | list[float]]:
-        pass
+        raise NotImplementedError()
 
     # Environment should only call this method to set channels
     @abstractmethod
     def set_values(self, channel_inputs: dict[str, float | list[float]]) -> None:
-        pass
+        raise NotImplementedError()
 
     def reset_interface(self) -> None:
         """
         Called after the application forks (i.e. after spawning a new multiprocess.Process)
         Subclasses should use this to reset any undesirable process wide state
         """
+        raise NotImplementedError()
 
     def get_value(self, channel_name: str, **kwargs: Any) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]

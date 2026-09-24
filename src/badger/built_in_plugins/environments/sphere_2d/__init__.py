@@ -24,12 +24,12 @@ class Environment(environment.Environment):
         "g": 0.0,
     }
 
-    def get_variables(self, variable_names):
+    def get_variables(self, variable_names: list[str]) -> dict[str, float]:
         variable_outputs = {v: self._variables[v] for v in variable_names}
 
         return variable_outputs
 
-    def set_variables(self, variable_inputs: dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]) -> None:
         for var, x in variable_inputs.items():
             self._variables[var] = x
 
@@ -40,5 +40,7 @@ class Environment(environment.Environment):
         self._observations["f"] = f
         self._observations["g"] = g
 
-    def get_observables(self, observable_names):
+    def get_observables(
+        self, observable_names: list[str]
+    ) -> dict[str, float | list[float]]:
         return {k: self._observations[k] for k in observable_names}

@@ -13,6 +13,7 @@ import os
 import signal
 import sys
 import time
+from argparse import Namespace
 from typing import Any, TypedDict
 
 from pandas import DataFrame
@@ -138,7 +139,7 @@ def run_n_archive(
 
 
 @deprecated("The `badger run` command is deprecated. Please use the GUI.")
-def run_routine(args):
+def run_routine(args: Namespace) -> None:
     print(
         "This command is deprecated.\n"
         "Please use 'badger -g' to launch the Badger GUI "

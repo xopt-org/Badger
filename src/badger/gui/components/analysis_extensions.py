@@ -2,7 +2,7 @@
 viewer). Each dialog receives live data updates from the run monitor."""
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCloseEvent
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class AnalysisExtension(QWidget):
     window_closed = pyqtSignal(object)
     generator_type: type[Generator]
-    widget: AnalysisWidget
+    widget: AnalysisWidget[Any]
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
@@ -43,7 +43,7 @@ class AnalysisExtension(QWidget):
 
     def initialize_extension(
         self,
-        extension_widget: AnalysisWidget,
+        extension_widget: AnalysisWidget[Any],
         extension_name: str,
         generator_type: type[Generator],
     ) -> None:

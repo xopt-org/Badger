@@ -65,9 +65,9 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 }
 
 
-class ParetoFrontWidget(AnalysisWidget):
-    generator: MOBOGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS
+class ParetoFrontWidget(AnalysisWidget[ConfigurableOptions]):
+    generator: MOBOGenerator
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
 
     hypervolume_history: pd.DataFrame = pd.DataFrame()
     pf_1: Tensor | None = None
@@ -514,8 +514,8 @@ class ParetoFrontWidget(AnalysisWidget):
                 ValueError, "No data points available for Hypervolume"
             )
         # Extract the x and y coordinates from the data points
-        x = data_points["iteration"].values.astype(float)
-        y = data_points["hypervolume"].values.astype(float)
+        x = data_points["iteration"].to_numpy(dtype=float)
+        y = data_points["hypervolume"].to_numpy(dtype=float)
         # Create a scatter plot
         ax.plot(
             x,

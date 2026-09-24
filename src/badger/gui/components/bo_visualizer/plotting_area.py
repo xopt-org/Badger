@@ -101,7 +101,7 @@ class PlottingArea(QWidget):
 
                     handler = MatplotlibInteractionHandler(
                         canvas,
-                        parameters,  # pyright: ignore[reportArgumentType]
+                        parameters,
                         routine,
                         variables,
                         update_extension,

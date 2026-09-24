@@ -25,9 +25,9 @@ def show_info(args: Namespace) -> None:
         return
 
     if args.mini and check_n_config_paths(args.config_filepath):
-        from badger.gui.mini import launch_gui
+        from badger.gui.mini import launch_mini_gui
 
-        launch_gui(config_path, template_filename=args.template)
+        launch_mini_gui(config_path, args.template)
 
         return
 

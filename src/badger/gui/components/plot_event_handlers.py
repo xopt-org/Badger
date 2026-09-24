@@ -16,7 +16,7 @@ from badger.gui.components.extension_utilities import (
     HandledException,
     to_precision_float,
 )
-from badger.gui.components.types import ConfigurableOptions
+from badger.gui.components.types import InteractionParameters
 from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
@@ -28,16 +28,10 @@ class MatplotlibInteractionHandler:
     This class is designed to be used with matplotlib figures and axes.
     """
 
-    parameters: ConfigurableOptions
-    routine: Routine
-    callback: Callable[[Routine, bool], None]
-    moving: bool
-    start: dict[str, float]  # Starting coordinates for movement
-
     def __init__(
         self,
         canvas: FigureCanvasQTAgg,
-        parameters: ConfigurableOptions,
+        parameters: InteractionParameters,
         routine: Routine,
         variables: list[str],
         callback: Callable[[Routine, bool], None],
@@ -46,46 +40,25 @@ class MatplotlibInteractionHandler:
         self.parameters = parameters
         self.variables = variables
         self.routine = routine
-        self.callback = callback
+        self.callback: Callable[[Routine, bool], None] = callback
         self.moving = False
-        self.start = {"x": 0, "y": 0}  # Starting coordinates for movement
+        self.start: dict[str, float] = {
+            "x": 0,
+            "y": 0,
+        }  # Starting coordinates for movement
         self.step = 0
         self.tooltips: list[Annotation] = []
 
     def connect_events(self) -> None:
-        self.canvas.mpl_connect(
-            "button_press_event",
-            lambda event: self.on_click(
-                cast(MouseEvent, event),
-                self.parameters,
-                self.routine,
-                self.callback,
-            ),
-        )
-        # self.canvas.mpl_connect(
-        #     "button_release_event",
-        #     lambda event: self.on_release(
-        #         event,  # type: ignore[call-arg]
-        #     ),
-        # )
-        # self.canvas.mpl_connect(
-        #     "motion_notify_event",
-        #     lambda event: self.on_motion(event),  # type: ignore[call-arg]
-        # )
-
-        self.canvas.mpl_connect(
-            "scroll_event",
-            lambda event: self.on_scroll(cast(MouseEvent, event)),
-        )
-
-        self.canvas.mpl_connect(
-            "pick_event",
-            lambda event: self.on_pick(cast(PickEvent, event)),
-        )
+        self.canvas.mpl_connect("button_press_event", self.on_click)
+        # self.canvas.mpl_connect("button_release_event", self.on_release)
+        # self.canvas.mpl_connect("motion_notify_event", self.on_motion)
+        self.canvas.mpl_connect("scroll_event", self.on_scroll)
+        self.canvas.mpl_connect("pick_event", self.on_pick)
 
     def update_reference_points(
         self,
-        parameters: ConfigurableOptions,
+        parameters: InteractionParameters,
         desired_coordinate: tuple[float, float],
     ) -> None:
         if (
@@ -120,13 +93,10 @@ class MatplotlibInteractionHandler:
 
         logger.debug(f"Updated reference points: {parameters['reference_points']}")
 
-    def on_click(
-        self,
-        event: MouseEvent,
-        parameters: ConfigurableOptions,
-        routine: Routine,
-        callback: Callable[[Routine, bool], None],
-    ) -> None:
+    def on_click(self, event: MouseEvent) -> None:
+        parameters = self.parameters
+        routine = self.routine
+        callback = self.callback
         logger.debug(f"Clicked at {event.xdata}, {event.ydata}, button: {event.button}")
         if event.inaxes is None:
             logger.debug("Click outside axes, ignoring")
@@ -268,7 +238,7 @@ class MatplotlibInteractionHandler:
     def on_pick(self, event: PickEvent) -> None:
         logger.debug("on_pick event triggered")
         plot = event.artist
-        mouseevent = event.mouseevent
+        mouseevent = cast(MouseEvent, event.mouseevent)  # type: ignore[redundant-cast] # mypy does not recognize MouseEvent from PickEvent
         if mouseevent.inaxes is None:
             logger.debug("Mouse event outside axes, ignoring")
             return
@@ -321,14 +291,13 @@ class MatplotlibInteractionHandler:
                 distances = (routine_data[x_column] - point[0]) ** 2 + (
                     routine_data[y_column] - point[1]
                 ) ** 2
-                idx = distances.idxmin()
-                searched_row = pd.Series(routine_data.loc[idx])
+                searched_row = routine_data.iloc[int(distances.to_numpy().argmin())]
             elif x_column:
-                idx = (routine_data[x_column] - point[0]).abs().idxmin()
-                searched_row = pd.Series(routine_data.loc[idx])
+                distances = (routine_data[x_column] - point[0]).abs()
+                searched_row = routine_data.iloc[int(distances.to_numpy().argmin())]
             elif y_column:
-                idx = (routine_data[y_column] - point[1]).abs().idxmin()
-                searched_row = pd.Series(routine_data.loc[idx])
+                distances = (routine_data[y_column] - point[1]).abs()
+                searched_row = routine_data.iloc[int(distances.to_numpy().argmin())]
 
             true_index = searched_row.name
 

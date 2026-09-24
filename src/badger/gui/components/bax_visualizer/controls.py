@@ -190,7 +190,7 @@ class ControlsWidget(QWidget):
 
         with BlockSignalsContext(self.reference_table):
             self.reference_table.setRowCount(len(self.parameters.variables))
-            self.ref_inputs: list[QTableWidgetItem] = []
+            self.ref_inputs = []
 
             for i, var_name in enumerate(self.parameters.variables):
                 variable_item = QTableWidgetItem(var_name)

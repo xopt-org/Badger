@@ -3,6 +3,8 @@ display toggles, variable selection, and reference points."""
 
 from typing import TypedDict
 
+from badger.gui.components.types import InteractionParameters
+
 
 class PlotOptions(TypedDict):
     n_grid: int
@@ -13,10 +15,6 @@ class PlotOptions(TypedDict):
     show_acq_func: bool
 
 
-class ConfigurableOptions(TypedDict):
+class ConfigurableOptions(InteractionParameters):
     plot_options: PlotOptions
-    variable_1: int
-    variable_2: int
-    variables: list[str]
-    reference_points: dict[str, float]
     include_variable_2: bool

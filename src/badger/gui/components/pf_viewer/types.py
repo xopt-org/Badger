@@ -13,16 +13,15 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
+from badger.gui.components.types import InteractionParameters
+
 
 class PlotOptions(TypedDict):
     show_only_pareto_front: bool
 
 
-class ConfigurableOptions(TypedDict):
+class ConfigurableOptions(InteractionParameters):
     plot_options: PlotOptions
-    variable_1: int
-    variable_2: int
-    variables: list[str]
     objectives: list[str]
     objective_1: int
     objective_2: int

@@ -20,18 +20,13 @@ from PyQt5.QtWidgets import QLayout, QWidget
 from badger.errors import BadgerLoadConfigError
 
 if TYPE_CHECKING:
-    from xopt.generators import Generator
+    from xopt.generator import Generator
 
     from badger.routine import Routine
 
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
 from gest_api.vocs import ContinuousVariable
-
-if TYPE_CHECKING:
-    from xopt.generators import Generator
-
-    from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +55,7 @@ class BlockSignalsContext:
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         exc_traceback: TracebackType | None,
-    ):
+    ) -> None:
         for widget in self.widgets:
             if not widget.signalsBlocked():
                 logger.warning(
@@ -204,14 +199,16 @@ def curr_ts_to_str(format: str = "lcls-log") -> str:
 
 
 def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") -> str:
-    data = routine.sorted_data
-    env_name = routine.environment.name
-    data_dict = data.to_dict("list")
     if hasattr(routine, "creation_ts"):
         suffix = routine.creation_ts
     else:  # compatibility with old routines
+        data = routine.sorted_data
+        if data is None:
+            raise ValueError("Unable to get timestamp. Sorted Data is None")
+        data_dict = data.to_dict("list")
         ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
         suffix = ts_float_to_str(ts_float, format)
+    env_name = routine.environment.name
     fname = f"{env_name}-{suffix}.yaml"
     return fname
 
@@ -367,7 +364,7 @@ def state_to_dict(
         "vocs": json.loads(generator.vocs.model_dump_json()),
     }
     if include_data:
-        output["data"] = json.loads(data.to_json())  # type: ignore
+        output["data"] = json.loads(data.to_json())
 
     return output
 
