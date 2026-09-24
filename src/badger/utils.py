@@ -434,3 +434,62 @@ def _round_bounds_inward(
     lower = _round_to_sigfig(float(bounds[0]), sigfigs, mode="ceil")
     upper = _round_to_sigfig(float(bounds[1]), sigfigs, mode="floor")
     return [lower, upper]
+
+
+def load_template_file(template_filepath):
+    """
+    Load routine template from YAML file path.
+
+    Args:
+        template_filepath: A YAML file path
+
+    Returns:
+        dict: Parsed template configuration
+
+    Raises:
+        BadgerLoadConfigError: If template cannot be loaded or parsed
+    """
+    try:
+        with open(template_filepath, "r") as f:
+            config = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        raise BadgerLoadConfigError(
+            f"Error parsing template file {template_filepath}: {str(e)}"
+        )
+    except IOError as e:
+        raise BadgerLoadConfigError(
+            f"Error reading template file {template_filepath}: {str(e)}"
+        )
+
+    if not isinstance(config, dict):
+        raise BadgerLoadConfigError(
+            f"Invalid template file: expected dict, got {type(config).__name__}"
+        )
+
+    return config
+
+
+def load_template_string(template_string):
+    """
+    Load routine template from YAML string.
+
+    Args:
+        template_string: A YAML string
+
+    Returns:
+        dict: Parsed template configuration
+
+    Raises:
+        BadgerLoadConfigError: If template cannot be loaded or parsed
+    """
+    try:
+        config = yaml.safe_load(template_string)
+    except yaml.YAMLError as e:
+        raise BadgerLoadConfigError(f"Invalid YAML string: {str(e)}")
+
+    if not isinstance(config, dict):
+        raise BadgerLoadConfigError(
+            f"Invalid template: expected dict, got {type(config).__name__}"
+        )
+
+    return config

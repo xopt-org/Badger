@@ -12,6 +12,7 @@ See core.py for the simpler in-process version of the same loop.
 
 from copy import deepcopy
 import logging
+import signal
 import time
 import traceback
 from typing import Any
@@ -163,6 +164,9 @@ def run_routine_subprocess(
     config_path: str
     log_queue: mp.Queue
     """
+    # Ignore Ctrl+C in child process so parent CLI can control pausing
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     # Setup logging for this subprocess
     if log_queue is not None:
         configure_process_logging(

@@ -13,6 +13,7 @@ from badger.actions.install import plugin_install
 from badger.actions.uninstall import plugin_remove
 from badger.actions.intf import show_intf
 from badger.actions.config import config_settings
+from badger.actions.run import run_routine_cli
 from badger.log import setup_logging
 
 logger = logging.getLogger("badger")
@@ -113,18 +114,42 @@ def main():
     parser_remove.set_defaults(func=plugin_remove)
 
     # Parser for the 'run' command
-    parser_run = subparsers.add_parser("run", help="run routines")
-    parser_run.add_argument("-a", "--generator", required=True, help="generator to use")
+    parser_run = subparsers.add_parser(
+        "run", help="Run optimization from template (YAML file or string)"
+    )
+
+    # Can specify template file or template string, not both
+    template_group = parser_run.add_mutually_exclusive_group(required=True)
+    template_group.add_argument(
+        "--template-file",
+        dest="template_file",
+        help="Path to the YAML template file",
+    )
+    template_group.add_argument(
+        "--template-string",
+        dest="template_string",
+        help="YAML template as a string",
+    )
+
+    parser_run.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run in headless mode without GUI",
+    )
+    parser_run.add_argument(
+        "--auto-run",
+        action="store_true",
+        help="Auto-start optimization without confirmation",
+    )
+    parser_run.add_argument("-a", "--generator", help="generator to use")
     parser_run.add_argument(
         "-ap", "--generator_params", help="parameters for the generator"
     )
-    parser_run.add_argument("-e", "--env", required=True, help="environment to use")
+    parser_run.add_argument("-e", "--env", help="environment to use")
     parser_run.add_argument(
         "-ep", "--env_params", help="parameters for the environment"
     )
-    parser_run.add_argument(
-        "-c", "--config", required=True, help="config for the routine"
-    )
+    parser_run.add_argument("-c", "--config", help="config for the routine")
     parser_run.add_argument(
         "-s", "--save", nargs="?", const="", help="the routine name to be saved"
     )
@@ -141,6 +166,8 @@ def main():
         nargs="?",
         help="verbose level of optimization progress",
     )
+
+    parser_run.set_defaults(func=run_routine_cli)
 
     # Parser for the 'config' command
     parser_config = subparsers.add_parser("config", help="Badger configurations")

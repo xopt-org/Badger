@@ -47,6 +47,17 @@ def test_list_algo():
             assert f"- {algo}" in outlines
 
 
+def test_cli_run():
+    command = ["badger", "run", "--help"]
+    out, err, exitcode = capture(command)
+
+    assert exitcode == 0
+    assert "--template-file" in out
+    assert "--template-string" in out
+    assert "--headless" in out
+    assert "--auto-run" in out
+
+
 # def test_cli_run(mock_config_root):
 #     command = ['badger', 'run', '-a', 'upper_confidence_bound', '-ap',
 #                '{max_evaluations: 10}',  '-e', 'silly', '-c',

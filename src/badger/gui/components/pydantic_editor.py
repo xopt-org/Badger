@@ -963,7 +963,10 @@ class BadgerPydanticEditor(QTreeWidget):
         elif field_name == "algorithm":
             if not issubclass(self.model_class, BaxGenerator):
                 raise ValueError("Generator does not support algorithms.")
-            compatible_classes = self.model_class.get_compatible_algorithms()
+            if hasattr(self.model_class, "get_compatible_algorithms"):
+                compatible_classes = self.model_class.get_compatible_algorithms()
+            else:
+                compatible_classes = []
             # TODO: Add in additional from BAX algorithms.
             compatible_classes = list(compatible_classes) + [
                 PathwiseMinimizeEmittance,

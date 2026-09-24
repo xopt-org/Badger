@@ -88,7 +88,12 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager: "Optional[ProcessManager]" = None):
+    def __init__(
+        self,
+        process_manager: "Optional[ProcessManager]" = None,
+        routine=None,
+        auto_run=False,
+    ):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
@@ -102,6 +107,9 @@ class BadgerHomePage(QWidget):
 
         self.load_all_runs()
         self.init_home_page()
+
+        if routine is not None:
+            self.load_routine_from_cli(routine, auto_run)
 
     def init_ui(self) -> None:
         logger.info("Initializing UI for BadgerHomePage.")
@@ -671,3 +679,35 @@ class BadgerHomePage(QWidget):
             self.overlay.hide()
         except AttributeError:  # in test mode
             pass
+
+    def load_routine_from_cli(self, routine, auto_run):
+        """
+        Load routine from CLI and optionally start optimization.
+
+        This method is called when a routine is provided via CLI.
+        It loads the routine into the editor and optionally triggers a run.
+
+        Args:
+            routine: Routine object to load
+            auto_run: If True, automatically start optimization
+        """
+        self.routine_editor.set_routine(routine, silent=True)
+
+        # Populate initial points table based on actions (like "Load Template" does),
+        # this ensures actions like "add_curr" and "add_rand" are executed
+        if (
+            hasattr(self.routine_editor, "init_table_actions")
+            and self.routine_editor.init_table_actions
+        ):
+            self.routine_editor.clear_init_table(reset_actions=False)
+            self.routine_editor.update_init_table(force=True)
+
+        self.current_routine = routine
+
+        self.run_monitor.init_plots(routine)
+
+        if routine.data is not None and len(routine.data) > 0:
+            update_table(self.run_table, routine.sorted_data, routine.vocs)
+
+        if auto_run:
+            self.start_run()

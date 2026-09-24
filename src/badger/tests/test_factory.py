@@ -46,6 +46,10 @@ class TestFactory:
                 test_vocs = deepcopy(TEST_VOCS_BASE)
                 test_vocs.objectives = {}
                 test_vocs.observables = ["f"]
+                gen_config["algorithm"] = {
+                    "name": "grid_search",
+                    "class_path": "bax_algorithms.grid_search.GridSearch",
+                }
                 json.dumps(gen_config)
                 gen_class(vocs=test_vocs, **gen_config)
             else:
