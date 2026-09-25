@@ -31,6 +31,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QPushButton,
     QSizePolicy,
     QStyledItemDelegate,
@@ -598,7 +599,7 @@ class BadgerEnvBox(QWidget):
     def filter_sta(self) -> None:
         self.sta_table.update_keyword(self.edit_sta.text())
 
-    def _fit_content(self, list) -> None:
+    def _fit_content(self, list: QListWidget) -> None:
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4
         height = max(28, min(height, 192))
         list.setFixedHeight(height)

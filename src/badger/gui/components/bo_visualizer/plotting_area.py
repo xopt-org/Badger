@@ -87,6 +87,9 @@ class PlottingArea(QWidget):
             )
 
             layout = self.layout()
+            if layout is None:
+                logger.error("Layout not found")
+                return
 
             with BlockSignalsContext(layout):
                 # Clear the existing layout (remove previous plot if any)

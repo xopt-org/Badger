@@ -169,7 +169,8 @@ class ControlsWidget(QWidget):
         self.reference_table.setColumnCount(2)
         self.reference_table.setHorizontalHeaderLabels(["Variable", "Value"])
         horizontal_header = self.reference_table.horizontalHeader()
-        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        if horizontal_header is not None:
+            horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         self.select_latest_reference_point_button = QPushButton("Set Latest")
         self.reference_point_display = QLabel("")
@@ -248,7 +249,8 @@ class ControlsWidget(QWidget):
 
         # Force the table to refresh and update its view
         viewport = self.reference_table.viewport()
-        viewport.update()
+        if viewport is not None:
+            viewport.update()
 
     def get_selected_variables(self) -> list[str]:
         """Get the currently selected variables from the combo boxes."""

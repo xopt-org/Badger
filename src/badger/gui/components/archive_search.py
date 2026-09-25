@@ -3,6 +3,8 @@ Users drag items from here into the variable/observable/constraint tables
 when building a routine."""
 
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from PyQt5.QtCore import (
     QAbstractTableModel,
@@ -10,7 +12,6 @@ from PyQt5.QtCore import (
     QModelIndex,
     QObject,
     Qt,
-    QVariant,
     pyqtSignal,
 )
 from PyQt5.QtGui import QDrag, QKeyEvent
@@ -26,6 +27,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from badger.environment import Environment
 from badger.errors import BadgerRoutineError
 
 logger = logging.getLogger(__name__)
@@ -41,37 +43,42 @@ class ArchiveResultsTableModel(QAbstractTableModel):
         The parent item of this table
     """
 
-    def __init__(self, parent: QObject = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent=parent)
 
-        self.results_list = []
+        self.results_list: list[str] = []
         self.column_names = ("Variable",)
 
-    def rowCount(self, parent: QObject) -> int:
+    def rowCount(self, parent: QModelIndex | None = None) -> int:
         """Return the row count of the table"""
         if parent is not None and parent.isValid():
             return 0
         return len(self.results_list)
 
-    def columnCount(self, parent: QObject) -> int:
+    def columnCount(self, parent: QModelIndex | None = None) -> int:
         """Return the column count of the table"""
         if parent is not None and parent.isValid():
             return 0
         return len(self.column_names)
 
-    def data(self, index: QModelIndex, role: int) -> QVariant:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         """Return the data for the associated role. Currently only supporting DisplayRole."""
         if not index.isValid():
-            return QVariant()
+            return None
 
-        if role != Qt.DisplayRole:
-            return QVariant()
+        if role != Qt.ItemDataRole.DisplayRole:
+            return None
 
         return self.results_list[index.row()]
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole) -> QVariant:
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> Any:
         """Return data associated with the header"""
-        if role != Qt.DisplayRole:
+        if role != Qt.ItemDataRole.DisplayRole:
             return super().headerData(section, orientation, role)
 
         return str(self.column_names[section])
@@ -79,7 +86,12 @@ class ArchiveResultsTableModel(QAbstractTableModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         """Return flags that determine how users can interact with the items in the table"""
         if index.isValid():
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+            return (
+                Qt.ItemFlags(Qt.ItemFlag.ItemIsEnabled)
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsDragEnabled
+            )
+        return Qt.ItemFlags()
 
     def append(self, pv: str) -> None:
         """Appends a row to this table given the variable name as input"""
@@ -104,10 +116,31 @@ class ArchiveResultsTableModel(QAbstractTableModel):
         self.endRemoveRows()
         self.layoutChanged.emit()
 
-    def sort(self, col: int, order=Qt.AscendingOrder) -> None:
+    def sort(self, col: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder) -> None:
         """Sort the table by variable name"""
-        self.results_list.sort(reverse=order == Qt.DescendingOrder)
+        self.results_list.sort(reverse=order == Qt.SortOrder.DescendingOrder)
         self.layoutChanged.emit()
+
+
+class ResultsTableView(QTableView):
+    """Table view whose drag payload is the caller-supplied selected-variable text."""
+
+    def __init__(
+        self,
+        get_selected: Callable[[], str],
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._get_selected = get_selected
+
+    def startDrag(self, supportedActions: Qt.DropActions | Qt.DropAction) -> None:
+        """Start a drag carrying the selected variable names so they can be dropped
+        onto a plot to begin drawing that variable's data."""
+        drag = QDrag(self)
+        mime_data = QMimeData()
+        mime_data.setText(self._get_selected())
+        drag.setMimeData(mime_data)
+        drag.exec_()
 
 
 class ArchiveSearchWidget(QWidget):
@@ -118,19 +151,19 @@ class ArchiveSearchWidget(QWidget):
 
     Parameters
     ----------
-    parent : QObject, optional
-        The parent item of this widget
+    parent : QWidget, optional
+        The parent widget of this widget
     """
 
     append_variables_requested = pyqtSignal(str)
 
-    def __init__(self, environment, parent: QObject = None) -> None:
+    def __init__(self, environment: Environment, parent: QWidget | None = None) -> None:
         super().__init__(parent=parent)
         self.env = environment
 
         self.resize(400, 800)
         self.setWindowTitle("Variable Search")
-        self.layout = QVBoxLayout()
+        self._layout = QVBoxLayout()
 
         self.search_label = QLabel("Pattern")
         self.search_box = QLineEdit()
@@ -143,7 +176,7 @@ class ArchiveSearchWidget(QWidget):
         self.loading_label.hide()
 
         self.results_table_model = ArchiveResultsTableModel()
-        self.results_view = QTableView(self)
+        self.results_view = ResultsTableView(self.selectedVariables, self)
         self.results_view.setModel(self.results_table_model)
         self.results_view.setProperty("showDropIndicator", False)
         self.results_view.setDragDropOverwriteMode(False)
@@ -153,23 +186,26 @@ class ArchiveSearchWidget(QWidget):
         self.results_view.setDropIndicatorShown(True)
         self.results_view.setCornerButtonEnabled(False)
         self.results_view.setSortingEnabled(True)
-        self.results_view.verticalHeader().setVisible(False)
-        self.results_view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.results_view.startDrag = self.startDragAction
+        vheader = self.results_view.verticalHeader()
+        if vheader is not None:
+            vheader.setVisible(False)
+        hheader = self.results_view.horizontalHeader()
+        if hheader is not None:
+            hheader.setSectionResizeMode(QHeaderView.Stretch)
 
         self.archive_url_layout = QHBoxLayout()
-        self.layout.addLayout(self.archive_url_layout)
+        self._layout.addLayout(self.archive_url_layout)
         self.search_layout = QHBoxLayout()
         self.search_layout.addWidget(self.search_label)
         self.search_layout.addWidget(self.search_box)
         self.search_layout.addWidget(self.search_button)
-        self.layout.addLayout(self.search_layout)
-        self.layout.addWidget(self.loading_label)
-        self.layout.addWidget(self.results_view)
+        self._layout.addLayout(self.search_layout)
+        self._layout.addWidget(self.loading_label)
+        self._layout.addWidget(self.results_view)
         self.results_view.doubleClicked.connect(
             lambda: self.append_variables_requested.emit(self.selectedVariables())
         )
-        self.setLayout(self.layout)
+        self.setLayout(self._layout)
 
     def selectedVariables(self) -> str:
         """Figure out based on which indexes were selected, the list of variables (by string name)
@@ -182,21 +218,11 @@ class ArchiveSearchWidget(QWidget):
             pv_list += pv_name + ", "
         return pv_list[:-2]
 
-    def startDragAction(self, supported_actions) -> None:
-        """
-        The method to be called when a user initiates a drag action for one of the results in the table. The current
-        reason for this functionality is the ability to drag a variable name onto a plot to automatically start drawing
-        data for that variable
-        """
-        drag = QDrag(self)
-        mime_data = QMimeData()
-        mime_data.setText(self.selectedVariables())
-        drag.setMimeData(mime_data)
-        drag.exec_()
-
-    def keyPressEvent(self, e: QKeyEvent) -> None:
+    def keyPressEvent(self, e: QKeyEvent | None) -> None:
         """Special key press tracker, just so that if enter or return is pressed the formula dialog attempts to submit the formula"""
-        if e.key() == Qt.Key_Return or e.key() == Qt.Key_Enter:
+        if e is not None and (
+            e.key() == Qt.Key.Key_Return or e.key() == Qt.Key.Key_Enter
+        ):
             self.request_variable_search()
         return super().keyPressEvent(e)
 

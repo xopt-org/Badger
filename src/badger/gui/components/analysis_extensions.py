@@ -77,7 +77,7 @@ class AnalysisExtension(QWidget):
 
         self.widget.update_plots(requires_rebuild, interval=self.widget.update_interval)
 
-    def closeEvent(self, a0: QCloseEvent) -> None:
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         self.window_closed.emit(self)
         super().closeEvent(a0)
 

@@ -42,7 +42,6 @@ dev = [
     "pytest-cov",
     "pytest-qt",
     "pytest-mock",
-    "pyqt5-stubs",
     "pandas-stubs",
     "types-requests",
     "types-PyYAML",
