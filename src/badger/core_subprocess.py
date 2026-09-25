@@ -18,6 +18,8 @@ import os
 import time
 import traceback
 from copy import deepcopy
+from multiprocessing.connection import Connection
+from multiprocessing.synchronize import Event as EventType
 from queue import Empty
 from typing import Any
 
@@ -39,7 +41,7 @@ from badger.errors import (
 )
 from badger.log import configure_process_logging
 from badger.logger import _get_default_logger
-from badger.logger.event import Events
+from badger.logger.event import Events, Solution
 from badger.routine import Routine
 from badger.settings import (
     apply_pytorch_multiprocess_tensor_sharing_setting,
@@ -52,9 +54,9 @@ logger = logging.getLogger(__name__)
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
-    queue: mp.Queue,
-    stop_process: mp.Event,
-    dialog_action_queue: mp.Queue,
+    queue: mp.Queue[Any],
+    stop_process: EventType,
+    dialog_action_queue: mp.Queue[Any],
 ) -> DataFrame:
     while True:
         try:
@@ -97,8 +99,8 @@ def evaluate_measurement_with_retry(
 
 def pause_for_termination_dialog_action(
     queue: mp.Queue,
-    stop_process: mp.Event,
-    pause_process: mp.Event,
+    stop_process: EventType,
+    pause_process: EventType,
     dialog_action_queue: mp.Queue,
     tc_condition: dict,
 ) -> None:
@@ -136,7 +138,7 @@ def pause_for_termination_dialog_action(
             )
 
 
-def convert_to_solution(result: DataFrame, routine: Routine):
+def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
     """
     This method is passed the latest evaluated solution and converts that to a printable format for the terminal.
     This method is for the GUI version of Badger.
@@ -150,7 +152,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         logger.debug(f"Selected best index: {best_idx}")
-        if best_idx.size > 0:
+        if best_idx.size > 0 and routine.data is not None:
             if best_idx[0] != len(routine.data) - 1:
                 is_optimal = False
             else:
@@ -172,7 +174,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     stas = list(result[vocs.observable_names].to_numpy()[0])
 
     # TODO: This structure needs improvement
-    solution = (
+    solution = Solution(
         vars,
         objs,
         cons,
@@ -190,26 +192,26 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 def run_routine_subprocess(
     args_queue: mp.Queue,
     queue: mp.Queue,
-    evaluate_queue: mp.Pipe,
-    stop_process: mp.Event,
-    pause_process: mp.Event,
-    wait_event: mp.Event,
+    evaluate_queue: tuple[Connection, Connection],
+    stop_process: EventType,
+    pause_process: EventType,
+    wait_event: EventType,
     config_path: str | None = None,
     log_queue: mp.Queue | None = None,
-    dialog_action_queue: mp.Queue | None = None,
+    dialog_action_queue: mp.Queue[Any] | None = None,
 ) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
 
     Parameters
     ----------
-    queue: mp.Queue
-    evaluate_queue: mp.Pipe
-    stop_process: mp.Event
-    pause_process: mp.Event
-    wait_event: mp.Event
-    config_path: str
-    log_queue: mp.Queue
+    queue: mp.Queue[Any] | None = None
+    evaluate_queue: tuple[Connection, Connection],
+    stop_process: EventType
+    pause_process: EventType
+    wait_event: EventType
+    config_path: str | None = None
+    log_queue: mp.Queue[Any] | None = None
     """
     # Setup logging for this subprocess
     if log_queue is not None:
@@ -218,7 +220,7 @@ def run_routine_subprocess(
             logger_name=__name__,
             # Always make this level DEBUG so no logs are filtered out until get sent to main,
             # where logs from all sub-processes get filtered before written.
-            log_level=logging.DEBUG,
+            log_level="DEBUG",
             process_name=f"{os.path.basename(__name__)}-{mp.current_process().pid}",
         )
 
@@ -305,12 +307,12 @@ def run_routine_subprocess(
 
     # Optimization starts
     # This is used by the logger to print to the terminal.
-    solution_meta = (
+    solution_meta = Solution(
         None,
         None,
         None,
         None,
-        None,
+        False,  # TODO: Was set to None before, but that doesn't make sense given the context. Need to verify this is correct.
         routine.vocs.variable_names,
         routine.vocs.objective_names,
         routine.vocs.constraint_names,

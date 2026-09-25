@@ -23,9 +23,8 @@ back only the checked rows.
 import logging
 from collections.abc import Callable
 from functools import partial, wraps
-from typing import Any, ParamSpec, cast
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
-from pyparsing import TypeVar
 from PyQt5.QtCore import QRegExp, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QDragEnterEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import (
@@ -45,6 +44,8 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 P = ParamSpec("P")
+# Bound to the class so the wrapper can call self.blockSignals(...).
+S = TypeVar("S", bound="EditableTable")
 
 
 class EditableTable(QTableWidget):
@@ -275,21 +276,25 @@ class EditableTable(QTableWidget):
         return [next(iter(item)) for item in self.data]
 
     @staticmethod
-    def block_signals(func: Callable[..., Any]) -> Callable[..., Any]:
+    def block_signals(
+        func: Callable[Concatenate[S, P], T],
+    ) -> Callable[Concatenate[S, P], T]:
         """
         A decorator to block signals at the beginning of a function
         and unblock them at the end.
         """
 
         @wraps(func)
-        def wrapper(self: "EditableTable", *args: P.args, **kwargs: P.kwargs) -> Any:
+        def wrapper(self: S, *args: P.args, **kwargs: P.kwargs) -> T:
             self.blockSignals(True)
             try:
                 return func(self, *args, **kwargs)
             finally:
                 self.blockSignals(False)
 
-        return wrapper
+        # wraps() returns a _Wrapped object; it is callable with wrapper's exact
+        # signature but is not nominally a Callable, so re-assert the type.
+        return cast(Callable[Concatenate[S, P], T], wrapper)
 
     def header_clicked(self, idx: int) -> None:
         """
@@ -306,10 +311,11 @@ class EditableTable(QTableWidget):
         all_checked = True
         visible_names: list[str] = []
         for i in range(self.rowCount() - 1):  # Exclude the last empty row
-            checkbox = self.cellWidget(i, 0)
-            if checkbox is None:
+            # PyQt5-stubs mistypes cellWidget as List[QWidget]; it returns one widget.
+            checkbox_widget = self.cellWidget(i, 0)
+            if checkbox_widget is None:
                 raise ValueError("Checkbox widget is None")
-            checkbox = cast(QCheckBox, checkbox)
+            checkbox = cast(QCheckBox, checkbox_widget)
 
             name_item = self.item(i, 1)
             if name_item is None:
@@ -359,19 +365,18 @@ class EditableTable(QTableWidget):
             name_item.setForeground(QColor("darkCyan"))
         else:
             # Make non-new PVs not editable
-            name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
+            name_item.setFlags(
+                name_item.flags() & ~Qt.ItemFlags(Qt.ItemFlag.ItemIsEditable)
+            )
         self.setItem(row, 1, name_item)
 
         cell_widgets = self.create_cell_widgets(info)
         for i, widget in enumerate(cell_widgets):
             if isinstance(widget, QComboBox):
-                widget = cast(QComboBox, widget)
                 widget.currentIndexChanged.connect(partial(self.update_info, i))
             elif isinstance(widget, QDoubleSpinBox):
-                widget = cast(QDoubleSpinBox, widget)
                 widget.valueChanged.connect(partial(self.update_info, i))
             elif isinstance(widget, QCheckBox):
-                widget = cast(QCheckBox, widget)
                 widget.stateChanged.connect(partial(self.update_info, i))
             else:
                 raise NotImplementedError(f"Unsupported widget type: {type(widget)}")
@@ -428,7 +433,7 @@ class EditableTable(QTableWidget):
             print(f"Error adding formula item: {e}")
             return
 
-    def add_plain_item(self, name: str):
+    def add_plain_item(self, name: str) -> None:
         self.add_formula_item((name, "", {}))
 
     def get_visible_items(self) -> list[str]:
@@ -540,14 +545,14 @@ class EditableTable(QTableWidget):
             if self.keyword and QRegExp(self.keyword).indexIn(name, 0) == -1:
                 self.removeRow(row)
 
-    def add_empty_row(self):
+    def add_empty_row(self) -> None:
         """
         Add an empty row for entering a new constraint.
         """
         row = self.rowCount()
         self.setRowCount(row + 1)
         item = QTableWidgetItem(self.new_item_prompt())
-        item.setFlags(item.flags() | Qt.ItemIsEditable)
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
         item.setForeground(QColor("gray"))
         self.setItem(row, 1, item)
 
@@ -594,13 +599,10 @@ class EditableTable(QTableWidget):
             if cell_widget is not None:
                 item = self.get_item_by_name(name)
                 if isinstance(cell_widget, QComboBox):
-                    cell_widget = cast(QComboBox, cell_widget)
-                    value = cell_widget.currentText()
+                    value: str | float | bool = cell_widget.currentText()
                 elif isinstance(cell_widget, QDoubleSpinBox):
-                    cell_widget = cast(QDoubleSpinBox, cell_widget)
                     value = cell_widget.value()
                 elif isinstance(cell_widget, QCheckBox):
-                    cell_widget = cast(QCheckBox, cell_widget)
                     value = cell_widget.isChecked()
                 else:
                     raise NotImplementedError(

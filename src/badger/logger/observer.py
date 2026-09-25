@@ -3,26 +3,26 @@ _Tracker adds iteration counting and elapsed-time tracking."""
 
 from datetime import UTC, datetime
 
-from badger.logger.event import Events
+from badger.logger.event import Events, Solution
 
 
 class Observer:
-    def update(self, event, solution):
+    def update(self, event: Events, solution: Solution) -> None:
         raise NotImplementedError
 
 
 class _Tracker:
-    def __init__(self):
+    def __init__(self) -> None:
         self._iterations = 0
 
-        self._start_time = None
-        self._previous_time = None
+        self._start_time: datetime | None = None
+        self._previous_time: datetime | None = None
 
-    def _update_tracker(self, event, solution):
+    def _update_tracker(self, event: Events, solution: Solution) -> None:
         if event == Events.OPTIMIZATION_STEP:
             self._iterations += 1
 
-    def _time_metrics(self):
+    def _time_metrics(self) -> tuple[str, float, float]:
         now = datetime.now(tz=UTC)
         if self._start_time is None:
             self._start_time = now

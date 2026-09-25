@@ -13,7 +13,7 @@ import os
 import platform
 import shutil
 from importlib import resources
-from typing import Any
+from typing import Any, Self, cast
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError
@@ -152,25 +152,28 @@ class BadgerConfig(BaseModel):
 
 
 class ConfigSingleton:
-    _instance = None
+    _instance: "ConfigSingleton | None" = None
+    user_flag: bool
+    _config: BadgerConfig
+    config_path: str | None
 
-    def __new__(cls, config_path: str | None = None, user_flag: bool = False):
+    def __new__(cls, config_path: str | None = None, user_flag: bool = False) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.user_flag = user_flag
             cls._instance._config = cls.load_or_create_config(config_path)
             cls._instance.config_path = config_path
-        return cls._instance
+        return cast(Self, cls._instance)
 
     @classmethod
-    def load_or_create_config(cls, config_path: str) -> BadgerConfig:
+    def load_or_create_config(cls, config_path: str | None) -> BadgerConfig:
         """
         Loads the config file from a given yaml file if it exists,
         otherwise creates an instance of BadgerConfig with default settings.
 
         Parameters
         ----------
-        config_path: str
+        config_path: str | None
             Path to the user config file.
 
         Returns
@@ -179,7 +182,7 @@ class ConfigSingleton:
             An instance of BadgerConfig populated with the data from the config file,
             or with default settings if the file does not exist.
         """
-        if os.path.exists(config_path):
+        if config_path is not None and os.path.exists(config_path):
             with open(config_path, "r") as config_file:
                 config_data = yaml.safe_load(config_file)
 
@@ -211,7 +214,7 @@ class ConfigSingleton:
                 print(f"Error validating config file: {e}")
                 raise
         else:
-            if cls._instance.user_flag:
+            if cls._instance and cls._instance.user_flag:
                 err_msg = f"Error loading config {config_path}: invalid path."
                 raise BadgerLoadConfigError(err_msg)
 
@@ -236,8 +239,9 @@ class ConfigSingleton:
             self._update_config_by_dot_key(config_data, dot_key, value)
 
         # Save updated config to file
-        with open(self.config_path, "w") as file:
-            yaml.dump(config_data, file, default_flow_style=False)
+        if self.config_path is not None:
+            with open(self.config_path, "w") as file:
+                yaml.dump(config_data, file, default_flow_style=False)
 
         self._config = BadgerConfig(**config_data)
 
@@ -260,7 +264,7 @@ class ConfigSingleton:
 
         Returns
         -------
-        result: Dict
+        result: dict[str, Any]
             A dictionary containing the settings. Keys in the dict are fields of the
             settings, the value for each key is the current value for that setting.
         """
@@ -271,7 +275,7 @@ class ConfigSingleton:
 
         Returns
         -------
-        result: Dict
+        result: dict[str, Any]
             A dictionary containing the path-related settings.
             Keys in the dict are fields of the settings,
             the value for each key is the current value for that setting.
@@ -408,7 +412,7 @@ class ConfigSingleton:
             The value that is being saved.
         """
         keys = key.split(".")
-        updates = {}
+        updates: dict[str, Any] = {}
         sub_dict = updates
 
         for k in keys[:-1]:
@@ -535,7 +539,7 @@ def apply_pytorch_multiprocess_tensor_sharing_setting(
         return
 
     try:
-        torch.multiprocessing.set_sharing_strategy(strategy)
+        torch.multiprocessing.set_sharing_strategy(strategy)  # type: ignore[no-untyped-call]
     except Exception:
         logger.exception(
             "Can't set pytorch multiprocess tensor-sharing strategy to '%s'", strategy
@@ -545,7 +549,7 @@ def apply_pytorch_multiprocess_tensor_sharing_setting(
     logger.info("Set pytorch multiprocess tensor-sharing strategy to '%s'", strategy)
 
 
-def mock_settings():
+def mock_settings() -> None:
     """A method for setting up mock settings"""
     config_singleton = init_settings()
     app_data_dir = get_datadir() / "Badger"
@@ -555,7 +559,7 @@ def mock_settings():
     plugins_dir = str(app_data_dir / "plugins")
     os.makedirs(plugins_dir, exist_ok=True)
     config_singleton.write_value("BADGER_PLUGIN_ROOT", plugins_dir)
-    built_in_plugins_dir = resources.files(__package__) / "built_in_plugins"
+    built_in_plugins_dir = str(resources.files(__package__) / "built_in_plugins")
     shutil.copytree(built_in_plugins_dir, plugins_dir, dirs_exist_ok=True)
 
     logbook_dir = str(app_data_dir / "logbook")
@@ -599,9 +603,14 @@ def get_user_config_folder() -> str:
         If the operating system is not supported.
     """
     system = platform.system()
+    config_folder: str | None
 
     if system == "Windows":
         config_folder = os.getenv("APPDATA") or os.getenv("LOCALAPPDATA")
+        if config_folder is None:
+            raise OSError(
+                "Neither APPDATA nor LOCALAPPDATA environment variable is set on this Windows system."
+            )
     elif system == "Darwin":
         config_folder = os.path.expanduser("~/Library/Application Support/Badger")
     elif system == "Linux":

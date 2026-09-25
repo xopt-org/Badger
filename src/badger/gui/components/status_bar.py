@@ -11,13 +11,13 @@ from badger.gui.windows.settings_dialog import BadgerSettingsDialog
 
 
 class BadgerStatusBar(QWidget):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         icon_ref = resources.files(__package__) / "../images/gear.png"
         with resources.as_file(icon_ref) as icon_path:
             self.icon_settings = QIcon(str(icon_path))
@@ -55,13 +55,13 @@ class BadgerStatusBar(QWidget):
             }
         """)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_settings.clicked.connect(self.go_settings)
 
-    def set_summary(self, text):
+    def set_summary(self, text: str) -> None:
         self.summary.setText(text)
         self.setToolTip(text)
 
-    def go_settings(self):
+    def go_settings(self) -> None:
         dlg = BadgerSettingsDialog(self)
         dlg.exec()

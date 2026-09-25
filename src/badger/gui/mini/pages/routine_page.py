@@ -1075,7 +1075,7 @@ class BadgerRoutinePage(QWidget):
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     @with_busy_cursor
-    def select_env(self, i: int):
+    def select_env(self, i: int) -> None:
         logger.info(f"Environment selected: {self.env_box.env_name} (index={i})")
 
         self.sig_status.emit("Loading variables...")

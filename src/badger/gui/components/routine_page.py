@@ -205,7 +205,7 @@ class BadgerRoutinePage(QWidget):
         # 2: not initialized, 1: apply to all, 0: apply to only visible
         self.lim_apply_to_vars = 2
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         logger.info("Initializing UI for BadgerRoutinePage.")
         config_singleton = init_settings()
 
@@ -342,7 +342,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         logger.info("Configuring logic for BadgerRoutinePage.")
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
@@ -375,9 +375,7 @@ class BadgerRoutinePage(QWidget):
         #     lambda: logger.debug("Selection changed")
         # )  # for debugging
 
-    def load_template_yaml(
-        self, checked_state, template_path: str | None = None
-    ) -> None:
+    def load_template_yaml(self, template_path: str | None = None) -> None:
         logger.info("Loading template YAML.")
         """
         Load data from template .yaml into template_dict dictionary.

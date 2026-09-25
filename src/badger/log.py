@@ -14,9 +14,10 @@ from __future__ import annotations
 import atexit
 import logging
 import os
+from argparse import Namespace
 from datetime import UTC, datetime
 from logging.handlers import QueueHandler, QueueListener
-from multiprocessing import Queue
+from multiprocessing import Queue, current_process
 
 from badger.settings import get_user_config_folder, init_settings
 
@@ -29,12 +30,12 @@ class LoggingManager:
     one listener thread collects logs from all worker sub-processes via a queue.
     """
 
-    def __init__(self):
-        self.log_queue: Queue = None
-        self.listener: QueueListener = None
-        self.handlers = []
+    def __init__(self) -> None:
+        self.log_queue: Queue[logging.LogRecord] | None = None
+        self.listener: QueueListener | None = None
+        self.handlers: list[logging.Handler] = []
 
-    def start_listener(self, log_filepath: str, log_level: str | int):
+    def start_listener(self, log_filepath: str, log_level: str | int) -> None:
         """
         For use in main process to setup queue and start listening for logs from sub processes.
 
@@ -50,7 +51,7 @@ class LoggingManager:
         # Queue for sending all the logs to
         self.log_queue = Queue()
 
-        self.handlers = []
+        self.handlers: list[logging.Handler] = []
         # File handler
         file_handler = logging.FileHandler(log_filepath, mode="a")
         file_formatter = logging.Formatter(
@@ -75,16 +76,16 @@ class LoggingManager:
         )  # '*' unpacks the array for us (unpacking operator)
         self.listener.start()
 
-        logger.info(
-            f"Centralized logging listener started with level {logging.getLevelName(log_level)}"
-        )
+        log_level_name = logging.getLevelName(log_level)
 
-    def stop_listener(self):
+        logger.info(f"Centralized logging listener started with level {log_level_name}")
+
+    def stop_listener(self) -> None:
         if self.listener:
             self.listener.stop()
             logger.info("Main process logging listener stopped")
 
-    def update_log_level(self, log_level: str | int):
+    def update_log_level(self, log_level: str | int) -> None:
         """
         Update log level in the handlers and logger objects in main process (only two handlers atm, terminal and file).
         This affects which level of logs (from any process) get written to the logfile.
@@ -108,11 +109,12 @@ class LoggingManager:
             if isinstance(logger_obj, logging.Logger) and name.startswith("badger"):
                 logger_obj.setLevel(log_level)
 
-        logger.info(
-            f"Log level updated to {logging.getLevelName(log_level)} for badger namespace."
-        )
+        # deprecated, getLevelNamesMapping()[log_level] is the replacement
+        log_level_name = logging.getLevelName(log_level)
 
-    def update_logfile_path(self, new_logfile_path: str):
+        logger.info(f"Log level updated to {log_level_name} for badger namespace.")
+
+    def update_logfile_path(self, new_logfile_path: str) -> None:
         """
         Update logfile path, so logs get written to a different file.
 
@@ -121,11 +123,19 @@ class LoggingManager:
         the QueueListener while passing in the new handlers.
         """
         # Get the existing handler
-        file_handler = None
+        file_handler: logging.FileHandler | None = None
         for h in self.handlers:
             if isinstance(h, logging.FileHandler):
                 file_handler = h
                 break
+        if file_handler is None:
+            logger.error("No file handler found, cannot update logfile path")
+            return
+
+        if file_handler is None:
+            raise ValueError(
+                "No file handler found in handlers list. Cannot update logfile path."
+            )
 
         # We want to keep using same formatter and loglevel
         formatter = file_handler.formatter
@@ -146,6 +156,9 @@ class LoggingManager:
         self.handlers.append(new_file_handler)
 
         # Restart QueueListener, using new handlers
+        if self.log_queue is None:
+            logger.error("No log queue found, cannot restart QueueListener")
+            return
         self.listener = QueueListener(
             self.log_queue, *self.handlers, respect_handler_level=True
         )
@@ -153,7 +166,7 @@ class LoggingManager:
 
         logger.info(f"Logfile path updated to {new_logfile_path}")
 
-    def get_logfile_name(self):
+    def get_logfile_name(self) -> str:
         """
         Get name of the logfile for today, which is in form of:
         "log_<month>_<day>.log"
@@ -162,11 +175,11 @@ class LoggingManager:
         log_filename = f"log_{today.year:04d}_{today.month:02d}_{today.day:02d}.log"
         return log_filename
 
-    def get_queue(self) -> Queue:
+    def get_queue(self) -> Queue[logging.LogRecord] | None:
         """Get the logging queue for use by subprocesses."""
         return self.log_queue
 
-    def create_log_dir(self, log_dir: str):
+    def create_log_dir(self, log_dir: str) -> None:
         """
         Create the logs directory if it doesn't exist.
 
@@ -174,7 +187,7 @@ class LoggingManager:
             log_dir: directory to potentially create.
         """
         # If not set, empty, or invalid, use default (/logs dir in root of repo)
-        if log_dir is None:
+        if log_dir == "":
             log_dir = "logs"
 
         # Expand user home directory if needed
@@ -196,9 +209,9 @@ class LoggingManager:
 
 
 def configure_process_logging(
-    log_queue: Queue | None = None,
+    log_queue: Queue[str] | None = None,
     logger_name: str = "badger",
-    log_level: str = "DEBUG",
+    log_level: str | int = "DEBUG",
     process_name: str | None = None,
 ) -> None:
     """
@@ -209,16 +222,14 @@ def configure_process_logging(
     args:
         logger_name (str): Name of the logger (default: "badger")
         log_level (int or str): Logging level to set
-        process_name (str): Custom process name to output in logs
+        process_name (str | None): Custom process name to output in logs
     """
     if isinstance(log_level, str):
-        log_level = getattr(logging, log_level.upper(), logging.DEBUG)
+        log_level = getattr(logging, log_level.upper(), "DEBUG")
 
     # Set custom process name if provided
     if process_name:
-        import multiprocessing as mp
-
-        mp.current_process().name = process_name
+        current_process().name = process_name
 
     # Get top level logger for this namespace
     logger = logging.getLogger(logger_name)
@@ -239,12 +250,12 @@ def configure_process_logging(
         if isinstance(logger_obj, logging.Logger) and name.startswith(logger_name):
             logger_obj.setLevel(log_level)
 
-    logger.info(
-        f"process logger configured with level {logging.getLevelName(log_level)}"
-    )
+    log_level_name = logging.getLevelName(log_level)
+
+    logger.info(f"process logger configured with level {log_level_name}")
 
 
-def setup_logging(args):
+def setup_logging(args: Namespace) -> None:
     """
     Init Badger's multiprocess logging system
     """
@@ -274,7 +285,7 @@ def setup_logging(args):
 
     # Ensure listener shuts down at exit
     atexit.register(
-        lambda: logging_manager.listener and logging_manager.listener.stop()
+        lambda: logging_manager.listener.stop() if logging_manager.listener else None
     )
 
 

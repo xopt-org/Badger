@@ -37,7 +37,7 @@ from xopt.generators import get_generator
 from xopt.generators.sequential import SequentialGenerator
 from xopt.vocs import get_local_region
 
-from badger.environment import BaseEnvironment, instantiate_env
+from badger.environment import BaseEnvironment, Environment, instantiate_env
 from badger.factory import get_env
 from badger.utils import curr_ts
 
@@ -71,7 +71,7 @@ class Routine(Xopt):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_model(cls, data: Any):
+    def validate_model(cls, data: Any) -> Any:
         logger.info("Validating Routine model from input data.")
         if isinstance(data, dict):
             logger.debug(f"Routine data dict received: {list(data.keys())}")
@@ -117,8 +117,11 @@ class Routine(Xopt):
                 except IndexError:
                     data["data"] = pd.DataFrame(data["data"], index=[0])
 
-                data["data"].index = data["data"].index.astype(int)
-                data["data"].sort_index(inplace=True)
+                    df = data["data"]
+                    assert isinstance(df, pd.DataFrame)
+                    df.index = df.index.astype(int)
+                    df.sort_index(inplace=True)
+                    data["data"] = df
 
                 # Add data one row at a time to avoid generator issues
                 if isinstance(data["generator"], SequentialGenerator):
@@ -142,9 +145,11 @@ class Routine(Xopt):
                 data["environment"] = instantiate_env(env_class, configs_env)
 
             # create evaluator
-            env = data["environment"]
+            env: Environment = data["environment"]
 
-            def evaluate_point(point: dict):
+            def evaluate_point(
+                point: dict[str, float],
+            ) -> dict[str, float | list[float]]:
                 logger.debug(f"Evaluating point: {point}")
                 point = pd.Series(point).explode().to_dict()
                 env.set_variables(point)
@@ -160,7 +165,7 @@ class Routine(Xopt):
         return data
 
     @field_validator("initial_points", mode="before")
-    def validate_data(cls, v, info: ValidationInfo):
+    def validate_data(cls, v: Any, info: ValidationInfo) -> Any:
         logger.debug("Validating initial_points field.")
         if isinstance(v, dict):
             try:
@@ -170,7 +175,7 @@ class Routine(Xopt):
         return v
 
     @property
-    def sorted_data(self):
+    def sorted_data(self) -> pd.DataFrame | None:
         logger.debug("Sorting routine data.")
         data_copy = deepcopy(self.data)
         if data_copy is not None:
@@ -178,7 +183,7 @@ class Routine(Xopt):
             data_copy.sort_index(inplace=True)
         return data_copy
 
-    def json(self, **kwargs) -> str:
+    def json(self, **kwargs: Any) -> str:
         logger.info("Serializing Routine to JSON.")
         """Handle custom serialization of environment"""
 
@@ -212,13 +217,15 @@ class Routine(Xopt):
         return json.dumps(dict_result)
 
 
-def calculate_variable_bounds(limit_options, vocs, env):
+def calculate_variable_bounds(
+    limit_options: dict[str, Any], vocs: VOCS, env: Environment
+) -> dict[str, list[float]]:
     logger.info("Calculating variable bounds.")
     vnames = vocs.variable_names
     var_curr = env.get_variables(vnames)
     var_range = env.get_bounds(vnames)
 
-    variables_updated = {}
+    variables_updated: dict[str, list[float]] = {}
     for name in vnames:
         try:
             limit_option = limit_options[name]
@@ -250,10 +257,12 @@ def calculate_variable_bounds(limit_options, vocs, env):
     return variables_updated
 
 
-def calculate_initial_points(init_actions, vocs, env):
+def calculate_initial_points(
+    init_actions: list[dict[str, Any]], vocs: VOCS, env: Environment
+) -> dict[str, list[float]]:
     logger.info("Calculating initial points.")
     vnames = vocs.variable_names
-    init_points = {k: [] for k in vnames}
+    init_points: dict[str, list[float]] = {k: [] for k in vnames}
 
     for action in init_actions:
         logger.debug(f"Processing initial point action: {action}")

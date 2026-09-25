@@ -4,6 +4,7 @@ utilities for logging channel interactions to disk for post-run analysis."""
 
 import pickle
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any, ClassVar, TypedDict
 
 from pydantic import BaseModel
@@ -11,8 +12,8 @@ from pydantic import BaseModel
 from badger.utils import curr_ts
 
 
-def log(func):
-    def func_log(*args, **kwargs):
+def log(func: Callable[..., Any]) -> Callable[..., Any]:
+    def func_log(*args: Any, **kwargs: Any) -> Any:
         if func.__name__ == "set_values":
             if "channel_inputs" in kwargs:
                 channel_inputs = kwargs["channel_inputs"]
@@ -55,12 +56,12 @@ class Interface(BaseModel, ABC):
     # params: float = Field(..., description='Example intf parameter')
 
     # Private variables
-    _logs: list[dict] = []  # TODO: Add a property for it?
+    _logs: list[dict[str, Any]] = []  # TODO: Add a property for it?
 
-    def start_recording(self):
+    def start_recording(self) -> None:
         self._logs = []
 
-    def stop_recording(self, filename):
+    def stop_recording(self, filename: str) -> None:
         # Do not create the pickle file if log is empty
         # This usually happens when the log decorator is not used in the
         # specific interface
@@ -72,7 +73,7 @@ class Interface(BaseModel, ABC):
 
         self._logs = []
 
-    def dump_recording(self, filename):
+    def dump_recording(self, filename: str) -> None:
         # Dump the logs to disk w/o cleaning up the log history
         if not self._logs:
             return
@@ -82,27 +83,28 @@ class Interface(BaseModel, ABC):
 
     # Environment should only call this method to get channels
     @abstractmethod
-    def get_values(self, channel_names: list[str]) -> dict[str, Any]:
-        pass
+    def get_values(self, channel_names: list[str]) -> dict[str, float | list[float]]:
+        raise NotImplementedError()
 
     # Environment should only call this method to set channels
     @abstractmethod
-    def set_values(self, channel_inputs: dict[str, Any]):
-        pass
+    def set_values(self, channel_inputs: dict[str, float | list[float]]) -> None:
+        raise NotImplementedError()
 
-    def reset_interface(self):
+    def reset_interface(self) -> None:
         """
         Called after the application forks (i.e. after spawning a new multiprocess.Process)
         Subclasses should use this to reset any undesirable process wide state
         """
+        raise NotImplementedError()
 
-    def get_value(self, channel_name: str, **kwargs) -> Any:
+    def get_value(self, channel_name: str, **kwargs: Any) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]
 
-    def set_value(self, channel_name: str, channel_value, **kwargs):
+    def set_value(self, channel_name: str, channel_value: Any, **kwargs: Any) -> None:
         return self.set_values({channel_name: channel_value}, **kwargs)
 
-    def get_info(self, channels: list[str]) -> InterfaceInfo:
+    def get_info(self, channels: list[str]) -> InterfaceInfo | None:
         """
         Optional; Returns information about the channels and environment for display
 

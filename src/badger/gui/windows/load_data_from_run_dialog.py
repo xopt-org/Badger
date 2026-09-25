@@ -57,7 +57,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
     def __init__(
         self,
         parent: QWidget,
-        env_vocs: VOCS = None,
+        env_vocs: VOCS | None = None,
         on_set: Callable[[Routine], None] | None = None,
     ):
         """
@@ -65,7 +65,8 @@ class BadgerLoadDataFromRunDialog(QDialog):
 
         Args:
             parent (QWidget): The parent widget.
-            data_table (QTableWidget, optional): The data table to update with loaded run data.
+            env_vocs (VOCS | None, optional): The environment VOCS object containing variable and objective names.
+            on_set (Callable[[Routine], None] | None, optional): Function to call when loading data.
 
         Attributes:
             data_table (QTableWidget): The data table to update with loaded run data.

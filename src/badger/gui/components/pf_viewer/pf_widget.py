@@ -65,9 +65,9 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 }
 
 
-class ParetoFrontWidget(AnalysisWidget):
-    generator: MOBOGenerator  # type: ignore
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS  # type: ignore
+class ParetoFrontWidget(AnalysisWidget[ConfigurableOptions]):
+    generator: MOBOGenerator
+    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
 
     hypervolume_history: pd.DataFrame = pd.DataFrame()
     pf_1: Tensor | None = None
@@ -318,8 +318,8 @@ class ParetoFrontWidget(AnalysisWidget):
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
-                    canvas = FigureCanvas(fig)
-                    toolbar = NavigationToolbar(canvas, self)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
+                    toolbar = NavigationToolbar(canvas, self)  # type: ignore[no-untyped-call]
 
                     variables = self.parameters["variables"]
 
@@ -344,14 +344,14 @@ class ParetoFrontWidget(AnalysisWidget):
                     plot_tab_widget.addTab(widget, "Variable Space")
                 except ValueError:
                     logger.error("No data points available for Variable Space")
-                    blank_canvas = FigureCanvas(fig)
+                    blank_canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_tab_widget.addTab(blank_canvas, "Variable Space")
 
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_pareto_plot(fig, ax)
-                    canvas = FigureCanvas(fig)
-                    toolbar = NavigationToolbar(canvas, self)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
+                    toolbar = NavigationToolbar(canvas, self)  # type: ignore[no-untyped-call]
 
                     variables = self.parameters["objectives"]
 
@@ -376,7 +376,7 @@ class ParetoFrontWidget(AnalysisWidget):
                     plot_tab_widget.addTab(widget, "Objective Space")
                 except ValueError:
                     logger.error("No data points available for Objective Space")
-                    blank_canvas = FigureCanvas(fig)
+                    blank_canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_tab_widget.addTab(blank_canvas, "Objective Space")
 
             plot_tab_widget.setCurrentIndex(self.parameters["plot_tab"])
@@ -397,11 +397,11 @@ class ParetoFrontWidget(AnalysisWidget):
             with MatplotlibFigureContext(fig_size=self.plot_size) as (fig, ax):
                 try:
                     fig, ax = self.create_hypervolume_plot(fig, ax)
-                    canvas = FigureCanvas(fig)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_hypervolume.addWidget(canvas)
                 except ValueError:
                     logger.error("No data points available for Hypervolume")
-                    blank_canvas = FigureCanvas(fig)
+                    blank_canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
                     plot_hypervolume.addWidget(blank_canvas)
 
     def create_pareto_plot(self, fig: Figure, ax: Axes) -> tuple[Figure, Axes]:
@@ -514,8 +514,8 @@ class ParetoFrontWidget(AnalysisWidget):
                 ValueError, "No data points available for Hypervolume"
             )
         # Extract the x and y coordinates from the data points
-        x = data_points["iteration"].values
-        y = data_points["hypervolume"].values
+        x = data_points["iteration"].to_numpy(dtype=float)
+        y = data_points["hypervolume"].to_numpy(dtype=float)
         # Create a scatter plot
         ax.plot(
             x,

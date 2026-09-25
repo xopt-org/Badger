@@ -69,9 +69,9 @@ class Parameters:
     include_y: bool = True
 
 
-class BaxWidget(AnalysisWidget):
+class BaxWidget(AnalysisWidget[Parameters]):
     generator: BaxGenerator
-    parameters: Parameters  # type: ignore[assignment]
+    parameters: Parameters
 
     def __init__(self, routine: Routine, parent: QWidget | None = None):
         logger.debug("Initializing BaxWidget")

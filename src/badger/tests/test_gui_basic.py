@@ -3,16 +3,17 @@ import time
 from unittest.mock import patch
 
 import pytest
-from PyQt5.QtCore import QEventLoop, Qt, QTimer
+from PyQt5.QtCore import QEventLoop, QTimer
 from PyQt5.QtWidgets import QDialog
+from pytestqt.qtbot import QtBot
 
 
 @pytest.fixture(scope="session")
-def init_multiprocessing():
+def init_multiprocessing() -> None:
     multiprocessing.set_start_method("fork", force=True)
 
 
-def test_gui_main(qtbot, init_multiprocessing):
+def test_gui_main(qtbot: QtBot, init_multiprocessing):
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_path_issues
 
@@ -79,7 +80,7 @@ def test_close_main(qtbot, init_multiprocessing):
     window.process_manager.close_proccesses()
 
 
-def test_traceback_during_run(qtbot, init_multiprocessing):
+def test_traceback_during_run(qtbot: QtBot) -> None:
     with patch("badger.core.run_routine") as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
@@ -131,7 +132,7 @@ def test_traceback_during_run(qtbot, init_multiprocessing):
         window.process_manager.close_proccesses()
 
 
-def test_measurement_retry_dialog_in_app_flow(qtbot, init_multiprocessing):
+def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
 
@@ -194,7 +195,7 @@ def test_measurement_retry_dialog_in_app_flow(qtbot, init_multiprocessing):
 # TODO: Check the use_low_noise_prior parameter in the routine
 # once it's running -- currently use_low_noise_prior is not exposed in the GUI
 # so need to check the routine object held by the monitor/runner
-def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
+def test_default_low_noise_prior_in_bo(qtbot: QtBot) -> None:
     import yaml
     from xopt.generators import all_generator_names
 
@@ -234,31 +235,32 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     window.process_manager.close_proccesses()
 
 
-def test_default_turbo_in_bo(qtbot):
+# TODO: Fix default turbo in bo test
+def test_default_turbo_in_bo(qtbot: QtBot) -> None:
     return
 
-    import yaml
-    from xopt.generators import all_generator_names
+    # import yaml
+    # from xopt.generators import all_generator_names
 
-    from badger.gui.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import fix_db_path_issue
+    # from badger.gui.windows.main_window import BadgerMainWindow
+    # from badger.tests.utils import fix_db_path_issue
 
-    fix_db_path_issue()
+    # fix_db_path_issue()
 
-    window = BadgerMainWindow()
-    qtbot.addWidget(window)
+    # window = BadgerMainWindow()
+    # qtbot.addWidget(window)
 
-    # Create and save a routine
-    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
-    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
+    # # Create and save a routine
+    # qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
+    # assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
-    editor = window.home_page.routine_editor
-    cb_generator = editor.generator_box.cb
-    algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
-    for algo in algos:
-        if algo in all_generator_names["bo"]:
-            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
-            params = editor.routine_page.generator_box.edit.get_parameters_yaml()
-            params_dict = yaml.safe_load(params)
+    # editor = window.home_page.routine_editor
+    # cb_generator = editor.generator_box.cb
+    # algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
+    # for algo in algos:
+    #     if algo in all_generator_names["bo"]:
+    #         qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
+    #         params = editor.routine_page.generator_box.edit.get_parameters_yaml()
+    #         params_dict = yaml.safe_load(params)
 
-            assert params_dict["turbo_controller"] == "optimize"
+    #         assert params_dict["turbo_controller"] == "optimize"

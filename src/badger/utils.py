@@ -11,14 +11,17 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from importlib import metadata
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import yaml
+from pandas import DataFrame
 from PyQt5.QtWidgets import QLayout, QWidget
 
 from badger.errors import BadgerLoadConfigError
 
 if TYPE_CHECKING:
+    from xopt.generator import Generator
+
     from badger.routine import Routine
 
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
@@ -31,13 +34,15 @@ logger = logging.getLogger(__name__)
 class BlockSignalsContext:
     widgets: Iterable[QWidget | QLayout]
 
-    def __init__(self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]):
+    def __init__(
+        self, widgets: QWidget | QLayout | Iterable[QWidget | QLayout]
+    ) -> None:
         if isinstance(widgets, Iterable):
             self.widgets = widgets
         else:
             self.widgets = [widgets]
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         for widget in self.widgets:
             if widget.signalsBlocked():
                 logger.warning(
@@ -50,7 +55,7 @@ class BlockSignalsContext:
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         exc_traceback: TracebackType | None,
-    ):
+    ) -> None:
         for widget in self.widgets:
             if not widget.signalsBlocked():
                 logger.warning(
@@ -62,34 +67,38 @@ class BlockSignalsContext:
 # https://stackoverflow.com/a/39681672/4263605
 # https://github.com/yaml/pyyaml/issues/234#issuecomment-765894586
 class Dumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
         return super().increase_indent(flow, False)
 
 
-def get_yaml_string(content):
+def get_yaml_string(content: Any) -> str:
     if content is None:
         return ""
 
-    return yaml.dump(content, Dumper=Dumper, default_flow_style=False, sort_keys=False)
+    return str(
+        yaml.dump(content, Dumper=Dumper, default_flow_style=False, sort_keys=False)
+    )
 
 
-def yprint(content):
+def yprint(content: Any) -> None:
     print(get_yaml_string(content), end="")
 
 
-def norm(x, lb, ub):
+def norm(x: float, lb: float, ub: float) -> float:
     return (x - lb) / (ub - lb)
 
 
-def denorm(x, lb, ub):
+def denorm(x: float, lb: float, ub: float) -> float:
     return (1 - x) * lb + x * ub
 
 
-def config_list_to_dict(config_list):
+def config_list_to_dict(
+    config_list: Iterable[dict[str, Any]] | None,
+) -> dict[str, Any]:
     if not config_list:
         return {}
 
-    book = {}
+    book: dict[str, Any] = {}
     for config in config_list:
         for k, v in config.items():
             book[k] = v
@@ -97,8 +106,8 @@ def config_list_to_dict(config_list):
     return book
 
 
-def load_config(fname):
-    configs = None
+def load_config(fname: str | None) -> dict[str, Any] | None:
+    configs: dict[str, Any] | None = None
 
     if fname is None:
         return configs
@@ -127,7 +136,9 @@ def load_config(fname):
     return configs
 
 
-def merge_params(default_params, params):
+def merge_params(
+    default_params: dict[str, Any] | None, params: dict[str, Any] | None
+) -> dict[str, Any] | None:
     merged_params = None
 
     if params is None:
@@ -140,9 +151,9 @@ def merge_params(default_params, params):
     return merged_params
 
 
-def range_to_str(vranges):
+def range_to_str(vranges: list[dict[str, tuple[float, float]]]) -> list[dict[str, str]]:
     # Transfer the range list to a string for better printing
-    vranges_str = []
+    vranges_str: list[dict[str, str]] = []
     for var_dict in vranges:
         var = next(iter(var_dict))
         vrange = var_dict[var]
@@ -188,19 +199,26 @@ def curr_ts_to_str(format: str = "lcls-log") -> str:
 
 
 def create_archive_run_filename(routine: "Routine", format: str = "lcls-fname") -> str:
-    data = routine.sorted_data
-    env_name = routine.environment.name
-    data_dict = data.to_dict("list")
     if hasattr(routine, "creation_ts"):
         suffix = routine.creation_ts
     else:  # compatibility with old routines
+        data = routine.sorted_data
+        if data is None:
+            raise ValueError("Unable to get timestamp. Sorted Data is None")
+        data_dict = data.to_dict("list")
         ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
         suffix = ts_float_to_str(ts_float, format)
+    env_name = routine.environment.name
     fname = f"{env_name}-{suffix}.yaml"
     return fname
 
 
 def get_header(routine: "Routine") -> list[str]:
+    obj_names: list[str] = []
+    var_names: list[str] = []
+    con_names: list[str] = []
+    sta_names: list[str] = []
+
     try:
         obj_names = routine.vocs.objective_names
     except AttributeError:
@@ -279,8 +297,14 @@ def convert_str_to_value(s: str) -> str | int | float | bool:
     return s
 
 
-def parse_rule(rule: dict | str) -> dict:
-    if type(rule) is str:
+class Rule(TypedDict):
+    direction: str
+    filter: str
+    reducer: str
+
+
+def parse_rule(rule: Rule | str) -> Rule:
+    if isinstance(rule, str):
         return {
             "direction": rule,
             "filter": "ignore_nan",
@@ -301,14 +325,10 @@ def parse_rule(rule: dict | str) -> dict:
     except KeyError:
         reducer = "percentile_80"
 
-    return {
-        "direction": direction,
-        "filter": filter,
-        "reducer": reducer,
-    }
+    return Rule(direction=direction, filter=filter, reducer=reducer)
 
 
-def get_value_or_none(book, key):
+def get_value_or_none(book: dict[str, Any], key: str) -> Any:
     try:
         value = book[key]
     except KeyError:
@@ -317,7 +337,7 @@ def get_value_or_none(book, key):
     return value
 
 
-def dump_state(dump_file, generator, data):
+def dump_state(dump_file: str | None, generator: "Generator", data: DataFrame) -> None:
     """dump data to file"""
     if dump_file is not None:
         output = state_to_dict(generator, data)
@@ -326,9 +346,17 @@ def dump_state(dump_file, generator, data):
         logger.debug(f"Dumped state to YAML file: {dump_file}")
 
 
-def state_to_dict(generator, data, include_data=True):
+class StateDict(TypedDict, total=False):
+    generator: dict[str, Any]
+    vocs: dict[str, Any]
+    data: dict[str, Any] | None
+
+
+def state_to_dict(
+    generator: "Generator", data: DataFrame, include_data: bool = True
+) -> StateDict:
     # dump data to dict with config metadata
-    output = {
+    output: StateDict = {
         "generator": {
             "name": type(generator).name,
             type(generator).name: json.loads(generator.model_dump_json()),
@@ -351,7 +379,7 @@ def strtobool(val: str) -> bool:
     try:
         val = val.lower()
     except AttributeError:
-        return val
+        return bool(val)
 
     if val in ("y", "yes", "t", "true", "on", "1"):
         return True
@@ -380,13 +408,14 @@ def get_datadir() -> pathlib.Path:
         return home / ".local/share"
     elif sys.platform == "darwin":
         return home / "Library/Application Support"
+    return home
 
 
-def get_badger_version():
+def get_badger_version() -> str:
     return metadata.version("badger-opt")
 
 
-def get_xopt_version():
+def get_xopt_version() -> str:
     return metadata.version("xopt")
 
 

@@ -2,9 +2,10 @@
 docs access, and the extensions palette launcher."""
 
 from importlib import resources
+from typing import Any, cast
 
-from PyQt5.QtCore import QEvent, QSize, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtCore import QEvent, QPoint, QSize, pyqtSignal
+from PyQt5.QtGui import QFont, QHelpEvent, QIcon
 from PyQt5.QtWidgets import (
     QAction,
     QHBoxLayout,
@@ -25,7 +26,7 @@ class SplitTooltipToolButton(QToolButton):
     Use arg menu_tooltip="desired tooltip" to set the menu tooltip
     """
 
-    def __init__(self, menu_tooltip="", parent=None):
+    def __init__(self, menu_tooltip: str = "", parent: QWidget | None = None) -> None:
         """
         Parameters
         ----------
@@ -35,20 +36,28 @@ class SplitTooltipToolButton(QToolButton):
         super().__init__(parent)
         self.menu_tooltip = menu_tooltip
 
-    def _over_menu_arrow(self, pos):
+    def _over_menu_arrow(self, pos: QPoint) -> bool:
         opt = QStyleOptionToolButton()
         self.initStyleOption(opt)
-        rect = self.style().subControlRect(
-            QStyle.CC_ToolButton, opt, QStyle.SC_ToolButtonMenu, self
+        style = self.style()
+        if style is None:
+            raise RuntimeError("Style not found")
+        rect = style.subControlRect(
+            QStyle.ComplexControl.CC_ToolButton,
+            opt,
+            QStyle.SubControl.SC_ToolButtonMenu,
+            self,
         )
         return rect.contains(pos)
 
-    def event(self, event):
-        if event.type() == QEvent.ToolTip and self._over_menu_arrow(event.pos()):
-            from PyQt5.QtWidgets import QToolTip
+    def event(self, event: QEvent | None) -> bool:
+        if event is not None and event.type() == QEvent.Type.ToolTip:
+            help_event = cast(QHelpEvent, event)
+            if self._over_menu_arrow(help_event.pos()):
+                from PyQt5.QtWidgets import QToolTip
 
-            QToolTip.showText(event.globalPos(), self.menu_tooltip, self)
-            return True
+                QToolTip.showText(help_event.globalPos(), self.menu_tooltip, self)
+                return True
         return super().event(event)
 
 
@@ -150,13 +159,13 @@ class BadgerActionBar(QWidget):
     sig_edit_checkpoint = pyqtSignal()
     sig_load_checkpoint = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.docs_name = "gui-usage"
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         def load_internal_icon(name: str) -> QIcon:
             icon_ref = resources.files(__package__) / f"../images/{name}"
             with resources.as_file(icon_ref) as icon_path:
@@ -189,13 +198,14 @@ class BadgerActionBar(QWidget):
         self.btn_help.setIconSize(QSize(20, 20))
 
         self.btn_reset = create_button("undo.png", "Reset environment")
-        self.btn_checkpoint = create_button(
-            "flag.png", "Checkpoint", size=(48, 32), tool_button=True
+        self.btn_checkpoint = cast(
+            QToolButton,
+            create_button("flag.png", "Checkpoint", size=(48, 32), tool_button=True),
         )
         self.btn_opt = create_button("star.png", "Jump to optimum")
         self.btn_set = create_button("set.png", "Dial in solution")
         self.btn_ctrl = create_button("pause.png", "Pause")
-        self.btn_ctrl._status = "pause"
+        self.ctrl_status = "pause"
 
         self.btn_del.setDisabled(True)
         self.btn_log.setDisabled(True)
@@ -291,7 +301,7 @@ class BadgerActionBar(QWidget):
             }
         """)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_del.clicked.connect(self.delete_run)
         self.btn_log.clicked.connect(self.logbook)
         self.btn_help.clicked.connect(self.open_docs)
@@ -318,7 +328,7 @@ class BadgerActionBar(QWidget):
         )
         self.btn_open_extensions_palette.clicked.connect(self.open_extensions_palette)
 
-    def lock(self):
+    def lock(self) -> None:
         self.btn_del.setDisabled(True)
         self.btn_log.setDisabled(True)
         self.btn_reset.setDisabled(True)
@@ -328,7 +338,7 @@ class BadgerActionBar(QWidget):
         self.btn_opt.setDisabled(True)
         self.btn_set.setDisabled(True)
 
-    def unlock(self):
+    def unlock(self) -> None:
         self.btn_del.setDisabled(False)
         self.btn_log.setDisabled(False)
         self.btn_reset.setDisabled(False)
@@ -338,13 +348,13 @@ class BadgerActionBar(QWidget):
         self.btn_opt.setDisabled(False)
         self.btn_set.setDisabled(False)
 
-    def routine_invalid(self):
+    def routine_invalid(self) -> None:
         self.btn_stop.setDisabled(False)
 
-    def routine_finished(self):
+    def routine_finished(self) -> None:
         self.btn_ctrl.setIcon(self.icon_pause)
         self.btn_ctrl.setToolTip("Pause")
-        self.btn_ctrl._status = "pause"
+        self.ctrl_status = "pause"
         self.btn_ctrl.setDisabled(True)
 
         # Note the order of the following two lines cannot be changed!
@@ -363,19 +373,19 @@ class BadgerActionBar(QWidget):
         self.btn_set.setDisabled(False)
         self.btn_del.setDisabled(False)
 
-    def toggle_reset(self, locked):
+    def toggle_reset(self, locked: bool) -> None:
         self.btn_reset.setDisabled(locked)
 
-    def toggle_run(self, locked):
+    def toggle_run(self, locked: bool) -> None:
         self.btn_stop.setDisabled(locked)
 
-    def toggle_other(self, locked):
+    def toggle_other(self, locked: bool) -> None:
         self.btn_del.setDisabled(locked)
         self.btn_log.setDisabled(locked)
         self.btn_opt.setDisabled(locked)
         self.btn_set.setDisabled(locked)
 
-    def run_start(self):
+    def run_start(self) -> None:
         self.btn_stop.setStyleSheet(stylesheet_stop)
         self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.btn_stop.setDisabled(False)
@@ -389,7 +399,7 @@ class BadgerActionBar(QWidget):
         self.btn_ctrl.setDisabled(False)
         self.btn_set.setDisabled(True)
 
-    def set_run_action(self):
+    def set_run_action(self) -> None:
         if self.btn_stop.defaultAction() is not self.run_action:
             self.btn_stop.setDefaultAction(self.run_action)
 
@@ -400,7 +410,7 @@ class BadgerActionBar(QWidget):
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
 
-    def set_run_until_action(self, from_menu=False):
+    def set_run_until_action(self, from_menu: bool = False) -> None:
         if self.btn_stop.defaultAction() is not self.run_until_action:
             self.btn_stop.setDefaultAction(self.run_until_action)
 
@@ -410,54 +420,54 @@ class BadgerActionBar(QWidget):
             self.btn_stop.setDisabled(True)
             self.sig_stop.emit()
 
-    def _on_run_action_triggered(self):
+    def _on_run_action_triggered(self) -> None:
         self.set_run_action()
 
-    def _on_run_until_action_triggered(self):
+    def _on_run_until_action_triggered(self) -> None:
         self.set_run_until_action(from_menu=False)
 
-    def _on_run_until_menu_action_triggered(self):
+    def _on_run_until_menu_action_triggered(self) -> None:
         self.set_run_until_action(from_menu=True)
 
-    def delete_run(self):
+    def delete_run(self) -> None:
         self.sig_delete_run.emit()
 
-    def logbook(self):
+    def logbook(self) -> None:
         self.sig_logbook.emit()
 
-    def open_docs(self):
+    def open_docs(self) -> None:
         self.window_docs.update_docs(self.docs_name)
         self.window_docs.show()
 
-    def reset_env(self):
+    def reset_env(self) -> None:
         self.sig_reset_env.emit()
 
-    def jump_to_optimal(self):
+    def jump_to_optimal(self) -> None:
         self.sig_jump_to_optimal.emit()
 
-    def dial_in(self):
+    def dial_in(self) -> None:
         self.sig_dial_in.emit()
 
-    def ctrl_routine(self):
-        if self.btn_ctrl._status == "pause":
+    def ctrl_routine(self) -> None:
+        if self.ctrl_status == "pause":
             self.sig_ctrl.emit(True)
             self.btn_ctrl.setIcon(self.icon_play)
             self.btn_ctrl.setToolTip("Resume")
-            self.btn_ctrl._status = "play"
+            self.ctrl_status = "play"
         else:
             self.sig_ctrl.emit(False)
             self.btn_ctrl.setIcon(self.icon_pause)
             self.btn_ctrl.setToolTip("Pause")
-            self.btn_ctrl._status = "pause"
+            self.ctrl_status = "pause"
 
-    def open_extensions_palette(self):
+    def open_extensions_palette(self) -> None:
         self.sig_open_extensions_palette.emit()
 
-    def env_ready(self):
+    def env_ready(self) -> None:
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
 
-    def update_run_tooltip(self, tc=None):
+    def update_run_tooltip(self, tc: dict[str, Any] | None = None) -> None:
         """Update btn_stop tooltip: tc dict for run-until mode, or None."""
         if tc is None:
             self.run_action.setToolTip("Run")

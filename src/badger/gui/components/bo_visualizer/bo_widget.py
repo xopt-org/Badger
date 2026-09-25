@@ -57,7 +57,7 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 }
 
 
-class BOPlotWidget(AnalysisWidget):
+class BOPlotWidget(AnalysisWidget[ConfigurableOptions]):
     generator: BayesianGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
 
     df_length: float = float("inf")
@@ -374,7 +374,8 @@ class BOPlotWidget(AnalysisWidget):
 
         # Force the table to refresh and update its view
         viewport = self.ui_components.reference_table.viewport()
-        viewport.update()
+        if viewport is not None:
+            viewport.update()
 
     def get_reference_points(
         self, ref_inputs: list[QTableWidgetItem], variable_names: list[str]
