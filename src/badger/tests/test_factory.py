@@ -39,7 +39,7 @@ class TestFactory:
             elif name == "latin_hypercube":
                 test_vocs = deepcopy(TEST_VOCS_BASE)
                 test_vocs.objectives = {
-                    k: ExploreObjective() for k in test_vocs.objectives.keys()
+                    k: ExploreObjective() for k in test_vocs.objectives
                 }
                 gen_class(vocs=test_vocs, **gen_config)
             elif name == "bax":

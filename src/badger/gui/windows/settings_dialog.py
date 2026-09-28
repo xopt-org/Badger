@@ -4,6 +4,7 @@ changes applied immediately to the running application."""
 
 import logging
 import os
+from typing import ClassVar
 
 from PyQt5.QtCore import Qt
 
@@ -29,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 class BadgerSettingsDialog(QDialog):
-    theme_list = ["default", "light", "dark"]
-    theme_idx_dict = {
+    theme_list: ClassVar[list[str]] = ["default", "light", "dark"]
+    theme_idx_dict: ClassVar[dict[str, int]] = {
         "default": 0,
         "light": 1,
         "dark": 2,
@@ -277,7 +278,7 @@ class BadgerSettingsDialog(QDialog):
         if theme_prev != theme_curr:
             self.set_theme(theme_prev)
 
-        for key in self.settings.keys():
+        for key in self.settings:
             self.config_singleton.write_value(key, self.settings[key]["value"])
 
         self.reject()

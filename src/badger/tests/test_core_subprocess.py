@@ -36,7 +36,7 @@ class TestCore:
 
     @pytest.fixture(autouse=True, scope="function")
     def test_core_setup(self, *args, **kwargs) -> None:
-        super(TestCore, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.count = 0
         self.candidates = None
         self.points_eval_list = []
@@ -78,10 +78,9 @@ class TestCore:
         }
         process_with_args = process_manager.remove_from_queue()
         pause_event = process_with_args["pause_event"]
-        data_queue = process_with_args["data_queue"]
+        args_queue = process_with_args["args_queue"]
         wait_event = process_with_args["wait_event"]
         routine_process = process_with_args["process"]
-        data_queue = process_with_args["data_queue"]
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
@@ -95,7 +94,7 @@ class TestCore:
             "start_time": time.time(),
         }
 
-        data_queue.put(arg_dict)
+        args_queue.put(arg_dict)
         wait_event.set()
         pause_event.set()
 
@@ -165,10 +164,9 @@ class TestCore:
         }
         process_with_args = process_manager.remove_from_queue()
         pause_event = process_with_args["pause_event"]
-        data_queue = process_with_args["data_queue"]
+        args_queue = process_with_args["args_queue"]
         wait_event = process_with_args["wait_event"]
         routine_process = process_with_args["process"]
-        data_queue = process_with_args["data_queue"]
         evaluate_queue = process_with_args["evaluate_queue"]
 
         arg_dict = {
@@ -178,7 +176,7 @@ class TestCore:
             "start_time": time.time(),
         }
 
-        data_queue.put(arg_dict)
+        args_queue.put(arg_dict)
         wait_event.set()
         pause_event.set()
 

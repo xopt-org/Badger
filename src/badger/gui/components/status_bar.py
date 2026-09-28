@@ -1,11 +1,13 @@
 """Bottom status bar showing run status and a settings button."""
 
 from importlib import resources
-from PyQt5.QtWidgets import QHBoxLayout, QWidget, QPushButton
+
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QSize
-from badger.gui.windows.settings_dialog import BadgerSettingsDialog
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
+
 from badger.gui.components.eliding_label import SimpleElidedLabel
+from badger.gui.windows.settings_dialog import BadgerSettingsDialog
 
 
 class BadgerStatusBar(QWidget):

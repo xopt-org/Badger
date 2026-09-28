@@ -1,23 +1,23 @@
 """Entry points and app bootstrap helpers for the Badger mini GUI package."""
 
-from importlib import resources
-import signal
+import logging
 import os
+import signal
 import sys
 import time
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5 import QtCore
-from qdarkstyle import load_stylesheet, DarkPalette
-
-from badger.settings import init_settings
-from badger.gui.mini.windows.main_window import BadgerMiniWindow
-
 import traceback
-from badger.errors import BadgerError
+from importlib import resources
 from types import TracebackType
-from typing import Type, NoReturn
-import logging
+from typing import NoReturn
+
+from PyQt5 import QtCore
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtWidgets import QApplication
+from qdarkstyle import DarkPalette, load_stylesheet
+
+from badger.errors import BadgerError
+from badger.gui.mini.windows.main_window import BadgerMiniWindow
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def on_timeout():
 
 
 def error_handler(
-    etype: Type[BaseException], value: BaseException, tb: TracebackType
+    etype: type[BaseException], value: BaseException, tb: TracebackType
 ) -> NoReturn:
     """
     Custom exception handler that formats uncaught exceptions and raises a BadgerError.
@@ -76,7 +76,7 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui(config_path=None, template_filename: str = None):
+def launch_gui(config_path=None, template_filename: str | None = None):
     sys.excepthook = error_handler
 
     app = QApplication(sys.argv)

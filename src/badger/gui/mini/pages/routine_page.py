@@ -8,81 +8,86 @@ to run. It also supports the reverse path (refresh_ui/set_routine) to load
 an existing Routine back into the form.
 """
 
-from typing import Any
-import warnings
-import traceback
 import copy
-from functools import partial
+import logging
 import os
-import yaml
+import traceback
+import warnings
+from datetime import UTC, datetime
+from functools import partial
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import pyqtSignal, QTimer
-from PyQt5.QtWidgets import QLineEdit, QPushButton, QFileDialog
-from PyQt5.QtWidgets import QMessageBox, QWidget, QTabWidget
-from PyQt5.QtWidgets import QVBoxLayout, QScrollArea
-from PyQt5.QtWidgets import QTableWidgetItem, QPlainTextEdit
-from PyQt5.QtWidgets import QApplication
-from badger.gui.components.navigators import HistoryNavigator
+import yaml
 from coolname import generate_slug
-from xopt import VOCS
-from xopt.vocs import random_inputs
-from xopt.generators import (
-    get_generator_defaults,
-    all_generator_names,
-    get_generator_dynamic,
-)
-from xopt.vocs import get_local_region
 from gest_api.vocs import (
     BaseObjective,
+    ContinuousVariable,
     GreaterThanConstraint,
     LessThanConstraint,
     MaximizeObjective,
     MinimizeObjective,
 )
-
 from pydantic import ValidationError
+from PyQt5.QtCore import QTimer, pyqtSignal
+from PyQt5.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QScrollArea,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+from xopt import VOCS
+from xopt.generators import (
+    all_generator_names,
+    get_generator_defaults,
+    get_generator_dynamic,
+)
+from xopt.vocs import get_local_region, random_inputs
 
+from badger.environment import instantiate_env
+from badger.errors import (
+    BadgerEnvInstantiationError,
+    BadgerEnvNotFoundError,
+    BadgerEnvVarError,
+    BadgerRoutineError,
+    VariableRangeError,
+)
+from badger.factory import get_env, list_env, list_generators
 from badger.gui.components.data_panel import BadgerDataPanel
 from badger.gui.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
     update_init_data_table,
 )
+from badger.gui.components.navigators import HistoryNavigator
 from badger.gui.mini.components.env_cbox import BadgerEnvBox
+from badger.gui.utils import filter_generator_config, with_busy_cursor
+from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
 from badger.gui.windows.docs_window import BadgerDocsWindow
-from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.ind_lim_vrange_dialog import (
     BadgerIndividualLimitVariableRangeDialog,
 )
-from badger.gui.windows.review_dialog import BadgerReviewDialog
-from badger.gui.windows.add_random_dialog import BadgerAddRandomDialog
+from badger.gui.windows.lim_vrange_dialog import BadgerLimitVariableRangeDialog
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.utils import filter_generator_config, with_busy_cursor
-from badger.environment import instantiate_env
-from badger.errors import (
-    BadgerEnvNotFoundError,
-    BadgerRoutineError,
-    BadgerEnvVarError,
-    BadgerEnvInstantiationError,
-    VariableRangeError,
-)
-from badger.factory import list_generators, list_env, get_env
+from badger.gui.windows.review_dialog import BadgerReviewDialog
 from badger.routine import Routine
 from badger.settings import init_settings
-from datetime import datetime
 from badger.utils import (
     BlockSignalsContext,
-    load_config,
+    _round_bounds_inward,
     get_badger_version,
     get_xopt_version,
+    load_config,
     ts_float_to_str,
-    _round_bounds_inward,
 )
-
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +123,7 @@ def extract_objective_symbol(objective: BaseObjective) -> str:
     if isinstance(objective, MaximizeObjective):
         return "MAXIMIZE"
     else:
-        raise ValueError(f"Unknown objective type: {objective}")
+        raise TypeError(f"Unknown objective type: {objective}")
 
 
 class BadgerRoutinePage(QWidget):
@@ -202,8 +207,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box = BadgerEnvBox(None, self.envs, self.generators)
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QScrollArea.NoFrame)
-        scroll_area.setStyleSheet(
-            """
+        scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;  /* Remove border */
                 margin: 0px;   /* Remove margin */
@@ -212,8 +216,7 @@ class BadgerRoutinePage(QWidget):
             QScrollArea > QWidget {
                 margin: 0px;   /* Remove margin inside */
             }
-        """
-        )
+        """)
         scroll_content_env = QWidget()
         scroll_layout_env = QVBoxLayout(scroll_content_env)
         # add extra right margin for macOS to prevent scrollbar overlap
@@ -641,28 +644,27 @@ class BadgerRoutinePage(QWidget):
         Filter which generator parameters get saved to template
         """
 
-        if generator_name in ["expected_improvement", "upper_confidence_bound"]:
-            if (
-                "turbo_controller" in generator_config
-                and generator_config["turbo_controller"] is not None
-                and isinstance(generator_config["turbo_controller"], dict)
-            ):
-                turbo = generator_config["turbo_controller"]
-                generator_config["turbo_controller"] = {
-                    k: v
-                    for k, v in turbo.items()
-                    if k
-                    in {
-                        "name",
-                        "length",
-                        "length_max",
-                        "length_min",
-                        "failure_tolerance",
-                        "success_tolerance",
-                        "scale_factor",
-                        "restrict_model_data",
-                    }
+        if generator_name in ["expected_improvement", "upper_confidence_bound"] and (
+            "turbo_controller" in generator_config
+            and generator_config["turbo_controller"] is not None
+            and isinstance(generator_config["turbo_controller"], dict)
+        ):
+            turbo = generator_config["turbo_controller"]
+            generator_config["turbo_controller"] = {
+                k: v
+                for k, v in turbo.items()
+                if k
+                in {
+                    "name",
+                    "length",
+                    "length_max",
+                    "length_min",
+                    "failure_tolerance",
+                    "success_tolerance",
+                    "scale_factor",
+                    "restrict_model_data",
                 }
+            }
 
         return generator_config
 
@@ -678,7 +680,7 @@ class BadgerRoutinePage(QWidget):
         # Suggest a filename based on the routine name or placeholder
         routine_name = self.edit_save.text() or self.edit_save.placeholderText()
         if not routine_name:
-            routine_name = "template_" + datetime.now().strftime("%y%m%d_%H%M%S")
+            routine_name = "template_" + datetime.now(tz=UTC).strftime("%y%m%d_%H%M%S")
         suggested_filename = f"{routine_name}.yaml"
         template_path, _ = QFileDialog.getSaveFileName(
             self,
@@ -998,7 +1000,7 @@ class BadgerRoutinePage(QWidget):
         # Get vocs
         try:
             vocs, _ = self.env_box.compose_vocs()
-        except Exception:
+        except BadgerRoutineError:
             vocs = None
         self.env_box.edit_algo_params.set_params_from_generator(
             name, filtered_config, vocs
@@ -1036,7 +1038,9 @@ class BadgerRoutinePage(QWidget):
         try:
             env = instantiate_env(self.env, configs)
         except Exception as e:
-            raise BadgerEnvInstantiationError(f"Failed to instantiate environment: {e}")
+            raise BadgerEnvInstantiationError(
+                f"Failed to instantiate environment: {e}"
+            ) from e
 
         return env
 
@@ -1046,10 +1050,11 @@ class BadgerRoutinePage(QWidget):
 
         try:
             tmp = {}
-            exec(self.script, tmp)
+            # User-provided script must define a `generate` function, so exec is required here.
+            exec(self.script, tmp)  # noqa: S102
             try:
                 tmp["generate"]  # test if generate function is defined
-            except Exception as e:
+            except KeyError as e:
                 QMessageBox.warning(
                     self, "Please define a valid generate function!", str(e)
                 )
@@ -1059,14 +1064,14 @@ class BadgerRoutinePage(QWidget):
             # Get vocs
             try:
                 vocs, _ = self.env_box.compose_vocs()
-            except Exception:
+            except BadgerRoutineError:
                 vocs = None
             # Function generate comes from the script
             params_generator = tmp["generate"](env, vocs)
             self.env_box.edit_algo_params.set_params_from_generator(
                 self.routine.generator.name, params_generator, vocs
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - runs user-provided generator script
             QMessageBox.warning(self, "Invalid script!", str(e))
 
     @with_busy_cursor
@@ -1104,7 +1109,7 @@ class BadgerRoutinePage(QWidget):
             self.env = env
             self.env_box.edit_var.clear()
             self.env_box.edit_obj.clear()
-        except Exception:
+        except Exception:  # noqa: BLE001 - env selection rollback on any failure
             self.configs = None
             self.env = None
             self.env_box.clear_selected_env()
@@ -1237,7 +1242,7 @@ class BadgerRoutinePage(QWidget):
             raise BadgerEnvVarError(
                 f"Failed to get current variable values : {e}\n"
                 "Please ensure the environment is properly configured."
-            )
+            ) from e
 
         # Iterate through the rows
         for row in range(table.rowCount()):
@@ -1421,7 +1426,7 @@ class BadgerRoutinePage(QWidget):
             raise BadgerEnvVarError(
                 f"Failed to get current variable values : {e}\n"
                 "Please ensure the environment is properly configured."
-            )
+            ) from e
 
         option_idx = self.limit_option["limit_option_idx"]
         clipped = {}
@@ -1462,7 +1467,7 @@ class BadgerRoutinePage(QWidget):
         self.update_init_table()  # auto populate if option is set
 
         # remember user selection for applying limit changes
-        if not self.lim_apply_to_vars == 2:
+        if self.lim_apply_to_vars != 2:
             # Check if lim_apply_to_vars has been initialized
             # It will be set to 2 until the btn_lim_vrange is clicked
             self.lim_apply_to_vars = set_all
@@ -1472,7 +1477,27 @@ class BadgerRoutinePage(QWidget):
             self.ratio_var_ranges[vname] = copy.deepcopy(self.limit_option)
         self.env_box.var_table.set_scan_range_options()
 
-    def set_ind_vrange(self, vname, config):
+    def set_ind_vrange(self, vname: str, config: dict) -> None:
+        """
+        Apply a variable-specific range policy to a single environment variable.
+
+        The selected mode is determined by ``config["limit_option_idx"]`` and can
+        represent a fixed percentage of the current value, a percentage of the full
+        hard-range width, a fixed absolute delta around the current value, or an exact
+        bound pair. The method reads the live environment value for ``vname``, computes
+        the candidate bounds, clips them to the hard limits from ``config["lower_bound"]``
+        and ``config["upper_bound"]``, and applies the result to the GUI variable table.
+        Initial points for that variable are recalculated with the new bounds.
+
+        Parameters
+        ----------
+        vname : str
+            Name of the variable whose bounds should be updated.
+        config : dict
+            Bounds configuration for the variable, including the hard limits,
+            ``limit_option_idx``, ``ratio_full``, ``ratio_curr``, ``delta``, and
+            ``exact_bounds``.
+        """
         logger.info(
             f"Setting individual variable range for {vname} with config: {config}"
         )
@@ -1482,6 +1507,7 @@ class BadgerRoutinePage(QWidget):
             "ratio_full": config["ratio_full"],
             "ratio_curr": config["ratio_curr"],
             "delta": config["delta"],
+            "exact_bounds": config["exact_bounds"],
         }
 
         option_idx = option["limit_option_idx"]
@@ -1489,17 +1515,24 @@ class BadgerRoutinePage(QWidget):
         env = self.create_env()
         curr = env.get_variables([vname])[vname]
 
-        # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
+        # set bounds based on selected option
         if option_idx == 1:
+            # ratio with full range
             ratio = option["ratio_full"]
             delta = 0.5 * ratio * (hard_bounds[1] - hard_bounds[0])
             bounds = [curr - delta, curr + delta]
             new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         elif option_idx == 2:
+            # delta around current value
             delta = option["delta"]
             bounds = [curr - delta, curr + delta]
             new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+        elif option_idx == 3:
+            # set exact bounds
+            bounds = option.get("exact_bounds", hard_bounds)
+            new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
         else:
+            # ratio around current value
             ratio = option["ratio_curr"]
             sign = np.sign(curr)
             bounds = [
@@ -1528,9 +1561,20 @@ class BadgerRoutinePage(QWidget):
         self.ratio_var_ranges[vname] = copy.deepcopy(option)
         self.env_box.var_table.set_scan_range_options()
 
-    def adjust_variable_range_options(self, ratio: float, var_name: str = None):
+    def adjust_variable_range_options(
+        self, ratio: float, var_name: str | None = None
+    ) -> None:
         """
         Scale variable ranges by ratio and recalculate bounds
+
+        Variable range options:
+        - `option_idx == 1`, bounds are calculated as a fraction of the full
+        variable range.
+        - `option_idx == 2`, bounds are calculated as a delta on either side of the
+        current value.
+        - `option_idx == 3`, the stored exact numerical bounds are used.
+        - Otherwise, (`option_idx == 0`) the ratio_curr mode calculated bounds as a
+        fraction of the current value around the current point.
 
         Parameters
         ----------
@@ -1558,16 +1602,25 @@ class BadgerRoutinePage(QWidget):
             # get copy of selected vrange option
             option = copy.copy(self.ratio_var_ranges.get(vname, self.limit_option))
             option_idx = option["limit_option_idx"]
-
-            if option_idx == 1:
-                key = "ratio_full"
-            elif option_idx == 2:
-                key = "delta"
+            if option_idx == 3:
+                # exact bounds: scale span by ratio around the current center.
+                exact_bounds = list(option.get("exact_bounds", [0.0, 0.0]))
+                lo, hi = sorted(exact_bounds)
+                center = 0.5 * (lo + hi)
+                half_span = 0.5 * (hi - lo) * ratio
+                option["exact_bounds"] = [center - half_span, center + half_span]
             else:
-                key = "ratio_curr"
+                # relative bounds options
+                if option_idx == 1:
+                    key = "ratio_full"
+                elif option_idx == 2:
+                    key = "delta"
+                else:
+                    key = "ratio_curr"
 
-            # update selected option with multiplication by ratio
-            option[key] = option[key] * ratio
+                # update selected option with multiplication by ratio
+                option[key] = option[key] * ratio
+
             self.ratio_var_ranges[vname] = option
 
         # recalculate bounds
@@ -1625,7 +1678,32 @@ class BadgerRoutinePage(QWidget):
         self.clear_init_table(reset_actions=False)
         self._fill_init_table()
 
-    def calc_auto_bounds(self):
+    def calc_auto_bounds(self) -> tuple[dict, dict]:
+        """
+        Compute auto-derived bounds for all selected variables.
+
+        Returns
+        -------
+        vrange, clipped: tuple[dict[str, list[float, float]], dict[str, bool]]
+            A tuple of dictionaires. Each dictionary is keyed by variable name.
+            `vrange` is a dict of [low, high] bounds for each variable.
+            `clipped` gives a bool for each variable indicating whether or not the
+            calculated bounds were clipped by hard limits.
+
+
+        The method of calculation is determined for each variable by that variable's
+        configured `limit_option_idx`, stored in `self.ratio_var_ranges[var_name]`.
+        - For `option_idx == 1`, bounds are calculated as a fraction of the full
+        variable range.
+        - For `option_idx == 2`, bounds are calculated as a delta on either side of the
+        current value.
+        - For `option_idx == 3`, the stored exact numerical bounds are used.
+        - Otherwise, (`option_idx == 0`) the ratio_curr mode calculated bounds as a
+        fraction of the current value around the current point.
+        In every case, the resulting bounds are
+        clipped to the variable's hard limits and the `clipped` dictionary records
+        whether a bound was reduced by that clip.
+        """
         logger.info("Calculating auto bounds for selected variables.")
         vname_selected = []
         vrange = {}
@@ -1649,7 +1727,9 @@ class BadgerRoutinePage(QWidget):
                 limit_option = self.limit_option
 
             option_idx = limit_option["limit_option_idx"]
-            # 0: ratio with current value, 1: ratio with full range, 2: delta around current value
+            # 0: ratio with current value, 1: ratio with full range, 2: delta around current value, 3: exact bounds
+            # Note that options 0, 1, and 2 are recalculated relative to current variable value, option 3 will not
+            # recalculate, this function just makes sure they are within the hard limits for the variable.
             if option_idx == 1:
                 ratio = limit_option["ratio_full"]
                 hard_bounds = vrange[name]
@@ -1667,6 +1747,14 @@ class BadgerRoutinePage(QWidget):
                 clipped[name] = bounds != new_bounds
                 vrange[name] = new_bounds
                 logger.info(f"Auto bounds for {name} (delta): {new_bounds}")
+            elif option_idx == 3:
+                exact_bounds = limit_option.get("exact_bounds")
+                hard_bounds = vrange[name]
+                bounds = sorted(exact_bounds) if exact_bounds else list(hard_bounds)
+                new_bounds = np.clip(bounds, hard_bounds[0], hard_bounds[1]).tolist()
+                clipped[name] = bounds != new_bounds
+                vrange[name] = new_bounds
+                logger.info(f"Auto bounds for {name} (exact): {new_bounds}")
             else:
                 ratio = limit_option["ratio_curr"]
                 hard_bounds = vrange[name]
@@ -1687,7 +1775,7 @@ class BadgerRoutinePage(QWidget):
         if checked:
             try:
                 _ = self.env_box.compose_vocs()
-            except Exception:
+            except BadgerRoutineError:
                 logger.warning("Variable range is not valid, switching to manual mode.")
                 QTimer.singleShot(
                     0, lambda: self.env_box.relative_to_curr.isChecked()
@@ -1770,10 +1858,18 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             option = self.limit_option
 
+        current_bounds = self.env_box.var_table.bounds.get(vname, bounds)
+        if current_bounds is None:
+            # default to env bounds if bounds not set
+            current_bounds = bounds
+        if isinstance(current_bounds, ContinuousVariable):
+            current_bounds = current_bounds.domain
+
         configs = {
             "current_value": curr,
             "lower_bound": bounds[0],
             "upper_bound": bounds[1],
+            "current_bounds": current_bounds,
             **option,
         }
 
@@ -1851,10 +1947,9 @@ class BadgerRoutinePage(QWidget):
 
         NO_OBJECTIVE_GENERATORS = ["bax"]
 
-        if not vocs.objectives:
-            if generator_name not in NO_OBJECTIVE_GENERATORS:
-                logger.error("No objectives selected.")
-                raise BadgerRoutineError("no objectives selected")
+        if not vocs.objectives and generator_name not in NO_OBJECTIVE_GENERATORS:
+            logger.error("No objectives selected.")
+            raise BadgerRoutineError("no objectives selected")
 
         # Initial points
         init_points_df = pd.DataFrame.from_dict(
@@ -1913,7 +2008,9 @@ class BadgerRoutinePage(QWidget):
                 # Metadata
                 badger_version=get_badger_version(),
                 xopt_version=get_xopt_version(),
-                creation_ts=ts_float_to_str(datetime.now().timestamp(), "lcls-fname"),
+                creation_ts=ts_float_to_str(
+                    datetime.now(tz=UTC).timestamp(), "lcls-fname"
+                ),
                 # Xopt part
                 generator=generator,
                 # Badger part
@@ -1952,7 +2049,7 @@ class BadgerRoutinePage(QWidget):
     def review(self):
         try:
             routine = self._compose_routine()
-        except Exception:
+        except Exception:  # noqa: BLE001 - routine compose reports via dialog
             return QMessageBox.critical(
                 self, "Invalid routine!", traceback.format_exc()
             )

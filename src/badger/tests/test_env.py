@@ -2,7 +2,7 @@ import pytest
 
 
 def test_find_env():
-    from badger.factory import list_env, get_env
+    from badger.factory import get_env, list_env
 
     assert len(list_env()) == 2
 
@@ -61,10 +61,10 @@ def test_list_observables():
 
 
 def test_get_variables():
-    from badger.factory import get_env, get_intf
     from badger.errors import (
         BadgerNoInterfaceError,
     )
+    from badger.factory import get_env, get_intf
 
     Interface, _ = get_intf("test")
     intf = Interface()
@@ -93,11 +93,11 @@ def test_get_variables():
 
 
 def testset_variables():
-    from badger.factory import get_env, get_intf
     from badger.errors import (
         BadgerEnvVarError,
         BadgerNoInterfaceError,
     )
+    from badger.factory import get_env, get_intf
 
     Interface, _ = get_intf("test")
     intf = Interface()
@@ -141,8 +141,8 @@ def testset_variables():
 
 
 def testget_observables():
-    from badger.factory import get_env, get_intf
     from badger.errors import BadgerNoInterfaceError
+    from badger.factory import get_env, get_intf
 
     Interface, _ = get_intf("test")
     intf = Interface()

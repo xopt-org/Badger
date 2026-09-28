@@ -1,6 +1,8 @@
 """Python syntax highlighter for the script editor. Colors keywords, strings,
 comments, numbers, and operators."""
 
+from typing import ClassVar
+
 from PyQt5 import QtCore, QtGui
 
 
@@ -37,7 +39,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
     """Syntax highlighter for the Python language."""
 
     # Python keywords
-    keywords = [
+    keywords: ClassVar[list[str]] = [
         "and",
         "assert",
         "break",
@@ -74,7 +76,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
     ]
 
     # Python operators
-    operators = [
+    operators: ClassVar[list[str]] = [
         "=",
         # Comparison
         "==",
@@ -107,7 +109,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
     ]
 
     # Python braces
-    braces = [
+    braces: ClassVar[list[str]] = [
         "{",
         "}",
         "(",
@@ -127,12 +129,10 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
 
         # Keyword, operator, and brace rules
         rules += [
-            (r"\b%s\b" % w, 0, STYLES["keyword"]) for w in PythonHighlighter.keywords
+            (rf"\b{w}\b", 0, STYLES["keyword"]) for w in PythonHighlighter.keywords
         ]
-        rules += [
-            (r"%s" % o, 0, STYLES["operator"]) for o in PythonHighlighter.operators
-        ]
-        rules += [(r"%s" % b, 0, STYLES["brace"]) for b in PythonHighlighter.braces]
+        rules += [(o, 0, STYLES["operator"]) for o in PythonHighlighter.operators]
+        rules += [(b, 0, STYLES["brace"]) for b in PythonHighlighter.braces]
 
         # All other rules
         rules += [
@@ -163,21 +163,20 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         # Do other syntax formatting
         for expression, nth, format in self.rules:
             index = expression.indexIn(text, 0)
-            if index >= 0:
-                # if there is a string we check
-                # if there are some triple quotes within the string
-                # they will be ignored if they are matched again
-                if expression.pattern() in [
-                    r'"[^"\\]*(\\.[^"\\]*)*"',
-                    r"'[^'\\]*(\\.[^'\\]*)*'",
-                ]:
-                    innerIndex = self.tri_single[0].indexIn(text, index + 1)
-                    if innerIndex == -1:
-                        innerIndex = self.tri_double[0].indexIn(text, index + 1)
+            # if there is a string we check
+            # if there are some triple quotes within the string
+            # they will be ignored if they are matched again
+            if index >= 0 and expression.pattern() in [
+                r'"[^"\\]*(\\.[^"\\]*)*"',
+                r"'[^'\\]*(\\.[^'\\]*)*'",
+            ]:
+                innerIndex = self.tri_single[0].indexIn(text, index + 1)
+                if innerIndex == -1:
+                    innerIndex = self.tri_double[0].indexIn(text, index + 1)
 
-                    if innerIndex != -1:
-                        tripleQuoteIndexes = range(innerIndex, innerIndex + 3)
-                        self.tripleQuoutesWithinStrings.extend(tripleQuoteIndexes)
+                if innerIndex != -1:
+                    tripleQuoteIndexes = range(innerIndex, innerIndex + 3)
+                    self.tripleQuoutesWithinStrings.extend(tripleQuoteIndexes)
 
             while index >= 0:
                 # skipping triple quotes within strings
@@ -237,7 +236,4 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             start = delimiter.indexIn(text, start + length)
 
         # Return True if still inside a multi-line string, False otherwise
-        if self.currentBlockState() == in_state:
-            return True
-        else:
-            return False
+        return self.currentBlockState() == in_state

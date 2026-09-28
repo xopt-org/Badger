@@ -2,12 +2,11 @@
 and to a JSON file (JSONLogger). Both subscribe to lifecycle events
 (start, step, end) from the optimization loop."""
 
-from __future__ import print_function
-import os
 import json
+import os
 
-from badger.logger.observer import _Tracker
 from badger.logger.event import Events
+from badger.logger.observer import _Tracker
 from badger.logger.util import Colours
 
 
@@ -22,7 +21,7 @@ class ScreenLogger(_Tracker):
     def __init__(self, verbose=2):
         self._verbose = verbose
         self._header_length = None
-        super(ScreenLogger, self).__init__()
+        super().__init__()
 
     @property
     def verbose(self):
@@ -128,7 +127,7 @@ class JSONLogger(_Tracker):
                 os.remove(self._path)
             except OSError:
                 pass
-        super(JSONLogger, self).__init__()
+        super().__init__()
 
     def update(self, event, solution):
         if event == Events.OPTIMIZATION_STEP:

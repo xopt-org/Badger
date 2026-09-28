@@ -10,22 +10,22 @@ Note: the CLI runner is deprecated — most users should use the GUI instead.
 
 import logging
 import os
+import signal
 import sys
 import time
-import signal
+from multiprocessing import Event, Pipe, Process, Queue
+
 import pandas as pd
-
-from multiprocessing import Process, Queue, Event, Pipe
-
 from pandas import DataFrame
+from typing_extensions import deprecated
 
-from badger.utils import curr_ts, load_template_file, load_template_string
+from badger.archive import save_tmp_run
 from badger.core import run_routine as run
 from badger.core_subprocess import run_routine_subprocess
+from badger.errors import BadgerLoadConfigError, BadgerRunTerminated
 from badger.routine import Routine, calculate_initial_points
 from badger.settings import init_settings
-from badger.archive import save_tmp_run
-from badger.errors import BadgerRunTerminated, BadgerLoadConfigError
+from badger.utils import curr_ts, load_template_file, load_template_string
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def run_n_archive(
 ):
     try:
         from badger.archive import archive_run
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit
         logger.error(e)
         return
 
@@ -48,7 +48,7 @@ def run_n_archive(
 
     def handler(*args):
         if storage["paused"]:
-            print("")  # start a new line
+            print()  # start a new line
             if flush_prompt:  # erase the last prompt
                 sys.stdout.write("\033[F")
             raise BadgerRunTerminated
@@ -95,8 +95,8 @@ def run_n_archive(
                 routine.environment.interface.dump_recording(
                     os.path.join(path, filename)
                 )
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001 - interface dump is best-effort
+                logger.warning("Failed to dump interface logs")
 
         # take a break to let the outside signal to change the status
         time.sleep(sleep)
@@ -114,7 +114,7 @@ def run_n_archive(
         )
     except BadgerRunTerminated as e:
         logger.info(e)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - CLI run boundary
         logger.error(e)
 
     # Save the run when at least one solution has been evaluated
@@ -125,61 +125,17 @@ def run_n_archive(
             path = _run["path"]
             filename = _run["filename"][:-4] + "pickle"
             routine.environment.interface.stop_recording(os.path.join(path, filename))
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 - interface dump is best-effort
+            logger.warning("Failed to dump interface logs")
 
 
+@deprecated("The `badger run` command is deprecated. Please use the GUI.")
 def run_routine(args):
     print(
         "This command is deprecated.\n"
         "Please use 'badger -g' to launch the Badger GUI "
         "and run an optimization."
     )
-    return
-
-    # try:
-    #     from ..factory import get_algo, get_env
-    # except Exception as e:
-    #     logger.error(e)
-    #     return
-
-    # try:
-    #     # Get env params
-    #     _, configs_env = get_env(args.env)
-
-    #     # Get algo params
-    #     _, configs_algo = get_algo(args.algo)
-
-    #     # Normalize the algo and env params
-    #     params_env = load_config(args.env_params)
-    #     params_algo = load_config(args.algo_params)
-    # except Exception as e:
-    #     logger.error(e)
-    #     return
-    # params_env = merge_params(configs_env['params'], params_env)
-    # params_algo = merge_params(configs_algo['params'], params_algo)
-
-    # # Load routine configs
-    # try:
-    #     configs_routine = load_config(args.config)
-    # except Exception as e:
-    #     logger.error(e)
-    #     return
-
-    # # Compose the routine
-    # routine = {
-    #     'name': args.save or generate_slug(2),
-    #     'algo': args.algo,
-    #     'env': args.env,
-    #     'algo_params': params_algo,
-    #     'env_params': params_env,
-    #     # env_vranges is an additional info for the normalization
-    #     # Will be removed after the normalization
-    #     'env_vranges': config_list_to_dict(configs_env['variables']),
-    #     'config': configs_routine,
-    # }
-
-    # run_n_archive(routine, args.yes, args.save, args.verbose)
 
 
 def run_routine_gui(routine, auto_run=False):
@@ -298,7 +254,7 @@ def run_routine_headless(routine, auto_run=False):
         """Signal handler for Ctrl+C - sets pause flag or raises to exit"""
         if storage["paused"]:
             # Second Ctrl+C while paused - raise to interrupt input() and exit
-            print("")  # new line
+            print()  # new line
             storage["should_exit"] = True
             raise KeyboardInterrupt  # Interrupt the input() call
         else:
@@ -315,7 +271,7 @@ def run_routine_headless(routine, auto_run=False):
         # Check if paused - handle pause prompt
         if storage["paused"]:
             pause_event.clear()  # Pause subprocess
-            print("")  # new line
+            print()  # new line
             try:
                 res = input(
                     "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
@@ -346,8 +302,7 @@ def run_routine_headless(routine, auto_run=False):
             while evaluate_queue[1].poll():
                 results = evaluate_queue[1].recv()
                 df = results[0]
-                if len(df) > iteration:
-                    iteration = len(df)
+                iteration = max(iteration, len(df))
 
         # Check for errors in data queue
         if not data_queue.empty():
@@ -373,9 +328,8 @@ def run_routine_headless(routine, auto_run=False):
         try:
             results = evaluate_queue[1].recv()
             df = results[0]
-            if len(df) > iteration:
-                iteration = len(df)
-        except Exception:
+            iteration = max(iteration, len(df))
+        except Exception:  # noqa: BLE001
             break
 
     # Print final status
@@ -410,7 +364,7 @@ def run_routine_cli(args):
             # gui mode (default mode)
             run_routine_gui(routine, auto_run=args.auto_run)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Error running routine: {e}")
         print(f"Error: {e}")
         import traceback

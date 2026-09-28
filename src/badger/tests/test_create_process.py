@@ -38,6 +38,7 @@ def test_create_subprocess_emits_signals(qtbot, process_creator):
         emitted_args = blocker_subprocess_prepared.args[0]
         assert set(emitted_args.keys()) == {
             "process",
+            "args_queue",
             "stop_event",
             "pause_event",
             "data_queue",
@@ -46,6 +47,7 @@ def test_create_subprocess_emits_signals(qtbot, process_creator):
             "dialog_action_queue",
         }
 
+        assert isinstance(emitted_args["args_queue"], mp.queues.Queue)
         assert isinstance(emitted_args["data_queue"], mp.queues.Queue)
         assert isinstance(emitted_args["dialog_action_queue"], mp.queues.Queue)
         assert isinstance(emitted_args["evaluate_queue"], tuple)
