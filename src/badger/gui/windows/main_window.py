@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class BadgerMainWindow(QMainWindow):
-    def __init__(self, routine=None, auto_run=False, watch_routine=None) -> None:
+    def __init__(
+        self, routine=None, auto_run=False, watch_routine=None, watch_stop=None
+    ) -> None:
         logger.info("Initializing BadgerMainWindow.")
         super().__init__()
         self.thread_list = []
@@ -27,6 +29,7 @@ class BadgerMainWindow(QMainWindow):
         self.routine = routine
         self.auto_run = auto_run
         self.watch_routine = watch_routine
+        self.watch_stop = watch_stop
 
         self.init_ui()
         self.config_logic()
@@ -95,6 +98,7 @@ class BadgerMainWindow(QMainWindow):
             routine=self.routine,
             auto_run=self.auto_run,
             watch_routine=self.watch_routine,
+            watch_stop=self.watch_stop,
         )
 
         self.stacks = stacks = QStackedWidget()

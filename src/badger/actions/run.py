@@ -137,7 +137,7 @@ def run_routine(args):
     )
 
 
-def run_routine_gui(routine, auto_run=False, watch_routine=None):
+def run_routine_gui(routine, auto_run=False, watch_routine=None, watch_stop=None):
     """
     Launch ACR GUI with pre-loaded routine.
 
@@ -147,10 +147,18 @@ def run_routine_gui(routine, auto_run=False, watch_routine=None):
         watch_routine: Optional path to a yaml file the gui should watch for changes.
             On file modification, the gui stops any active
             run, reloads, and re-starts (auto_run=True only).
+        watch_stop: Optional path to a sentinel file the gui should watch for existence.
+            When it appears, the gui will gracefully stop the
+            active run (while still keeping the window alive) and deletes the file.
     """
     from badger.gui import launch_gui
 
-    launch_gui(routine=routine, auto_run=auto_run, watch_routine=watch_routine)
+    launch_gui(
+        routine=routine,
+        auto_run=auto_run,
+        watch_routine=watch_routine,
+        watch_stop=watch_stop,
+    )
 
 
 def _headless_worker(*args):
@@ -458,7 +466,10 @@ def run_routine_cli(args):
         else:
             # gui mode (default mode)
             run_routine_gui(
-                routine, auto_run=args.auto_run, watch_routine=args.watch_routine
+                routine,
+                auto_run=args.auto_run,
+                watch_routine=args.watch_routine,
+                watch_stop=args.watch_stop,
             )
 
     except Exception as e:  # noqa: BLE001

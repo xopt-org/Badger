@@ -151,9 +151,22 @@ def main():
         help=(
             "Path to a routine yaml the guio should watch for changes. "
             "When the file is modified (ex: by an external agent "
-            "supplying the next routine in a campaign), the gui stops "
+            "supplying the next routine in a campaign), the GUI stops "
             "any active run, reloads the routine, and (if --auto-run "
-            "was set) restarts. sGUI mode only."
+            "was set) restarts. GUI mode only."
+        ),
+    )
+    parser_run.add_argument(
+        "--watch-stop",
+        type=str,
+        default=None,
+        help=(
+            "Path to a sentinel file the GUI should watch. When the "
+            "file appears (or is touched), the GUI gracefully stops "
+            "the currently-running routine WITHOUT closing the window, "
+            "then deletes the sentinel. Pair with --watch-routine so an "
+            "external agent can stop runs and swap routines without "
+            "respawning the GUI. GUI mode only."
         ),
     )
     parser_run.add_argument("-a", "--generator", help="generator to use")
