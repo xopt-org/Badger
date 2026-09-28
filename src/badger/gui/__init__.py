@@ -84,7 +84,7 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui(config_path=None, routine=None, auto_run=False):
+def launch_gui(config_path=None, routine=None, auto_run=False, watch_routine=None):
     """
     Launch the Badger ACR GUI.
 
@@ -92,6 +92,9 @@ def launch_gui(config_path=None, routine=None, auto_run=False):
         config_path: Optional path to configuration file
         routine: Optional Routine object to pre-load in GUI
         auto_run: If True and routine is provided, automatically start optimization
+        watch_routine: Optional path to a routine yaml the gui should watch.
+            On file modification, the gui stops any active run
+            and reloads + auto-restarts.
     """
     sys.excepthook = error_handler
 
@@ -123,7 +126,9 @@ def launch_gui(config_path=None, routine=None, auto_run=False):
         app.setStyleSheet("")
 
     # Show the main window
-    window = BadgerMainWindow(routine=routine, auto_run=auto_run)
+    window = BadgerMainWindow(
+        routine=routine, auto_run=auto_run, watch_routine=watch_routine
+    )
 
     # Enable Ctrl + C quit
     signal.signal(signal.SIGINT, on_exit)

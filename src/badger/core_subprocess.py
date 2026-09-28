@@ -12,6 +12,7 @@ See core.py for the simpler in-process version of the same loop.
 
 from __future__ import annotations
 
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -135,6 +136,30 @@ def pause_for_termination_dialog_action(
             raise BadgerRunTerminated(
                 "Run terminated after termination condition reached"
             )
+
+
+def _emit_live_log(routine: Routine, is_optimal: bool) -> None:
+    """
+    If BADGER_LIVE_LOG_PATH is set in the environment, append a JSONL
+    record describing the most-recent evaluation. Used by external
+    agents (e.g. Otter's auto-tune skill) to monitor a running Badger
+    optimization without screen-scraping the GUI or tailing the run
+    archive yaml.
+
+    Side-effect-free when the env var is unset. Never raises.
+    """
+    live_log = os.environ.get("BADGER_LIVE_LOG_PATH")
+    if not live_log:
+        return
+    try:
+        last = routine.data.iloc[-1].to_dict()
+        last["iteration"] = len(routine.data) - 1
+        last["is_optimal"] = bool(is_optimal)
+        with open(live_log, "a") as f:
+            f.write(json.dumps(last, default=str) + "\n")
+    # never let logging crash the optimizer
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("BADGER_LIVE_LOG_PATH write failed: %s", exc)
 
 
 def convert_to_solution(result: DataFrame, routine: Routine):
@@ -339,6 +364,7 @@ def run_routine_subprocess(
                 if evaluate:
                     time.sleep(0.1)  # give it some break tp catch up
                     evaluate_queue[0].send((routine.data, routine.generator))
+                    _emit_live_log(routine, solution[4])
 
         logger.info("Starting optimization loop...")
         while True:
@@ -437,6 +463,7 @@ def run_routine_subprocess(
             if evaluate:
                 logger.debug("Sending evaluation data to evaluate_queue.")
                 evaluate_queue[0].send((routine.data, generator_copy))
+                _emit_live_log(routine, solution[4])
 
             if archive and not testing:
                 logger.info("Archiving run state.")

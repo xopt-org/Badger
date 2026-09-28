@@ -138,17 +138,20 @@ def run_routine(args):
     )
 
 
-def run_routine_gui(routine, auto_run=False):
+def run_routine_gui(routine, auto_run=False, watch_routine=None):
     """
     Launch ACR GUI with pre-loaded routine.
 
     Args:
         routine: Routine object to load
         auto_run: If True, automatically start optimization after loading
+        watch_routine: Optional path to a yaml file the gui should watch for changes.
+            On file modification, the gui stops any active
+            run, reloads, and re-starts (auto_run=True only).
     """
     from badger.gui import launch_gui
 
-    launch_gui(routine=routine, auto_run=auto_run)
+    launch_gui(routine=routine, auto_run=auto_run, watch_routine=watch_routine)
 
 
 def run_routine_headless(routine, auto_run=False):
@@ -362,7 +365,9 @@ def run_routine_cli(args):
             run_routine_headless(routine, auto_run=args.auto_run)
         else:
             # gui mode (default mode)
-            run_routine_gui(routine, auto_run=args.auto_run)
+            run_routine_gui(
+                routine, auto_run=args.auto_run, watch_routine=args.watch_routine
+            )
 
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error running routine: {e}")

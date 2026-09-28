@@ -141,6 +141,18 @@ def main():
         action="store_true",
         help="Auto-start optimization without confirmation",
     )
+    parser_run.add_argument(
+        "--watch-routine",
+        type=str,
+        default=None,
+        help=(
+            "Path to a routine yaml the guio should watch for changes. "
+            "When the file is modified (ex: by an external agent "
+            "supplying the next routine in a campaign), the gui stops "
+            "any active run, reloads the routine, and (if --auto-run "
+            "was set) restarts. sGUI mode only."
+        ),
+    )
     parser_run.add_argument("-a", "--generator", help="generator to use")
     parser_run.add_argument(
         "-ap", "--generator_params", help="parameters for the generator"
