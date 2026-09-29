@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from pandas import DataFrame
-from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
+from PyQt5.QtCore import QFileSystemWatcher, QModelIndex, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
     QLabel,
@@ -51,13 +51,14 @@ from badger.gui.components.navigators import HistoryNavigator, TemplateNavigator
 from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
-from badger.gui.utils import build_bax_results_file
+from badger.gui.utils import build_bax_results_file, load_template_smart
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
+from badger.routine import Routine
 from badger.settings import init_settings
 from badger.utils import get_header
 
@@ -88,7 +89,13 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager: "ProcessManager | None" = None):
+    def __init__(
+        self,
+        process_manager: "ProcessManager | None" = None,
+        routine=None,
+        auto_run=False,
+        watch_routine=None,
+    ):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
@@ -97,11 +104,102 @@ class BadgerHomePage(QWidget):
         self.process_manager = process_manager
         self.current_routine = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
+
+        self._watch_routine_path = watch_routine
+        self._watch_auto_run = auto_run
+        self._watch_fs_watcher = None
+
+        self.auto_run = auto_run
         self.init_ui()
         self.config_logic()
 
         self.load_all_runs()
         self.init_home_page()
+
+        if routine is not None:
+            self.load_routine_from_cli(routine, auto_run)
+
+        # Install file-system watcher for campaign-mode routine swaps
+        if self._watch_routine_path:
+            QTimer.singleShot(200, self._install_routine_watcher)
+
+    def _install_routine_watcher(self):
+        """
+        Install a QFileSystemWatcher on filepath `self._watch_routine_path`.
+        When the file changes (ex: an external agent has written a new routine
+        yaml in place), stop the currently-running optimization (if any),
+        reload the routine, and (if --auto-run was set) restart.
+        """
+        path = self._watch_routine_path
+        if not path or not os.path.isfile(path):
+            logger.warning(
+                "watch-routine: file does not exist yet (%s); "
+                "watcher will be (re)installed on first change.",
+                path,
+            )
+        self._watch_fs_watcher = QFileSystemWatcher(
+            [path] if os.path.isfile(path) else [], self
+        )
+        self._watch_fs_watcher.fileChanged.connect(self._on_watch_routine_changed)
+        # Also watch the parent dir so file-replacement (atomic mv) is caught
+        parent = os.path.dirname(path) or "."
+        if os.path.isdir(parent):
+            self._watch_fs_watcher.addPath(parent)
+            self._watch_fs_watcher.directoryChanged.connect(self._on_watch_dir_changed)
+        logger.info("watch-routine: watching %s", path)
+
+    def _on_watch_dir_changed(self, _changed_dir):
+        # Re-add the file path in case it was atomically replaced
+        # (replacement deletes the inode → fileChanged stops firing).
+        path = self._watch_routine_path
+        if path and os.path.isfile(path) and path not in self._watch_fs_watcher.files():
+            self._watch_fs_watcher.addPath(path)
+            # Trigger a reload too — directory changed because the
+            # file appeared / was replaced.
+            self._on_watch_routine_changed(path)
+
+    def _on_watch_routine_changed(self, path):
+        """
+        File-watcher callback: stop any running routine, load the new
+        yaml, and (if auto-run was requested at launch) start it.
+        Debounced so editors that save in multiple writes don't trigger
+        a thrash.
+        """
+        if not hasattr(self, "_watch_pending"):
+            self._watch_pending = False
+        if self._watch_pending:
+            return
+        self._watch_pending = True
+        # 300ms debounce — long enough to absorb an editor's atomic save,
+        # short enough to feel responsive to a deliberate "swap routine".
+        QTimer.singleShot(300, lambda: self._do_watch_reload(path))
+
+    def _do_watch_reload(self, path):
+        self._watch_pending = False
+        try:
+            if not os.path.isfile(path):
+                logger.warning("watch-routine: %s no longer exists; skip reload", path)
+                return
+
+            # Stop any active run, gracefully.
+            try:
+                if self.run_monitor is not None and getattr(
+                    self.run_monitor, "running", False
+                ):
+                    logger.info("watch-routine: stopping current run before reload")
+                    self.run_monitor.sig_stop.emit()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("watch-routine: stop emit failed: %s", exc)
+
+            # Load the new routine
+            config = load_template_smart(path)
+            routine = Routine(**config)
+            logger.info("watch-routine: loaded new routine %r", routine.name)
+
+            # Reuse the CLI loader (handles routine view + auto-run)
+            self.load_routine_from_cli(routine, self._watch_auto_run)
+        except Exception:
+            logger.exception("watch-routine: reload failed")
 
     def init_ui(self) -> None:
         logger.info("Initializing UI for BadgerHomePage.")
@@ -680,3 +778,35 @@ class BadgerHomePage(QWidget):
             self.overlay.hide()
         except AttributeError:  # in test mode
             pass
+
+    def load_routine_from_cli(self, routine, auto_run):
+        """
+        Load routine from CLI and optionally start optimization.
+
+        This method is called when a routine is provided via CLI.
+        It loads the routine into the editor and optionally triggers a run.
+
+        Args:
+            routine: Routine object to load
+            auto_run: If True, automatically start optimization
+        """
+        self.routine_editor.set_routine(routine, silent=True)
+
+        # Populate initial points table based on actions (like "Load Template" does),
+        # this ensures actions like "add_curr" and "add_rand" are executed
+        if (
+            hasattr(self.routine_editor, "init_table_actions")
+            and self.routine_editor.init_table_actions
+        ):
+            self.routine_editor.clear_init_table(reset_actions=False)
+            self.routine_editor.update_init_table(force=True)
+
+        self.current_routine = routine
+
+        self.run_monitor.init_plots(routine)
+
+        if routine.data is not None and len(routine.data) > 0:
+            update_table(self.run_table, routine.sorted_data, routine.vocs)
+
+        if auto_run:
+            self.start_run()

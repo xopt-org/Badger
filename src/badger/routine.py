@@ -39,7 +39,7 @@ from xopt.vocs import get_local_region
 
 from badger.environment import BaseEnvironment, instantiate_env
 from badger.factory import get_env
-from badger.utils import curr_ts
+from badger.utils import curr_ts, ts_float_to_str
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,9 @@ class Routine(Xopt):
         logger.info("Validating Routine model from input data.")
         if isinstance(data, dict):
             logger.debug(f"Routine data dict received: {list(data.keys())}")
+            # Auto-populate creation timestamp if missing (e.g. from YAML templates) for archiving
+            if "creation_ts" not in data or data["creation_ts"] is None:
+                data["creation_ts"] = ts_float_to_str(curr_ts().timestamp())
             # validate vocs
             vocs_data = None
             if "vocs" in data:
@@ -254,6 +257,8 @@ def calculate_initial_points(init_actions, vocs, env):
     logger.info("Calculating initial points.")
     vnames = vocs.variable_names
     init_points = {k: [] for k in vnames}
+    if not init_actions:
+        return init_points
 
     for action in init_actions:
         logger.debug(f"Processing initial point action: {action}")
