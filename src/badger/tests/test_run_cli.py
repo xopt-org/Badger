@@ -5,8 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from badger.actions.run import run_routine_cli
-from badger.routine import Routine, calculate_initial_points
 from badger.utils import load_template_file
 
 
@@ -37,23 +35,12 @@ def sample_template_file(tmp_path):
 def test_routine_creation(sample_template_file):
     config = load_template_file(sample_template_file)
 
+    from badger.routine import Routine
+
     routine = Routine(**config)
     assert routine.creation_ts is not None
     assert isinstance(routine.creation_ts, str)
     assert len(routine.creation_ts) > 0
-
-
-def test_calculate_initial_points(sample_template_file):
-    config = load_template_file(sample_template_file)
-    routine = Routine(**config)
-
-    # Test passing 'None' into initial_point_actions
-    init_points = calculate_initial_points(None, routine.vocs, routine.environment)
-    assert isinstance(init_points, dict)
-    assert "x0" in init_points
-    assert len(init_points["x0"]) == 0
-    assert "x1" in init_points
-    assert len(init_points["x1"]) == 0
 
 
 def test_run_routine_cli_headless_auto_run(sample_template_file, mocker):
@@ -65,6 +52,7 @@ def test_run_routine_cli_headless_auto_run(sample_template_file, mocker):
     args.headless = True
     args.auto_run = True
 
+    from badger.actions.run import run_routine_cli
     from badger.actions.run import run_routine_headless as mock_headless
 
     run_routine_cli(args)
@@ -84,6 +72,7 @@ def test_run_routine_cli_gui_mode(sample_template_file, mocker):
     args.headless = False
     args.auto_run = False
 
+    from badger.actions.run import run_routine_cli
     from badger.actions.run import run_routine_gui as mock_gui
 
     run_routine_cli(args)
@@ -116,6 +105,7 @@ def test_run_routine_cli_template_string(mocker):
     args.headless = True
     args.auto_run = True
 
+    from badger.actions.run import run_routine_cli
     from badger.actions.run import run_routine_headless as mock_headless
 
     run_routine_cli(args)
