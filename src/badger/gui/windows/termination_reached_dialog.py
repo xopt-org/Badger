@@ -4,6 +4,8 @@ Lets users choose whether to continue running or end the current run,
 after the run is paused by a termination condition.
 """
 
+from typing import Any, cast
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QDialog,
@@ -46,7 +48,12 @@ QPushButton
 
 
 class BadgerTerminationReachedDialog(QDialog):
-    def __init__(self, tc_condition=None, text="", parent=None):
+    def __init__(
+        self,
+        tc_condition: dict[str, Any] | None = None,
+        text: str = "",
+        parent: QDialog | None = None,
+    ) -> None:
         super().__init__(parent)
 
         self.setWindowTitle("Termination Condition Reached")
@@ -56,6 +63,7 @@ class BadgerTerminationReachedDialog(QDialog):
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(8)
 
+        tc_condition = cast(dict[str, Any], tc_condition)
         tc_type = tc_condition["type"]
         if tc_type == "max_eval":
             tc_type_text = "N iterations"
@@ -72,12 +80,18 @@ class BadgerTerminationReachedDialog(QDialog):
 
         summary_label = QLabel(f"{tc_type_text}: {state} / {tc_condition['config']}")
         summary_label.setWordWrap(True)
-        summary_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        # PyQt5 stubs type flag OR as int, so cast back to the flag type.
+        summary_label.setAlignment(
+            cast(
+                Qt.AlignmentFlag,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            )
+        )
         #  summary_label.setStyleSheet("color: #8A949E;")
         text_column.addWidget(summary_label)
 
         body_label = QLabel("Badger optimization paused")
-        body_label.setAlignment(Qt.AlignLeft)
+        body_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         text_column.addWidget(body_label)
 
         content_row.addLayout(text_column)
@@ -91,12 +105,14 @@ class BadgerTerminationReachedDialog(QDialog):
         font.setPointSize(12)
         self.setFont(font)
 
-        self.continueButton.setText("Continue")
-        # self.continueButton.setStyleSheet(stylesheet_run)
-        self.continueButton.setFixedSize(96, 24)
-        self.endButton.setText("End Run")
-        self.endButton.setStyleSheet(stylesheet_stop)
-        self.endButton.setFixedSize(96, 24)
+        if self.continueButton is not None:
+            self.continueButton.setText("Continue")
+            # self.continueButton.setStyleSheet(stylesheet_run)
+            self.continueButton.setFixedSize(96, 24)
+        if self.endButton is not None:
+            self.endButton.setText("End Run")
+            self.endButton.setStyleSheet(stylesheet_stop)
+            self.endButton.setFixedSize(96, 24)
 
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)

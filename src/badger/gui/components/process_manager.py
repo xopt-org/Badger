@@ -1,11 +1,18 @@
 """Keeps a pool of pre-spawned subprocesses ready to run optimizations.
 When one is consumed by a run, signals that a new one should be created."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
+from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Event
+from typing import TYPE_CHECKING, Any
 
 from PyQt5.QtCore import QObject, pyqtSignal
+
+if TYPE_CHECKING:
+    from badger.gui.components.routine_runner import ArgumentDict
 
 
 @dataclass
@@ -13,11 +20,11 @@ class ProcessWithArgs:
     process: Process
     stop_event: Event
     pause_event: Event
-    args_queue: Queue
-    data_queue: Queue
-    evaluate_queue: Queue
+    args_queue: Queue[ArgumentDict]
+    data_queue: Queue[dict[str, Any] | tuple[str, str]]
+    evaluate_queue: tuple[Connection, Connection]
     wait_event: Event
-    dialog_action_queue: Queue
+    dialog_action_queue: Queue[dict[str, str]]
 
 
 class ProcessManager(QObject):

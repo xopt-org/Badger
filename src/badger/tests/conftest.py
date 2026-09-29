@@ -1,12 +1,15 @@
 import os
 import shutil
+from collections.abc import Generator
 
 import pytest
+from _pytest.fixtures import FixtureRequest
 from PyQt5.QtWidgets import QDialog
+from pytest_mock import MockerFixture
 
 
 @pytest.fixture(autouse=True)
-def suppress_popups(mocker):
+def suppress_popups(mocker: MockerFixture) -> None:
     mocker.patch(
         "badger.gui.windows.expandable_message_box.ExpandableMessageBox.exec_",
         return_value=None,
@@ -19,14 +22,15 @@ def suppress_popups(mocker):
 
 @pytest.fixture(scope="module", autouse=True)
 def config_test_settings(
-    mock_plugin_root,
-    mock_template_root,
-    mock_logbook_root,
-    mock_archive_root,
-    mock_log_directory,
-    mock_logging_level,
-    mock_temp_directory,
-):
+    mock_plugin_root: str,
+    mock_template_root: str,
+    mock_logbook_root: str,
+    mock_archive_root: str,
+    mock_log_directory: str,
+    mock_logging_level: str,
+    mock_temp_directory: str,
+) -> Generator[None, None, None]:
+
     from badger.settings import init_settings
 
     config_singleton = init_settings()
@@ -71,12 +75,12 @@ def config_test_settings(
 
 @pytest.fixture(scope="module", autouse=True)
 def clean_up(
-    mock_template_root,
-    mock_logbook_root,
-    mock_archive_root,
-    mock_log_directory,
-    mock_temp_directory,
-):
+    mock_template_root: str,
+    mock_logbook_root: str,
+    mock_archive_root: str,
+    mock_log_directory: str,
+    mock_temp_directory: str,
+) -> Generator[None, None, None]:
     # Clean before tests
     shutil.rmtree(mock_template_root, True)  # ignore errors
     shutil.rmtree(mock_logbook_root, True)
@@ -95,45 +99,45 @@ def clean_up(
 
 
 @pytest.fixture(scope="module")
-def mock_root(request):
-    return os.path.join(request.fspath.dirname, "mock")
+def mock_root(request: FixtureRequest) -> str:
+    return os.path.join(request.path.parent, "mock")
 
 
 @pytest.fixture(scope="module")
-def mock_plugin_root(mock_root):
+def mock_plugin_root(mock_root: str) -> str:
     return os.path.join(mock_root, "plugins")
 
 
 @pytest.fixture(scope="module")
-def mock_template_root(mock_root):
+def mock_template_root(mock_root: str) -> str:
     return os.path.join(mock_root, "templates")
 
 
 @pytest.fixture(scope="module")
-def mock_logbook_root(mock_root):
+def mock_logbook_root(mock_root: str) -> str:
     return os.path.join(mock_root, "logbook")
 
 
 @pytest.fixture(scope="module")
-def mock_archive_root(mock_root):
+def mock_archive_root(mock_root: str) -> str:
     return os.path.join(mock_root, "archived")
 
 
 @pytest.fixture(scope="module")
-def mock_log_directory(mock_root):
+def mock_log_directory(mock_root: str) -> str:
     return os.path.join(mock_root, "logs")
 
 
 @pytest.fixture(scope="module")
-def mock_temp_directory(mock_root):
+def mock_temp_directory(mock_root: str) -> str:
     return os.path.join(mock_root, "temp")
 
 
 @pytest.fixture(scope="module")
-def mock_logging_level(mock_root):
+def mock_logging_level(mock_root: str) -> str:
     return "WARNING"
 
 
 @pytest.fixture(scope="module")
-def mock_config_root(mock_root):
+def mock_config_root(mock_root: str) -> str:
     return os.path.join(mock_root, "configs")

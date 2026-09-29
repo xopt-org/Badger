@@ -2,6 +2,7 @@
 Used by test environments and as the fallback when no hardware
 interface is configured."""
 
+from collections.abc import Mapping
 from typing import Any
 
 from badger import interface
@@ -32,6 +33,6 @@ class Interface(interface.Interface):
 
         return channel_outputs
 
-    def set_values(self, channel_inputs: dict[str, float | list[float]]) -> None:
+    def set_values(self, channel_inputs: Mapping[str, float | list[float]]) -> None:
         for channel, value in channel_inputs.items():
             self._states[channel] = value

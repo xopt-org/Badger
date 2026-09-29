@@ -1,8 +1,12 @@
 import multiprocessing
 import time
+from collections.abc import Generator
 
 import pandas as pd
 import pytest
+
+from badger.gui.components.process_manager import ProcessManager
+from badger.gui.components.routine_runner import ArgumentDict
 
 
 class TestCore:
@@ -11,7 +15,7 @@ class TestCore:
     """
 
     @pytest.fixture
-    def process_manager(self):
+    def process_manager(self) -> Generator[ProcessManager, None, None]:
         from badger.gui.components.create_process import CreateProcess
         from badger.gui.components.process_manager import ProcessManager
 
@@ -22,10 +26,10 @@ class TestCore:
 
         yield process_manager
 
-        process_manager.close_proccesses()
+        process_manager.close_processes()
 
     @pytest.fixture(scope="session")
-    def init_multiprocessing(self):
+    def init_multiprocessing(self) -> None:
         # Use 'spawn' on Windows, 'fork' on Unix-like systems
         method = (
             "spawn"
@@ -35,7 +39,7 @@ class TestCore:
         multiprocessing.set_start_method(method, force=True)
 
     @pytest.fixture(autouse=True, scope="function")
-    def test_core_setup(self, *args, **kwargs) -> None:
+    def test_core_setup(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
         self.count = 0
         self.candidates = None
@@ -57,7 +61,7 @@ class TestCore:
         self.points_eval_target = pd.DataFrame(data_eval_target)
 
     def test_run_routine_subprocess(
-        self, process_manager, init_multiprocessing
+        self, process_manager: ProcessManager, init_multiprocessing: None
     ) -> None:
         """
         A unit test to ensure the core functionality
@@ -77,22 +81,27 @@ class TestCore:
             "max_eval": 3,
         }
         process_with_args = process_manager.remove_from_queue()
-        pause_event = process_with_args["pause_event"]
-        args_queue = process_with_args["args_queue"]
-        wait_event = process_with_args["wait_event"]
-        routine_process = process_with_args["process"]
-        evaluate_queue = process_with_args["evaluate_queue"]
+        assert process_with_args is not None
+        pause_event = process_with_args.pause_event
+        args_queue = process_with_args.args_queue
+        wait_event = process_with_args.wait_event
+        routine_process = process_with_args.process
+        evaluate_queue = process_with_args.evaluate_queue
 
-        arg_dict = {
-            "routine_id": self.routine.id,
-            "routine_filename": tmp_filename,
-            "routine_name": self.routine.name,
-            "variable_ranges": self.routine.vocs.variables,
-            "initial_points": self.routine.initial_points,
-            "evaluate": True,
-            "termination_condition": self.termination_condition,
-            "start_time": time.time(),
-        }
+        arg_dict = ArgumentDict(
+            routine_id=self.routine.id,
+            routine_filename=tmp_filename,
+            routine_name=self.routine.name,
+            variable_ranges=self.routine.vocs.variables,
+            initial_points=self.routine.initial_points,
+            evaluate=True,
+            archive=True,
+            termination_condition=self.termination_condition,
+            start_time=time.time(),
+            testing=True,
+            run_data=True,
+            init_points=self.routine.initial_points,
+        )
 
         args_queue.put(arg_dict)
         wait_event.set()
@@ -142,59 +151,3 @@ class TestCore:
             .astype(float)
             .equals(self.points_eval_target.astype(float))
         )
-
-    def test_run_turbo(self, process_manager, init_multiprocessing) -> None:
-        """
-        A unit test to ensure TuRBO can run in Badger.
-        """
-        return
-
-        from badger.db import save_routine
-        from badger.tests.utils import create_routine_turbo
-
-        self.count = 0
-        self.num_of_points = 3
-        self.routine = create_routine_turbo()
-        time.sleep(1)
-        assert self.routine.generator.turbo_controller.best_value is None
-        save_routine(self.routine)
-        self.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 3,
-        }
-        process_with_args = process_manager.remove_from_queue()
-        pause_event = process_with_args["pause_event"]
-        args_queue = process_with_args["args_queue"]
-        wait_event = process_with_args["wait_event"]
-        routine_process = process_with_args["process"]
-        evaluate_queue = process_with_args["evaluate_queue"]
-
-        arg_dict = {
-            "routine_id": self.routine.id,
-            "evaluate": True,
-            "termination_condition": self.termination_condition,
-            "start_time": time.time(),
-        }
-
-        args_queue.put(arg_dict)
-        wait_event.set()
-        pause_event.set()
-
-        time.sleep(0.20)
-        routine_process.terminate()
-        time.sleep(1)
-
-        while evaluate_queue[1].poll():
-            self.results = evaluate_queue[1].recv()
-
-        # assert len(self.candidates_list) == self.count - 1
-
-        # assert len(self.results) == self.num_of_points
-
-        assert self.states is None
-
-        """
-        path = "./test.yaml"
-        assert os.path.exists(path) is True
-        os.remove("./test.yaml")
-        """

@@ -13,7 +13,7 @@ evaluation on computed observables (see formula.py).
 import logging
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from pydantic import BaseModel, ConfigDict, Field, SerializeAsAny
 from pydantic._internal._model_construction import ModelMetaclass
@@ -53,14 +53,16 @@ def validate_setpoints(
 
 
 def process_formulas(
-    func: Callable[[Any, list[str]], dict[str, float]],
-) -> Callable[[Any, list[str]], dict[str, float]]:
+    func: Callable[[Any, list[str]], dict[str, float | list[float]]],
+) -> Callable[[Any, list[str]], dict[str, float | list[float]]]:
     """
     Decorator function that wraps get_observables method
     to process formulas if they exist in the observable names.
     """
 
-    def process(cls, observable_names: list[str]) -> dict[str, float]:
+    def process(
+        cls: Any, observable_names: list[str]
+    ) -> dict[str, float | list[float]]:
         # get the list of observable names needed by themselves and any formulas
         formula_observables = []
         basic_observables = []
@@ -127,9 +129,10 @@ def validate_bounds(
 
 
 class EnvMeta(ModelMetaclass):
-    def __new__(
+    # mypy forbids Self as a metaclass __new__ return type, so return EnvMeta.
+    def __new__(  # noqa: PYI034
         mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]
-    ) -> Self:
+    ) -> "EnvMeta":
         # Wrap get_bounds with validate_bounds if defined
         if "get_bounds" in namespace:
             namespace["get_bounds"] = validate_bounds(namespace["get_bounds"])
@@ -318,7 +321,9 @@ class Environment(BaseEnvironment):
         if not self.interface:
             raise BadgerNoInterfaceError
 
-        return self.interface.get_values(variable_names)
+        # Variables are scalar setpoints, but the interface exposes the broader
+        # channel type shared with observables.
+        return cast(dict[str, float], self.interface.get_values(variable_names))
 
     def set_variables(self, variable_inputs: dict[str, float]) -> None:
         if not self.interface:

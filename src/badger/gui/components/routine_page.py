@@ -64,7 +64,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt import VOCS
 from xopt.generators import (
     all_generator_names,
     get_generator_defaults,
@@ -112,6 +111,7 @@ from badger.utils import (
     strtobool,
     ts_float_to_str,
 )
+from xopt import VOCS
 
 logger = logging.getLogger(__name__)
 

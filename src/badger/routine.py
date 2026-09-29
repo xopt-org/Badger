@@ -14,7 +14,7 @@ state and generate initial sampling points.
 import json
 import logging
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -52,13 +52,13 @@ class Routine(Xopt):
     environment: SerializeAsAny[BaseEnvironment]
     initial_points: DataFrame | None = Field(None)
     critical_constraint_names: list[str] | None = Field([])
-    tags: list | None = Field(None)
+    tags: dict[str, Any] | None = Field(None)
     script: str | None = Field(None)
     # Store relative to current params
     relative_to_current: bool | None = Field(False)
-    vrange_limit_options: dict | None = Field(None)
-    vrange_hard_limit: dict | None = Field({})  # override hard limits
-    initial_point_actions: list | None = Field(None)
+    vrange_limit_options: dict[str, dict[str, Any]] | None = Field(None)
+    vrange_hard_limit: dict[str, list[float]] | None = Field({})  # override hard limits
+    initial_point_actions: list[dict[str, Any]] | None = Field(None)
     additional_variables: list[str] | None = Field([])
     formulas: dict[str, dict[str, Any]] | None = Field({})
     constraint_formulas: dict[str, dict[str, Any]] | None = Field({})
@@ -113,23 +113,20 @@ class Routine(Xopt):
             if "data" in data and isinstance(data["data"], dict):
                 logger.debug("Validating and converting data to DataFrame.")
                 try:
-                    data["data"] = pd.DataFrame(data["data"])
+                    df = pd.DataFrame(data["data"])
                 except IndexError:
-                    data["data"] = pd.DataFrame(data["data"], index=[0])
-
-                    df = data["data"]
-                    assert isinstance(df, pd.DataFrame)
+                    df = pd.DataFrame(data["data"], index=[0])
                     df.index = df.index.astype(int)
                     df.sort_index(inplace=True)
-                    data["data"] = df
+                data["data"] = df
 
                 # Add data one row at a time to avoid generator issues
                 if isinstance(data["generator"], SequentialGenerator):
                     logger.debug("Setting data for SequentialGenerator.")
-                    data["generator"].set_data(data["data"])
+                    data["generator"].set_data(df)
                 else:
                     logger.debug("Adding data to generator.")
-                    data["generator"].add_data(data["data"])
+                    data["generator"].add_data(df)
 
             # instantiate env
             if isinstance(data["environment"], dict):
@@ -151,7 +148,9 @@ class Routine(Xopt):
                 point: dict[str, float],
             ) -> dict[str, float | list[float]]:
                 logger.debug(f"Evaluating point: {point}")
-                point = pd.Series(point).explode().to_dict()
+                point = cast(
+                    dict[str, float], pd.Series(point).explode().to_dict()
+                )
                 env.set_variables(point)
                 obs = env.get_observables(data["generator"].vocs.output_names)
                 ts = curr_ts()
@@ -160,7 +159,7 @@ class Routine(Xopt):
                 logger.debug(f"Evaluation result: {obs}")
                 return obs
 
-            data["evaluator"] = Evaluator(function=evaluate_point)
+            data["evaluator"] = Evaluator(function=evaluate_point)  # type: ignore[call-arg]
 
         return data
 
@@ -205,20 +204,23 @@ class Routine(Xopt):
         dict_result["environment"] = {"name": self.environment.name} | dict_result[
             "environment"
         ]
-        try:
-            dict_result["environment"]["interface"] = {
-                "name": self.environment.interface.name
-            } | dict_result["environment"]["interface"]
-        except KeyError:
-            pass
-        except AttributeError:
-            pass
+        # Only Environment (not BaseEnvironment) carries an interface.
+        if (
+            isinstance(self.environment, Environment)
+            and self.environment.interface is not None
+        ):
+            try:
+                dict_result["environment"]["interface"] = {
+                    "name": self.environment.interface.name
+                } | dict_result["environment"]["interface"]
+            except KeyError:
+                pass
 
         return json.dumps(dict_result)
 
 
 def calculate_variable_bounds(
-    limit_options: dict[str, Any], vocs: VOCS, env: Environment
+    limit_options: dict[str, dict[str, Any]], vocs: VOCS, env: BaseEnvironment
 ) -> dict[str, list[float]]:
     logger.info("Calculating variable bounds.")
     vnames = vocs.variable_names
@@ -258,7 +260,7 @@ def calculate_variable_bounds(
 
 
 def calculate_initial_points(
-    init_actions: list[dict[str, Any]], vocs: VOCS, env: Environment
+    init_actions: list[dict[str, Any]], vocs: VOCS, env: BaseEnvironment
 ) -> dict[str, list[float]]:
     logger.info("Calculating initial points.")
     vnames = vocs.variable_names

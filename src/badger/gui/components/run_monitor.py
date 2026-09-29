@@ -240,7 +240,7 @@ class BadgerOptMonitor(QWidget):
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
 
     def init_plots(
-        self, routine: Routine = None, run_filename: str | None = None
+        self, routine: Routine | None = None, run_filename: str | None = None
     ) -> None:
         """
         Initialize and configure the plots and related components in the application.
@@ -251,11 +251,11 @@ class BadgerOptMonitor(QWidget):
 
         Parameters
         ----------
-        routine : Routine,
+        routine : Routine | None,
             The routine to use for configuring the plots. If
             not provided, the method will use the previously set routine.
 
-        run_filename : str, optional
+        run_filename : str | None, optional
             The filename of the run, used to determine the state of the application's UI
             elements.
 

@@ -2,15 +2,15 @@ import subprocess
 from importlib import metadata
 
 
-def capture(command):
+def capture(command: list[str]) -> tuple[str, str, int]:
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    out = out.decode("utf-8")
-    err = err.decode("utf-8")
+    _out, _err = proc.communicate()
+    out = _out.decode("utf-8")
+    err = _err.decode("utf-8")
     return out, err, proc.returncode
 
 
-def test_cli_main():
+def test_cli_main() -> None:
     command = ["badger"]
     out, _, exitcode = capture(command)
 
@@ -32,7 +32,7 @@ def test_cli_main():
         assert outlines[1] == f"version: {version}"
 
 
-def test_list_algo():
+def test_list_algo() -> None:
     from badger.factory import ALGO_EXCLUDED
 
     command = ["badger", "generator"]
@@ -45,20 +45,3 @@ def test_list_algo():
     for algo in ["expected_improvement", "neldermead", "rcds"]:
         if algo not in ALGO_EXCLUDED:
             assert f"- {algo}" in outlines
-
-
-# def test_cli_run(mock_config_root):
-#     command = ['badger', 'run', '-a', 'upper_confidence_bound', '-ap',
-#                '{max_evaluations: 10}',  '-e', 'silly', '-c',
-#                os.path.join(mock_config_root, 'test.yaml'), '-y']
-#     out, err, exitcode = capture(command)
-
-#     assert exitcode == 0
-
-#     # Check output lines
-#     outlines = out.splitlines()
-#     assert len(outlines) == 15
-
-#     # Check table header
-#     assert outlines[1] == '|    iter    |     l2     ' \
-#         + '|     q1     |     q2     |'

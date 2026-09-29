@@ -24,6 +24,16 @@ from badger.settings import get_user_config_folder, init_settings
 logger = logging.getLogger(__name__)
 
 
+def _get_level_name(log_level: str | int) -> str:
+    """Non-deprecated replacement for logging.getLevelName (int -> level name)."""
+    if isinstance(log_level, int):
+        name_by_level = {
+            level: name for name, level in logging.getLevelNamesMapping().items()
+        }
+        return name_by_level.get(log_level, str(log_level))
+    return log_level
+
+
 class LoggingManager:
     """
     Used to manage logging across multiple processes,
@@ -51,7 +61,7 @@ class LoggingManager:
         # Queue for sending all the logs to
         self.log_queue = Queue()
 
-        self.handlers: list[logging.Handler] = []
+        self.handlers = []
         # File handler
         file_handler = logging.FileHandler(log_filepath, mode="a")
         file_formatter = logging.Formatter(
@@ -76,7 +86,7 @@ class LoggingManager:
         )  # '*' unpacks the array for us (unpacking operator)
         self.listener.start()
 
-        log_level_name = logging.getLevelName(log_level)
+        log_level_name = _get_level_name(log_level)
 
         logger.info(f"Centralized logging listener started with level {log_level_name}")
 
@@ -109,8 +119,7 @@ class LoggingManager:
             if isinstance(logger_obj, logging.Logger) and name.startswith("badger"):
                 logger_obj.setLevel(log_level)
 
-        # deprecated, getLevelNamesMapping()[log_level] is the replacement
-        log_level_name = logging.getLevelName(log_level)
+        log_level_name = _get_level_name(log_level)
 
         logger.info(f"Log level updated to {log_level_name} for badger namespace.")
 
@@ -209,7 +218,7 @@ class LoggingManager:
 
 
 def configure_process_logging(
-    log_queue: Queue[str] | None = None,
+    log_queue: Queue[logging.LogRecord] | None = None,
     logger_name: str = "badger",
     log_level: str | int = "DEBUG",
     process_name: str | None = None,
@@ -250,7 +259,7 @@ def configure_process_logging(
         if isinstance(logger_obj, logging.Logger) and name.startswith(logger_name):
             logger_obj.setLevel(log_level)
 
-    log_level_name = logging.getLevelName(log_level)
+    log_level_name = _get_level_name(log_level)
 
     logger.info(f"process logger configured with level {log_level_name}")
 

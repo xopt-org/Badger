@@ -1,6 +1,7 @@
 import logging
 import time
-from multiprocessing import Process
+from multiprocessing import Process, Queue
+from pathlib import Path
 
 from badger.log import configure_process_logging, get_logging_manager
 
@@ -19,7 +20,7 @@ is likely broken aswell. Testing should eventually be expanded to test the loggi
 """
 
 
-def simple_subprocess(log_queue):
+def simple_subprocess(log_queue: Queue[logging.LogRecord]) -> None:
     configure_process_logging(log_queue=log_queue, log_level="DEBUG")
 
     sub_logger = logging.getLogger("badger.subprocess")
@@ -29,7 +30,7 @@ def simple_subprocess(log_queue):
         time.sleep(0.5)
 
 
-def test_multiprocessed_logging(tmp_path):
+def test_multiprocessed_logging(tmp_path: Path) -> None:
     # deleted after each run
     log_filepath_1 = tmp_path / "test_multiprocess_1.log"
     log_filepath_2 = tmp_path / "test_multiprocess_2.log"
@@ -116,7 +117,6 @@ def test_multiprocessed_logging(tmp_path):
 
 if __name__ == "__main__":
     import tempfile
-    from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmpdir:
         test_multiprocessed_logging(Path(tmpdir))

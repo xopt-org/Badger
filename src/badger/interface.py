@@ -4,7 +4,7 @@ utilities for logging channel interactions to disk for post-run analysis."""
 
 import pickle
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, ClassVar, TypedDict
 
 from pydantic import BaseModel
@@ -88,7 +88,7 @@ class Interface(BaseModel, ABC):
 
     # Environment should only call this method to set channels
     @abstractmethod
-    def set_values(self, channel_inputs: dict[str, float | list[float]]) -> None:
+    def set_values(self, channel_inputs: Mapping[str, float | list[float]]) -> None:
         raise NotImplementedError()
 
     def reset_interface(self) -> None:

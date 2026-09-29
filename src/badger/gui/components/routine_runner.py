@@ -11,8 +11,9 @@ import logging
 import time
 import traceback
 from dataclasses import dataclass
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from multiprocessing.synchronize import Event
+from typing import Any, cast
 
 import pandas as pd
 from PyQt5.QtCore import QObject, QTimer, pyqtSignal
@@ -44,14 +45,14 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ArgumentDict:
-    routine_id: int | None
+    routine_id: str | None
     routine_filename: str | None
     routine_name: str
-    variable_ranges: dict
-    initial_points: pd.DataFrame
+    variable_ranges: dict[str, Any]
+    initial_points: pd.DataFrame | None
     evaluate: bool
     archive: bool
-    termination_condition: dict
+    termination_condition: dict[str, Any] | None
     start_time: float
     testing: bool
     run_data: bool
@@ -103,19 +104,19 @@ class BadgerRoutineSubprocess:
         self.process_manager = process_manager
         self.routine = routine
         self.routine_filename = routine_filename
-        self.run_filename = None
+        self.run_filename: str | None = None
         self.states = None  # system states to be saved at start of a run
         self.save = save
         self.verbose = verbose
         self.use_full_ts = use_full_ts
-        self.termination_condition = (
+        self.termination_condition: dict[str, Any] | None = (
             None  # additional option to control the optimization flow
         )
         self.start_time: float | None = None  # track the time cost of the run
         self.last_dump_time: float | None = (
             None  # track the time the run data got dumped
         )
-        self.data_and_error_queue = None
+        self.data_and_error_queue: Queue[dict[str, Any] | tuple[str, str]] | None = None
         self.stop_event: Event | None = None
         self.pause_event: Event | None = None
         self.routine_process: Process | None = None
@@ -124,7 +125,7 @@ class BadgerRoutineSubprocess:
         self.testing = testing
         self.config_singleton = init_settings()
 
-    def set_termination_condition(self, termination_condition: dict) -> None:
+    def set_termination_condition(self, termination_condition: dict[str, Any]) -> None:
         logger.info(f"Setting termination condition: {termination_condition}")
         """
         Setter method for the termination condition.
@@ -169,8 +170,15 @@ class BadgerRoutineSubprocess:
             self.config_singleton.read_value("AUTO_REFRESH")
             and self.routine.relative_to_current
         ):
+            limit_options = self.routine.vrange_limit_options
+            init_actions = self.routine.initial_point_actions
+            if limit_options is None or init_actions is None:
+                raise BadgerError(
+                    "relative_to_current requires variable range options and "
+                    "initial point actions to be set"
+                )
             variables_updated = calculate_variable_bounds(
-                self.routine.vrange_limit_options,
+                limit_options,
                 self.routine.vocs,
                 self.routine.environment,
             )
@@ -178,16 +186,16 @@ class BadgerRoutineSubprocess:
             self.routine.vocs.variables = variables_updated
 
             init_points = calculate_initial_points(
-                self.routine.initial_point_actions,
+                init_actions,
                 self.routine.vocs,
                 self.routine.environment,
             )
             try:
-                init_points = pd.DataFrame(init_points)
+                init_points_df = pd.DataFrame(init_points)
             except IndexError:
-                init_points = pd.DataFrame(init_points, index=[0])
+                init_points_df = pd.DataFrame(init_points, index=[0])
 
-            self.routine.initial_points = init_points
+            self.routine.initial_points = init_points_df
 
         try:
             self.save_init_vars()
@@ -234,8 +242,15 @@ class BadgerRoutineSubprocess:
                 self.config_singleton.read_value("AUTO_REFRESH")
                 and self.routine.relative_to_current
             ):
+                limit_options = self.routine.vrange_limit_options
+                init_actions = self.routine.initial_point_actions
+                if limit_options is None or init_actions is None:
+                    raise BadgerError(
+                        "relative_to_current requires variable range options and "
+                        "initial point actions to be set"
+                    )
                 variables_updated = calculate_variable_bounds(
-                    self.routine.vrange_limit_options,
+                    limit_options,
                     self.routine.vocs,
                     self.routine.environment,
                 )
@@ -243,23 +258,24 @@ class BadgerRoutineSubprocess:
                 self.routine.vocs.variables = variables_updated
 
                 init_points = calculate_initial_points(
-                    self.routine.initial_point_actions,
+                    init_actions,
                     self.routine.vocs,
                     self.routine.environment,
                 )
                 try:
-                    init_points = pd.DataFrame(init_points)
+                    init_points_df = pd.DataFrame(init_points)
                 except IndexError:
-                    init_points = pd.DataFrame(init_points, index=[0])
+                    init_points_df = pd.DataFrame(init_points, index=[0])
 
-                self.routine.initial_points = init_points
+                self.routine.initial_points = init_points_df
 
         except BadgerRunTerminated as e:
             self.signals.finished.emit()
             self.signals.info.emit(str(e))
         except Exception as e:  # noqa: BLE001 - run worker boundary
             traceback_info = traceback.format_exc()
-            e._details = traceback_info
+            # Attach traceback as a dynamic attribute read back by the run monitor.
+            cast(Any, e)._details = traceback_info
             self.signals.finished.emit()
             self.signals.error.emit(e)
 
@@ -281,6 +297,12 @@ class BadgerRoutineSubprocess:
         It also checks the self.data_and_error_queue to see if an exception was thrown during the routine.
         It is called by a QTimer every 100 miliseconds.
         """
+        if (
+            self.routine is None
+            or self.data_and_error_queue is None
+            or self.routine_process is None
+        ):
+            return
         if self.evaluate_queue[1].poll():
             while self.evaluate_queue[1].poll():
                 results = self.evaluate_queue[1].recv()
@@ -319,7 +341,7 @@ class BadgerRoutineSubprocess:
             self.close()
             self.evaluate_queue[1].close()
 
-    def handle_measurement_error(self, msg: dict) -> str:
+    def handle_measurement_error(self, msg: dict[str, Any]) -> str:
         dialog = BadgerMeasurementRetryDialog(
             text=msg.get("title", "Measurement failed."),
             detailedText=msg.get("traceback", ""),
@@ -329,24 +351,26 @@ class BadgerRoutineSubprocess:
             return MEASUREMENT_ACTION_RETRY
         return MEASUREMENT_ACTION_ABORT
 
-    def handle_termination_reached(self, msg: dict) -> str:
+    def handle_termination_reached(self, msg: dict[str, Any]) -> str:
         # update status
-        tc_condition = msg.get("tc_condition")
+        tc_condition = cast(dict[str, Any], msg.get("tc_condition"))
         status_str = self._format_tc_status_str(tc_condition)
         self.signals.sig_status.emit(status_str)
 
         # launch dialog
         dialog = BadgerTerminationReachedDialog(
             tc_condition=tc_condition,
-            text=msg.get("title"),
+            text=msg.get("title", ""),
         )
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
+            if self.routine is not None:
+                self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             return TERMINATION_ACTION_CONTINUE
         return TERMINATION_ACTION_END
 
-    def _format_tc_status_str(self, tc_condition: dict) -> str:
+    def _format_tc_status_str(self, tc_condition: dict[str, Any]) -> str:
+        routine_name = self.routine.name if self.routine is not None else "unknown"
         tc_type = tc_condition["type"]
         if tc_type == "max_eval":
             tc_type_text = "N iterations"
@@ -354,7 +378,9 @@ class BadgerRoutineSubprocess:
         else:
             tc_type_text = "timeout"
             state = f"{tc_condition['state']:.2f} s"
-        return f"Routine {self.routine.name} paused: Condition {tc_type_text} = {state} reached"
+        return (
+            f"Routine {routine_name} paused: Condition {tc_type_text} = {state} reached"
+        )
 
     def after_evaluate(self, results: pd.DataFrame) -> None:
         logger.debug("Received evaluation results from subprocess.")
@@ -373,6 +399,8 @@ class BadgerRoutineSubprocess:
         """
         Emits the intital variables in the env_ready signal.
         """
+        if self.routine is None:
+            return
         init_vars = get_current_vars(self.routine)
         self.signals.env_ready.emit(init_vars)
 
@@ -384,6 +412,8 @@ class BadgerRoutineSubprocess:
         then the method will terminate the process.
         The method then emits a signal that the process has been stopped.
         """
+        if self.stop_event is None or self.routine_process is None:
+            return
         self.stop_event.set()
         self.routine_process.join(timeout=0.1)
 
@@ -403,6 +433,8 @@ class BadgerRoutineSubprocess:
         ----------
         pause : bool
         """
+        if self.routine is None or self.pause_event is None:
+            return
         if pause:
             self.signals.sig_status.emit(f"Routine {self.routine.name} paused")
             self.pause_event.clear()

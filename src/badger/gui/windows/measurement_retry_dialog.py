@@ -1,13 +1,15 @@
 """Error dialog that allows users to retry measurements after errors in setting variable
 values / getting observables from the environment. Based on the ExpandableMessageBox dialog."""
 
-from PyQt5.QtWidgets import QDialogButtonBox, QMessageBox
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QMessageBox
 
 from .expandable_message_box import ExpandableMessageBox
 
 
 class BadgerMeasurementRetryDialog(ExpandableMessageBox):
-    def __init__(self, text="", detailedText="", parent=None):
+    def __init__(
+        self, text: str = "", detailedText: str = "", parent: QDialog | None = None
+    ) -> None:
         full_text = (
             "There was an error setting variables or getting observables.\n\n" + text
         )
@@ -33,9 +35,11 @@ class BadgerMeasurementRetryDialog(ExpandableMessageBox):
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
         self.retryButton = self.dialogButtonBox.button(QDialogButtonBox.Ok)
-        self.retryButton.setText("Retry Measurement")
+        if self.retryButton is not None:
+            self.retryButton.setText("Retry Measurement")
         self.stopButton = self.dialogButtonBox.button(QDialogButtonBox.Cancel)
-        self.stopButton.setText("Stop Run")
+        if self.stopButton is not None:
+            self.stopButton.setText("Stop Run")
         self.dialogButtonBox.accepted.connect(self.accept)
         self.dialogButtonBox.rejected.connect(self.reject)
 
