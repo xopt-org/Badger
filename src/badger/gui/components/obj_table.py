@@ -43,18 +43,18 @@ class ObjectiveTable(EditableTable):
         self.setColumnWidth(2, 192)
         self.setHorizontalHeaderLabels(["", "Name", "Rule"])
 
-    def default_info(self) -> list[str]:
+    def default_info(self) -> tuple[str, float, bool]:
         """
         Get the default information list for a new item.
 
         Returns
         -------
-        list
-            A list containing default values for a new item.
+        tuple
+            A tuple containing default values for a new item.
         """
-        return ["MINIMIZE"]
+        return ("MINIMIZE", 0.0, False)
 
-    def new_item_prompt(self):
+    def new_item_prompt(self) -> str:
         """
         The prompt text to enter a new item.
         """
@@ -75,7 +75,7 @@ class ObjectiveTable(EditableTable):
             f"Objective {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list[Any]) -> tuple[QWidget, ...]:
+    def create_cell_widgets(self, info: tuple[str, float, bool]) -> tuple[QWidget, ...]:
         # Rule
         cb_rule = QComboBox()
         cb_rule.setItemDelegate(QStyledItemDelegate())
@@ -83,5 +83,3 @@ class ObjectiveTable(EditableTable):
         cb_rule.setCurrentIndex(0 if info[0] == "MINIMIZE" else 1)
 
         return (cb_rule,)
-
-        return [cb_rule]

@@ -225,9 +225,7 @@ class BaseEnvironment(BaseModel, metaclass=EnvMeta):
         """
         return {}
 
-    def get_bounds(
-        self, variable_names: dict[str, list[float]]
-    ) -> dict[str, list[float]]:
+    def get_bounds(self, variable_names: list[str]) -> dict[str, list[float]]:
         """
         Get the bounds for the specified variables in the environment.
         The bounds are returned as a dictionary with variable names as keys

@@ -48,16 +48,16 @@ class ConstraintTable(EditableTable):
             ["", "Name", "Relation", "Threshold", "Critical"]
         )
 
-    def default_info(self) -> list[Any]:
+    def default_info(self) -> tuple[str, float, bool]:
         """
         Get the default information list for a new item.
 
         Returns
         -------
-        list
-            A list containing default values for a new item.
+        tuple
+            A tuple containing default values for a new item.
         """
-        return ["<", 0.0, False]
+        return ("<", 0.0, False)
 
     def new_item_prompt(self) -> str:
         """
@@ -80,7 +80,7 @@ class ConstraintTable(EditableTable):
             f"Constraint {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list[Any]) -> tuple[QWidget, ...]:
+    def create_cell_widgets(self, info: tuple[str, float, bool]) -> tuple[QWidget, ...]:
         # Relation
         relation_combo = QComboBox()
         relation_combo.setItemDelegate(QStyledItemDelegate())

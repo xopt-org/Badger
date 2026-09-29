@@ -10,6 +10,9 @@ pause/resume and clean shutdown when the user hits stop.
 import logging
 import time
 import traceback
+from dataclasses import dataclass
+from multiprocessing import Process
+from multiprocessing.synchronize import Event
 
 import pandas as pd
 from PyQt5.QtCore import QObject, QTimer, pyqtSignal
@@ -39,6 +42,22 @@ from badger.tests.utils import get_current_vars
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ArgumentDict:
+    routine_id: int | None
+    routine_filename: str | None
+    routine_name: str
+    variable_ranges: dict
+    initial_points: pd.DataFrame
+    evaluate: bool
+    archive: bool
+    termination_condition: dict
+    start_time: float
+    testing: bool
+    run_data: bool
+    init_points: bool
+
+
 class BadgerRoutineSignals(QObject):
     env_ready = pyqtSignal(list)
     finished = pyqtSignal()
@@ -58,7 +77,7 @@ class BadgerRoutineSubprocess:
     def __init__(
         self,
         process_manager: ProcessManager,
-        routine: Routine = None,
+        routine: Routine | None = None,
         routine_filename: str | None = None,
         save: bool = False,
         verbose: int = 2,
@@ -68,12 +87,12 @@ class BadgerRoutineSubprocess:
         """
         Parameters
         ----------
-        routine: Routine
-            Defined routine for runner
+        routine: Routine | None
+            Defined routine for runner, or None if not yet defined
         save: bool
             Flag to enable saving to database
         verbose: int, default: 2
-            Verbostiy level (higher is more output)
+            Verbosity level (higher is more output)
         use_full_ts: bool
             If true use full time stamp info when dumping to database
         """
@@ -92,12 +111,14 @@ class BadgerRoutineSubprocess:
         self.termination_condition = (
             None  # additional option to control the optimization flow
         )
-        self.start_time = None  # track the time cost of the run
-        self.last_dump_time = None  # track the time the run data got dumped
+        self.start_time: float | None = None  # track the time cost of the run
+        self.last_dump_time: float | None = (
+            None  # track the time the run data got dumped
+        )
         self.data_and_error_queue = None
-        self.stop_event = None
-        self.pause_event = None
-        self.routine_process = None
+        self.stop_event: Event | None = None
+        self.pause_event: Event | None = None
+        self.routine_process: Process | None = None
         self.is_killed = False
         self.interval = 100
         self.testing = testing
@@ -125,6 +146,10 @@ class BadgerRoutineSubprocess:
         self.start_time = time.time()
         self.last_dump_time = None  # reset the timer
 
+        if self.routine is None:
+            logger.error("No routine defined for the runner.")
+            return
+
         # Patch for converting dtype str to torch object
         try:
             dtype = self.routine.generator.turbo_controller.tkwargs["dtype"]
@@ -136,7 +161,7 @@ class BadgerRoutineSubprocess:
         except TypeError:
             pass
 
-        if not run_data_flag:
+        if not run_data_flag and self.routine is not None:
             self.routine.data = None  # reset data
 
         # Recalculate the bounds and initial points if asked
@@ -167,29 +192,33 @@ class BadgerRoutineSubprocess:
         try:
             self.save_init_vars()
             process_with_args = self.process_manager.remove_from_queue()
-            self.routine_process = process_with_args["process"]
-            self.stop_event = process_with_args["stop_event"]
-            self.pause_event = process_with_args["pause_event"]
-            self.args_queue = process_with_args["args_queue"]
-            self.data_and_error_queue = process_with_args["data_queue"]
-            self.evaluate_queue = process_with_args["evaluate_queue"]
-            self.wait_event = process_with_args["wait_event"]
-            self.dialog_action_queue = process_with_args["dialog_action_queue"]
+            if process_with_args is None:
+                logger.error("No available process in the process manager.")
+                return
 
-            arg_dict = {
-                "routine_id": self.routine.id,
-                "routine_filename": self.routine_filename,
-                "routine_name": self.routine.name,
-                "variable_ranges": self.routine.vocs.variables,
-                "initial_points": self.routine.initial_points,
-                "evaluate": True,
-                "archive": self.save,
-                "termination_condition": self.termination_condition,
-                "start_time": self.start_time,
-                "testing": self.testing,
-                "run_data": run_data_flag,
-                "init_points": init_points_flag,
-            }
+            self.routine_process = process_with_args.process
+            self.stop_event = process_with_args.stop_event
+            self.pause_event = process_with_args.pause_event
+            self.args_queue = process_with_args.args_queue
+            self.data_and_error_queue = process_with_args.data_queue
+            self.evaluate_queue = process_with_args.evaluate_queue
+            self.wait_event = process_with_args.wait_event
+            self.dialog_action_queue = process_with_args.dialog_action_queue
+
+            arg_dict = ArgumentDict(
+                routine_id=self.routine.id,
+                routine_filename=self.routine_filename,
+                routine_name=self.routine.name,
+                variable_ranges=self.routine.vocs.variables,
+                initial_points=self.routine.initial_points,
+                evaluate=True,
+                archive=self.save,
+                termination_condition=self.termination_condition,
+                start_time=self.start_time,
+                testing=self.testing,
+                run_data=run_data_flag,
+                init_points=init_points_flag,
+            )
 
             self.args_queue.put(arg_dict)
             self.wait_event.set()

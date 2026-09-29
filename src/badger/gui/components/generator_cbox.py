@@ -1,6 +1,7 @@
 """Panel where users pick an optimization algorithm from the Xopt registry
 and configure its parameters via the Pydantic tree editor."""
 
+from gest_api.vocs import VOCS
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,7 +13,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.gui.components.collapsible_box import CollapsibleBox
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
@@ -29,10 +29,10 @@ LABEL_WIDTH = 96
 class BadgerAlgoBox(QWidget):
     def __init__(
         self,
-        parent=None,
-        generators: list | None = None,
-        scaling_functions: list | None = None,
-    ):
+        parent: QWidget | None = None,
+        generators: list[str] | None = None,
+        scaling_functions: list[str] | None = None,
+    ) -> None:
         if generators is None:
             generators = []
         if scaling_functions is None:
@@ -44,7 +44,7 @@ class BadgerAlgoBox(QWidget):
 
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         config_singleton = init_settings()
 
         vbox = QVBoxLayout(self)
@@ -145,5 +145,5 @@ class BadgerAlgoBox(QWidget):
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_misc.hide()
 
-    def update_vocs(self, vocs: VOCS):
+    def update_vocs(self, vocs: VOCS) -> None:
         self.edit.update_vocs(vocs)

@@ -29,6 +29,7 @@ from typing import (
 import yaml
 from bax_algorithms.emittance import PathwiseMinimizeEmittance
 from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
+from gest_api.vocs import VOCS
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, PydanticUndefinedType
@@ -57,7 +58,6 @@ from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
-from xopt.vocs import VOCS
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +94,11 @@ def convert_to_type(value: Any, type: Callable[[Any], T]) -> T:
 
 
 def _set_value_for_basic_widget(
-    widget: QWidget,
+    widget: QWidget | None,
     value: str | float | bool | None,
 ) -> None:
+    if widget is None:
+        return
     nullable = bool(widget.property("badger_nullable"))
     if isinstance(widget, (QLabel, QLineEdit)):
         widget.setText("null" if value is None else str(value))
@@ -206,7 +208,7 @@ class BadgerResolvedType:
             return BadgerResolvedType(main=str)
 
         return BadgerResolvedType(
-            main=origin,
+            main=cast("type[Any] | None", origin),
             nullable=nullable,
             subtype=BadgerResolvedType.find_primary(args),
         )
@@ -284,19 +286,20 @@ class BadgerResolvedType:
                 )
             if isinstance(resolved_type.subtype, list):
                 primary_type = resolved_type.subtype[0]
-                secondary_type = (
+                list_secondary_type: BadgerResolvedType | None = (
                     resolved_type.subtype[1] if len(resolved_type.subtype) > 1 else None
                 )
 
             else:
                 primary_type = resolved_type.subtype
-                secondary_type = None
+                list_secondary_type = None
             if primary_type.main is None:
                 raise ValueError(
                     f"Property name {property_name}: List subtype must be a basic type"
                 )
             widget = BadgerListEditor(
-                primary_type.main, secondary_type.main if secondary_type else None
+                primary_type.main,
+                list_secondary_type.main if list_secondary_type else None,
             )
 
             if default is not None and isinstance(default, list):
@@ -645,8 +648,8 @@ class BadgerListEditor(QWidget):
                 + "}"
             )
 
-    def get_parameters_dict(self) -> dict[str, Any] | None:
-        child_values: list[str | None] = [
+    def get_parameters_dict(self) -> dict[str, Any] | list[Any] | None:
+        child_values: list[Any] = [
             _qt_widget_to_value(child.parameter_value)
             for child in self.list_container.children()
             if isinstance(child, BadgerListItem)
@@ -1205,8 +1208,14 @@ class BadgerPydanticEditor(QTreeWidget):
         # Rebuilding the tree resets the scrollbars, making the view jump back
         # to the top on every edit. Capture the current scroll positions so we
         # can restore them once the tree has been repopulated.
-        h_scroll = self.horizontalScrollBar().value()
-        v_scroll = self.verticalScrollBar().value()
+        h_scroll_value = 0
+        h_scroll = self.horizontalScrollBar()
+        if h_scroll is not None:
+            h_scroll_value = h_scroll.value()
+        v_scroll = self.verticalScrollBar()
+        v_scroll_value = 0
+        if v_scroll is not None:
+            v_scroll_value = v_scroll.value()
 
         self.clear()
 
@@ -1246,8 +1255,12 @@ class BadgerPydanticEditor(QTreeWidget):
         # next event-loop iteration so the restore runs after the tree has laid
         # out its (re)created items and updated the scrollbar ranges.
         def restore_scroll() -> None:
-            self.horizontalScrollBar().setValue(h_scroll)
-            self.verticalScrollBar().setValue(v_scroll)
+            h_scroll = self.horizontalScrollBar()
+            if h_scroll is not None:
+                h_scroll.setValue(h_scroll_value)
+            v_scroll = self.verticalScrollBar()
+            if v_scroll is not None:
+                v_scroll.setValue(v_scroll_value)
 
         QTimer.singleShot(0, restore_scroll)
 
@@ -1366,9 +1379,10 @@ class BadgerPydanticEditor(QTreeWidget):
         else:
             error_widget = self
         if error_widget:
-            if type(error_widget) is QTreeWidgetItem:
-                error_widget.setBackground(0, Qt.GlobalColor.red)
-                widget = self.itemWidget(error_widget, self.value_col)
+            if isinstance(error_widget, QTreeWidgetItem):
+                item: QTreeWidgetItem = error_widget
+                item.setBackground(0, Qt.GlobalColor.red)
+                widget = self.itemWidget(item, self.value_col)
                 if widget is not None:
                     widget.setProperty("error", True)
                     widget.setStyleSheet('*[error="true"] { border: 2px dashed red }')
@@ -1378,9 +1392,8 @@ class BadgerPydanticEditor(QTreeWidget):
                             '*[error="true"] { border: 2px dashed red }'
                         )
 
-                error_widget.setToolTip(0, msg)
+                item.setToolTip(0, msg)
             else:
-                error_widget = cast(QTreeWidget, error_widget)
                 error_widget.setProperty("error", True)
                 error_widget.setStyleSheet('*[error="true"] { border: 2px dashed red }')
                 error_widget.setToolTip(msg)

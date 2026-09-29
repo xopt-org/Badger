@@ -129,7 +129,9 @@ def format_validation_error(e: ValidationError) -> str:
     return "\n".join(messages)
 
 
-def extract_constraint_symbol_and_value(constraint: BaseConstraint) -> str:
+def extract_constraint_symbol_and_value(
+    constraint: BaseConstraint,
+) -> tuple[str, float]:
     """
     Extract symbol and value from gest-api constraint objects
     generator standard library [gest-api](https://github.com/campa-consortium/gest-api)
@@ -232,7 +234,7 @@ class BadgerRoutinePage(QWidget):
         edit_save.setPlaceholderText(generate_slug(2))
         hbox_name.addWidget(label)
         hbox_name.addWidget(edit_save, 1)
-        vbox_meta.addWidget(name, alignment=Qt.AlignTop)
+        vbox_meta.addWidget(name, alignment=Qt.AlignmentFlag.AlignTop)
 
         # Description
         descr = QWidget()
@@ -274,15 +276,15 @@ class BadgerRoutinePage(QWidget):
             "Save as Template"
         )
         save_template_button.setFixedSize(128, 24)
-        hbox_name.addWidget(save_template_button, alignment=Qt.AlignRight)
-        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
+        hbox_name.addWidget(save_template_button, alignment=Qt.AlignmentFlag.AlignRight)
+        vbox_meta.addWidget(template_button, alignment=Qt.AlignmentFlag.AlignBottom)
         template_button.show()
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_tags.hide()
-        vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
+        vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignmentFlag.AlignTop)
         # vbox_meta.addStretch()
 
         # vbox.addWidget(group_meta)
@@ -409,7 +411,7 @@ class BadgerRoutinePage(QWidget):
             print(f"Error loading template: {e}")
             return
 
-    def set_options_from_template(self, template_dict: dict[str, Any]):
+    def set_options_from_template(self, template_dict: dict[str, Any]) -> None:
         logger.info(
             f"Setting options from template: {template_dict.get('name', 'unknown')}"
         )

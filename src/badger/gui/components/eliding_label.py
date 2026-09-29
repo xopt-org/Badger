@@ -48,17 +48,20 @@ class ElidingLabel(QLabel):
     def __init__(
         self,
         text: str = "",
-        mode: Qt.TextElideMode = Qt.ElideMiddle,
+        mode: Qt.TextElideMode = Qt.TextElideMode.ElideMiddle,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
 
         self._mode = mode
         self.is_elided = False
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.setText(text)
 
-    def setText(self, text: str) -> None:
+    def setText(self, text: str | None) -> None:
+        if text is None:
+            text = ""
+
         self._contents = text
 
         # This line set for testing.  Its value is the return value of
@@ -72,7 +75,7 @@ class ElidingLabel(QLabel):
     def text(self) -> str:
         return self._contents
 
-    def paintEvent(self, event: QPaintEvent) -> None:
+    def paintEvent(self, event: QPaintEvent | None) -> None:
         super().paintEvent(event)
 
         did_elide = False
@@ -111,19 +114,21 @@ class ElidingLabel(QLabel):
 
 
 class SimpleElidedLabel(QLabel):
-    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
+    def __init__(self, text: str | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._text = text
 
-    def setText(self, text: str) -> None:
+    def setText(self, text: str | None) -> None:
         self._text = text
         super().setText(self.elidedText())
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent | None) -> None:
         super().setText(self.elidedText())
         super().resizeEvent(event)
 
     def elidedText(self) -> str:
         metrics = QFontMetrics(self.font())
-        elided = metrics.elidedText(self._text, Qt.ElideRight, self.width())
+        elided = metrics.elidedText(
+            self._text, Qt.TextElideMode.ElideRight, self.width()
+        )
         return elided

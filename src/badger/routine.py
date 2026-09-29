@@ -32,7 +32,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from xopt import VOCS, Evaluator, Xopt
 from xopt.generators import get_generator
 from xopt.generators.sequential import SequentialGenerator
 from xopt.vocs import get_local_region
@@ -40,6 +39,7 @@ from xopt.vocs import get_local_region
 from badger.environment import BaseEnvironment, Environment, instantiate_env
 from badger.factory import get_env
 from badger.utils import curr_ts
+from xopt import VOCS, Evaluator, Xopt
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,13 @@ key-value fields."""
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 
-def labeled_lineedit(name, text, width_name=64, placeholder=None, readonly=True):
+def labeled_lineedit(
+    name: str,
+    text: str,
+    width_name: int = 64,
+    placeholder: str | None = None,
+    readonly: bool = True,
+) -> QWidget:
     widget = QWidget()
     hbox = QHBoxLayout(widget)
     hbox.setContentsMargins(0, 0, 0, 0)

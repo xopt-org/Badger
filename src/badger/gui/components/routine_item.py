@@ -3,7 +3,7 @@ and environment with hover/selection styling and a delete button."""
 
 from datetime import datetime
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import QEvent, Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QHBoxLayout,
@@ -76,8 +76,15 @@ class BadgerRoutineItem(QWidget):
     sig_del = pyqtSignal(str)
 
     def __init__(
-        self, id, name, timestamp, environment, env_dict, description="", parent=None
-    ):
+        self,
+        id: str,
+        name: str,
+        timestamp: str,
+        environment: str,
+        env_dict: dict[str, dict[str, str]],
+        description: str = "",
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
 
         self.activated = False
@@ -113,8 +120,8 @@ class BadgerRoutineItem(QWidget):
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
-        self.setAttribute(Qt.WA_StyledBackground)
+    def init_ui(self) -> None:
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.setStyleSheet(self.stylesheet_normal)
 
         cool_font = QFont()
@@ -144,13 +151,17 @@ class BadgerRoutineItem(QWidget):
 
         # Routine tools
         self.btn_fav = btn_fav = create_button(
-            "star.png", "Favorite routine", stylesheet_fav, size=None
+            "star.png",
+            "Favorite routine",
+            stylesheet_fav,
         )
         btn_fav.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         btn_fav.setFixedWidth(32)
         btn_fav.hide()  # hide it for now
         self.btn_del = btn_del = create_button(
-            "trash.png", "Delete routine", stylesheet_del, size=None
+            "trash.png",
+            "Delete routine",
+            stylesheet_del,
         )
         btn_del.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         btn_del.setFixedWidth(32)
@@ -160,25 +171,25 @@ class BadgerRoutineItem(QWidget):
 
         self.update_tooltip()
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_del.clicked.connect(self.delete_routine)
         # self.btn_fav.clicked.connect(self.favorite_routine)
 
-    def activate(self):
+    def activate(self) -> None:
         self.activated = True
         if self.hover:
             self.setStyleSheet(self.stylesheet_activate_hover)
         else:
             self.setStyleSheet(self.stylesheet_activate)
 
-    def deactivate(self):
+    def deactivate(self) -> None:
         self.activated = False
         if self.hover:
             self.setStyleSheet(self.stylesheet_normal_hover)
         else:
             self.setStyleSheet(self.stylesheet_normal)
 
-    def enterEvent(self, event):
+    def enterEvent(self, event: QEvent | None) -> None:
         self.hover = True
         # self.btn_fav.show()
         # self.btn_del.show()
@@ -187,7 +198,7 @@ class BadgerRoutineItem(QWidget):
         else:
             self.setStyleSheet(self.stylesheet_normal_hover)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event: QEvent | None) -> None:
         self.hover = False
         # self.btn_fav.hide()
         # self.btn_del.hide()
@@ -196,9 +207,9 @@ class BadgerRoutineItem(QWidget):
         else:
             self.setStyleSheet(self.stylesheet_normal)
 
-    def delete_routine(self):
+    def delete_routine(self) -> None:
         reply = QMessageBox.question(
-            self.parent(),
+            self.parentWidget(),
             "Delete routine",
             f"Are you sure you want to delete routine {self.name}?",
             QMessageBox.Yes | QMessageBox.No,
@@ -209,13 +220,13 @@ class BadgerRoutineItem(QWidget):
 
         self.sig_del.emit(self.id)
 
-    def update_tooltip(self):
+    def update_tooltip(self) -> None:
         _timestamp = datetime.fromisoformat(self.timestamp)
         time_str = _timestamp.strftime("%m/%d/%Y, %H:%M:%S")
         self.setToolTip(
             f"name: {self.name}\ncreated at: {time_str}\ndescription:\n{self.description}"
         )
 
-    def update_description(self, descr):
+    def update_description(self, descr: str) -> None:
         self.description = descr
         self.update_tooltip()

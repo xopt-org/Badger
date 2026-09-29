@@ -88,7 +88,7 @@ class EditableTable(QTableWidget):
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.setColumnWidth(0, 20)  # width for checkboxes
 
-        self.data: list[dict[str, Any]] = []
+        self.data: list[dict[str, tuple[str, float, bool]]] = []
         self.status: dict[str, bool] = {}  # track selection
         self.formulas: dict[str, dict[str, Any]] = {}  # track formula item
 
@@ -110,16 +110,16 @@ class EditableTable(QTableWidget):
         logger.debug("Emitting data_changed signal from editable_table")
         self.data_changed.emit()
 
-    def default_info(self) -> list[Any]:
+    def default_info(self) -> tuple[str, float, bool]:
         """
         Get the default information list for a new item.
 
         Returns
         -------
-        list
-            A list containing default values for a new item.
+        tuple
+            A tuple containing default values for a new item.
         """
-        return ["<", 0.0, False]
+        return ("<", 0.0, False)
 
     def new_item_prompt(self) -> str:
         """
@@ -142,7 +142,7 @@ class EditableTable(QTableWidget):
             f"Item {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list[Any]) -> tuple[QWidget, ...]:
+    def create_cell_widgets(self, info: tuple[str, float, bool]) -> tuple[QWidget, ...]:
         # Relation
         relation_combo = QComboBox()
         relation_combo.setItemDelegate(QStyledItemDelegate())
@@ -167,7 +167,7 @@ class EditableTable(QTableWidget):
 
         Parameters
         ----------
-        event : QDragEnterEvent
+        e : QDragEnterEvent | None
             The drag enter event.
         """
         # Accept internal moves (reordering) or external text drops.
@@ -191,7 +191,7 @@ class EditableTable(QTableWidget):
 
         Parameters
         ----------
-        event : QDragMoveEvent
+        e : QDragMoveEvent | None
             The drag move event.
         """
 
@@ -221,7 +221,7 @@ class EditableTable(QTableWidget):
 
         Parameters
         ----------
-        event : QDropEvent
+        event : QDropEvent | None
             The drop event.
         """
 
@@ -334,7 +334,7 @@ class EditableTable(QTableWidget):
         self,
         row: int,
         name: str,
-        info: list[Any],
+        info: tuple[str, float, bool],
         selected: bool = False,
     ) -> None:
         """
@@ -346,8 +346,8 @@ class EditableTable(QTableWidget):
             The row index where the item should be inserted.
         name : str
             The name of the item.
-        info : list
-            A list containing additional information about the item.
+        info : tuple[str, float, bool]
+            A tuple containing additional information about the item.
         selected : bool, optional
             Whether the item is selected, default is False.
         """
@@ -637,7 +637,7 @@ class EditableTable(QTableWidget):
 
     def update_items(
         self,
-        data: list[dict[str, Any]] | None = None,
+        data: list[dict[str, tuple[str, float, bool]]] | None = None,
         status: dict[str, bool] | None = None,
         formulas: dict[str, dict[str, Any]] | None = None,
         vocs_signal: bool = True,
@@ -649,7 +649,7 @@ class EditableTable(QTableWidget):
     @block_signals
     def update_items_wrapper(
         self,
-        data: list[dict[str, Any]] | None = None,
+        data: list[dict[str, tuple[str, float, bool]]] | None = None,
         status: dict[str, bool] | None = None,
         formulas: dict[str, dict[str, Any]] | None = None,
     ) -> None:
@@ -691,16 +691,16 @@ class EditableTable(QTableWidget):
         # Add an empty row for new constraints
         self.add_empty_row()
 
-    def export_data(self) -> list[dict[str, Any]]:
+    def export_data(self) -> list[dict[str, tuple[str, float, bool]]]:
         """
-        Export the items as a list of dictionaries.
+        Export the items as a list of dictionaries with tuple info for each item.
 
         Returns
         -------
-        List[Dict[str, Any]]
+        List[Dict[str, tuple[str, float, bool]]]
             A list of items with their properties.
         """
-        exported_items: list[dict[str, Any]] = []
+        exported_items: list[dict[str, tuple[str, float, bool]]] = []
         for item in self.data:
             if self.status.get(next(iter(item)), False):
                 exported_items.append(item)

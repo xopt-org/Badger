@@ -45,6 +45,8 @@ def archive_run(
 ) -> RunArchive:  # TODO: make states more specific
 
     data = routine.sorted_data
+    if not data:
+        raise ValueError("No data to archive")
     data_dict = data.to_dict("list")
     if hasattr(routine, "creation_ts") and routine.creation_ts is not None:
         suffix = routine.creation_ts
@@ -175,7 +177,7 @@ def load_run(run_fname: str) -> Routine:
     # TODO: create utility function to catch warnings to remove code
     # duplication
     with warnings.catch_warnings(record=True) as caught_warnings:
-        routine: Routine = Routine.from_file(filename)
+        routine = Routine.from_file(filename)
 
         # Check if any user warnings were caught
         for warning in caught_warnings:

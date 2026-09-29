@@ -22,7 +22,7 @@ import logging
 from importlib import resources
 from typing import Any
 
-from gest_api.vocs import ContinuousVariable
+from gest_api.vocs import VOCS, ContinuousVariable
 from pydantic_core import ValidationError
 from PyQt5.QtCore import QPropertyAnimation, QRegExp, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -38,7 +38,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
@@ -522,7 +521,6 @@ class BadgerEnvBox(QWidget):
         cbox_more.setContentLayout(vbox_more)
 
     def config_logic(self) -> None:
-        self.dict_con = {}
 
         self.edit_var.textChanged.connect(self.filter_var)
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
@@ -635,18 +633,18 @@ class BadgerEnvBox(QWidget):
         # Compose the VOCS settings
         variables = self.var_table.export_variables()
 
-        objectives: dict[str, Any] = {}
+        objectives: dict[str, str] = {}
         for objective in self.obj_table.export_data():
             obj_name = next(iter(objective))
-            (rule,) = objective[obj_name]
+            rule = objective[obj_name][0]
             objectives[obj_name] = rule
 
-        constraints: dict[str, list[float]] = {}
+        constraints: dict[str, tuple[str, float]] = {}
         critical_constraints: list[str] = []
         for constraint in self.con_table.export_data():
             con_name = next(iter(constraint))
             relation, threshold, critical = constraint[con_name]
-            constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
+            constraints[con_name] = (CONS_RELATION_DICT[relation], threshold)
             if critical:
                 critical_constraints.append(con_name)
 
@@ -657,12 +655,12 @@ class BadgerEnvBox(QWidget):
 
         try:
             # We want to ensure it's a dict of either lists or ContinuousVariables
-            variables = {
+            processed_variables: dict[str, list[float] | ContinuousVariable] = {
                 k: list(v) if not isinstance(v, ContinuousVariable) else v
                 for k, v in variables.items()
             }
             vocs = VOCS(
-                variables=variables,
+                variables=processed_variables,
                 objectives=objectives,
                 constraints=constraints,
                 constants={},

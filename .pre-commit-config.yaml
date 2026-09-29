@@ -32,12 +32,12 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v2.3.1
-  #   hooks:
-  #     - id: mypy
-  #       args: [--strict, --ignore-missing-imports]
-  #       additional_dependencies:
-  #         - pydantic
-  #         - pandas-stubs
-  #         - types-requests
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.1
+    hooks:
+      - id: mypy
+        args: [--strict, --ignore-missing-imports]
+        additional_dependencies:
+          - pydantic
+          - pandas-stubs
+          - types-requests

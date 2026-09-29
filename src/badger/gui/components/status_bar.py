@@ -33,7 +33,7 @@ class BadgerStatusBar(QWidget):
         self.summary = summary = SimpleElidedLabel()
         summary.setObjectName("StatusBar")
         # summary.setStyleSheet("background-color: orange;")  # for debugging
-        summary.setAlignment(Qt.AlignCenter)
+        summary.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.btn_settings = btn_settings = QPushButton()
         btn_settings.setStyleSheet("background-color: transparent; border: none;")
