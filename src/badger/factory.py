@@ -58,6 +58,7 @@ class BadgerPluginConfig(TypedDict):
     observations: list[str]
 
 
+# Register built-in plugins path so they can be imported during CLI runs
 BUILT_IN_PLUGIN_ROOT = str(Path(__file__).parent / "built_in_plugins")
 if BUILT_IN_PLUGIN_ROOT not in sys.path:
     sys.path.append(BUILT_IN_PLUGIN_ROOT)
@@ -120,6 +121,7 @@ def load_plugin(
         "environment",
     ], f"Invalid plugin type {ptype}"
 
+    # Try loading config from user plugin root, fallback to built-in plugins if not found
     proot = os.path.join(root, f"{ptype}s")
     plugin_config_path = os.path.join(proot, pname, "configs.yaml")
     if not os.path.exists(plugin_config_path):
@@ -392,6 +394,7 @@ def _md_images_to_html(
 
 def get_plug(root: str, name: str, ptype: str):
     try:
+        # If plugin not registered yet (e.g. CLI run), check if it exists in built-in plugins
         if name not in BADGER_FACTORY[ptype]:
             builtin_config = os.path.join(
                 BUILT_IN_PLUGIN_ROOT, f"{ptype}s", name, "configs.yaml"

@@ -257,8 +257,6 @@ def calculate_initial_points(init_actions, vocs, env):
     logger.info("Calculating initial points.")
     vnames = vocs.variable_names
     init_points = {k: [] for k in vnames}
-    if not init_actions:
-        return init_points
 
     for action in init_actions:
         logger.debug(f"Processing initial point action: {action}")

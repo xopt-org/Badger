@@ -23,6 +23,7 @@ from badger.archive import save_tmp_run
 from badger.core import run_routine as run
 from badger.core_subprocess import run_routine_subprocess
 from badger.errors import BadgerLoadConfigError, BadgerRunTerminated
+from badger.log import get_logging_manager
 from badger.routine import Routine, calculate_initial_points
 from badger.settings import init_settings
 from badger.utils import curr_ts, load_template_file, load_template_string
@@ -181,22 +182,29 @@ def run_routine_headless(routine, auto_run=False):
             return
 
     # Set up subprocess communication
+    args_queue = Queue()
     data_queue = Queue()
     evaluate_queue = Pipe()
     stop_event = Event()
     pause_event = Event()
     wait_event = Event()
     config_path = init_settings()._instance.config_path
+    logging_manager = get_logging_manager()
+    log_queue = logging_manager.get_queue()
+    dialog_action_queue = Queue()
 
     process = Process(
         target=run_routine_subprocess,
         args=(
+            args_queue,
             data_queue,
             evaluate_queue,
             stop_event,
             pause_event,
             wait_event,
             config_path,
+            log_queue,
+            dialog_action_queue,
         ),
     )
     process.start()
@@ -238,7 +246,7 @@ def run_routine_headless(routine, auto_run=False):
     }
 
     # put data in queue (subprocess is already running and waiting)
-    data_queue.put(arg_dict)
+    args_queue.put(arg_dict)
 
     # Signal subprocess to begin execution
     pause_event.set()  # Start unpaused
