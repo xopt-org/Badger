@@ -23,18 +23,13 @@ from badger.errors import (
     MEASUREMENT_ACTION_RETRY,
     MEASUREMENT_ACTION_ABORT,
     TERMINATION_REACHED_TYPE,
-    TERMINATION_ACTION_TYPE,
-    TERMINATION_ACTION_CONTINUE,
-    TERMINATION_ACTION_END,
+    PAUSE_ACK_TYPE,
 )
 from badger.tests.utils import get_current_vars
 from badger.routine import calculate_variable_bounds, calculate_initial_points
 from badger.settings import init_settings
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.windows.measurement_retry_dialog import BadgerMeasurementRetryDialog
-from badger.gui.windows.termination_reached_dialog import (
-    BadgerTerminationReachedDialog,
-)
 from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
@@ -48,6 +43,8 @@ class BadgerRoutineSignals(QObject):
     info = pyqtSignal(str)
     states = pyqtSignal(str)
     sig_status = pyqtSignal(str)  # status message information
+    sig_termination_reached = pyqtSignal(dict)  # tc condition that paused the run
+    sig_pause_ack = pyqtSignal()  # subprocess has actually stopped after a pause request
 
 
 class BadgerRoutineSubprocess:
@@ -178,6 +175,9 @@ class BadgerRoutineSubprocess:
             self.evaluate_queue = process_with_args["evaluate_queue"]
             self.wait_event = process_with_args["wait_event"]
             self.dialog_action_queue = process_with_args["dialog_action_queue"]
+            self.termination_control_queue = process_with_args[
+                "termination_control_queue"
+            ]
 
             arg_dict = {
                 "routine_id": self.routine.id,
@@ -276,13 +276,9 @@ class BadgerRoutineSubprocess:
                     isinstance(msg, dict)
                     and msg.get("type") == TERMINATION_REACHED_TYPE
                 ):
-                    action = self.handle_termination_reached(msg)
-                    self.dialog_action_queue.put(
-                        {
-                            "type": TERMINATION_ACTION_TYPE,
-                            "action": action,
-                        }
-                    )
+                    self.handle_termination_reached(msg)
+                elif isinstance(msg, dict) and msg.get("type") == PAUSE_ACK_TYPE:
+                    self.signals.sig_pause_ack.emit()
                 elif (
                     isinstance(msg, dict) and msg.get("type") == "termination_extended"
                 ):
@@ -308,22 +304,12 @@ class BadgerRoutineSubprocess:
             return MEASUREMENT_ACTION_RETRY
         return MEASUREMENT_ACTION_ABORT
 
-    def handle_termination_reached(self, msg: dict) -> str:
-        # update status
+    def handle_termination_reached(self, msg: dict) -> None:
+        """The subprocess already paused itself, so only report the new state."""
+        self.active_tc = None
         tc_condition = msg.get("tc_condition")
-        status_str = self._format_tc_status_str(tc_condition)
-        self.signals.sig_status.emit(status_str)
-
-        # launch dialog
-        dialog = BadgerTerminationReachedDialog(
-            tc_condition=tc_condition,
-            text=msg.get("title"),
-        )
-        result = dialog.exec_()
-        if result == QDialog.Accepted:
-            self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
-            return TERMINATION_ACTION_CONTINUE
-        return TERMINATION_ACTION_END
+        self.signals.sig_status.emit(self._format_tc_status_str(tc_condition))
+        self.signals.sig_termination_reached.emit(tc_condition)
 
     def _format_tc_status_str(self, tc_condition: dict) -> str:
         tc_type = tc_condition["type"]
@@ -383,11 +369,22 @@ class BadgerRoutineSubprocess:
         pause : bool
         """
         if pause:
-            self.signals.sig_status.emit(f"Routine {self.routine.name} paused")
             self.pause_event.clear()
         else:
             self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             self.pause_event.set()
+
+    def resume_with_extension(self) -> None:
+        """Extend the active condition by the configured amount and resume."""
+        # send new termination condition to subprocess
+        self.termination_control_queue.put(
+            {
+                "type": "extend_termination_condition",
+                "termination_condition": self.termination_condition,
+            }
+        )
+
+        self.ctrl_routine(False) # unpause
 
     def close(self) -> None:
         logger.info("Closing routine subprocess and stopping timer.")

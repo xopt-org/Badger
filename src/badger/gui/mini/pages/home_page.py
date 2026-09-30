@@ -299,14 +299,12 @@ class BadgerHomePage(QWidget):
         )
         self.run_action_bar.sig_smart_run_ctrl.connect(self.smart_run_with_data)
         self.run_action_bar.sig_run_with_data.connect(
-            lambda: self.start_run(
-                use_termination_condition=bool(self.run_monitor.termination_condition),
-                load_displayed_data=True,
-            )
+            lambda: self.start_run(load_displayed_data=True)
         )
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )
+        self.run_action_bar.sig_update_tc.connect(self.edit_termination_condition)
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 
@@ -314,7 +312,6 @@ class BadgerHomePage(QWidget):
         self.run_controller.sig_stop.connect(self.run_monitor.stop)
         self.run_controller.sig_start.connect(
             lambda load_displayed_data: self.start_run(
-                use_termination_condition=bool(self.run_monitor.termination_condition),
                 load_displayed_data=load_displayed_data,  # arg from signal
             )
         )
@@ -326,8 +323,8 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.btn_stop.setDefaultAction(
             self.run_action_bar.smart_run_action
         )
-        # configure default to max_eval (tc_idx=0), 100 iterations
-        initial_tc = {"tc_idx": 0, "max_eval": 100, "max_time": 300, "ftol": 0}
+        # configure default to max_eval (tc_idx=0), 50 iterations
+        initial_tc = {"tc_idx": 0, "max_eval": 50, "max_time": 300, "ftol": 0}
         self.run_monitor.save_termination_condition(initial_tc)
         self.run_action_bar.update_run_tooltip(initial_tc)
 
@@ -541,13 +538,39 @@ class BadgerHomePage(QWidget):
         )
 
     def handle_pause(self, pause: bool):
-        self.run_monitor.ctrl_routine(pause)
-        self.run_action_bar.handle_pause_action(pause)
-        self.toggle_lock(not pause)
+        if pause:
+            # pause routine
+            self.run_monitor.ctrl_routine(True)
+        else:
+            self.run_monitor.resume_with_extension()
+
+    def reflect_pause_state(self, paused: bool):
+        """Sync the GUI to the run pause state, whoever initiated it."""
+        self.run_action_bar.handle_pause_action(paused)
+        self.toggle_lock(not paused)
+
+    def edit_termination_condition(self):
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            run_opt=None,
+            save_config=self.run_monitor.save_termination_condition,
+            configs=self.run_monitor.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
+        self.run_action_bar.update_run_tooltip(
+            self.run_monitor.termination_condition
+        )
+
+    def termination_updated(self, tc: dict):
+        self.run_action_bar.update_run_tooltip(tc)
 
     def prepare_run(self, data=None, init_points_flag=True):
         """
-        Prepares the run by composing the routine, validating data if present,
+        Prepares the run by composing the routine, validating data if present, 
         saving created routine to a yaml file, and passing the routine to
         the run monitor to initialize plots.
 
@@ -605,16 +628,13 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(
-        self, use_termination_condition: bool = False, load_displayed_data: bool = False
-    ):
+    def start_run(self, load_displayed_data: bool = False):
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
         - Data Options are collected from BadgerDataPanel
 
         Args:
-            use_termination_condition (bool): Is set as True if called from BadgerTerminationConditionDialog.
             load_displayed_data (bool): If True loads data from the currently displayed routine.
 
         Notes:
@@ -651,7 +671,6 @@ class BadgerHomePage(QWidget):
             self.prepare_run()
 
         self.run_monitor.start(
-            use_termination_condition=use_termination_condition,
             run_data_flag=run_data_flag,
             init_points_flag=init_points_flag,
         )
@@ -687,7 +706,7 @@ class BadgerHomePage(QWidget):
                 self.run_monitor.termination_condition
             )
         else:
-            self.start_run(use_termination_condition=True)
+            self.start_run()
 
     def new_run(self):
         logger.info("Creating new run.")

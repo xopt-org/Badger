@@ -2,6 +2,9 @@
 when an optimization run should automatically stop — either after a maximum
 number of evaluations or after a maximum elapsed time."""
 
+from copy import copy
+from collections.abc import Callable
+
 from PyQt5.QtWidgets import (
     QDialog,
     QWidget,
@@ -38,12 +41,20 @@ QPushButton
 
 
 class BadgerTerminationConditionDialog(QDialog):
-    def __init__(self, parent, run_opt, save_config, configs=None):
+    def __init__(
+        self,
+        parent,
+        run_opt: Callable | None,
+        save_config: Callable,
+        configs: dict | None = None,
+    ):
         super().__init__(parent)
 
+        # run_opt optional, if function given will be called on set/run button press
+        # otherwise the dialog will set the config using save_config and close
         self.run_opt = run_opt
         self.save_config = save_config
-        self.configs = configs
+        self.configs = copy(configs)
         if configs is None:
             self.configs = {"tc_idx": 0, "max_eval": 42, "max_time": 600, "ftol": 0}
 
@@ -65,11 +76,14 @@ class BadgerTerminationConditionDialog(QDialog):
         lbl.setFixedWidth(64)
         self.cb = cb = QComboBox()
         cb.setItemDelegate(QStyledItemDelegate())
+        # TODO: Re-add optimization converged when convergence criteria implemented
+        # also update the index to set in run() below
         cb.addItems(
             [
-                "maximum evaluation reached",
+                "n iterations reached",
                 "maximum running time exceeded",
                 # 'optimization converged',
+                "None (continue until stopped)",
             ]
         )
         cb.setCurrentIndex(self.configs["tc_idx"])
@@ -121,8 +135,16 @@ class BadgerTerminationConditionDialog(QDialog):
         hbox_tol.addWidget(lbl)
         hbox_tol.addWidget(sb_tol, 1)
 
+        none_config = QWidget()
+        hbox_none = QHBoxLayout(none_config)
+        hbox_none.setContentsMargins(0, 0, 0, 0)
+        lbl = QLabel("The run will continue until you stop it manually.")
+        lbl.setWordWrap(True)
+        hbox_none.addWidget(lbl)
+
         stacks.addWidget(max_eval_config)
         stacks.addWidget(max_time_config)
+        stacks.addWidget(none_config)
         stacks.addWidget(tol_config)
 
         stacks.setCurrentIndex(self.configs["tc_idx"])
@@ -134,8 +156,12 @@ class BadgerTerminationConditionDialog(QDialog):
         hbox_set = QHBoxLayout(button_set)
         hbox_set.setContentsMargins(0, 0, 0, 0)
         self.btn_cancel = btn_cancel = QPushButton("Cancel")
-        self.btn_run = btn_run = QPushButton("Run")
-        btn_run.setStyleSheet(stylesheet_run)
+        if self.run_opt:
+            self.btn_run = btn_run = QPushButton("Run")
+            btn_run.setStyleSheet(stylesheet_run)
+        else:
+            self.btn_run = btn_run = QPushButton("Set")
+            # btn_run.setStyleSheet(stylesheet_run)
         btn_cancel.setFixedSize(96, 24)
         btn_run.setFixedSize(96, 24)
         hbox_set.addStretch()
@@ -164,8 +190,14 @@ class BadgerTerminationConditionDialog(QDialog):
         self.configs["ftol"] = ftol
 
     def run(self):
-        self.save_config(self.configs)
-        self.run_opt(True)
+        if self.cb.currentIndex() == 2:
+            # This will need to be updated when ftol is implemented
+            self.save_config(None)
+        else:
+            self.save_config(self.configs)
+        if self.run_opt:
+            # only run if given run_opt, otherwise just sets default
+            self.run_opt()
         self.close()
 
     def terminition_condition_changed(self, i):
@@ -175,6 +207,6 @@ class BadgerTerminationConditionDialog(QDialog):
         self.configs["tc_idx"] = i
 
     def closeEvent(self, event):
-        self.save_config(self.configs)
+        # self.save_config(self.configs)
 
         event.accept()

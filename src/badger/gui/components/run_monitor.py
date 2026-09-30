@@ -72,6 +72,11 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_run = pyqtSignal(bool)
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
+    sig_env_reset = pyqtSignal() # notify on reset complete
+    sig_vars_set = pyqtSignal() # notify var set complete
+
+    sig_paused = pyqtSignal(bool)  # Notify home_page that run has been paused to make sure GUI updates
+    sig_termination_reached = pyqtSignal(dict)  # run paused by a run-until condition
 
     def __init__(self, process_manager: "Optional[ProcessManager]" = None):
         super().__init__()
@@ -456,6 +461,13 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
         routine_runner.signals.sig_status.connect(self.sig_status.emit)
+        routine_runner.signals.sig_termination_reached.connect(
+                    lambda: self.set_paused(True)
+                )
+        routine_runner.signals.sig_termination_reached.connect(
+            self.sig_termination_reached.emit
+        )
+        routine_runner.signals.sig_pause_ack.connect(lambda: self.set_paused(True))
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
@@ -468,7 +480,6 @@ class BadgerOptMonitor(QWidget):
 
     def start(
         self,
-        use_termination_condition: bool = False,
         run_data_flag: bool = False,
         init_points_flag: bool = True,
     ) -> None:
@@ -477,9 +488,9 @@ class BadgerOptMonitor(QWidget):
         if not run_data_flag:
             self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
+        # routine runner initialized
         self.init_routine_runner()
-        if use_termination_condition:
-            self.routine_runner.set_termination_condition(self.termination_condition)
+        self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
         self.paused = False
         self.routine_runner.run(
@@ -490,6 +501,8 @@ class BadgerOptMonitor(QWidget):
 
     def save_termination_condition(self, tc) -> None:
         self.termination_condition = tc
+        if self.routine_runner: # will be None on startup
+            self.routine_runner.set_termination_condition(tc)
 
     def enable_auto_range(self) -> None:
         # Enable autorange
@@ -542,6 +555,9 @@ class BadgerOptMonitor(QWidget):
         self.check_critical()
 
     def update_status_with_tc(self):
+        if self.paused:
+            return
+
         termination_condition = self.routine_runner.active_tc
         if termination_condition:
             idx = self.termination_condition["tc_idx"]
@@ -753,9 +769,35 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(
         #     self, 'Success!', f'')
 
+    def set_paused(self, paused: bool) -> None:
+        """
+        Record the pause state of the run, and reflect on the GUI. This can be called either from
+        a GUI action or if the subprocess pauses after reaching a stopping condition.
+        """
+        self.paused = paused
+        if paused:
+            self.sig_status.emit(f"Routine {self.routine.name} paused")
+        self.sig_paused.emit(paused)
+
     def ctrl_routine(self, status) -> None:
-        self.paused = status
+        """Called from home_page to pause(True)/unpause(False) subprocess loop.
+
+        On pause, the GUI is not reflected as paused until the subprocess confirms
+        it has actually stopped (see sig_pause_ack), since it may still be mid-evaluation.
+        """
+        if not status:
+            self.set_paused(False)
         self.sig_pause.emit(status)
+        
+    def resume_with_extension(self) -> None:
+        """
+        Resume the active routine and extend the configured termination condition.
+        Updates the UI and calls routine_runner.resume_with_extension which
+        places the currently configured termination condition extension in
+        a queue to the subprocess to extend on resuming.
+        """
+        self.set_paused(False)
+        self.routine_runner.resume_with_extension()
 
     def ins_obj_dragged(self, ins_obj) -> None:
         self.inspector_variable.setValue(ins_obj.value())
