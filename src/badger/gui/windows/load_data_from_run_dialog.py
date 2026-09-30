@@ -7,7 +7,9 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -19,7 +21,6 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from pyqtgraph.Qt import QtCore, QtGui
-from xopt.vocs import VOCS
 
 from badger.archive import (
     get_base_run_filename,
@@ -57,15 +58,15 @@ class BadgerLoadDataFromRunDialog(QDialog):
     def __init__(
         self,
         parent: QWidget,
-        env_vocs: VOCS | None = None,
-        on_set: Callable[[Routine], None] | None = None,
+        env_vocs: VOCS,
+        on_set: Callable[[Routine], None],
     ):
         """
         Initialize the dialog.
 
         Args:
             parent (QWidget): The parent widget.
-            env_vocs (VOCS | None, optional): The environment VOCS object containing variable and objective names.
+            env_vocs (VOCS): The environment VOCS object containing variable and objective names.
             on_set (Callable[[Routine], None] | None, optional): Function to call when loading data.
 
         Attributes:
@@ -73,7 +74,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
             selected_routine (Optional[Routine]): The currently selected routine.
         """
         super().__init__(parent)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
 
         self.selected_routine = None
         self.env_vocs = env_vocs
@@ -147,7 +148,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         vbox.addWidget(content_widget)
         vbox.addWidget(button_set)
 
-    def preview_run(self, routine: Routine = None) -> None:
+    def preview_run(self, routine: Routine | None = None) -> None:
         """
         Add data to plot to preview the selected run.
         """
@@ -158,9 +159,6 @@ class BadgerLoadDataFromRunDialog(QDialog):
             self.selected_routine = routine = self.load_data(
                 get_base_run_filename(self.history_browser.currentText())
             )
-
-        if routine is None:
-            return
 
         # Configure plots
         curves_objective = self._configure_plot(
@@ -234,24 +232,24 @@ class BadgerLoadDataFromRunDialog(QDialog):
         except Exception as e:
             raise BadgerRoutineError(f"{e}") from e
 
-    def load_data(self, run_filename: str) -> None:
+    def load_data(self, run_filename: str) -> Routine | None:
         """
         Load data from the selected run.
 
         Returns:
-            Optional[Routine]: The loaded routine or None if loading fails.
+            Routine | None: The loaded routine or None if loading fails.
         """
         if not run_filename:
-            return
+            return None
         try:
             routine = load_run(run_filename)
             return routine
         except IndexError:
-            return
+            return None
         except Exception:  # noqa: BLE001 - run load boundary
-            return
+            return None
 
-    def init_plots(self) -> None:
+    def init_plots(self) -> pg.GraphicsLayoutWidget:
         """
         Initialize the plots for data preview. These are static plots styled to
         match the plots on the main GUI from BadgerOptMonitor
@@ -302,17 +300,17 @@ class BadgerLoadDataFromRunDialog(QDialog):
 
     def _configure_plot(
         self, plot_object: pg.PlotItem, names: list[str]
-    ) -> dict[str : pg.PlotCurveItem]:
+    ) -> dict[str, pg.PlotCurveItem]:
         """
         Configure the plot with the given data names.
         Adapted from BadgerOptMonitor._configure_plot
 
         Args:
             plot_object (pg.PlotItem): The plot object to configure.
-            names (List[str]): The names of the data series.
+            names (list[str]): The names of the data series.
 
         Returns:
-            dict: A dictionary mapping data names to plot curves.
+            dict[str, pg.PlotCurveItem]: A dictionary mapping data names to plot curves.
         """
         plot_object.clear()
         curves = {}
@@ -345,7 +343,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
         return curves
 
     def _set_plot_data(
-        self, names: list[str], curves: dict, data: pd.DataFrame
+        self, names: list[str], curves: dict[str, pg.PlotCurveItem], data: pd.DataFrame
     ) -> None:
         """
         Set data for the plot curves.
@@ -379,7 +377,7 @@ class BadgerLoadDataFromRunDialog(QDialog):
                 hist_x, not_live_data[name].to_numpy(dtype=np.double)
             )
 
-    def show_vocs_mismatch_dialog(self, list1: list[str], list2: list[str]):
+    def show_vocs_mismatch_dialog(self, list1: list[str], list2: list[str]) -> None:
         """
         Display a helpful dialog notifying the user that the data they are trying to load
         does not have the same variables and objectives as they have selected in the GUI.
@@ -398,8 +396,9 @@ class BadgerLoadDataFromRunDialog(QDialog):
         dialog.setStandardButtons(QMessageBox.Ok)
         dialog.exec_()
 
-    def cancel_changes(self):
+    def cancel_changes(self) -> None:
         self.close()
 
-    def closeEvent(self, event):
-        event.accept()
+    def closeEvent(self, event: QCloseEvent | None) -> None:
+        if event:
+            event.accept()

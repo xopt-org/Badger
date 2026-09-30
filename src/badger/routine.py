@@ -23,6 +23,7 @@ import pandas as pd
 # each time a Routine is created
 import xopt.generators.bayesian
 import xopt.generators.sequential  # noqa: F401
+from gest_api.vocs import VOCS
 from pandas import DataFrame
 from pydantic import (
     ConfigDict,
@@ -32,6 +33,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from xopt import Evaluator, Xopt
 from xopt.generators import get_generator
 from xopt.generators.sequential import SequentialGenerator
 from xopt.vocs import get_local_region
@@ -39,7 +41,6 @@ from xopt.vocs import get_local_region
 from badger.environment import BaseEnvironment, Environment, instantiate_env
 from badger.factory import get_env
 from badger.utils import curr_ts
-from xopt import VOCS, Evaluator, Xopt
 
 logger = logging.getLogger(__name__)
 
@@ -148,9 +149,7 @@ class Routine(Xopt):
                 point: dict[str, float],
             ) -> dict[str, float | list[float]]:
                 logger.debug(f"Evaluating point: {point}")
-                point = cast(
-                    dict[str, float], pd.Series(point).explode().to_dict()
-                )
+                point = cast(dict[str, float], pd.Series(point).explode().to_dict())
                 env.set_variables(point)
                 obs = env.get_observables(data["generator"].vocs.output_names)
                 ts = curr_ts()

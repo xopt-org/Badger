@@ -10,6 +10,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from badger.core_subprocess import run_routine_subprocess
 from badger.log import get_logging_manager
 from badger.settings import init_settings
+from badger.types import ArgumentQueueType
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +34,11 @@ class CreateProcess(QObject):
         """
         self.stop_event = Event()
         self.pause_event = Event()
-        self.args_queue = Queue()
-        self.data_queue = Queue()
+        self.args_queue: Queue[ArgumentQueueType] = Queue()
+        self.data_queue: Queue[dict[str, Any] | tuple[str, str]] = Queue()
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
-        self.dialog_action_queue: Queue[Any] = Queue()
+        self.dialog_action_queue: Queue[dict[str, str]] = Queue()
 
         config_instance = init_settings()._instance
         config_path = config_instance.config_path if config_instance else None

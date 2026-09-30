@@ -10,7 +10,6 @@ pause/resume and clean shutdown when the user hits stop.
 import logging
 import time
 import traceback
-from dataclasses import dataclass
 from multiprocessing import Process, Queue
 from multiprocessing.synchronize import Event
 from typing import Any, cast
@@ -39,24 +38,9 @@ from badger.gui.windows.termination_reached_dialog import (
 from badger.routine import Routine, calculate_initial_points, calculate_variable_bounds
 from badger.settings import init_settings
 from badger.tests.utils import get_current_vars
+from badger.types import ArgumentQueueType
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ArgumentDict:
-    routine_id: str | None
-    routine_filename: str | None
-    routine_name: str
-    variable_ranges: dict[str, Any]
-    initial_points: pd.DataFrame | None
-    evaluate: bool
-    archive: bool
-    termination_condition: dict[str, Any] | None
-    start_time: float
-    testing: bool
-    run_data: bool
-    init_points: bool
 
 
 class BadgerRoutineSignals(QObject):
@@ -213,7 +197,7 @@ class BadgerRoutineSubprocess:
             self.wait_event = process_with_args.wait_event
             self.dialog_action_queue = process_with_args.dialog_action_queue
 
-            arg_dict = ArgumentDict(
+            arg_dict = ArgumentQueueType(
                 routine_id=self.routine.id,
                 routine_filename=self.routine_filename,
                 routine_name=self.routine.name,

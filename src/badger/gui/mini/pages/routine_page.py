@@ -22,6 +22,7 @@ import pandas as pd
 import yaml
 from coolname import generate_slug
 from gest_api.vocs import (
+    BaseConstraint,
     BaseObjective,
     ContinuousVariable,
     GreaterThanConstraint,
@@ -105,7 +106,9 @@ def format_validation_error(e: ValidationError) -> str:
     return "\n".join(messages)
 
 
-def extract_constraint_symbol_and_value(constraint):
+def extract_constraint_symbol_and_value(
+    constraint: BaseConstraint,
+) -> tuple[str, float]:
     if isinstance(constraint, GreaterThanConstraint):
         return ">", constraint.value
     if isinstance(constraint, LessThanConstraint):
@@ -134,7 +137,7 @@ class BadgerRoutinePage(QWidget):
     sig_select_env = pyqtSignal(str)
     sig_status = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info("Initializing BadgerRoutinePage.")
         super().__init__()
 
@@ -179,7 +182,7 @@ class BadgerRoutinePage(QWidget):
         # 2: not initialized, 1: apply to all, 0: apply to only visible
         self.lim_apply_to_vars = 2
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         logger.info("Initializing UI for BadgerRoutinePage.")
         self.config_singleton = config_singleton = init_settings()
 
@@ -246,7 +249,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         logger.info("Configuring logic for BadgerRoutinePage.")
         # self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
@@ -303,7 +306,7 @@ class BadgerRoutinePage(QWidget):
         self.env_box.var_table.set_saved_values(values_by_name)
 
     def load_template_yaml(
-        self, checked_state=None, template_path: str | None = None
+        self, checked_state: bool | None = None, template_path: str | None = None
     ) -> None:
         logger.info("Loading template YAML.")
         """
@@ -344,7 +347,7 @@ class BadgerRoutinePage(QWidget):
             print(f"Error loading template: {e}")
             return
 
-    def set_options_from_template(self, template_dict: dict[str, Any]):
+    def set_options_from_template(self, template_dict: dict[str, Any]) -> None:
         logger.info(
             f"Setting options from template: {template_dict.get('name', 'unknown')}"
         )
@@ -668,7 +671,7 @@ class BadgerRoutinePage(QWidget):
 
         return generator_config
 
-    def save_template_yaml(self):
+    def save_template_yaml(self) -> None:
         logger.info("Saving routine as template YAML.")
         """
         Save the current routine as a template .yaml file

@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from badger.gui.components.process_manager import ProcessManager
-from badger.gui.components.routine_runner import ArgumentDict
+from badger.gui.components.routine_runner import ArgumentQueueType
 
 
 class TestCore:
@@ -88,7 +88,7 @@ class TestCore:
         routine_process = process_with_args.process
         evaluate_queue = process_with_args.evaluate_queue
 
-        arg_dict = ArgumentDict(
+        arg_dict = ArgumentQueueType(
             routine_id=self.routine.id,
             routine_filename=tmp_filename,
             routine_name=self.routine.name,

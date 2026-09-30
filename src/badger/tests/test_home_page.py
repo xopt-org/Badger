@@ -67,4 +67,4 @@ def test_home_page_run_routine(qtbot, init_multiprocessing):
         # assert we get the right result, ie. correct number of samples
         assert len(home_page.run_monitor.routine.data) == 3
 
-    main_page.process_manager.close_proccesses()
+    main_page.process_manager.close_processes()

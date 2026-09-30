@@ -30,7 +30,7 @@ class TestRoutineRunner:
 
         yield process_manager
 
-        process_manager.close_proccesses()
+        process_manager.close_processes()
 
     @pytest.fixture
     def instance(self, process_manager, init_multiprocessing):
@@ -170,4 +170,4 @@ class TestRoutineRunner:
 
         assert len(monitor.routine.data) == 2
 
-        window.process_manager.close_proccesses()
+        window.process_manager.close_processes()

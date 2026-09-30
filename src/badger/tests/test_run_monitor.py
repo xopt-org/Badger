@@ -32,7 +32,7 @@ class TestRunMonitor:
         process_builder.create_subprocess()
         yield process_manager
 
-        process_manager.close_proccesses()
+        process_manager.close_processes()
 
     @pytest.fixture
     def monitor(self, process_manager, init_multiprocessing):
@@ -400,7 +400,7 @@ class TestRunMonitor:
         # Check if the env has been reset
         curr_vars = get_current_vars(monitor.routine)
         assert np.all(curr_vars == init_vars)
-        window.process_manager.close_proccesses()
+        window.process_manager.close_processes()
 
     def test_dial_in_solution(self, qtbot, home_page):
         monitor = home_page.run_monitor

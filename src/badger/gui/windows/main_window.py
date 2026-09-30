@@ -6,11 +6,13 @@ import os
 from importlib import metadata
 
 from PyQt5.QtCore import QThread
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWidget
 
 from badger.gui.components.create_process import CreateProcess
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.pages.home_page import BadgerHomePage
+from badger.types import ProcessWithArgs
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class BadgerMainWindow(QMainWindow):
     def __init__(self) -> None:
         logger.info("Initializing BadgerMainWindow.")
         super().__init__()
-        self.thread_list = []
+        self.thread_list: list[QThread] = []
         self.process_manager = ProcessManager()
         self.process_manager.processQueueUpdated.connect(self.addSubprocess)
         self.addSubprocess()
@@ -32,19 +34,19 @@ class BadgerMainWindow(QMainWindow):
         Adds a subprocess to the subprocess queue.
         This method builds the subprocess on a QThread so as to not disrupt the main process.
         """
-        self.thread = QThread()
+        self._thread = QThread()
         self.worker = CreateProcess()
-        self.worker.moveToThread(self.thread)
+        self.worker.moveToThread(self._thread)
 
-        self.thread.started.connect(self.worker.create_subprocess)
+        self._thread.started.connect(self.worker.create_subprocess)
         self.worker.subprocess_prepared.connect(self.storeSubprocess)
-        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self._thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(self.cleanupThread)
+        self._thread.finished.connect(self._thread.deleteLater)
+        self._thread.finished.connect(self.cleanupThread)
 
-        self.thread_list.append(self.thread)
-        self.thread.start()
+        self.thread_list.append(self._thread)
+        self._thread.start()
 
     def cleanupThread(self) -> None:
         logger.info("Cleaning up finished thread.")
@@ -52,19 +54,20 @@ class BadgerMainWindow(QMainWindow):
         Method to remove threads no longer active from the thread list.
 
         Parameters:
-            thread: QThread
+            None
+        The thread to be cleaned up is inferred from the sender of the signal.
         """
         thread = self.sender()
         if thread in self.thread_list:
             self.thread_list.remove(thread)
 
-    def storeSubprocess(self, process_with_args: dict) -> None:
+    def storeSubprocess(self, process_with_args: ProcessWithArgs) -> None:
         logger.info(f"Storing prepared subprocess: {process_with_args}")
         """
         Store the prepared subprocess for later use.
 
         Parameters:
-            process_with_args: Dict
+            process_with_args: ProcessWithArgs
         """
         self.process_manager.add_to_queue(process_with_args)
 
@@ -105,7 +108,7 @@ class BadgerMainWindow(QMainWindow):
     def config_logic(self) -> None:
         logger.info("Configuring logic.")
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         logger.info("Main window close event triggered.")
         if (
             hasattr(self.home_page.routine_editor, "archive_search")
@@ -115,7 +118,7 @@ class BadgerMainWindow(QMainWindow):
 
         monitor = self.home_page.run_monitor
         if not monitor.running:
-            self.process_manager.close_proccesses()
+            self.process_manager.close_processes()
             monitor.destroy_unused_env()
             return
 
@@ -130,13 +133,14 @@ class BadgerMainWindow(QMainWindow):
 
         if reply == QMessageBox.Yes:
 
-            def close_window():
+            def close_window() -> None:
                 monitor.destroy_unused_env()
                 self.close()
 
             monitor.register_post_run_action(close_window)
             monitor.testing = True  # suppress the archive pop-ups
-            monitor.routine_runner.stop_routine()
-            event.ignore()
-        else:
+            if monitor.routine_runner is not None:
+                monitor.routine_runner.stop_routine()
+
+        if event is not None:
             event.ignore()

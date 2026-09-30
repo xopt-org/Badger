@@ -2,6 +2,10 @@
 when an optimization run should automatically stop — either after a maximum
 number of evaluations or after a maximum elapsed time."""
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
@@ -34,20 +38,37 @@ QPushButton
 """
 
 
+@dataclass
+class TerminationConditionConfig:
+    tc_idx: int
+    max_eval: int
+    max_time: float
+    ftol: float
+
+
 class BadgerTerminationConditionDialog(QDialog):
-    def __init__(self, parent, run_opt, save_config, configs=None):
+    def __init__(
+        self,
+        run_opt: Callable[[bool, bool], None],
+        save_config: Callable[[TerminationConditionConfig], None],
+        parent: QDialog | None = None,
+        configs: TerminationConditionConfig | None = None,
+    ):
         super().__init__(parent)
 
         self.run_opt = run_opt
         self.save_config = save_config
-        self.configs = configs
         if configs is None:
-            self.configs = {"tc_idx": 0, "max_eval": 42, "max_time": 600, "ftol": 0}
+            self.configs = TerminationConditionConfig(
+                tc_idx=0, max_eval=42, max_time=600, ftol=0
+            )
+        else:
+            self.configs = configs
 
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Optimization termination condition")
         self.setMinimumWidth(360)
 
@@ -69,7 +90,7 @@ class BadgerTerminationConditionDialog(QDialog):
                 # 'optimization converged',
             ]
         )
-        cb.setCurrentIndex(self.configs["tc_idx"])
+        cb.setCurrentIndex(self.configs.tc_idx)
 
         hbox.addWidget(lbl)
         hbox.addWidget(cb, 1)
@@ -87,7 +108,7 @@ class BadgerTerminationConditionDialog(QDialog):
         self.sb_max_eval = sb_max_eval = QSpinBox()
         sb_max_eval.setMinimum(1)
         sb_max_eval.setMaximum(100000)
-        sb_max_eval.setValue(self.configs["max_eval"])
+        sb_max_eval.setValue(self.configs.max_eval)
         sb_max_eval.setSingleStep(1)
         hbox_max_eval.addWidget(lbl)
         hbox_max_eval.addWidget(sb_max_eval, 1)
@@ -99,7 +120,7 @@ class BadgerTerminationConditionDialog(QDialog):
         self.sb_max_time = sb_max_time = QDoubleSpinBox()
         sb_max_time.setMinimum(0.0)
         sb_max_time.setMaximum(86400)
-        sb_max_time.setValue(self.configs["max_time"])
+        sb_max_time.setValue(self.configs.max_time)
         sb_max_time.setDecimals(2)
         sb_max_time.setSingleStep(0.1)
         hbox_max_time.addWidget(lbl)
@@ -112,7 +133,7 @@ class BadgerTerminationConditionDialog(QDialog):
         self.sb_tol = sb_tol = QDoubleSpinBox()
         sb_tol.setMinimum(0.0)
         sb_tol.setMaximum(1000)
-        sb_tol.setValue(self.configs["ftol"])
+        sb_tol.setValue(self.configs.ftol)
         sb_tol.setDecimals(6)
         sb_tol.setSingleStep(0.001)
         hbox_tol.addWidget(lbl)
@@ -122,7 +143,7 @@ class BadgerTerminationConditionDialog(QDialog):
         stacks.addWidget(max_time_config)
         stacks.addWidget(tol_config)
 
-        stacks.setCurrentIndex(self.configs["tc_idx"])
+        stacks.setCurrentIndex(self.configs.tc_idx)
         vbox_config.addWidget(stacks)
         vbox_config.addStretch(1)
 
@@ -143,35 +164,36 @@ class BadgerTerminationConditionDialog(QDialog):
         vbox.addWidget(group_config, 1)
         vbox.addWidget(button_set)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.cb.currentIndexChanged.connect(self.terminition_condition_changed)
-        self.btn_cancel.clicked.connect(self.close)
+        self.btn_cancel.clicked.connect(self.closeEvent)
         self.btn_run.clicked.connect(self.run)
         self.sb_max_eval.valueChanged.connect(self.max_eval_changed)
         self.sb_max_time.valueChanged.connect(self.max_time_changed)
         self.sb_tol.valueChanged.connect(self.ftol_changed)
 
-    def max_eval_changed(self, max_eval):
-        self.configs["max_eval"] = max_eval
+    def max_eval_changed(self, max_eval: int) -> None:
+        self.configs.max_eval = max_eval
 
-    def max_time_changed(self, max_time):
-        self.configs["max_time"] = max_time
+    def max_time_changed(self, max_time: float) -> None:
+        self.configs.max_time = max_time
 
-    def ftol_changed(self, ftol):
-        self.configs["ftol"] = ftol
+    def ftol_changed(self, ftol: float) -> None:
+        self.configs.ftol = ftol
 
-    def run(self):
+    def run(self) -> None:
         self.save_config(self.configs)
-        self.run_opt(True)
+        self.run_opt(True, False)
         self.close()
 
-    def terminition_condition_changed(self, i):
+    def terminition_condition_changed(self, i: int) -> None:
         self.stacks.setCurrentIndex(i)
 
         # Update configs
-        self.configs["tc_idx"] = i
+        self.configs.tc_idx = i
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         self.save_config(self.configs)
 
-        event.accept()
+        if event is not None:
+            event.accept()

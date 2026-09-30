@@ -40,7 +40,7 @@ class BadgerSettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         logger.info("Initializing BadgerSettingsDialog.")
         super().__init__(parent)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
 
         self.config_singleton = init_settings()
 

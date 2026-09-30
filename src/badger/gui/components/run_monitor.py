@@ -39,6 +39,7 @@ from badger.gui.components.extensions_palette import ExtensionsPalette
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
 from badger.gui.components.routine_runner import BadgerRoutineSubprocess
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.windows.terminition_condition_dialog import TerminationConditionConfig
 
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
 from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
@@ -488,7 +489,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 
-    def save_termination_condition(self, tc) -> None:
+    def save_termination_condition(self, tc: TerminationConditionConfig) -> None:
         self.termination_condition = tc
 
     def enable_auto_range(self) -> None:
@@ -659,6 +660,9 @@ class BadgerOptMonitor(QWidget):
         try:
             # TODO: fill in the states
             # TODO: replace self.testing with with another processes for having a testing mode
+            if self.routine is None:
+                raise ValueError("Routine is not set")
+
             if not self.testing:
                 run = archive_run(self.routine, states=self._states)
                 self.routine_runner.run_filename = run["filename"]
@@ -693,6 +697,8 @@ class BadgerOptMonitor(QWidget):
         # self.reset_routine_runner()
 
     def destroy_unused_env(self) -> None:
+        if self.routine is None:
+            raise ValueError("Routine is not set")
         if not self.running:
             try:
                 del self.routine_runner.routine.environment

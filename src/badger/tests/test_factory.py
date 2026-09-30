@@ -7,7 +7,7 @@ from xopt.resources.testing import TEST_VOCS_BASE
 
 
 class TestFactory:
-    def test_generator_generation(self):
+    def test_generator_generation(self) -> None:
         from badger.factory import list_generators
 
         generator_names = list_generators()

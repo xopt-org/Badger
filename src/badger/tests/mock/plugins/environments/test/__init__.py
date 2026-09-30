@@ -2,9 +2,9 @@ import time
 from typing import ClassVar
 
 import torch
-from badger.errors import BadgerNoInterfaceError
 
 from badger import environment
+from badger.errors import BadgerNoInterfaceError
 
 
 class Environment(environment.Environment):

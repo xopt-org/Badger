@@ -9,7 +9,7 @@ from badger.utils import get_yaml_string
 
 
 class BadgerReviewDialog(QDialog):
-    def __init__(self, parent, routine: Routine):
+    def __init__(self, routine: Routine, parent: QDialog | None = None):
         super().__init__(parent)
 
         self.routine = routine
@@ -17,7 +17,7 @@ class BadgerReviewDialog(QDialog):
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         name = self.routine.name
         self.setWindowTitle(f"Review routine {name}")
 
@@ -31,5 +31,5 @@ class BadgerReviewDialog(QDialog):
         vbox.addWidget(brow_routine)
         vbox.addWidget(btn_ok)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_ok.accepted.connect(self.accept)

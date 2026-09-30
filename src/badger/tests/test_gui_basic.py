@@ -13,7 +13,7 @@ def init_multiprocessing() -> None:
     multiprocessing.set_start_method("fork", force=True)
 
 
-def test_gui_main(qtbot: QtBot, init_multiprocessing):
+def test_gui_main(qtbot: QtBot, init_multiprocessing) -> None:
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_path_issues
 
@@ -37,10 +37,10 @@ def test_gui_main(qtbot: QtBot, init_multiprocessing):
     # TODO: Test if generator tab has been filled
     # assert window.stacks.currentWidget().tabs.currentIndex() == 1
 
-    window.process_manager.close_proccesses()
+    window.process_manager.close_processes()
 
 
-def test_close_main(qtbot, init_multiprocessing):
+def test_close_main(qtbot, init_multiprocessing) -> None:
     from badger.archive import save_tmp_run
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
@@ -77,10 +77,10 @@ def test_close_main(qtbot, init_multiprocessing):
     with pytest.raises(AttributeError):
         _ = home_page.run_monitor.routine.environment
 
-    window.process_manager.close_proccesses()
+    window.process_manager.close_processes()
 
 
-def test_traceback_during_run(qtbot: QtBot) -> None:
+def test_traceback_during_run(qtbot: QtBot, init_multiprocessing) -> None:
     with patch("badger.core.run_routine") as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
@@ -129,7 +129,7 @@ def test_traceback_during_run(qtbot: QtBot) -> None:
         while home_page.run_monitor.running:
             qtbot.wait(100)
 
-        window.process_manager.close_proccesses()
+        window.process_manager.close_processes()
 
 
 def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
@@ -154,10 +154,10 @@ def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
     # Grab queue and process from the process manager
     process_with_args = window.process_manager.remove_from_queue()
     assert process_with_args is not None
-    runner.data_and_error_queue = process_with_args["data_queue"]
-    runner.dialog_action_queue = process_with_args["dialog_action_queue"]
-    runner.evaluate_queue = process_with_args["evaluate_queue"]
-    runner.routine_process = process_with_args["process"]
+    runner.data_and_error_queue = process_with_args.data_queue
+    runner.dialog_action_queue = process_with_args.dialog_action_queue
+    runner.evaluate_queue = process_with_args.evaluate_queue
+    runner.routine_process = process_with_args.process
 
     with patch(
         "badger.gui.windows.measurement_retry_dialog.BadgerMeasurementRetryDialog.exec_",
@@ -187,9 +187,9 @@ def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
             "action": "retry",
         }
 
-    window.process_manager.close_proccesses()
-    process_with_args["process"].terminate()
-    process_with_args["process"].join()
+    window.process_manager.close_processes()
+    process_with_args.process.terminate()
+    process_with_args.process.join()
 
 
 # TODO: Check the use_low_noise_prior parameter in the routine
@@ -232,7 +232,7 @@ def test_default_low_noise_prior_in_bo(qtbot: QtBot) -> None:
             else:  # that part of params is hidden so we need to dig deeper
                 pass
 
-    window.process_manager.close_proccesses()
+    window.process_manager.close_processes()
 
 
 # TODO: Fix default turbo in bo test
