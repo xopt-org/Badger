@@ -3,7 +3,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from xopt import VOCS
+from gest_api.vocs import VOCS
 from xopt.generators import RandomGenerator
 from xopt.generators.bayesian import UpperConfidenceBoundGenerator
 

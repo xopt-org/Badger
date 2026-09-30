@@ -7,6 +7,7 @@ import pytest
 
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.components.routine_runner import ArgumentQueueType
+from badger.types import TerminationConditionConfig
 
 
 class TestCore:
@@ -60,9 +61,8 @@ class TestCore:
 
         self.points_eval_target = pd.DataFrame(data_eval_target)
 
-    def test_run_routine_subprocess(
-        self, process_manager: ProcessManager, init_multiprocessing: None
-    ) -> None:
+    @pytest.mark.usefixtures("init_multiprocessing")
+    def test_run_routine_subprocess(self, process_manager: ProcessManager) -> None:
         """
         A unit test to ensure the core functionality
         of run_routine_xopt is functioning as intended.
@@ -76,10 +76,10 @@ class TestCore:
         self.routine = create_routine()
         time.sleep(1)
         tmp_filename = save_tmp_run(self.routine)
-        self.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 3,
-        }
+        self.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=3,
+        )
         process_with_args = process_manager.remove_from_queue()
         assert process_with_args is not None
         pause_event = process_with_args.pause_event

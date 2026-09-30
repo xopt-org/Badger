@@ -22,6 +22,7 @@ import pandas as pd
 import yaml
 from coolname import generate_slug
 from gest_api.vocs import (
+    VOCS,
     BaseConstraint,
     BaseObjective,
     ContinuousVariable,
@@ -45,7 +46,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt import VOCS
 from xopt.generators import (
     all_generator_names,
     get_generator_defaults,
@@ -706,7 +706,7 @@ class BadgerRoutinePage(QWidget):
             logger.error(f"Error saving template: {e}")
             return
 
-    def refresh_ui(self, routine: Routine | None = None, silent: bool = False):
+    def refresh_ui(self, routine: Routine | None = None, silent: bool = False) -> None:
         logger.info(
             f"Refreshing UI for routine: {getattr(routine, 'name', None)} (silent={silent})"
         )

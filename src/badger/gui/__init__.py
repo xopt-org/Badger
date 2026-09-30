@@ -60,7 +60,7 @@ def on_timeout() -> None:
 
 
 def error_handler(
-    etype: type[BaseException], value: BaseException, tb: TracebackType
+    etype: type[BaseException], value: BaseException, tb: TracebackType | None
 ) -> NoReturn:
     """
     Custom exception handler that formats uncaught exceptions and raises a BadgerError.

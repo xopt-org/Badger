@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
 
 
-def test_routine_page_init(qtbot: QtBot):
+def test_routine_page_init(qtbot: QtBot) -> None:
     from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
@@ -21,7 +21,7 @@ def test_routine_page_init(qtbot: QtBot):
     qtbot.addWidget(window)
 
 
-def test_set_routine(qtbot: QtBot):
+def test_set_routine(qtbot: QtBot) -> None:
     from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.tests.utils import create_routine
 
@@ -31,7 +31,7 @@ def test_set_routine(qtbot: QtBot):
     window.set_routine(routine)
 
 
-def test_routine_generation(qtbot: QtBot):
+def test_routine_generation(qtbot: QtBot) -> None:
     from badger.errors import BadgerRoutineError
 
     # test if a simple routine can be created
@@ -79,7 +79,7 @@ def test_routine_generation(qtbot: QtBot):
     assert routine.xopt_version == get_xopt_version()
 
 
-def test_add_additional_vars(qtbot: QtBot):
+def test_add_additional_vars(qtbot: QtBot) -> None:
     from badger.gui.components.routine_page import BadgerRoutinePage
 
     window = BadgerRoutinePage()
@@ -122,7 +122,7 @@ def test_add_additional_vars(qtbot: QtBot):
     assert window.env_box.var_table.rowCount() == n_rows + 1
 
 
-def test_initial_points(qtbot: QtBot):
+def test_initial_points(qtbot: QtBot) -> None:
     # test to make sure initial points widget works properly
     from badger.gui.components.routine_page import BadgerRoutinePage
 
@@ -151,7 +151,7 @@ def test_initial_points(qtbot: QtBot):
     )
 
 
-def test_ui_update(qtbot: QtBot):
+def test_ui_update(qtbot: QtBot) -> None:
     # test to make sure initial points widget works properly
     from badger.gui.components.routine_page import BadgerRoutinePage
     from badger.tests.utils import create_routine
@@ -183,7 +183,7 @@ def test_ui_update(qtbot: QtBot):
     assert actual_params == expected_params
 
 
-def test_constraints(qtbot: QtBot):
+def test_constraints(qtbot: QtBot) -> None:
     # test if a simple routine can be created
     from badger.gui.components.routine_page import BadgerRoutinePage
 
@@ -206,7 +206,7 @@ def test_constraints(qtbot: QtBot):
     assert routine.critical_constraint_names == ["c"]
 
 
-def test_observables(qtbot: QtBot):
+def test_observables(qtbot: QtBot) -> None:
     # test if a simple routine can be created
     from badger.gui.components.routine_page import BadgerRoutinePage
 
@@ -228,7 +228,7 @@ def test_observables(qtbot: QtBot):
     assert routine.vocs.observables == {"c": Observable(dtype=None)}
 
 
-def test_add_random_points(qtbot: QtBot):
+def test_add_random_points(qtbot: QtBot) -> None:
     # test to add random points to initial points table
     from badger.gui.components.routine_page import BadgerRoutinePage
 
@@ -269,28 +269,28 @@ def test_add_random_points(qtbot: QtBot):
 
 # TODO: Test if the EI, Simplex, and RCDS params show o the params editor
 # are the simplified versions
-def test_simplified_generator_params(qtbot: QtBot):
+def test_simplified_generator_params(qtbot: QtBot) -> None:
     pass
 
 
 # TODO: First load an old routine w/ initail points,
 # then create a new routine and check if the initial points panel
 # is cleared
-def test_initial_points_clear_when_create_routine(qtbot: QtBot):
+def test_initial_points_clear_when_create_routine(qtbot: QtBot) -> None:
     pass
 
 
 # TODO: Test if env selector reacts to scroll events, it should not
-def test_scroll_on_environment_selector(qtbot: QtBot):
+def test_scroll_on_environment_selector(qtbot: QtBot) -> None:
     pass
 
 
 # TODO: Test if generator selector reacts to scroll events, it should not
-def test_scroll_on_generator_selector(qtbot: QtBot):
+def test_scroll_on_generator_selector(qtbot: QtBot) -> None:
     pass
 
 
 # TODO: Test relative to current behavior, including the auto calculated
 # bounds and initial points wrt the current variable values
-def test_relative_to_current(qtbot: QtBot):
+def test_relative_to_current(qtbot: QtBot) -> None:
     pass

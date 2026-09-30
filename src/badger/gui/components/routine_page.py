@@ -39,6 +39,7 @@ import pandas as pd
 import yaml
 from coolname import generate_slug
 from gest_api.vocs import (
+    VOCS,
     BaseConstraint,
     BaseObjective,
     ContinuousVariable,
@@ -64,7 +65,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt import VOCS
 from xopt.generators import (
     all_generator_names,
     get_generator_defaults,

@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from PyQt5.QtCore import QEventLoop, QTimer
+from PyQt5.QtGui import QShowEvent
 from PyQt5.QtWidgets import QDialog
 from pytestqt.qtbot import QtBot
 
@@ -13,7 +14,8 @@ def init_multiprocessing() -> None:
     multiprocessing.set_start_method("fork", force=True)
 
 
-def test_gui_main(qtbot: QtBot, init_multiprocessing) -> None:
+@pytest.mark.usefixtures("init_multiprocessing")
+def test_gui_main(qtbot: QtBot) -> None:
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_path_issues
 
@@ -40,10 +42,12 @@ def test_gui_main(qtbot: QtBot, init_multiprocessing) -> None:
     window.process_manager.close_processes()
 
 
-def test_close_main(qtbot, init_multiprocessing) -> None:
+@pytest.mark.usefixtures("init_multiprocessing")
+def test_close_main(qtbot: QtBot) -> None:
     from badger.archive import save_tmp_run
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
+    from badger.types import TerminationConditionConfig
 
     fix_path_issues()
 
@@ -61,10 +65,10 @@ def test_close_main(qtbot, init_multiprocessing) -> None:
     tmp_filename = save_tmp_run(routine)
     home_page.run_monitor.testing = True
     home_page.run_monitor.routine_filename = tmp_filename
-    home_page.run_monitor.termination_condition = {
-        "tc_idx": 0,
-        "max_eval": 3,
-    }
+    home_page.run_monitor.termination_condition = TerminationConditionConfig(
+        tc_idx=0,
+        max_eval=3,
+    )
     home_page.go_run(-1)
     home_page.run_monitor.start(True)
 
@@ -73,6 +77,9 @@ def test_close_main(qtbot, init_multiprocessing) -> None:
     loop.exec_()
 
     window.close()  # this action should release the env
+
+    assert home_page.run_monitor.routine is not None
+
     # So we expect an AttributeError here
     with pytest.raises(AttributeError):
         _ = home_page.run_monitor.routine.environment
@@ -80,13 +87,15 @@ def test_close_main(qtbot, init_multiprocessing) -> None:
     window.process_manager.close_processes()
 
 
-def test_traceback_during_run(qtbot: QtBot, init_multiprocessing) -> None:
+@pytest.mark.usefixtures("init_multiprocessing")
+def test_traceback_during_run(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
     with patch("badger.core.run_routine") as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
         from badger.gui.windows.main_window import BadgerMainWindow
         from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
         from badger.tests.utils import create_routine, fix_path_issues
+        from badger.types import TerminationConditionConfig
 
         fix_path_issues()
 
@@ -102,27 +111,26 @@ def test_traceback_during_run(qtbot: QtBot, init_multiprocessing) -> None:
         home_page = window.home_page
         home_page.current_routine = routine
         home_page.run_monitor.testing = True
-        home_page.run_monitor.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 3,
-        }
+        home_page.run_monitor.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=3,
+        )
         home_page.go_run(-1)
 
-        # Function to replace the original showEvent
-        def patched_showEvent(original_showEvent):
-            def inner(ins, event):
-                original_showEvent(ins, event)  # Call the original showEvent
+        # Patch showEvent to auto-accept the traceback dialog when it appears.
+        original_show_event = BadgerScrollableMessageBox.showEvent
 
-                assert ins  # make sure the dialog is created
-                assert ins.detailedTextWidget.toPlainText()  # make sure it's not empty
+        def patched_show_event(
+            ins: BadgerScrollableMessageBox, event: QShowEvent | None
+        ) -> None:
+            original_show_event(ins, event)  # Call the original showEvent
 
-                QTimer.singleShot(100, ins.accept)  # Close the dialog after 100 ms
+            assert ins  # make sure the dialog is created
+            assert ins.detailedTextWidget.toPlainText()  # make sure it's not empty
 
-            return inner
+            QTimer.singleShot(100, ins.accept)  # Close the dialog after 100 ms
 
-        BadgerScrollableMessageBox.showEvent = patched_showEvent(
-            BadgerScrollableMessageBox.showEvent
-        )
+        monkeypatch.setattr(BadgerScrollableMessageBox, "showEvent", patched_show_event)
 
         home_page.run_monitor.start(True)
         # Wait until the run is done
@@ -135,6 +143,11 @@ def test_traceback_during_run(qtbot: QtBot, init_multiprocessing) -> None:
 def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
+    from badger.types import (
+        MeasurementActionMessage,
+        MeasurementErrorMessage,
+        TerminationConditionConfig,
+    )
 
     fix_path_issues()
     window = BadgerMainWindow()
@@ -147,9 +160,14 @@ def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
     routine = create_routine()
     home_page = window.home_page
     home_page.current_routine = routine
+    home_page.run_monitor.termination_condition = TerminationConditionConfig(
+        tc_idx=0,
+        max_eval=3,
+    )
     home_page.go_run(-1)
     home_page.run_monitor.init_routine_runner()
     runner = home_page.run_monitor.routine_runner
+    assert runner is not None
 
     # Grab queue and process from the process manager
     process_with_args = window.process_manager.remove_from_queue()
@@ -164,11 +182,10 @@ def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
         return_value=QDialog.Accepted,
     ) as exec_mock:
         runner.data_and_error_queue.put(
-            {
-                "type": "measurement_error",
-                "title": "Injected measurement error",
-                "traceback": "traceback details",
-            }
+            MeasurementErrorMessage(
+                title="Injected measurement error",
+                traceback="traceback details",
+            )
         )
 
         # Wait up to 1 second in 10 for queue to receive the error.
@@ -182,10 +199,7 @@ def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
 
         exec_mock.assert_called_once()
         response = runner.dialog_action_queue.get(timeout=1)
-        assert response == {
-            "type": "measurement_action",
-            "action": "retry",
-        }
+        assert response == MeasurementActionMessage(action="retry")
 
     window.process_manager.close_processes()
     process_with_args.process.terminate()

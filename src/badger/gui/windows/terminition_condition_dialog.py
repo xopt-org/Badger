@@ -3,7 +3,6 @@ when an optimization run should automatically stop — either after a maximum
 number of evaluations or after a maximum elapsed time."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
 
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
@@ -21,6 +20,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from badger.types import TerminationConditionConfig
+
 stylesheet_run = """
 QPushButton:hover:pressed
 {
@@ -36,14 +37,6 @@ QPushButton
     color: #000000;
 }
 """
-
-
-@dataclass
-class TerminationConditionConfig:
-    tc_idx: int
-    max_eval: int
-    max_time: float
-    ftol: float
 
 
 class BadgerTerminationConditionDialog(QDialog):

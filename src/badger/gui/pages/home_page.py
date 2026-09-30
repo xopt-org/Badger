@@ -15,9 +15,10 @@ import logging
 import os
 import traceback
 from importlib import resources
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import numpy as np
+from gest_api.vocs import VOCS
 from pandas import DataFrame
 from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 from PyQt5.QtGui import QIcon, QKeySequence
@@ -48,6 +49,7 @@ from badger.gui.components.data_table import (
     update_table,
 )
 from badger.gui.components.navigators import HistoryNavigator, TemplateNavigator
+from badger.gui.components.process_manager import ProcessManager
 from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.gui.components.run_monitor import BadgerOptMonitor
 from badger.gui.components.status_bar import BadgerStatusBar
@@ -58,13 +60,9 @@ from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
+from badger.routine import Routine
 from badger.settings import init_settings
 from badger.utils import get_header
-
-if TYPE_CHECKING:
-    from badger.gui.components.process_manager import ProcessManager
-    from badger.routine import VOCS
-
 
 logger = logging.getLogger(__name__)
 
@@ -88,14 +86,14 @@ class BadgerHomePage(QWidget):
     sig_routine_activated = pyqtSignal(bool)
     sig_routine_invalid = pyqtSignal()
 
-    def __init__(self, process_manager: "ProcessManager | None" = None):
+    def __init__(self, process_manager: ProcessManager):
         logger.info("Initializing BadgerHomePage.")
         super().__init__()
 
         self.mode = "regular"  # home page mode
         self.splitter_state = None  # store the run splitter state
         self.process_manager = process_manager
-        self.current_routine = None  # current routine
+        self.current_routine: Routine | None = None  # current routine
         self.go_run_failed = False  # flag to indicate go_run failed
         self.init_ui()
         self.config_logic()
@@ -131,7 +129,7 @@ class BadgerHomePage(QWidget):
         template_browser.setFixedWidth(360)
 
         # Splitter
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
 
@@ -161,7 +159,7 @@ class BadgerHomePage(QWidget):
             font-weight: bold;
             padding: 4px;
         """)
-        title_label.setAlignment(Qt.AlignCenter)  # Center-align the title
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center-align the title
         vbox_table.addWidget(title_label, 0)
         self.run_table = run_table = data_table()
         run_table.set_uneditable()  # should not be editable
@@ -187,12 +185,12 @@ class BadgerHomePage(QWidget):
         vbox_run.setContentsMargins(0, 0, 0, 0)
         vbox_run.setSpacing(0)
 
-        splitter_run = QSplitter(Qt.Horizontal)
+        splitter_run = QSplitter(Qt.Orientation.Horizontal)
         splitter_run.setStretchFactor(0, 1)
         splitter_run.setStretchFactor(1, 1)
         vbox_run.addWidget(splitter_run, 1)
 
-        splitter_data = QSplitter(Qt.Vertical)
+        splitter_data = QSplitter(Qt.Orientation.Vertical)
         splitter_data.setStretchFactor(0, 1)
         splitter_data.setStretchFactor(1, 0)
         splitter_data.addWidget(panel_monitor)
@@ -462,12 +460,12 @@ class BadgerHomePage(QWidget):
 
         # Notify user that data has been added to the routine
         dialog = QMessageBox(
-            text=str(
-                "Data loaded into routine for the following VOCS:\n\n"
-                + f"{list(data_keys)}\n\n"
-                + "Click OK to continue!"
-            ),
             parent=self,
+        )
+        dialog.setText(
+            "Data loaded into routine for the following VOCS:\n\n"
+            + f"{list(data_keys)}\n\n"
+            + "Click OK to continue!"
         )
         dialog.setIcon(QMessageBox.Information)
         dialog.setWindowTitle("Data added to routine")

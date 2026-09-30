@@ -1,20 +1,20 @@
 class TestDB:
     def test_save_routine(self) -> None:
         from badger.db import remove_routine, save_routine
-        from badger.tests.utils import create_routine, fix_db_path_issue
+        from badger.tests.utils import create_routine, fix_path_issues
 
-        fix_db_path_issue()
+        fix_path_issues()
 
         routine = create_routine()
         save_routine(routine)
 
         remove_routine(routine.id)
 
-    def test_load_routine(self):
+    def test_load_routine(self) -> None:
         from badger.db import load_routine, remove_routine, save_routine
-        from badger.tests.utils import create_routine, fix_db_path_issue
+        from badger.tests.utils import create_routine, fix_path_issues
 
-        fix_db_path_issue()
+        fix_path_issues()
 
         routine = create_routine()
         save_routine(routine)

@@ -21,12 +21,8 @@ from PyQt5.QtWidgets import QDialog
 from badger.errors import (
     MEASUREMENT_ACTION_ABORT,
     MEASUREMENT_ACTION_RETRY,
-    MEASUREMENT_ACTION_TYPE,
-    MEASUREMENT_ERROR_TYPE,
     TERMINATION_ACTION_CONTINUE,
     TERMINATION_ACTION_END,
-    TERMINATION_ACTION_TYPE,
-    TERMINATION_REACHED_TYPE,
     BadgerError,
     BadgerRunTerminated,
 )
@@ -38,7 +34,15 @@ from badger.gui.windows.termination_reached_dialog import (
 from badger.routine import Routine, calculate_initial_points, calculate_variable_bounds
 from badger.settings import init_settings
 from badger.tests.utils import get_current_vars
-from badger.types import ArgumentQueueType
+from badger.types import (
+    ArgumentQueueType,
+    DataQueueMessage,
+    MeasurementActionMessage,
+    MeasurementErrorMessage,
+    TerminationActionMessage,
+    TerminationConditionConfig,
+    TerminationReachedMessage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +97,14 @@ class BadgerRoutineSubprocess:
         self.save = save
         self.verbose = verbose
         self.use_full_ts = use_full_ts
-        self.termination_condition: dict[str, Any] | None = (
+        self.termination_condition: TerminationConditionConfig | None = (
             None  # additional option to control the optimization flow
         )
         self.start_time: float | None = None  # track the time cost of the run
         self.last_dump_time: float | None = (
             None  # track the time the run data got dumped
         )
-        self.data_and_error_queue: Queue[dict[str, Any] | tuple[str, str]] | None = None
+        self.data_and_error_queue: Queue[DataQueueMessage] | None = None
         self.stop_event: Event | None = None
         self.pause_event: Event | None = None
         self.routine_process: Process | None = None
@@ -109,14 +113,16 @@ class BadgerRoutineSubprocess:
         self.testing = testing
         self.config_singleton = init_settings()
 
-    def set_termination_condition(self, termination_condition: dict[str, Any]) -> None:
+    def set_termination_condition(
+        self, termination_condition: TerminationConditionConfig
+    ) -> None:
         logger.info(f"Setting termination condition: {termination_condition}")
         """
         Setter method for the termination condition.
 
         Parameters
         ----------
-        termination_condition : dict
+        termination_condition : TerminationConditionConfig
         """
         self.termination_condition = termination_condition
 
@@ -296,28 +302,18 @@ class BadgerRoutineSubprocess:
         if not self.data_and_error_queue.empty():
             try:
                 msg = self.data_and_error_queue.get()
-                if isinstance(msg, dict) and msg.get("type") == MEASUREMENT_ERROR_TYPE:
+                if isinstance(msg, MeasurementErrorMessage):
                     action = self.handle_measurement_error(msg)
                     self.dialog_action_queue.put(
-                        {
-                            "type": MEASUREMENT_ACTION_TYPE,
-                            "action": action,
-                        }
+                        MeasurementActionMessage(action=action)
                     )
-                elif (
-                    isinstance(msg, dict)
-                    and msg.get("type") == TERMINATION_REACHED_TYPE
-                ):
+                elif isinstance(msg, TerminationReachedMessage):
                     action = self.handle_termination_reached(msg)
                     self.dialog_action_queue.put(
-                        {
-                            "type": TERMINATION_ACTION_TYPE,
-                            "action": action,
-                        }
+                        TerminationActionMessage(action=action)
                     )
                 else:
-                    error_title, error_traceback = msg
-                    BadgerError(error_title, error_traceback)
+                    BadgerError(msg.title, msg.traceback)
             except ValueError:  # seems to only occur in tests
                 pass
 
@@ -325,29 +321,29 @@ class BadgerRoutineSubprocess:
             self.close()
             self.evaluate_queue[1].close()
 
-    def handle_measurement_error(self, msg: dict[str, Any]) -> str:
+    def handle_measurement_error(self, msg: MeasurementErrorMessage) -> str:
         dialog = BadgerMeasurementRetryDialog(
-            text=msg.get("title", "Measurement failed."),
-            detailedText=msg.get("traceback", ""),
+            text=msg.title,
+            detailedText=msg.traceback,
         )
         result = dialog.exec_()
-        if result == QDialog.Accepted:
+        if result == QDialog.DialogCode.Accepted:
             return MEASUREMENT_ACTION_RETRY
         return MEASUREMENT_ACTION_ABORT
 
-    def handle_termination_reached(self, msg: dict[str, Any]) -> str:
+    def handle_termination_reached(self, msg: TerminationReachedMessage) -> str:
         # update status
-        tc_condition = cast(dict[str, Any], msg.get("tc_condition"))
+        tc_condition = msg.tc_condition
         status_str = self._format_tc_status_str(tc_condition)
         self.signals.sig_status.emit(status_str)
 
         # launch dialog
         dialog = BadgerTerminationReachedDialog(
             tc_condition=tc_condition,
-            text=msg.get("title", ""),
+            text=msg.title,
         )
         result = dialog.exec_()
-        if result == QDialog.Accepted:
+        if result == QDialog.DialogCode.Accepted:
             if self.routine is not None:
                 self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             return TERMINATION_ACTION_CONTINUE

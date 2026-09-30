@@ -18,11 +18,6 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-
-# Import xopt.generators at startup so they don't need to be imported
-# each time a Routine is created
-import xopt.generators.bayesian
-import xopt.generators.sequential  # noqa: F401
 from gest_api.vocs import VOCS
 from pandas import DataFrame
 from pydantic import (

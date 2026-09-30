@@ -31,12 +31,8 @@ from xopt.vocs import select_best
 from badger.errors import (
     MEASUREMENT_ACTION_ABORT,
     MEASUREMENT_ACTION_RETRY,
-    MEASUREMENT_ACTION_TYPE,
-    MEASUREMENT_ERROR_TYPE,
     TERMINATION_ACTION_CONTINUE,
     TERMINATION_ACTION_END,
-    TERMINATION_ACTION_TYPE,
-    TERMINATION_REACHED_TYPE,
     BadgerEnvObsError,
     BadgerRunTerminated,
 )
@@ -48,24 +44,26 @@ from badger.settings import (
     apply_pytorch_multiprocess_tensor_sharing_setting,
     init_settings,
 )
-from badger.types import ArgumentQueueType
+from badger.types import (
+    ArgumentQueueType,
+    DataQueueMessage,
+    DialogActionMessage,
+    MeasurementActionMessage,
+    MeasurementErrorMessage,
+    RoutineErrorMessage,
+    TerminationActionMessage,
+    TerminationReachedMessage,
+)
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ErrorQueueType:
-    type: str
-    title: str
-    traceback: str
 
 
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
-    queue: mp.Queue[ErrorQueueType],
+    data_and_error_queue: mp.Queue[DataQueueMessage],
     stop_process: Event,
-    dialog_action_queue: mp.Queue[Any],
+    dialog_action_queue: mp.Queue[DialogActionMessage],
 ) -> DataFrame:
     while True:
         try:
@@ -74,9 +72,8 @@ def evaluate_measurement_with_retry(
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
             logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
-            queue.put(
-                ErrorQueueType(
-                    type=MEASUREMENT_ERROR_TYPE,
+            data_and_error_queue.put(
+                MeasurementErrorMessage(
                     title=error_title,
                     traceback=error_traceback,
                 )
@@ -93,13 +90,11 @@ def evaluate_measurement_with_retry(
                 except Empty:
                     continue
 
-                if (
-                    isinstance(msg, dict)
-                    and msg.get("type") == MEASUREMENT_ACTION_TYPE
-                    and msg.get("action")
-                    in [MEASUREMENT_ACTION_RETRY, MEASUREMENT_ACTION_ABORT]
-                ):
-                    if msg["action"] == MEASUREMENT_ACTION_RETRY:
+                if isinstance(msg, MeasurementActionMessage) and msg.action in [
+                    MEASUREMENT_ACTION_RETRY,
+                    MEASUREMENT_ACTION_ABORT,
+                ]:
+                    if msg.action == MEASUREMENT_ACTION_RETRY:
                         break
                     raise BadgerRunTerminated(
                         f"Run terminated after measurement error: {error_title}"
@@ -113,18 +108,16 @@ class TerminationCondition:
 
 
 def pause_for_termination_dialog_action(
-    queue: mp.Queue[ErrorQueueType],
+    data_and_error_queue: mp.Queue[DataQueueMessage],
     stop_process: Event,
     pause_process: Event,
-    dialog_action_queue: mp.Queue[Any],
+    dialog_action_queue: mp.Queue[DialogActionMessage],
     tc_condition: TerminationCondition,
 ) -> None:
     """Pause the run and wait for user action when run-until condition is reached."""
-    queue.put(
-        ErrorQueueType(
-            type=TERMINATION_REACHED_TYPE,
-            title="Termination condition reached",
-            traceback=str(tc_condition.condition),
+    data_and_error_queue.put(
+        TerminationReachedMessage(
+            tc_condition={"type": tc_condition.type, **tc_condition.condition},
         )
     )
 
@@ -139,13 +132,11 @@ def pause_for_termination_dialog_action(
         except Empty:
             continue
 
-        if (
-            isinstance(msg, dict)
-            and msg.get("type") == TERMINATION_ACTION_TYPE
-            and msg.get("action")
-            in [TERMINATION_ACTION_CONTINUE, TERMINATION_ACTION_END]
-        ):
-            if msg["action"] == TERMINATION_ACTION_CONTINUE:
+        if isinstance(msg, TerminationActionMessage) and msg.action in [
+            TERMINATION_ACTION_CONTINUE,
+            TERMINATION_ACTION_END,
+        ]:
+            if msg.action == TERMINATION_ACTION_CONTINUE:
                 pause_process.set()
                 return
 
@@ -209,12 +200,12 @@ def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
 
 def run_routine_subprocess(
     args_queue: mp.Queue[ArgumentQueueType],
-    queue: mp.Queue[ErrorQueueType],
+    data_and_error_queue: mp.Queue[DataQueueMessage],
     evaluate_queue: tuple[Connection, Connection],
     stop_process: Event,
     pause_process: Event,
     wait_event: Event,
-    dialog_action_queue: mp.Queue[dict[str, str]],
+    dialog_action_queue: mp.Queue[DialogActionMessage],
     config_path: str | None = None,
     log_queue: mp.Queue[logging.LogRecord] | None = None,
 ) -> None:
@@ -223,15 +214,15 @@ def run_routine_subprocess(
 
     Parameters
     ----------
-    queue: mp.Queue[ErrorQueueType] | None = None
     args_queue: mp.Queue[ArgumentQueueType],
+    data_and_error_queue: mp.Queue[DataQueueMessage],
     evaluate_queue: tuple[Connection, Connection],
     stop_process: Event,
     pause_process: Event,
     wait_event: Event,
+    dialog_action_queue: mp.Queue[DialogActionMessage],
     config_path: str | None = None,
     log_queue: mp.Queue[logging.LogRecord] | None = None,
-    dialog_action_queue: mp.Queue[dict[str, str]] | None = None,
     """
     # Setup logging for this subprocess
     if log_queue is not None:
@@ -280,7 +271,7 @@ def run_routine_subprocess(
             routine.environment.variables.update(routine.vrange_hard_limit)
 
         # Reset data if run_data option is False
-        if not args["run_data"] and routine.data is not None:
+        if not args.run_data and routine.data is not None:
             logger.info("Resetting routine data")
             routine.data = routine.data.iloc[0:0]  # reset the data
 
@@ -288,10 +279,8 @@ def run_routine_subprocess(
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
         logger.error(f"Error initializing routine: {error_title}\n{error_traceback}")
-        queue.put(
-            ErrorQueueType(
-                type="InitializationError", title=error_title, traceback=error_traceback
-            )
+        data_and_error_queue.put(
+            RoutineErrorMessage(title=error_title, traceback=error_traceback)
         )
         raise
 
@@ -351,20 +340,23 @@ def run_routine_subprocess(
         # initial sampling
         if args.init_points:
             logger.info("Evaluating initial points...")
-            for _, ele in initial_points.iterrows():
-                logger.debug(f"Evaluating initial point: {ele.to_dict()}")
-                result = evaluate_measurement_with_retry(
-                    routine,
-                    ele.to_dict(),
-                    queue,
-                    stop_process,
-                    dialog_action_queue,
-                )
-                solution = convert_to_solution(result, routine)
-                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-                if evaluate:
-                    time.sleep(0.1)  # give it some break tp catch up
-                    evaluate_queue[0].send((routine.data, routine.generator))
+            if initial_points is None or initial_points.empty:
+                logger.info("No initial points provided.")
+            else:
+                for _, ele in initial_points.iterrows():
+                    logger.debug(f"Evaluating initial point: {ele.to_dict()}")
+                    result = evaluate_measurement_with_retry(
+                        routine,
+                        ele.to_dict(),
+                        data_and_error_queue,
+                        stop_process,
+                        dialog_action_queue,
+                    )
+                    solution = convert_to_solution(result, routine)
+                    opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                    if evaluate:
+                        time.sleep(0.1)  # give it some break tp catch up
+                        evaluate_queue[0].send((routine.data, routine.generator))
 
         logger.info("Starting optimization loop...")
         while True:
@@ -379,9 +371,9 @@ def run_routine_subprocess(
 
             if termination_condition and start_time:
                 tc_config = termination_condition
-                idx = tc_config["tc_idx"]
+                idx = tc_config.tc_idx
                 if idx == 0:
-                    max_eval = tc_config["max_eval"]
+                    max_eval = tc_config.max_eval
                     if routine.data is not None:
                         if "live" in routine.data.columns:
                             # Only count number of live data points
@@ -410,7 +402,7 @@ def run_routine_subprocess(
                         )
 
                         pause_for_termination_dialog_action(
-                            queue=queue,
+                            data_and_error_queue=data_and_error_queue,
                             stop_process=stop_process,
                             pause_process=pause_process,
                             dialog_action_queue=dialog_action_queue,
@@ -420,7 +412,7 @@ def run_routine_subprocess(
                         termination_condition = None
                         continue
                 elif idx == 1:
-                    max_time = tc_config["max_time"]
+                    max_time = tc_config.max_time
                     dt = time.time() - start_time
                     logger.debug(f"Checking max_time termination: {dt} >= {max_time}")
                     if dt >= max_time:
@@ -429,7 +421,7 @@ def run_routine_subprocess(
                         )
                         pause_process.clear()
                         pause_for_termination_dialog_action(
-                            queue=queue,
+                            data_and_error_queue=data_and_error_queue,
                             stop_process=stop_process,
                             pause_process=pause_process,
                             dialog_action_queue=dialog_action_queue,
@@ -460,7 +452,11 @@ def run_routine_subprocess(
                 pause_process.wait()
 
             result = evaluate_measurement_with_retry(
-                routine, candidates, queue, stop_process, dialog_action_queue
+                routine,
+                candidates,
+                data_and_error_queue,
+                stop_process,
+                dialog_action_queue,
             )
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
@@ -483,7 +479,9 @@ def run_routine_subprocess(
         logger.error(f"XoptError during optimization: {e}")
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         error_title = "BadgerEnvObsError: There was an error getting observables from the environment. See the traceback for more details."
-        queue.put((error_title, traceback.format_exc()))
+        data_and_error_queue.put(
+            RoutineErrorMessage(title=error_title, traceback=traceback.format_exc())
+        )
         evaluate_queue[0].close()
         raise BadgerEnvObsError(e)
     except Exception as e:
@@ -493,6 +491,8 @@ def run_routine_subprocess(
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
-        queue.put((error_title, error_traceback))
+        data_and_error_queue.put(
+            RoutineErrorMessage(title=error_title, traceback=error_traceback)
+        )
         evaluate_queue[0].close()
         raise

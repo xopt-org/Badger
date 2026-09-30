@@ -2,7 +2,7 @@
 docs access, and the extensions palette launcher."""
 
 from importlib import resources
-from typing import Any, cast
+from typing import cast
 
 from PyQt5.QtCore import QEvent, QPoint, QSize, pyqtSignal
 from PyQt5.QtGui import QFont, QHelpEvent, QIcon
@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
 
 from badger.gui.utils import create_button
 from badger.gui.windows.docs_window import BadgerDocsWindow
+from badger.types import TerminationConditionConfig
 
 
 class SplitTooltipToolButton(QToolButton):
@@ -467,15 +468,14 @@ class BadgerActionBar(QWidget):
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
 
-    def update_run_tooltip(self, tc: dict[str, Any] | None = None) -> None:
-        """Update btn_stop tooltip: tc dict for run-until mode, or None."""
+    def update_run_tooltip(self, tc: TerminationConditionConfig | None = None) -> None:
+        """Update btn_stop tooltip: tc config for run-until mode, or None."""
         if tc is None:
             self.run_action.setToolTip("Run")
         else:
-            tc_idx = tc.get("tc_idx", 0)
-            if tc_idx == 0:
-                tip = f"Run until: n iterations = {tc.get('max_eval')}"
-            elif tc_idx == 1:
-                tip = f"Run until: timeout = {tc.get('max_time')}s"
+            if tc.tc_idx == 0:
+                tip = f"Run until: n iterations = {tc.max_eval}"
+            elif tc.tc_idx == 1:
+                tip = f"Run until: timeout = {tc.max_time}s"
             self.run_until_action.setToolTip(tip)
             self.run_until_menu_action.setToolTip(tip)

@@ -1,5 +1,6 @@
 import multiprocessing
 import warnings
+from collections.abc import Generator
 from unittest.mock import patch
 
 import numpy as np
@@ -8,11 +9,19 @@ from PyQt5.QtCore import QEventLoop, QPointF, Qt, QTimer
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtTest import QSignalSpy
 from PyQt5.QtWidgets import QApplication, QMessageBox
+from pytest_mock import MockerFixture
+from pytestqt.qtbot import QtBot
+
+from badger.gui.components.process_manager import ProcessManager
+from badger.gui.components.run_monitor import BadgerOptMonitor
+from badger.gui.pages.home_page import BadgerHomePage
+from badger.gui.windows.main_window import BadgerMainWindow
+from badger.types import TerminationConditionConfig
 
 
 class TestRunMonitor:
     @pytest.fixture(scope="session")
-    def init_multiprocessing(self):
+    def init_multiprocessing(self) -> None:
         # Use 'spawn' on Windows, 'fork' on Unix-like systems
         method = (
             "spawn"
@@ -22,9 +31,8 @@ class TestRunMonitor:
         multiprocessing.set_start_method(method, force=True)
 
     @pytest.fixture
-    def process_manager(self):
+    def process_manager(self) -> Generator[ProcessManager, None, None]:
         from badger.gui.components.create_process import CreateProcess
-        from badger.gui.components.process_manager import ProcessManager
 
         process_manager = ProcessManager()
         process_builder = CreateProcess()
@@ -35,9 +43,10 @@ class TestRunMonitor:
         process_manager.close_processes()
 
     @pytest.fixture
-    def monitor(self, process_manager, init_multiprocessing):
+    def monitor(
+        self, process_manager: ProcessManager, init_multiprocessing
+    ) -> BadgerOptMonitor:
         from badger.archive import save_tmp_run
-        from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
         routine = create_routine()
@@ -50,9 +59,8 @@ class TestRunMonitor:
         return monitor
 
     @pytest.fixture
-    def home_page(self, process_manager):
+    def home_page(self, process_manager: ProcessManager) -> BadgerHomePage:
         from badger.archive import save_tmp_run
-        from badger.gui.pages.home_page import BadgerHomePage
         from badger.tests.utils import create_routine
 
         routine = create_routine()
@@ -68,9 +76,8 @@ class TestRunMonitor:
         return home
 
     @pytest.fixture
-    def home_page_critical(self, process_manager):
+    def home_page_critical(self, process_manager: ProcessManager) -> BadgerHomePage:
         from badger.archive import save_tmp_run
-        from badger.gui.pages.home_page import BadgerHomePage
         from badger.tests.utils import create_routine_critical
 
         routine = create_routine_critical()
@@ -85,13 +92,13 @@ class TestRunMonitor:
 
         return home
 
-    def add_data(self, monitor):
+    def add_data(self, monitor: BadgerOptMonitor) -> None:
         monitor.routine.random_evaluate(10)
         monitor.init_plots(monitor.routine)
 
         assert len(monitor.routine.data) == 10
 
-    def test_run_monitor(self, process_manager):
+    def test_run_monitor(self, process_manager: ProcessManager) -> None:
         from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
@@ -123,18 +130,20 @@ class TestRunMonitor:
 
         # set up run monitor and test it
         monitor.init_routine_runner()
-        monitor.routine_runner.set_termination_condition({"tc_idx": 0, "max_eval": 2})
+        monitor.routine_runner.set_termination_condition(
+            TerminationConditionConfig(tc_idx=0, max_eval=2)
+        )
         spy = QSignalSpy(monitor.routine_runner.signals.progress)
         assert spy.isValid()
         monitor.start()
 
-    def test_routine_identity(self, home_page):
+    def test_routine_identity(self, home_page: BadgerHomePage) -> None:
         monitor = home_page.run_monitor
         monitor.init_routine_runner()
 
         assert monitor.routine_runner.routine == monitor.routine
 
-    def test_plotting(self, qtbot, monitor):
+    def test_plotting(self, qtbot: QtBot, monitor: BadgerOptMonitor) -> None:
         self.add_data(monitor)
         monitor.update_curves()
 
@@ -150,7 +159,9 @@ class TestRunMonitor:
         monitor.x_plot_y_axis = 1
         monitor.update_curves()
 
-    def test_click_graph(self, qtbot, monitor, mocker):
+    def test_click_graph(
+        self, qtbot: QtBot, monitor: BadgerOptMonitor, mocker: MockerFixture
+    ) -> None:
         self.add_data(monitor)
         sig_inspect_spy = QSignalSpy(monitor.sig_inspect)
         monitor.plot_x_axis = True
@@ -165,7 +176,9 @@ class TestRunMonitor:
         assert new_variable_value != orginal_value
         assert len(sig_inspect_spy) == 1
 
-    def create_test_run_monitor(self, process_manager, add_data=True):
+    def create_test_run_monitor(
+        self, process_manager: ProcessManager, add_data: bool = True
+    ) -> BadgerOptMonitor:
         from badger.gui.components.run_monitor import BadgerOptMonitor
         from badger.tests.utils import create_routine
 
@@ -182,7 +195,9 @@ class TestRunMonitor:
 
         return monitor
 
-    def test_x_axis_specification(self, qtbot, monitor, mocker):
+    def test_x_axis_specification(
+        self, qtbot: QtBot, monitor: BadgerOptMonitor, mocker: MockerFixture
+    ) -> None:
         # check iteration/time drop down menu
         self.add_data(monitor)
 
@@ -242,11 +257,13 @@ class TestRunMonitor:
         monitor.cb_plot_x.setCurrentIndex(1)
         assert current_index == monitor.inspector_variable.value()
 
-    def test_y_axis_specification(self, qtbot, monitor):
-        monitor.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 10,
-        }
+    def test_y_axis_specification(
+        self, qtbot: QtBot, monitor: BadgerOptMonitor
+    ) -> None:
+        monitor.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=10,
+        )
         monitor.start(True)
 
         # Wait until the run is done
@@ -284,14 +301,14 @@ class TestRunMonitor:
         normalized_raw_value = monitor.curves_variable["x0"].getData()[1][index]
         assert normalized_raw_value == 0.75
 
-    def test_pause_play(self, qtbot, home_page):
+    def test_pause_play(self, qtbot: QtBot, home_page: BadgerHomePage) -> None:
         monitor = home_page.run_monitor
         action_bar = home_page.run_action_bar
 
-        monitor.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 10,
-        }
+        monitor.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=10,
+        )
         spy = QSignalSpy(monitor.sig_pause)
 
         monitor.start(True)
@@ -308,7 +325,7 @@ class TestRunMonitor:
         while monitor.running:
             qtbot.wait(100)
 
-    def test_jump_to_optimum(self, qtbot, home_page):
+    def test_jump_to_optimum(self, qtbot: QtBot, home_page: BadgerHomePage) -> None:
         monitor = home_page.run_monitor
         action_bar = home_page.run_action_bar
 
@@ -330,9 +347,10 @@ class TestRunMonitor:
         # Check if it is going to be the optimal solution
         assert max_value == optimal_value
 
-    def test_reset_environment(self, qtbot, init_multiprocessing):
+    def test_reset_environment(
+        self, qtbot: QtBot, init_multiprocessing, home_page: BadgerHomePage
+    ) -> None:
         from badger.archive import save_tmp_run
-        from badger.gui.windows.main_window import BadgerMainWindow
         from badger.tests.utils import (
             create_routine,
             get_current_vars,
@@ -358,10 +376,10 @@ class TestRunMonitor:
         # check if reset button click signal is trigged and if state is same as original state after click
         init_vars = get_current_vars(routine)
 
-        monitor.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 10,
-        }
+        monitor.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=10,
+        )
         home_page.go_run(-1)
         monitor.start(True)
 

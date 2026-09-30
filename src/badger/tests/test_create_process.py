@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import sys
+from dataclasses import fields
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -41,9 +42,9 @@ def test_create_subprocess_emits_signals(
         assert blocker_finished.signal_triggered
         mock_process.assert_called_once()
 
-        # Verify that the emitted object contains the expected keys
+        # Verify that the emitted object exposes the expected attributes
         emitted_args = blocker_subprocess_prepared.args[0]
-        assert set(emitted_args.keys()) == {
+        assert {f.name for f in fields(emitted_args)} == {
             "process",
             "args_queue",
             "stop_event",
@@ -54,10 +55,10 @@ def test_create_subprocess_emits_signals(
             "dialog_action_queue",
         }
 
-        assert isinstance(emitted_args["args_queue"], mp.queues.Queue)
-        assert isinstance(emitted_args["data_queue"], mp.queues.Queue)
-        assert isinstance(emitted_args["dialog_action_queue"], mp.queues.Queue)
-        assert isinstance(emitted_args["evaluate_queue"], tuple)
-        assert isinstance(emitted_args["wait_event"], mp.synchronize.Event)
-        assert isinstance(emitted_args["stop_event"], mp.synchronize.Event)
-        assert isinstance(emitted_args["pause_event"], mp.synchronize.Event)
+        assert isinstance(emitted_args.args_queue, mp.queues.Queue)
+        assert isinstance(emitted_args.data_queue, mp.queues.Queue)
+        assert isinstance(emitted_args.dialog_action_queue, mp.queues.Queue)
+        assert isinstance(emitted_args.evaluate_queue, tuple)
+        assert isinstance(emitted_args.wait_event, mp.synchronize.Event)
+        assert isinstance(emitted_args.stop_event, mp.synchronize.Event)
+        assert isinstance(emitted_args.pause_event, mp.synchronize.Event)

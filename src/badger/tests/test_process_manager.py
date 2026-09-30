@@ -1,15 +1,18 @@
 import pytest
+from pytestqt.qtbot import QtBot
+
+from badger.gui.components.process_manager import ProcessManager
 
 
 @pytest.fixture
-def process_manager():
+def process_manager() -> ProcessManager:
     from badger.gui.components.process_manager import ProcessManager
 
     return ProcessManager()
 
 
 class TestProcessManager:
-    def test_add_to_queue(self, process_manager):
+    def test_add_to_queue(self, process_manager: ProcessManager) -> None:
         """
         Test that a process can be added to the queue.
         """
@@ -18,7 +21,9 @@ class TestProcessManager:
         assert len(process_manager.processes_queue) == 1
         assert process_manager.processes_queue[0] == process_with_args
 
-    def test_remove_from_queue(self, process_manager, qtbot):
+    def test_remove_from_queue(
+        self, process_manager: ProcessManager, qtbot: QtBot
+    ) -> None:
         """
         Test that a process can be removed from the queue and the correct process is returned.
         """

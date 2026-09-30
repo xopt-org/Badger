@@ -469,4 +469,4 @@ def _round_bounds_inward(
 
     lower = _round_to_sigfig(float(bounds[0]), sigfigs, mode="ceil")
     upper = _round_to_sigfig(float(bounds[1]), sigfigs, mode="floor")
-    return [lower, upper]
+    return lower, upper

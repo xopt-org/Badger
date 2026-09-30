@@ -132,3 +132,6 @@ TERMINATION_REACHED_TYPE = "termination_reached"
 TERMINATION_ACTION_TYPE = "termination_action"
 TERMINATION_ACTION_CONTINUE = "continue"
 TERMINATION_ACTION_END = "end"
+
+# Type tag for fatal errors that end a run, sent from subprocess to routine runner.
+ROUTINE_ERROR_TYPE = "routine_error"

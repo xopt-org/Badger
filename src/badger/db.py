@@ -95,7 +95,7 @@ def ensure_runs_db_exists(func: Callable[P, T]) -> Callable[P, T]:
     return func_safe
 
 
-def filter_routines(records, tags):
+def filter_routines(records: list[tuple], tags: dict) -> list[tuple]:
     records_filtered = []
     for record in records:
         try:
@@ -108,7 +108,7 @@ def filter_routines(records, tags):
     return records_filtered
 
 
-def extract_metadata(records):
+def extract_metadata(records: list[tuple]) -> tuple[list[str], list[str]]:
     env_list = []
     descr_list = []
     for record in records:
@@ -226,7 +226,7 @@ def load_routine(id: str) -> tuple[Routine, Any]:
 
 
 @ensure_routines_db_exists
-def list_routine(keyword="", tags: dict[str, str] | None = None):
+def list_routine(keyword: str = "", tags: dict[str, str] | None = None) -> list[tuple]:
     if tags is None:
         tags = {}
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
@@ -318,7 +318,7 @@ def list_routine(keyword="", tags: dict[str, str] | None = None):
 
 
 @ensure_runs_db_exists
-def save_run(run: dict[str, Any]) -> int:
+def save_run(run: dict[str, Any]) -> int | None:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run, timeout=30.0)
@@ -334,6 +334,8 @@ def save_run(run: dict[str, Any]) -> int:
     # Check if the record exist (same filename)
     cur.execute("select id from run where filename = ?", (run_filename,))
     existing_row = cur.fetchone()
+
+    rid: int | None = None
 
     if existing_row:
         cur.execute(
@@ -355,7 +357,7 @@ def save_run(run: dict[str, Any]) -> int:
 
 
 @ensure_runs_db_exists
-def get_runs_by_routine(routine_id: str):
+def get_runs_by_routine(routine_id: str) -> list[str]:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -373,7 +375,7 @@ def get_runs_by_routine(routine_id: str):
 
 
 @ensure_runs_db_exists
-def get_runs():
+def get_runs() -> list[str]:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -390,7 +392,7 @@ def get_runs():
 
 
 @ensure_runs_db_exists
-def remove_run_by_filename(filename):
+def remove_run_by_filename(filename: str) -> None:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -403,7 +405,7 @@ def remove_run_by_filename(filename):
 
 
 @ensure_runs_db_exists
-def remove_run_by_id(rid):
+def remove_run_by_id(rid: int) -> None:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -415,7 +417,7 @@ def remove_run_by_id(rid):
     con.close()
 
 
-def import_routines(filename):
+def import_routines(filename: str) -> None:
     con = sqlite3.connect(filename)
     cur = con.cursor()
 
@@ -447,7 +449,7 @@ def import_routines(filename):
         raise BadgerDBError(get_yaml_string(failed_list))
 
 
-def export_routines(filename, routine_id_list):
+def export_routines(filename: str, routine_id_list: list[str]) -> None:
     con = sqlite3.connect(filename)
     cur = con.cursor()
 

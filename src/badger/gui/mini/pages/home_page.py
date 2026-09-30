@@ -54,6 +54,7 @@ from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
 from badger.settings import init_settings
+from badger.types import TerminationConditionConfig
 from badger.utils import get_header
 
 logger = logging.getLogger(__name__)
@@ -299,7 +300,9 @@ class BadgerHomePage(QWidget):
             self.run_action_bar.run_until_action
         )
         # configure default to max_eval (tc_idx=0), 50 iterations
-        initial_tc = {"tc_idx": 0, "max_eval": 100, "max_time": 300, "ftol": 0}
+        initial_tc = TerminationConditionConfig(
+            tc_idx=0, max_eval=100, max_time=300, ftol=0
+        )
         self.run_monitor.save_termination_condition(initial_tc)
         self.run_action_bar.update_run_tooltip(initial_tc)
 

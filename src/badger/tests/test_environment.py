@@ -7,6 +7,7 @@ import pytest
 
 from badger.environment import BaseEnvironment, Environment
 from badger.errors import BadgerEnvVarError, BadgerNoInterfaceError
+from badger.factory import BadgerPluginConfig
 from badger.interface import Interface
 
 # TEST_VOCS_BASE replacement for testing
@@ -413,7 +414,7 @@ class TestEnvironment:
 
         original_get_intf = getattr(badger.factory, "get_intf", None)
 
-        def mock_get_intf(name):
+        def mock_get_intf(name: str) -> tuple[Mock, BadgerPluginConfig]:
             mock_interface_class = Mock()
             mock_interface_class.return_value = Mock(spec=Interface)
             return mock_interface_class, {}
