@@ -562,6 +562,10 @@ class BadgerHomePage(QWidget):
         run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points
 
+        if self.routine_editor.env_box.relative_to_curr.isChecked():
+            # update initial points before initializing routine
+            self.routine_editor.update_init_table()
+
         if run_data_flag:
             data_to_load = self.data_panel.get_data()  # Get data from data_panel
             self.prepare_run(

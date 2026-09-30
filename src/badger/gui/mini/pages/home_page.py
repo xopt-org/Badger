@@ -661,6 +661,7 @@ class BadgerHomePage(QWidget):
         if run_data_flag:
             init_points_flag = False
 
+        self.routine_editor.update_init_table()  # update initial points before prepare run
         if run_data_flag:
             data_to_load = self.load_data_from_run()
             self.prepare_run(
