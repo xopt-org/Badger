@@ -94,6 +94,9 @@ class BadgerRoutineSubprocess:
         )
         self.active_tc = None
         self.start_time = None  # track the time cost of the run
+        self.last_resume_time = (
+            None  # track when the run was last (re)started for display
+        )
         self.last_dump_time = None  # track the time the run data got dumped
         self.data_and_error_queue = None
         self.stop_event = None
@@ -125,6 +128,7 @@ class BadgerRoutineSubprocess:
 
         logger.info("Starting routine run.")
         self.start_time = time.time()
+        self.last_resume_time = self.start_time
         self.last_dump_time = None  # reset the timer
 
         # Patch for converting dtype str to torch object
@@ -372,7 +376,9 @@ class BadgerRoutineSubprocess:
         """
         if pause:
             self.pause_event.clear()
+            # Subprocess will pause at the start of its next iteration when it checks pause_event
         else:
+            self.last_resume_time = time.time()  # record time of resume for display
             self.signals.sig_status.emit(f"Running routine {self.routine.name}...")
             self.pause_event.set()
 

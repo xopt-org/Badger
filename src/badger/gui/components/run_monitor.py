@@ -9,6 +9,7 @@ finishes, it archives the data and hands results off to analysis extensions
 
 import logging
 import os
+import time
 import traceback
 from importlib import resources
 from typing import TYPE_CHECKING, List, Optional
@@ -569,13 +570,23 @@ class BadgerOptMonitor(QWidget):
                 data = self.routine.data
                 if data is not None:
                     if "live" in data.columns:
-                        # Only count number of live data points
-                        count = sum(1 for live_val in data["live"] if live_val == 1)
+                        # Display total count, including previous data (match run monitor)
+                        add_count = sum(1 for live_val in data["live"] if live_val == 0)
+                        count = len(data)
+                        max_eval += add_count
                     else:
                         count = len(data)
                 if not self.paused:
                     self.sig_status.emit(
                         f"Running routine {self.routine.name}...   [{count}/{max_eval}]"
+                    )
+            elif idx == 1:
+                # display time remaining after last resume
+                max_time = self.termination_condition["max_time"]
+                elapsed = time.time() - self.routine_runner.last_resume_time
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{elapsed:.1f}/{max_time:.1f} s]"
                     )
         else:
             self.sig_status.emit(f"Running routine {self.routine.name}...")
