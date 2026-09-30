@@ -265,18 +265,26 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_toggle_other.connect(self.run_action_bar.toggle_other)
         self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
         self.run_monitor.sig_env_ready.connect(self.update_saved_values_from_monitor)
+        # The following signal notifies that run_monitor has paused
+        self.run_monitor.sig_paused.connect(self.reflect_pause_state)
+        # Connect var set complete signals from monitor to run_controller restart_override_flag
+        self.run_monitor.sig_env_reset.connect(
+            self.run_controller.set_restart_override_flag
+        )
+        self.run_monitor.sig_vars_set.connect(
+            self.run_controller.set_restart_override_flag
+        )
 
         self.run_action_bar.sig_start.connect(self.start_run)
         self.run_action_bar.sig_start_until.connect(self.start_run_until)
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)
-        self.run_action_bar.sig_reset_env.connect(self.run_monitor.reset_env)
+        self.run_action_bar.sig_reset_env.connect(
+            self.run_monitor.reset_env
+        )  # on complete, emits sig_env_reset
         self.run_action_bar.sig_reset_env.connect(
             self.routine_editor.env_box.var_table.refresh_current_values
-        )
-        self.run_action_bar.sig_reset_env.connect(
-            self.run_controller.set_restart_override_flag
         )
         self.run_action_bar.sig_save_checkpoint.connect(
             self.run_monitor.save_checkpoint
@@ -290,11 +298,13 @@ class BadgerHomePage(QWidget):
         self.run_action_bar.sig_jump_to_optimal.connect(
             self.run_monitor.jump_to_optimal
         )
-        self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
+        self.run_action_bar.sig_dial_in.connect(
+            self.run_monitor.set_vars
+        )  # on complete, emits sig_vars_set
         self.run_action_bar.sig_dial_in.connect(
             self.routine_editor.env_box.var_table.refresh_current_values
         )
-        self.run_action_bar.sig_dial_in.connect(
+        self.run_action_bar.sig_flag_restart.connect(
             self.run_controller.set_restart_override_flag
         )
         self.run_action_bar.sig_smart_run_ctrl.connect(self.smart_run_with_data)
@@ -561,16 +571,14 @@ class BadgerHomePage(QWidget):
             dlg.exec()
         finally:
             self.tc_dialog = None
-        self.run_action_bar.update_run_tooltip(
-            self.run_monitor.termination_condition
-        )
+        self.run_action_bar.update_run_tooltip(self.run_monitor.termination_condition)
 
     def termination_updated(self, tc: dict):
         self.run_action_bar.update_run_tooltip(tc)
 
     def prepare_run(self, data=None, init_points_flag=True):
         """
-        Prepares the run by composing the routine, validating data if present, 
+        Prepares the run by composing the routine, validating data if present,
         saving created routine to a yaml file, and passing the routine to
         the run monitor to initialize plots.
 

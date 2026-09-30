@@ -44,7 +44,9 @@ class BadgerRoutineSignals(QObject):
     states = pyqtSignal(str)
     sig_status = pyqtSignal(str)  # status message information
     sig_termination_reached = pyqtSignal(dict)  # tc condition that paused the run
-    sig_pause_ack = pyqtSignal()  # subprocess has actually stopped after a pause request
+    sig_pause_ack = (
+        pyqtSignal()
+    )  # subprocess has actually stopped after a pause request
 
 
 class BadgerRoutineSubprocess:
@@ -384,7 +386,7 @@ class BadgerRoutineSubprocess:
             }
         )
 
-        self.ctrl_routine(False) # unpause
+        self.ctrl_routine(False)  # unpause
 
     def close(self) -> None:
         logger.info("Closing routine subprocess and stopping timer.")

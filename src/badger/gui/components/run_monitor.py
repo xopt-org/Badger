@@ -72,10 +72,12 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_run = pyqtSignal(bool)
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
-    sig_env_reset = pyqtSignal() # notify on reset complete
-    sig_vars_set = pyqtSignal() # notify var set complete
+    sig_env_reset = pyqtSignal()  # notify on reset complete
+    sig_vars_set = pyqtSignal()  # notify var set complete
 
-    sig_paused = pyqtSignal(bool)  # Notify home_page that run has been paused to make sure GUI updates
+    sig_paused = pyqtSignal(
+        bool
+    )  # Notify home_page that run has been paused to make sure GUI updates
     sig_termination_reached = pyqtSignal(dict)  # run paused by a run-until condition
 
     def __init__(self, process_manager: "Optional[ProcessManager]" = None):
@@ -446,6 +448,7 @@ class BadgerOptMonitor(QWidget):
     def init_routine_runner(self) -> None:
         self.reset_routine_runner()
 
+        # init routine runner
         self.routine_runner = routine_runner = BadgerRoutineSubprocess(
             self.process_manager,
             self.routine,
@@ -462,8 +465,8 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.states.connect(self.states)
         routine_runner.signals.sig_status.connect(self.sig_status.emit)
         routine_runner.signals.sig_termination_reached.connect(
-                    lambda: self.set_paused(True)
-                )
+            lambda: self.set_paused(True)
+        )
         routine_runner.signals.sig_termination_reached.connect(
             self.sig_termination_reached.emit
         )
@@ -501,7 +504,7 @@ class BadgerOptMonitor(QWidget):
 
     def save_termination_condition(self, tc) -> None:
         self.termination_condition = tc
-        if self.routine_runner: # will be None on startup
+        if self.routine_runner:  # will be None on startup
             self.routine_runner.set_termination_condition(tc)
 
     def enable_auto_range(self) -> None:
@@ -690,7 +693,6 @@ class BadgerOptMonitor(QWidget):
     def routine_finished(self) -> None:
         self.running = False
         self.paused = False
-        self.sig_routine_finished.emit()
 
         self.sig_lock.emit(False)
 
@@ -728,7 +730,8 @@ class BadgerOptMonitor(QWidget):
             for action in self.post_run_actions:
                 action()
 
-        # self.reset_routine_runner()
+        # emit sig_routine_finished after archiving run data
+        self.sig_routine_finished.emit()
 
     def destroy_unused_env(self) -> None:
         if not self.running:
@@ -788,7 +791,7 @@ class BadgerOptMonitor(QWidget):
         if not status:
             self.set_paused(False)
         self.sig_pause.emit(status)
-        
+
     def resume_with_extension(self) -> None:
         """
         Resume the active routine and extend the configured termination condition.
@@ -885,6 +888,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
         )
+        self.sig_env_reset.emit()  # notify reset complete
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
@@ -1052,6 +1056,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
         )
+        self.sig_vars_set.emit()
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
 
