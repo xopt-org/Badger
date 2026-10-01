@@ -1,7 +1,11 @@
 """Panel for viewing and managing pre-loaded optimization data. Lets
 users load data from archived runs or clear the buffer before starting."""
 
+import logging
+from typing import overload
+
 import pandas as pd
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -13,7 +17,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.gui.components.data_table import (
     TableWithCopy,
@@ -26,6 +29,8 @@ from badger.gui.windows.load_data_from_run_dialog import (
     BadgerLoadDataFromRunDialog,
 )
 from badger.routine import Routine
+
+logger = logging.getLogger(__name__)
 
 LABEL_WIDTH = 96
 
@@ -45,9 +50,8 @@ stylesheet_no_data = """
 
 
 class BadgerDataPanel(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self.parent = parent
 
         # Set up ui
         self.init_ui()
@@ -55,11 +59,17 @@ class BadgerDataPanel(QWidget):
         # DataFrame to keep track of data in table including metadata
         self.table_data = pd.DataFrame()
 
-        self.selected_routine = None  # Keeps track of VOCS in displayed data
-        self.env_vocs = None  # Keeps track of selected VOCS from environment tab
+        self.selected_routine: Routine | None = (
+            None  # Keeps track of VOCS in displayed data
+        )
+        self.env_vocs: VOCS | None = (
+            None  # Keeps track of selected VOCS from environment tab
+        )
 
         # boolean indicating whether to show metadata in table
         self.info = False
+
+        self.tc_dialog: BadgerLoadDataFromRunDialog | None = None
 
     def init_ui(self) -> None:
         """Initialize interface"""
@@ -77,7 +87,7 @@ class BadgerDataPanel(QWidget):
                 padding: 4px;
         """
         )
-        title_label.setAlignment(Qt.AlignCenter)  # Center-align the title
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center-align the title
         vbox_table.addWidget(title_label, 0)
         vbox.addWidget(panel_table)
 
@@ -105,7 +115,7 @@ class BadgerDataPanel(QWidget):
         self.btn_reset_table.setFixedSize(96, 24)
         hbox_load_data_options.addWidget(self.btn_load_data)
         hbox_load_data_options.addWidget(self.btn_reset_table)
-        hbox_load_data_options.setAlignment(Qt.AlignLeft)
+        hbox_load_data_options.setAlignment(Qt.AlignmentFlag.AlignLeft)
         hbox_load_data_options.addStretch()
         self.info_checkbox = QCheckBox("Display metadata  ")
         self.info_checkbox.setToolTip(
@@ -139,6 +149,8 @@ class BadgerDataPanel(QWidget):
     def show_metadata(self) -> None:
         self.info = self.info_checkbox.isChecked()
         if self.has_data:
+            if self.selected_routine is None:
+                raise ValueError("No routine selected.")
             self.update_table(
                 self.data_table, self.table_data, vocs=self.selected_routine.vocs
             )
@@ -146,9 +158,11 @@ class BadgerDataPanel(QWidget):
                 headers = get_horizontal_header_as_list(self.data_table)
                 if "live" in headers:
                     i = headers.index("live")
-                    self.data_table.horizontalHeaderItem(i).setToolTip(
-                        "Indicates whether data was acquired \n(1) live during the current run, or \n(0) imported from previous optimizations"
-                    )
+                    header_item = self.data_table.horizontalHeaderItem(i)
+                    if header_item is not None:
+                        header_item.setToolTip(
+                            "Indicates whether data was acquired \n(1) live during the current run, or \n(0) imported from previous optimizations"
+                        )
 
     def update_vocs(self, vocs: VOCS) -> None:
         """
@@ -169,20 +183,20 @@ class BadgerDataPanel(QWidget):
         """
         Verify that variables and objectives have been selected, then open dialog to load data
         """
-        vocs = self.env_vocs
 
-        if not vocs.variable_names or not vocs.objective_names:
-            dialog = QMessageBox(
-                text="Select Environment + VOCS before adding data!",
-                parent=self,
-            )
+        if self.env_vocs is None:
+            raise ValueError("Environment VOCS not set.")
+
+        if not self.env_vocs.variable_names or not self.env_vocs.objective_names:
+            dialog = QMessageBox(self)
+            dialog.setText("Select Environment + VOCS before adding data!")
             dialog.setIcon(QMessageBox.Information)
             dialog.setStandardButtons(QMessageBox.Ok)
             _ = dialog.exec_()
 
             return
         else:
-            _ = self.get_data_from_dialog()
+            self.get_data_from_dialog()
 
     def set_routine(self, routine: Routine) -> None:
         self.selected_routine = routine
@@ -225,6 +239,8 @@ class BadgerDataPanel(QWidget):
         """
         Opens a dialog window for loading data into generator.
         """
+        if self.env_vocs is None:
+            raise ValueError("Environment VOCS not set.")
         dlg = BadgerLoadDataFromRunDialog(
             parent=self,
             env_vocs=self.env_vocs.variable_names + self.env_vocs.output_names,
@@ -256,7 +272,7 @@ class BadgerDataPanel(QWidget):
         self.update_table(self.data_table, all_data, vocs)
 
     def update_table(
-        self, table: TableWithCopy, data: pd.DataFrame = None, vocs: VOCS = None
+        self, table: TableWithCopy, data: pd.DataFrame, vocs: VOCS = None
     ) -> None:
         """Makes sure column order remains consistent and self.table_data stays updated
         to match displayed table. Call data_table's update_table method to update the table
@@ -268,7 +284,7 @@ class BadgerDataPanel(QWidget):
     def get_data(self) -> pd.DataFrame:
         return self.table_data
 
-    def get_data_as_dict(self) -> dict:
+    def get_data_as_dict(self) -> dict[str, list[str]]:
         data = get_table_content_as_dict(self.data_table)
         if not self.info:
             data = filter_metadata(data)
@@ -276,7 +292,7 @@ class BadgerDataPanel(QWidget):
         return data
 
     @property
-    def routine(self) -> Routine:
+    def routine(self) -> Routine | None:
         return self.selected_routine
 
     def load_data_from_dialog(self, routine: Routine) -> None:
@@ -290,6 +306,9 @@ class BadgerDataPanel(QWidget):
         """
         # Data from routine to load
         data = routine.data
+        if data is None:
+            logger.warning("No data found in the selected routine")
+            return
         # Create copy of data without metadata columns
         filtered_data = filter_metadata(data)
         data_keys = list(filtered_data.keys())
@@ -300,12 +319,10 @@ class BadgerDataPanel(QWidget):
         # Raise error if loaded data keys do not match selected vocs
         # This happens here if selected VOCS have been changed but old data is still in the table.
         if self.has_data and set(data_keys) != set(filtered_table_keys):
-            dialog = QMessageBox(
-                text=(
-                    "Keys in loaded data do not match current table!"
-                    "\nTry clearing the table before adding new data."
-                ),
-                parent=self,
+            dialog = QMessageBox(self)
+            dialog.setText(
+                "Keys in loaded data do not match current table!"
+                "\nTry clearing the table before adding new data."
             )
             dialog.setIcon(QMessageBox.Warning)
             dialog.setStandardButtons(QMessageBox.Ok)
@@ -329,6 +346,9 @@ class BadgerDataPanel(QWidget):
         """
         self.set_routine(routine)
         data = routine.data
+        if data is None:
+            logger.warning("No data found in the selected routine")
+            return
 
         self.run_data_checkbox.setEnabled(True)
 
@@ -348,7 +368,11 @@ class BadgerDataPanel(QWidget):
         columns = list(data.columns)
         columns_set = set(columns)
         reordered_cols = []
-        vocs = self.selected_routine.vocs
+        routine = self.selected_routine
+        if routine is None:
+            logger.warning("No routine selected")
+            return data
+        vocs = routine.vocs
 
         priority_groups = [
             vocs.objective_names,
@@ -383,9 +407,19 @@ class BadgerDataPanel(QWidget):
         self.run_data_checkbox.setEnabled(False)
 
 
-def filter_metadata(data: dict) -> dict:
+@overload
+def filter_metadata(data: dict[str, list[str]]) -> dict[str, list[str]]: ...
+
+
+@overload
+def filter_metadata(data: pd.DataFrame) -> pd.DataFrame: ...
+
+
+def filter_metadata(
+    data: dict[str, list[str]] | pd.DataFrame,
+) -> dict[str, list[str]] | pd.DataFrame:
     """
-    Remove metadata columns from data dictionary
+    Remove metadata columns from a data dict or DataFrame.
     """
     data_copy = data.copy()
 

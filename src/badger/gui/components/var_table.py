@@ -25,10 +25,10 @@ import logging
 import traceback
 from functools import partial
 from importlib import resources
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from gest_api.vocs import ContinuousVariable
-from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
+from PyQt5.QtCore import QModelIndex, QPoint, QSize, Qt, pyqtSignal
 from PyQt5.QtGui import (
     QColor,
     QDragEnterEvent,
@@ -57,6 +57,9 @@ from badger.environment import Environment, instantiate_env
 from badger.errors import BadgerInterfaceChannelError
 from badger.gui.components.robust_spinbox import RobustSpinBox
 from badger.gui.windows.expandable_message_box import ExpandableMessageBox
+
+if TYPE_CHECKING:
+    from badger.factory import BadgerPluginConfig
 
 logger = logging.getLogger(__name__)
 
@@ -121,26 +124,26 @@ class VariableTable(QTableWidget):
         self.bounds: dict[str, tuple[float, float]] = {}  # track var bounds
         self.checked_only = False
         self.bounds_locked = False
-        self.addtl_vars = []  # track variables added on the fly
+        self.addtl_vars: list[str] = []  # track variables added on the fly
         self.env_class: type[Environment] | None = (
             None  # needed to get bounds on the fly
         )
-        self.env = None  # needed to get bounds on the fly
-        self.configs = None  # needed to get bounds on the fly
+        self.env: Environment | None = None  # needed to get bounds on the fly
+        self.configs: BadgerPluginConfig | None = None  # for bounds on the fly
         self.previous_values: dict[
             tuple[int, int], str
         ] = {}  # to track changes in table
         self.config_logic()
         self.customContextMenuRequested.connect(self.display_context_menu)
 
-    def update_vocs(self):
+    def update_vocs(self) -> None:
         """
         Emit the data_changed signal to notify that the VOCS has been updated.
         """
         logger.debug("Emitting data_changed signal from VariableTable")
         self.data_changed.emit()
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         hheader = self.horizontalHeader()
         if hheader:
             hheader.sectionClicked.connect(self.header_clicked)
@@ -155,7 +158,7 @@ class VariableTable(QTableWidget):
                 self.previous_values[(row, column)] = item.text()
         super().setItem(row, column, item)
 
-    def is_all_checked(self):
+    def is_all_checked(self) -> bool:
         for i in range(self.rowCount() - 1):
             item = self.cellWidget(i, 0)
             if not item:
@@ -166,7 +169,7 @@ class VariableTable(QTableWidget):
 
         return True
 
-    def header_clicked(self, idx: int):
+    def header_clicked(self, idx: int) -> None:
         if idx:
             return
 
@@ -183,7 +186,7 @@ class VariableTable(QTableWidget):
             item.blockSignals(False)
         self.update_selected()
 
-    def update_bounds(self):
+    def update_bounds(self) -> None:
         for i in range(self.rowCount() - 1):
             widget = self.item(i, 1)
             if not widget:
@@ -204,7 +207,7 @@ class VariableTable(QTableWidget):
             self.validate_row(i)  # Validate the row after updating bounds
         self.data_changed.emit()
 
-    def validate_row(self, row: int):
+    def validate_row(self, row: int) -> None:
         """
         Validate the bounds for a given row. If invalid, apply a red border to the row.
         """
@@ -226,7 +229,7 @@ class VariableTable(QTableWidget):
 
     def set_bounds(
         self, variables: dict[str, tuple[float, float]], signal: bool = True
-    ):
+    ) -> None:
         for name, bounds in variables.items():
             self.bounds[name] = bounds
 
@@ -237,7 +240,7 @@ class VariableTable(QTableWidget):
 
     def refresh_variable(
         self, name: str, bounds: tuple[float, float], hard_bounds: tuple[float, float]
-    ):
+    ) -> None:
         self.bounds[name] = bounds
 
         # Update the variable in self.variables
@@ -254,7 +257,7 @@ class VariableTable(QTableWidget):
 
         self.update_variables(self.variables, 2)
 
-    def update_selected(self):
+    def update_selected(self) -> None:
         for i in range(self.rowCount() - 1):
             _cb = self.cellWidget(i, 0)
             if not _cb:
@@ -277,21 +280,21 @@ class VariableTable(QTableWidget):
         if self.checked_only:
             self.show_checked_only()
 
-    def set_selected(self, variable_names: list[str]):
-        self.selected: dict[str, bool] = {}
+    def set_selected(self, variable_names: list[str]) -> None:
+        self.selected = {}
         for vname in variable_names:
             self.selected[vname] = True
 
         self.update_variables(self.variables, 3)
 
-    def toggle_show_mode(self, checked_only: bool):
+    def toggle_show_mode(self, checked_only: bool) -> None:
         self.checked_only = checked_only
         if checked_only:
             self.show_checked_only()
         else:
             self.show_all()
 
-    def show_checked_only(self):
+    def show_checked_only(self) -> None:
         checked_variables: list[dict[str, tuple[float, float]]] = []
         for var in self.variables:
             name = next(iter(var))
@@ -299,7 +302,7 @@ class VariableTable(QTableWidget):
                 checked_variables.append(var)
         self.update_variables(checked_variables, 3)
 
-    def show_all(self):
+    def show_all(self) -> None:
         self.update_variables(self.variables, 3)
 
     def is_checked(self, name: str) -> bool:
@@ -331,13 +334,13 @@ class VariableTable(QTableWidget):
 
     def _set_spinbox_style(
         self, spinbox: RobustSpinBox, is_selected: bool, has_error: bool = False
-    ):
+    ) -> None:
         """Set the style of a spinbox based on selection and error status."""
         color = "lightgray" if is_selected else "gray"
         border = "border: 1px solid red;" if has_error else ""
         spinbox.setStyleSheet(f"QDoubleSpinBox {{ color: {color}; {border} }}")
 
-    def _set_spinbox_text_color(self, row: int, is_selected: bool):
+    def _set_spinbox_text_color(self, row: int, is_selected: bool) -> None:
         """Set the text color of the spinboxes in a given row based on selection status."""
         sb_lower = self.cellWidget(row, 2)
         sb_upper = self.cellWidget(row, 3)
@@ -355,7 +358,7 @@ class VariableTable(QTableWidget):
         self,
         variables: list[dict[str, tuple[float, float] | ContinuousVariable]],
         filtered: int = 0,
-    ):
+    ) -> None:
         # filtered = 0: completely refresh
         # filtered = 1: filtered by keyword
         # filtered = 2: just rerender based on check status
@@ -370,7 +373,7 @@ class VariableTable(QTableWidget):
             self.variables = self.all_variables[:]  # make a copy
             self.selected = {}
             self.bounds = {}
-            self.addtl_vars: list[str] = []
+            self.addtl_vars = []
             for var in self.variables:
                 name = next(iter(var))
                 self.bounds[name] = var[name]
@@ -405,7 +408,9 @@ class VariableTable(QTableWidget):
                 item.setForeground(QColor("darkCyan"))
             else:
                 # Make non-new PVs not editable
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                item.setFlags(
+                    cast(Qt.ItemFlags, item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                )
                 item.setForeground(QColor("lightgray" if _cb.isChecked() else "gray"))
             self.setItem(i, 1, item)
 
@@ -458,7 +463,7 @@ class VariableTable(QTableWidget):
 
         # Make extra editable row
         item = QTableWidgetItem(self.PLACEHOLDER_TEXT)
-        item.setFlags(item.flags() | Qt.ItemIsEditable)
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
         item.setForeground(QColor("gray"))
         self.setItem(n - 1, 1, item)
 
@@ -469,10 +474,10 @@ class VariableTable(QTableWidget):
             self.sig_sel_changed.emit()
             self.data_changed.emit()
 
-    def handle_config_button(self, var_name: str):
+    def handle_config_button(self, var_name: str) -> None:
         self.sig_var_config.emit(var_name)
 
-    def add_additional_variable(self, item: QTableWidgetItem):
+    def add_additional_variable(self, item: QTableWidgetItem) -> None:
         row = item.row()
         column = item.column()
         name = item.text()
@@ -498,7 +503,7 @@ class VariableTable(QTableWidget):
         if row == self.rowCount() - 1 and column == 1 and name != self.PLACEHOLDER_TEXT:
             self.try_insert_variable(name)
 
-    def try_insert_variable(self, name: str):
+    def try_insert_variable(self, name: str) -> None:
         idx = self.rowCount() - 1
 
         # Check that variables doesn't already exist in table
@@ -577,13 +582,15 @@ class VariableTable(QTableWidget):
 
     def get_bounds(self, name: str) -> tuple[Any, Any]:
         # TODO: move elsewhere?
+        if self.env_class is None or self.configs is None:
+            raise RuntimeError("Environment is not configured for fetching bounds!")
         self.env = instantiate_env(self.env_class, self.configs)
 
         value = self.env.get_variable(name)
         bound = self.env.get_bounds([name])[name]
         return value, bound
 
-    def add_variable(self, name: str, lb: float, ub: float):
+    def add_variable(self, name: str, lb: float, ub: float) -> None:
         var = {name: (lb, ub)}
 
         self.all_variables.append(var)
@@ -599,15 +606,15 @@ class VariableTable(QTableWidget):
 
         return variables_exported
 
-    def lock_bounds(self):
+    def lock_bounds(self) -> None:
         self.bounds_locked = True
         self.toggle_show_mode(self.checked_only)
 
-    def unlock_bounds(self):
+    def unlock_bounds(self) -> None:
         self.bounds_locked = False
         self.toggle_show_mode(self.checked_only)
 
-    def dragEnterEvent(self, e: QDragEnterEvent | None):
+    def dragEnterEvent(self, e: QDragEnterEvent | None) -> None:
         if e is None:
             return
 
@@ -621,7 +628,7 @@ class VariableTable(QTableWidget):
         else:
             e.ignore()
 
-    def dragMoveEvent(self, e: QDragMoveEvent | None):
+    def dragMoveEvent(self, e: QDragMoveEvent | None) -> None:
         if e is None:
             return
 
@@ -635,7 +642,7 @@ class VariableTable(QTableWidget):
         else:
             e.ignore()
 
-    def dropEvent(self, event: QDropEvent | None):
+    def dropEvent(self, event: QDropEvent | None) -> None:
         if event is None:
             return
 
@@ -661,19 +668,23 @@ class VariableTable(QTableWidget):
         else:
             event.ignore()
 
-    def flags(self, index):
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         if not index.isValid():
-            return Qt.ItemIsEnabled
-        flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            return cast(Qt.ItemFlags, Qt.ItemFlag.ItemIsEnabled)
+        flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
         if index.column() == 1:
-            flags |= Qt.ItemIsEditable | Qt.ItemIsDropEnabled
-        return flags
+            flags |= Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDropEnabled
+        return cast(Qt.ItemFlags, flags)
 
-    def display_info(self, item: QTableWidgetItem | None):
+    def display_info(self, item: QTableWidgetItem | None) -> None:
         """
         Opens a message box displaying status info from the underlying interface about a variable.
         """
+        if item is None:
+            return
         if not self.env:
+            if self.env_class is None or self.configs is None:
+                raise RuntimeError("Environment is not configured for fetching info!")
             self.env = instantiate_env(self.env_class, self.configs)
 
         status = self.env.get_info([item.text()])
@@ -684,7 +695,7 @@ class VariableTable(QTableWidget):
         mb.setWindowTitle("Variable Info")
         layout = QGridLayout(mb)
         row = 0
-        for k, v in status["vars"][item.text()].items():
+        for k, v in cast(Any, status["vars"])[item.text()].items():
             layout.addWidget(QLabel(text=f"{k}:", parent=mb), row, 0)
             layout.addWidget(QLabel(text=v, parent=mb), row, 1)
             row += 1
@@ -698,17 +709,17 @@ class VariableTable(QTableWidget):
         mb.exec()
 
     @staticmethod
-    def _handle_close(widget: QPushButton):
+    def _handle_close(widget: QPushButton) -> None:
         widget.close()
 
-    def copy_name(self, item: QTableWidgetItem | None):
+    def copy_name(self, item: QTableWidgetItem | None) -> None:
         if item is None:
             return
         clipboard = QGuiApplication.clipboard()
         if clipboard is not None:
             clipboard.setText(item.text())
 
-    def display_context_menu(self, pt: QPoint):
+    def display_context_menu(self, pt: QPoint) -> None:
         menu = QMenu(self)
         item = self.itemAt(pt)
         if item is None or item.text() == self.PLACEHOLDER_TEXT or item.column() != 1:

@@ -1,7 +1,7 @@
 import pytest
 
 
-def test_find_env():
+def test_find_env() -> None:
     from badger.factory import get_env, list_env
 
     assert len(list_env()) == 2
@@ -11,7 +11,7 @@ def test_find_env():
     assert configs["version"] == "1.0"
 
 
-def test_get_params():
+def test_get_params() -> None:
     from badger.factory import get_env
 
     _, configs = get_env("test")
@@ -20,7 +20,7 @@ def test_get_params():
     assert params == {"delay": 0.0, "flag": 0}
 
 
-def test_set_params():
+def test_set_params() -> None:
     from badger.factory import get_env, get_intf
 
     Interface, _ = get_intf("test")
@@ -39,7 +39,7 @@ def test_set_params():
     assert env.flag == 0
 
 
-def test_list_variables():
+def test_list_variables() -> None:
     from badger.factory import get_env
 
     Environment, _ = get_env("test")
@@ -51,7 +51,7 @@ def test_list_variables():
     assert env.variable_names == list(variables.keys())
 
 
-def test_list_observables():
+def test_list_observables() -> None:
     from badger.factory import get_env
 
     Environment, _ = get_env("test")
@@ -60,7 +60,7 @@ def test_list_observables():
     assert env.observables == ["f", "c"]
 
 
-def test_get_variables():
+def test_get_variables() -> None:
     from badger.errors import (
         BadgerNoInterfaceError,
     )
@@ -92,7 +92,7 @@ def test_get_variables():
     # assert "Getting them through interface is not allowed" in str(e.value)
 
 
-def testset_variables():
+def testset_variables() -> None:
     from badger.errors import (
         BadgerEnvVarError,
         BadgerNoInterfaceError,
@@ -140,7 +140,7 @@ def testset_variables():
     assert variable_outputs == {"x1": 1, "x2": -1}  # values shouldn't change
 
 
-def testget_observables():
+def testget_observables() -> None:
     from badger.errors import BadgerNoInterfaceError
     from badger.factory import get_env, get_intf
 

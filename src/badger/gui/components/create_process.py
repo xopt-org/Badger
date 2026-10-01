@@ -9,6 +9,12 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from badger.core_subprocess import run_routine_subprocess
 from badger.log import get_logging_manager
 from badger.settings import init_settings
+from badger.types import (
+    ArgumentQueueType,
+    DataQueueMessage,
+    DialogActionMessage,
+    ProcessWithArgs,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +38,14 @@ class CreateProcess(QObject):
         """
         self.stop_event = Event()
         self.pause_event = Event()
-        self.args_queue = Queue()
-        self.data_queue = Queue()
+        self.args_queue: Queue[ArgumentQueueType] = Queue()
+        self.data_queue: Queue[DataQueueMessage] = Queue()
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
-        self.dialog_action_queue = Queue()
-        config_path = init_settings()._instance.config_path
+        self.dialog_action_queue: Queue[DialogActionMessage] = Queue()
+
+        config_instance = init_settings()._instance
+        config_path = config_instance.config_path if config_instance else None
 
         # Get the logging queue from the centralized manager
         logging_manager = get_logging_manager()
@@ -53,22 +61,23 @@ class CreateProcess(QObject):
                 self.stop_event,
                 self.pause_event,
                 self.wait_event,
+                self.dialog_action_queue,
                 config_path,
                 log_queue,
-                self.dialog_action_queue,
             ),
         )
         new_process.start()
-        self.subprocess_prepared.emit(
-            {
-                "process": new_process,
-                "args_queue": self.args_queue,
-                "stop_event": self.stop_event,
-                "pause_event": self.pause_event,
-                "data_queue": self.data_queue,
-                "evaluate_queue": self.evaluate_queue,
-                "wait_event": self.wait_event,
-                "dialog_action_queue": self.dialog_action_queue,
-            }
+
+        _p = ProcessWithArgs(
+            process=new_process,
+            args_queue=self.args_queue,
+            data_queue=self.data_queue,
+            evaluate_queue=self.evaluate_queue,
+            stop_event=self.stop_event,
+            pause_event=self.pause_event,
+            wait_event=self.wait_event,
+            dialog_action_queue=self.dialog_action_queue,
         )
+
+        self.subprocess_prepared.emit(_p)
         self.finished.emit()

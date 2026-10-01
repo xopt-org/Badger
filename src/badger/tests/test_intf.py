@@ -1,4 +1,4 @@
-def test_find_intf():
+def test_find_intf() -> None:
     from badger.factory import get_intf, list_intf
 
     assert len(list_intf()) == 1
@@ -8,7 +8,7 @@ def test_find_intf():
     assert configs["version"] == "1.0"
 
 
-def test_get_params():
+def test_get_params() -> None:
     from badger.factory import get_intf
 
     _, configs = get_intf("test")
@@ -17,7 +17,7 @@ def test_get_params():
     assert params == {"flag": 0}
 
 
-def test_set_params():
+def test_set_params() -> None:
     from badger.factory import get_intf
 
     Interface, _ = get_intf("test")
@@ -26,7 +26,7 @@ def test_set_params():
     assert intf.flag == 1
 
 
-def test_get_values():
+def test_get_values() -> None:
     from badger.factory import get_intf
 
     Interface, _ = get_intf("test")
@@ -40,7 +40,7 @@ def test_get_values():
     assert value == 0.5
 
 
-def test_set_values():
+def test_set_values() -> None:
     from badger.factory import get_intf
 
     Interface, _ = get_intf("test")
@@ -57,7 +57,7 @@ def test_set_values():
     assert value == 5
 
 
-def test_recording():
+def test_recording() -> None:
     from badger.factory import get_intf
 
     Interface, _ = get_intf("test")

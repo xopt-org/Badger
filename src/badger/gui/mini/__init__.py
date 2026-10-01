@@ -8,7 +8,7 @@ import time
 import traceback
 from importlib import resources
 from types import TracebackType
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont, QIcon
@@ -27,10 +27,10 @@ if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):
 if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):
     QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
-TIMER = {"time": None}
+TIMER: dict[str, float | None] = {"time": None}
 
 
-def on_exit(*args):
+def on_exit(*args: Any) -> None:
     if TIMER["time"] is None:
         print("Press Ctrl/Cmd + C again within 1s to quit Badger")
         TIMER["time"] = time.time()
@@ -41,7 +41,7 @@ def on_exit(*args):
     QApplication.quit()
 
 
-def on_timeout():
+def on_timeout() -> None:
     if TIMER["time"] is None:
         return
 
@@ -52,7 +52,7 @@ def on_timeout():
 
 
 def error_handler(
-    etype: type[BaseException], value: BaseException, tb: TracebackType
+    etype: type[BaseException], value: BaseException, tb: TracebackType | None
 ) -> NoReturn:
     """
     Custom exception handler that formats uncaught exceptions and raises a BadgerError.
@@ -63,8 +63,8 @@ def error_handler(
         The class of the exception that was raised.
     value : BaseException
         The exception instance.
-    tb : TracebackType
-        The traceback object associated with the exception.
+    tb : TracebackType | None
+        The traceback object associated with the exception, or None if not available.
 
     Raises
     ------
@@ -76,14 +76,17 @@ def error_handler(
     raise BadgerError(error_title, error_msg)
 
 
-def launch_gui(config_path=None, template_filename: str | None = None):
+def launch_mini_gui(
+    config_path: str | None = None, template_filename: str | None = None
+) -> None:
+
     sys.excepthook = error_handler
 
     app = QApplication(sys.argv)
 
     # Set app metainfo
     app.setApplicationName("Badger")
-    icon_ref = resources.files(__name__).parent / "images" / "icon.png"
+    icon_ref = resources.files(__name__).joinpath("images", "icon.png")
     with resources.as_file(icon_ref) as icon_path:
         app.setWindowIcon(QIcon(str(icon_path)))
 

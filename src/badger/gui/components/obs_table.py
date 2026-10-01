@@ -39,18 +39,18 @@ class ObservableTable(EditableTable):
 
         self.setHorizontalHeaderLabels(["", "Name"])
 
-    def default_info(self) -> list[Any]:
+    def default_info(self) -> tuple[str, float, bool]:
         """
         Get the default information list for a new item.
 
         Returns
         -------
-        list
-            A list containing default values for a new item.
+        tuple
+            A tuple containing default values for a new item.
         """
-        return []
+        return ("", 0.0, False)
 
-    def new_item_prompt(self):
+    def new_item_prompt(self) -> str:
         """
         The prompt text to enter a new item.
         """
@@ -71,5 +71,5 @@ class ObservableTable(EditableTable):
             f"Observable {name} already exists!",
         )
 
-    def create_cell_widgets(self, info: list[Any]) -> tuple[Any, ...]:
+    def create_cell_widgets(self, info: tuple[str, float, bool]) -> tuple[Any, ...]:
         return ()

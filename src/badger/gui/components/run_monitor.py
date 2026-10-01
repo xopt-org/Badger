@@ -10,12 +10,14 @@ finishes, it archives the data and hands results off to analysis extensions
 import logging
 import os
 import traceback
+from collections.abc import Callable
 from importlib import resources
-from typing import TYPE_CHECKING
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
@@ -31,11 +33,12 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from pyqtgraph.Qt import QtCore, QtGui
-from xopt.vocs import VOCS, normalize_inputs, select_best
+from xopt.vocs import normalize_inputs, select_best
 
 from badger.archive import BADGER_ARCHIVE_ROOT, archive_run
 from badger.gui.components.analysis_extensions import AnalysisExtension
 from badger.gui.components.extensions_palette import ExtensionsPalette
+from badger.gui.components.process_manager import ProcessManager
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
 from badger.gui.components.routine_runner import BadgerRoutineSubprocess
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
@@ -44,9 +47,7 @@ from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
 from badger.routine import Routine
 from badger.tests.utils import get_current_vars
-
-if TYPE_CHECKING:
-    from badger.gui.components.process_manager import ProcessManager
+from badger.types import TerminationConditionConfig
 
 logger = logging.getLogger(__name__)
 
@@ -73,17 +74,17 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
 
-    def __init__(self, process_manager: "ProcessManager | None" = None):
+    def __init__(self, process_manager: ProcessManager):
         super().__init__()
         # self.setAttribute(Qt.WA_DeleteOnClose, True)
 
         # For plot type switching
-        self.x_plot_y_axis = 0  # 0: raw, 1: normalized
-        self.plot_x_axis = 0  # 0: iteration, 1: time
+        self.x_plot_y_axis: Literal[0, 1] = 0  # 0: raw, 1: normalized
+        self.plot_x_axis: Literal[0, 1] = 0  # 0: iteration, 1: time
         self.x_plot_relative = True
         # Routine info
-        self.routine = None
-        self.routine_filename = None
+        self.routine: Routine | None = None
+        self.routine_filename: str | None = None
         self.process_manager = process_manager
 
         # Curves in the monitor
@@ -97,7 +98,7 @@ class BadgerOptMonitor(QWidget):
         self.running = False
 
         # Termination condition for the run
-        self.termination_condition = None
+        self.termination_condition: TerminationConditionConfig | None = None
 
         self.checkpoint_data: dict[str, float] | None = None
 
@@ -106,7 +107,7 @@ class BadgerOptMonitor(QWidget):
 
         self.testing = False
         self.tc_dialog = None
-        self.post_run_actions = []
+        self.post_run_actions: list[Callable[[], None]] = []
 
         self.init_ui()
         self.config_logic()
@@ -114,7 +115,7 @@ class BadgerOptMonitor(QWidget):
 
     @property
     def vocs(self) -> VOCS:
-        return self.routine.vocs
+        return self.routine.vocs if self.routine is not None else None
 
     def states(self, new_states: dict) -> None:
         self._states = new_states
@@ -161,7 +162,8 @@ class BadgerOptMonitor(QWidget):
 
         # Set up the monitor
         # Don't set show=True or there will be a blank window flashing once
-        self.monitor = monitor = pg.GraphicsLayoutWidget()
+        # Cast the GraphicsLayoutWidget to GraphicsLayout for type consistency
+        self.monitor = monitor = cast(pg.GraphicsLayout, pg.GraphicsLayoutWidget())
         pg.setConfigOptions(antialias=True)
         # monitor.ci.setBorder((50, 50, 100))
         # monitor.resize(1000, 600)
@@ -240,7 +242,7 @@ class BadgerOptMonitor(QWidget):
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
 
     def init_plots(
-        self, routine: Routine = None, run_filename: str | None = None
+        self, routine: Routine | None = None, run_filename: str | None = None
     ) -> None:
         """
         Initialize and configure the plots and related components in the application.
@@ -251,11 +253,11 @@ class BadgerOptMonitor(QWidget):
 
         Parameters
         ----------
-        routine : Routine,
+        routine : Routine | None,
             The routine to use for configuring the plots. If
             not provided, the method will use the previously set routine.
 
-        run_filename : str, optional
+        run_filename : str | None, optional
             The filename of the run, used to determine the state of the application's UI
             elements.
 
@@ -406,10 +408,12 @@ class BadgerOptMonitor(QWidget):
 
         self.sig_toggle_other.emit(False)
 
-    def _configure_plot(self, plot_object, inspector, names: list[str]) -> dict:
+    def _configure_plot(
+        self, plot_object: pg.PlotItem, inspector: pg.InfiniteLine, names: list[str]
+    ) -> pg.PlotDataItem:
         plot_object.clear()
         plot_object.addItem(inspector)
-        curves = {}
+        curves: dict[str, pg.PlotDataItem] = {}
         for i, name in enumerate(names):
             color = self.colors[i % len(self.colors)]
             # symbol = self.symbols[i % len(self.colors)]
@@ -452,7 +456,7 @@ class BadgerOptMonitor(QWidget):
 
         routine_runner.signals.env_ready.connect(self.env_ready)
         routine_runner.signals.finished.connect(self.routine_finished)
-        routine_runner.signals.progress.connect(self.update)
+        routine_runner.signals.progress.connect(self.update_plots)
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
@@ -488,7 +492,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 
-    def save_termination_condition(self, tc) -> None:
+    def save_termination_condition(self, tc: TerminationConditionConfig) -> None:
         self.termination_condition = tc
 
     def enable_auto_range(self) -> None:
@@ -519,7 +523,7 @@ class BadgerOptMonitor(QWidget):
 
         return data["timestamp"].to_numpy(copy=True)
 
-    def update(self, results: pd.DataFrame) -> None:
+    def update_plots(self, results: pd.DataFrame) -> None:
         """Update plots in main window as well as any active extensions and the
         extensions palette
 
@@ -659,6 +663,9 @@ class BadgerOptMonitor(QWidget):
         try:
             # TODO: fill in the states
             # TODO: replace self.testing with with another processes for having a testing mode
+            if self.routine is None:
+                raise ValueError("Routine is not set")
+
             if not self.testing:
                 run = archive_run(self.routine, states=self._states)
                 self.routine_runner.run_filename = run["filename"]
@@ -666,15 +673,15 @@ class BadgerOptMonitor(QWidget):
                 path = run["path"]
                 filename = run["filename"][:-4] + "pickle"
 
-            try:
-                env.interface.stop_recording(os.path.join(path, filename))
-            except AttributeError:  # recording was not enabled
-                logger.debug("Recording was not enabled")
+                try:
+                    env.interface.stop_recording(os.path.join(path, filename))
+                except AttributeError:  # recording was not enabled
+                    logger.debug("Recording was not enabled")
 
-            self.sig_run_name.emit(run["filename"])
-            self.sig_status.emit(
-                f"Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}"
-            )
+                self.sig_run_name.emit(run["filename"])
+                self.sig_status.emit(
+                    f"Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}"
+                )
             # if not self.testing:
             #     QMessageBox.information(
             #         self, 'Success!',
@@ -694,6 +701,9 @@ class BadgerOptMonitor(QWidget):
 
     def destroy_unused_env(self) -> None:
         if not self.running:
+            if self.routine_runner is None:
+                logger.debug("Routine runner is not set")
+                return
             try:
                 del self.routine_runner.routine.environment
             except AttributeError:  # env already destroyed
@@ -1073,7 +1083,13 @@ class BadgerOptMonitor(QWidget):
         self.post_run_actions.append(action)
 
 
-def add_axes(monitor, ylabel, title, cursor_line, **kwargs) -> pg.PlotItem:
+def add_axes(
+    monitor: pg.GraphicsLayout,
+    ylabel: str,
+    title: str,
+    cursor_line: pg.InfiniteLine,
+    **kwargs: Any,
+) -> pg.PlotItem:
     plot_obj = monitor.addPlot(title=title, **kwargs)
     plot_obj.setLabel("left", ylabel)
     plot_obj.setLabel("bottom", "iterations")
@@ -1100,7 +1116,13 @@ def create_cursor_line() -> pg.InfiniteLine:
     )
 
 
-def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None) -> None:
+def set_data(
+    names: list[str],
+    curves: dict[str, pg.PlotDataItem],
+    data: pd.DataFrame,
+    ts=None,
+) -> None:
+
     # Split data into live and not live
     live_mask = data["live"].astype(bool)
     live_data = data.loc[live_mask]

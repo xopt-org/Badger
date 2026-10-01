@@ -2,11 +2,13 @@
 offers to fix missing ones interactively, and can factory-reset Badger back
 to its default state."""
 
+from argparse import Namespace
+
 from badger.actions.config import _config_path_var
 from badger.settings import init_settings, mock_settings
 
 
-def self_check(args):
+def self_check(args: Namespace) -> None:
     config = init_settings()
     # Reset Badger
 
@@ -35,7 +37,7 @@ def self_check(args):
         print("Badger is healthy!")
 
 
-def check_n_config_paths(config_filepath=None):
+def check_n_config_paths(config_filepath: str | None = None) -> bool:
     if config_filepath is not None:
         config = init_settings(config_filepath)
     else:
@@ -43,9 +45,14 @@ def check_n_config_paths(config_filepath=None):
 
     good = True
     all_bad = True  # if all config paths are empty, we'll suggest initialization
-    issue_list = []
+    issue_list: list[str] = []
 
-    for pname, pvalue in config._config.model_dump(by_alias=True).items():
+    for (
+        pname,
+        pvalue,
+    ) in config._config.model_dump(  # pyright: ignore[reportPrivateUsage]
+        by_alias=True
+    ).items():
         if config.read_value(pname) is None:
             good = False
             issue_list.append(pname)

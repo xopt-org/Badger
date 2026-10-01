@@ -1,15 +1,18 @@
 import multiprocessing
+from collections.abc import Generator
 from unittest.mock import Mock
 
 import pytest
-from PyQt5.QtCore import QEventLoop, Qt, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtTest import QSignalSpy
-from PyQt5.QtWidgets import QApplication
+
+from badger.gui.components.process_manager import ProcessManager
+from badger.gui.components.routine_runner import BadgerRoutineSubprocess
 
 
 class TestRoutineRunner:
-    @pytest.fixture(scope="session")
-    def init_multiprocessing(self):
+    @pytest.fixture(scope="session", autouse=True)
+    def init_multiprocessing(self) -> None:
         # Use 'spawn' on Windows, 'fork' on Unix-like systems
         method = (
             "spawn"
@@ -19,9 +22,8 @@ class TestRoutineRunner:
         multiprocessing.set_start_method(method, force=True)
 
     @pytest.fixture
-    def process_manager(self):
+    def process_manager(self) -> Generator[ProcessManager, None, None]:
         from badger.gui.components.create_process import CreateProcess
-        from badger.gui.components.process_manager import ProcessManager
 
         process_manager = ProcessManager()
         process_builder = CreateProcess()
@@ -30,10 +32,10 @@ class TestRoutineRunner:
 
         yield process_manager
 
-        process_manager.close_proccesses()
+        process_manager.close_processes()
 
     @pytest.fixture
-    def instance(self, process_manager, init_multiprocessing):
+    def instance(self, process_manager: ProcessManager) -> BadgerRoutineSubprocess:
         from badger.archive import save_tmp_run
         from badger.gui.components.routine_runner import (
             BadgerRoutineSubprocess,
@@ -46,7 +48,7 @@ class TestRoutineRunner:
         instance.pause_event = multiprocessing.Event()
         return instance
 
-    def test_ctrl_routine(self, instance) -> None:
+    def test_ctrl_routine(self, instance: BadgerRoutineSubprocess) -> None:
         # Test setting the event
         instance.ctrl_routine(True)
         assert not instance.pause_event.is_set()
@@ -55,24 +57,24 @@ class TestRoutineRunner:
         instance.ctrl_routine(False)
         assert instance.pause_event.is_set()
 
-    def test_stop_routine(self, instance):
+    def test_stop_routine(self, instance: BadgerRoutineSubprocess) -> None:
         instance.run()
         instance.stop_routine()
         assert instance.stop_event.is_set()
 
-    def test_save_init_vars(self, instance):
+    def test_save_init_vars(self, instance: BadgerRoutineSubprocess) -> None:
         sig_env_ready_spy = QSignalSpy(instance.signals.env_ready)
         instance.save_init_vars()
         assert len(sig_env_ready_spy) == 1
 
-    def test_after_evaluate(self, instance):
+    def test_after_evaluate(self, instance: BadgerRoutineSubprocess) -> None:
         sig_progress_spy = QSignalSpy(instance.signals.progress)
         instance.setup_timer()
         instance.after_evaluate(True)
         assert len(sig_progress_spy) == 1
         instance.timer.stop()
 
-    def test_check_queue(self, instance):
+    def test_check_queue(self, instance: BadgerRoutineSubprocess) -> None:
         sig_finished_spy = QSignalSpy(instance.signals.finished)
         instance.run()
         instance.data_and_error_queue.empty = Mock(return_value=True)
@@ -87,7 +89,7 @@ class TestRoutineRunner:
         # instance.stop_routine()
         # assert len(sig_progress_spy) > 0
 
-    def test_setup_timer(self, instance):
+    def test_setup_timer(self, instance: BadgerRoutineSubprocess) -> None:
         instance.setup_timer()
         assert isinstance(instance.timer, QTimer)
         assert instance.timer.interval() == 100
@@ -95,79 +97,17 @@ class TestRoutineRunner:
 
         instance.timer.stop()
 
-    def test_run(self, instance):
+    def test_run(self, instance: BadgerRoutineSubprocess) -> None:
         instance.run()
         instance.ctrl_routine(True)
         assert instance.routine_process.is_alive()
         assert instance.wait_event.is_set()
         instance.stop_routine()
 
-    def test_set_termination_condition(self, instance):
-        instance.set_termination_condition(True)
+    def test_set_termination_condition(self, instance: BadgerRoutineSubprocess) -> None:
+        from badger.types import TerminationConditionConfig
+
+        instance.set_termination_condition(
+            TerminationConditionConfig(tc_idx=0, max_eval=2)
+        )
         assert instance.termination_condition
-
-    # TODO: check for signal emit message
-
-    def test_turbo_with_routine_runner(self, qtbot, init_multiprocessing):
-        # TODO: make this test more stable
-        return
-
-        from badger.gui.windows.main_window import BadgerMainWindow
-        from badger.gui.windows.message_dialog import (
-            BadgerScrollableMessageBox,
-        )
-
-        window = BadgerMainWindow()
-        # qtbot.addWidget(window)
-
-        loop = QEventLoop()
-        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
-        loop.exec_()
-
-        # Create and save a routine
-        editor = window.home_page.routine_editor
-        # Turn off relative to current
-        editor.env_box.relative_to_curr.setChecked(False)
-        # Config env and vocs
-        qtbot.keyClicks(editor.env_box.cb, "test")
-        editor.env_box.var_table.cellWidget(0, 0).setChecked(True)
-        editor.env_box.obj_table.cellWidget(0, 0).setChecked(True)
-        qtbot.mouseClick(editor.env_box.btn_add_curr, Qt.MouseButton.LeftButton)
-
-        # Run the routine
-        monitor = window.home_page.run_monitor
-        monitor.testing = True
-
-        def handle_dialog():
-            while monitor.tc_dialog is None:
-                QApplication.processEvents()
-
-            # Set max evaluation to 2, then run the optimization
-            monitor.tc_dialog.sb_max_eval.setValue(2)
-            qtbot.mouseClick(monitor.tc_dialog.btn_run, Qt.MouseButton.LeftButton)
-
-        QTimer.singleShot(0, handle_dialog)
-
-        # Bypass the possible Badger error dialog
-        def patched_showEvent(original_showEvent):
-            def inner(ins, event):
-                original_showEvent(ins, event)  # Call the original showEvent
-                QTimer.singleShot(100, ins.accept)  # Close the dialog after 100 ms
-
-            return inner
-
-        BadgerScrollableMessageBox.showEvent = patched_showEvent(
-            BadgerScrollableMessageBox.showEvent
-        )
-
-        action_bar = window.home_page.run_action_bar
-        action_bar.run_until_action.trigger()
-        monitor.routine_runner.data_and_error_queue.empty = Mock(return_value=True)
-
-        # Wait until the run is done
-        while monitor.running:
-            qtbot.wait(100)
-
-        assert len(monitor.routine.data) == 2
-
-        window.process_manager.close_proccesses()

@@ -48,7 +48,7 @@ class BoundsPreviewBar(QWidget):
         ratio = max(0.0, min(1.0, ratio))
         return left + ratio * width
 
-    def paintEvent(self, _event: QPaintEvent) -> None:
+    def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Paint the track, preview range, current marker, and value labels."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -64,7 +64,7 @@ class BoundsPreviewBar(QWidget):
         track_top = track_y - track_h / 2.0
         track_rect = QRectF(left, track_top, track_w, float(track_h))
 
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(QColor(55, 66, 81)))
         painter.drawRoundedRect(track_rect, 2, 2)
 

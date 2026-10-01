@@ -15,7 +15,7 @@ class Environment(environment.Environment):
     flag: int = 0
     delay: float = 0.0
 
-    def set_variables(self, variable_inputs: dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]) -> None:
         if not self.interface:
             raise BadgerNoInterfaceError
 
@@ -28,7 +28,7 @@ class Environment(environment.Environment):
         self.interface.set_value("c", float((x**2).sum().numpy()))
         time.sleep(self.delay)
 
-    def get_bounds(self, variable_names):
+    def get_bounds(self, variable_names: list[str]) -> dict[str, list[float]]:
         """
         Returns the bounds of new variables (not already included in env).
         """

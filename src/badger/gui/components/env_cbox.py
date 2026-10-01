@@ -22,7 +22,7 @@ import logging
 from importlib import resources
 from typing import Any
 
-from gest_api.vocs import ContinuousVariable
+from gest_api.vocs import VOCS, ContinuousVariable
 from pydantic_core import ValidationError
 from PyQt5.QtCore import QPropertyAnimation, QRegExp, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -31,13 +31,13 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QPushButton,
     QSizePolicy,
     QStyledItemDelegate,
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
@@ -167,7 +167,7 @@ class BadgerEnvBox(QWidget):
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         config_singleton = init_settings()
 
         icon_ref = resources.files(__package__) / "../images/import.png"
@@ -520,8 +520,7 @@ class BadgerEnvBox(QWidget):
 
         cbox_more.setContentLayout(vbox_more)
 
-    def config_logic(self):
-        self.dict_con = {}
+    def config_logic(self) -> None:
 
         self.edit_var.textChanged.connect(self.filter_var)
         self.check_only_var.stateChanged.connect(self.toggle_var_show_mode)
@@ -544,7 +543,7 @@ class BadgerEnvBox(QWidget):
         vocs, _ = self.compose_vocs()
         self.vocs_updated.emit(vocs)
 
-    def toggle_params(self, checked: bool):
+    def toggle_params(self, checked: bool) -> None:
         if not checked:
             self.animation.setStartValue(self.edit.sizeHint().height())
             self.animation.setEndValue(0)
@@ -557,18 +556,18 @@ class BadgerEnvBox(QWidget):
         # Configure the animation
         self.animation.start()
 
-    def animation_finished(self):
+    def animation_finished(self) -> None:
         if self.edit.maximumHeight() == 0:
             self.edit.hide()
 
-    def toggle_var_show_mode(self, _):
+    def toggle_var_show_mode(self, _: Any) -> None:
         self.var_table.toggle_show_mode(self.check_only_var.isChecked())
 
-    def add_var(self, name, lb, ub):
+    def add_var(self, name: str, lb: float, ub: float) -> None:
         self.var_table.add_variable(name, lb, ub)
         self.filter_var()
 
-    def filter_var(self):
+    def filter_var(self) -> None:
         keyword = self.edit_var.text()
         rx = QRegExp(keyword)
 
@@ -580,33 +579,33 @@ class BadgerEnvBox(QWidget):
 
         self.var_table.update_variables(_variables, 1)
 
-    def toggle_obj_show_mode(self, _):
+    def toggle_obj_show_mode(self, _: Any) -> None:
         self.obj_table.update_show_selected_only(self.check_only_obj.isChecked())
 
-    def filter_obj(self):
+    def filter_obj(self) -> None:
         self.obj_table.update_keyword(self.edit_obj.text())
 
-    def toggle_con_show_mode(self, _):
+    def toggle_con_show_mode(self, _: Any) -> None:
         self.con_table.update_show_selected_only(self.check_only_con.isChecked())
 
-    def filter_con(self):
+    def filter_con(self) -> None:
         self.con_table.update_keyword(self.edit_con.text())
 
-    def toggle_sta_show_mode(self, _):
+    def toggle_sta_show_mode(self, _: Any) -> None:
         self.sta_table.update_show_selected_only(self.check_only_sta.isChecked())
 
-    def filter_sta(self):
+    def filter_sta(self) -> None:
         self.sta_table.update_keyword(self.edit_sta.text())
 
-    def _fit_content(self, list):
+    def _fit_content(self, list: QListWidget) -> None:
         height = list.sizeHintForRow(0) * list.count() + 2 * list.frameWidth() + 4
         height = max(28, min(height, 192))
         list.setFixedHeight(height)
 
-    def fit_content(self):
+    def fit_content(self) -> None:
         return
 
-    def switch_var_panel_style(self, auto=True):
+    def switch_var_panel_style(self, auto: bool = True) -> None:
         if auto:
             self.var_panel.setStyleSheet(stylesheet_auto)
             self.msg_auto.setStyleSheet(stylesheet_auto_msg)
@@ -616,7 +615,7 @@ class BadgerEnvBox(QWidget):
             self.msg_auto.setStyleSheet(stylesheet_manual_msg)
             self.msg_auto.setText(self.MSG_MANUAL)
 
-    def update_stylesheets(self, environment=""):
+    def update_stylesheets(self, environment: str = "") -> None:
         if environment in self.env_dict:
             color_dict = self.env_dict[environment]
             stylesheet = f"""
@@ -634,13 +633,13 @@ class BadgerEnvBox(QWidget):
         # Compose the VOCS settings
         variables = self.var_table.export_variables()
 
-        objectives: dict[str, Any] = {}
+        objectives: dict[str, str] = {}
         for objective in self.obj_table.export_data():
             obj_name = next(iter(objective))
-            (rule,) = objective[obj_name]
+            rule = objective[obj_name][0]
             objectives[obj_name] = rule
 
-        constraints: dict[str, list[float]] = {}
+        constraints: dict[str, list[str | float]] = {}
         critical_constraints: list[str] = []
         for constraint in self.con_table.export_data():
             con_name = next(iter(constraint))
@@ -656,12 +655,12 @@ class BadgerEnvBox(QWidget):
 
         try:
             # We want to ensure it's a dict of either lists or ContinuousVariables
-            variables = {
+            processed_variables: dict[str, list[float] | ContinuousVariable] = {
                 k: list(v) if not isinstance(v, ContinuousVariable) else v
                 for k, v in variables.items()
             }
             vocs = VOCS(
-                variables=variables,
+                variables=processed_variables,
                 objectives=objectives,
                 constraints=constraints,
                 constants={},

@@ -3,18 +3,25 @@ comments, numbers, and operators."""
 
 from typing import ClassVar
 
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import QRegExp
+from PyQt5.QtGui import (
+    QColor,
+    QFont,
+    QSyntaxHighlighter,
+    QTextCharFormat,
+    QTextDocument,
+)
 
 
-def format(color, style=""):
+def format(color: str, style: str = "") -> QTextCharFormat:
     """Return a QTextCharFormat with the given attributes."""
-    _color = QtGui.QColor()
+    _color = QColor()
     _color.setNamedColor(color)
 
-    _format = QtGui.QTextCharFormat()
+    _format = QTextCharFormat()
     _format.setForeground(_color)
     if "bold" in style:
-        _format.setFontWeight(QtGui.QFont.Bold)
+        _format.setFontWeight(QFont.Bold)
     if "italic" in style:
         _format.setFontItalic(True)
 
@@ -35,7 +42,7 @@ STYLES = {
 }
 
 
-class PythonHighlighter(QtGui.QSyntaxHighlighter):
+class PythonHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for the Python language."""
 
     # Python keywords
@@ -118,12 +125,12 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         "]",
     ]
 
-    def __init__(self, parent: QtGui.QTextDocument) -> None:
+    def __init__(self, parent: QTextDocument) -> None:
         super().__init__(parent)
 
         # Multi-line strings (expression, flag, style)
-        self.tri_single = (QtCore.QRegExp("'''"), 1, STYLES["string2"])
-        self.tri_double = (QtCore.QRegExp('"""'), 2, STYLES["string2"])
+        self.tri_single = (QRegExp("'''"), 1, STYLES["string2"])
+        self.tri_double = (QRegExp('"""'), 2, STYLES["string2"])
 
         rules = []
 
@@ -155,11 +162,11 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         ]
 
         # Build a QRegExp for each pattern
-        self.rules = [(QtCore.QRegExp(pat), index, fmt) for (pat, index, fmt) in rules]
+        self.rules = [(QRegExp(pat), index, fmt) for (pat, index, fmt) in rules]
 
-    def highlightBlock(self, text):
+    def highlightBlock(self, text: str | None) -> None:
         """Apply syntax highlighting to the given block of text."""
-        self.tripleQuoutesWithinStrings = []
+        self.tripleQuoutesWithinStrings: list[int] = []
         # Do other syntax formatting
         for expression, nth, format in self.rules:
             index = expression.indexIn(text, 0)
@@ -193,12 +200,21 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
 
         self.setCurrentBlockState(0)
 
+        if text is None:
+            return
+
         # Do multi-line strings
         in_multiline = self.match_multiline(text, *self.tri_single)
         if not in_multiline:
             in_multiline = self.match_multiline(text, *self.tri_double)
 
-    def match_multiline(self, text, delimiter, in_state, style):
+    def match_multiline(
+        self,
+        text: str,
+        delimiter: QRegExp,
+        in_state: int,
+        style: QTextCharFormat,
+    ) -> bool:
         """Do highlighting of multi-line strings. ``delimiter`` should be a
         ``QRegExp`` for triple-single-quotes or triple-double-quotes, and
         ``in_state`` should be a unique integer to represent the corresponding

@@ -13,7 +13,7 @@ class Environment(environment.Environment):
 
     flag: int = 0
 
-    def set_variables(self, variable_inputs: dict[str, float]):
+    def set_variables(self, variable_inputs: dict[str, float]) -> None:
         if not self.interface:
             raise BadgerNoInterfaceError
 

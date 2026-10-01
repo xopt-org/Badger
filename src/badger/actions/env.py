@@ -1,8 +1,8 @@
 """The `badger env` command. Lists available environment plugins or shows
 the details (variables, observations, parameters) of a specific one."""
 
-import argparse
 import logging
+from argparse import Namespace
 
 from badger.errors import BadgerInvalidPluginError, BadgerPluginNotFoundError
 from badger.utils import range_to_str, yprint
@@ -10,7 +10,7 @@ from badger.utils import range_to_str, yprint
 logger = logging.getLogger(__name__)
 
 
-def show_env(args: argparse.Namespace) -> None:
+def show_env(args: Namespace) -> None:
     try:
         from badger.factory import get_env, list_env
     except Exception:

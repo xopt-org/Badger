@@ -39,6 +39,7 @@ import pandas as pd
 import yaml
 from coolname import generate_slug
 from gest_api.vocs import (
+    VOCS,
     BaseConstraint,
     BaseObjective,
     ContinuousVariable,
@@ -64,7 +65,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt import VOCS
 from xopt.generators import (
     all_generator_names,
     get_generator_defaults,
@@ -129,7 +129,9 @@ def format_validation_error(e: ValidationError) -> str:
     return "\n".join(messages)
 
 
-def extract_constraint_symbol_and_value(constraint: BaseConstraint) -> str:
+def extract_constraint_symbol_and_value(
+    constraint: BaseConstraint,
+) -> tuple[str, float]:
     """
     Extract symbol and value from gest-api constraint objects
     generator standard library [gest-api](https://github.com/campa-consortium/gest-api)
@@ -205,7 +207,7 @@ class BadgerRoutinePage(QWidget):
         # 2: not initialized, 1: apply to all, 0: apply to only visible
         self.lim_apply_to_vars = 2
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         logger.info("Initializing UI for BadgerRoutinePage.")
         config_singleton = init_settings()
 
@@ -232,7 +234,7 @@ class BadgerRoutinePage(QWidget):
         edit_save.setPlaceholderText(generate_slug(2))
         hbox_name.addWidget(label)
         hbox_name.addWidget(edit_save, 1)
-        vbox_meta.addWidget(name, alignment=Qt.AlignTop)
+        vbox_meta.addWidget(name, alignment=Qt.AlignmentFlag.AlignTop)
 
         # Description
         descr = QWidget()
@@ -274,15 +276,15 @@ class BadgerRoutinePage(QWidget):
             "Save as Template"
         )
         save_template_button.setFixedSize(128, 24)
-        hbox_name.addWidget(save_template_button, alignment=Qt.AlignRight)
-        vbox_meta.addWidget(template_button, alignment=Qt.AlignBottom)
+        hbox_name.addWidget(save_template_button, alignment=Qt.AlignmentFlag.AlignRight)
+        vbox_meta.addWidget(template_button, alignment=Qt.AlignmentFlag.AlignBottom)
         template_button.show()
 
         # Tags
         self.cbox_tags = cbox_tags = BadgerFilterBox(title=" Tags")
         if not strtobool(config_singleton.read_value("BADGER_ENABLE_ADVANCED")):
             cbox_tags.hide()
-        vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignTop)
+        vbox_meta.addWidget(cbox_tags, alignment=Qt.AlignmentFlag.AlignTop)
         # vbox_meta.addStretch()
 
         # vbox.addWidget(group_meta)
@@ -342,7 +344,7 @@ class BadgerRoutinePage(QWidget):
         except KeyError:
             self.template_dir = os.path.join(self.BADGER_PLUGIN_ROOT, "templates")
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         logger.info("Configuring logic for BadgerRoutinePage.")
         self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
@@ -375,9 +377,7 @@ class BadgerRoutinePage(QWidget):
         #     lambda: logger.debug("Selection changed")
         # )  # for debugging
 
-    def load_template_yaml(
-        self, checked_state, template_path: str | None = None
-    ) -> None:
+    def load_template_yaml(self, template_path: str | None = None) -> None:
         logger.info("Loading template YAML.")
         """
         Load data from template .yaml into template_dict dictionary.
@@ -411,7 +411,7 @@ class BadgerRoutinePage(QWidget):
             print(f"Error loading template: {e}")
             return
 
-    def set_options_from_template(self, template_dict: dict[str, Any]):
+    def set_options_from_template(self, template_dict: dict[str, Any]) -> None:
         logger.info(
             f"Setting options from template: {template_dict.get('name', 'unknown')}"
         )

@@ -3,8 +3,10 @@ user configure the number of random points and the sampling fraction around
 the current operating point before starting an optimization run."""
 
 from copy import deepcopy
+from dataclasses import dataclass
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
@@ -22,24 +24,37 @@ from PyQt5.QtWidgets import (
 from badger.gui.components.robust_spinbox import RobustSpinBox
 
 
+@dataclass
+class BadgerAddRandomConfig:
+    method: int
+    n_points: int
+    fraction: float
+
+
 class BadgerAddRandomDialog(QDialog):
-    def __init__(self, parent, add_points, save_config, configs=None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        add_points=None,
+        save_config=None,
+        configs: dict | None = None,
+    ) -> None:
         super().__init__(parent)
 
         self.add_points = add_points
         self.save_config = save_config
         self.configs = deepcopy(configs)
         if configs is None:
-            self.configs = {
-                "method": 0,
-                "n_points": 3,
-                "fraction": 0.1,
-            }
+            self.configs = BadgerAddRandomConfig(
+                method=0,
+                n_points=3,
+                fraction=0.1,
+            )
 
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Add random points")
         self.setMinimumWidth(360)
 
@@ -121,32 +136,34 @@ class BadgerAddRandomDialog(QDialog):
         vbox.addWidget(group_config, 1)
         vbox.addWidget(button_set)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.cb.currentIndexChanged.connect(self.method_changed)
         self.btn_cancel.clicked.connect(self.close)
         self.btn_add.clicked.connect(self.add)
         self.sb_np.valueChanged.connect(self.n_points_changed)
         self.sb_frac.valueChanged.connect(self.frac_changed)
 
-    def n_points_changed(self, n_points):
+    def n_points_changed(self, n_points: int) -> None:
         self.configs["n_points"] = n_points
 
-    def frac_changed(self, frac):
+    def frac_changed(self, frac: float) -> None:
         self.configs["fraction"] = frac
 
-    def add(self):
+    def add(self) -> None:
         self.save_config(self.configs)
         self.add_points()
         self.close()
 
-    def method_changed(self, i):
+    def method_changed(self, i: int) -> None:
         self.stacks.setCurrentIndex(i)
 
         # Update configs
         self.configs["method"] = i
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+        if event is None:
+            return
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             self.add()
-        elif event.key() == Qt.Key_Escape:
+        elif event.key() == Qt.Key.Key_Escape:
             self.close()

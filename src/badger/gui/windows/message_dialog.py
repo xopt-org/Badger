@@ -3,7 +3,7 @@ with an optional expandable details section in a resizable, scrollable window,
 used for showing verbose error information or optimization summaries."""
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QFontDatabase, QTextOption
+from PyQt5.QtGui import QFont, QFontDatabase, QPixmap, QTextOption
 from PyQt5.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -20,10 +20,15 @@ from PyQt5.QtWidgets import (
 
 class BadgerScrollableMessageBox(QDialog):
     def __init__(
-        self, icon=None, title="Message", text="", detailedText="", parent=None
-    ):
+        self,
+        icon: QPixmap | None = None,
+        title: str = "Message",
+        text: str = "",
+        detailedText: str = "",
+        parent: QDialog | None = None,
+    ) -> None:
         super().__init__(parent)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
 
         # Main layout
         mainLayout = QVBoxLayout(self)
@@ -66,19 +71,27 @@ class BadgerScrollableMessageBox(QDialog):
         self.setWindowTitle(title)
         self.resize(420, 300)
 
-    def setText(self, text):
+    def setText(self, text: str) -> None:
         self.textLabel.setText(text)
 
-    def setDetailedText(self, detailedText):
+    def setDetailedText(self, detailedText: str) -> None:
         self.detailedTextWidget.setText(detailedText)
 
-    def setIcon(self, icon):
+    def setIcon(self, icon: QPixmap) -> None:
         # This maps the QMessageBox icons to the QDialog
         iconMap = {
-            QMessageBox.Information: QMessageBox.standardIcon(QMessageBox.Information),
-            QMessageBox.Warning: QMessageBox.standardIcon(QMessageBox.Warning),
-            QMessageBox.Critical: QMessageBox.standardIcon(QMessageBox.Critical),
-            QMessageBox.Question: QMessageBox.standardIcon(QMessageBox.Question),
+            QMessageBox.Icon.Information: QMessageBox.standardIcon(
+                QMessageBox.Icon.Information
+            ),
+            QMessageBox.Icon.Warning: QMessageBox.standardIcon(
+                QMessageBox.Icon.Warning
+            ),
+            QMessageBox.Icon.Critical: QMessageBox.standardIcon(
+                QMessageBox.Icon.Critical
+            ),
+            QMessageBox.Icon.Question: QMessageBox.standardIcon(
+                QMessageBox.Icon.Question
+            ),
         }
         standardIcon = iconMap.get(icon)
         if standardIcon:

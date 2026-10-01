@@ -2,6 +2,7 @@
 shows the details of a specific one."""
 
 import logging
+from typing import Any
 
 from badger.errors import BadgerInvalidPluginError, BadgerPluginNotFoundError
 from badger.utils import yprint
@@ -9,7 +10,7 @@ from badger.utils import yprint
 logger = logging.getLogger(__name__)
 
 
-def show_intf(args):
+def show_intf(args: Any) -> None:
     try:
         from badger.factory import get_intf, list_intf
     except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit

@@ -1,10 +1,11 @@
 import os
+from collections.abc import Generator
 
 import pytest
 
 
 class TestRoutine:
-    def test_routine_init(self):
+    def test_routine_init(self) -> None:
         from badger.tests.utils import create_routine
 
         routine = create_routine()
@@ -12,7 +13,7 @@ class TestRoutine:
 
         assert len(routine.data) == 1
 
-    def test_routine_serialization(self):
+    def test_routine_serialization(self) -> None:
         from badger.routine import Routine
         from badger.tests.utils import create_routine
 
@@ -28,7 +29,7 @@ class TestRoutine:
 
         assert len(lroutine.data) == 2
 
-    def test_routine_env_dump(self):
+    def test_routine_env_dump(self) -> None:
         from badger.environment import Environment
         from badger.routine import Routine
         from badger.tests.utils import create_routine
@@ -44,7 +45,7 @@ class TestRoutine:
         assert routine_re.environment.flag == 1
 
     @pytest.fixture(scope="module", autouse=True)
-    def clean_up(self):
+    def clean_up(self) -> Generator[None, None, None]:
         yield
         files = ["test.yaml"]
         for f in files:

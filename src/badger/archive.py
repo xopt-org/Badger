@@ -11,6 +11,8 @@ import logging
 import os
 import time
 import warnings
+from collections.abc import Hashable
+from typing import Any, TypedDict
 
 from badger.errors import BadgerConfigError
 from badger.routine import Routine
@@ -30,12 +32,23 @@ elif not os.path.exists(BADGER_ARCHIVE_ROOT):
     logger.info(f"Badger run root {BADGER_ARCHIVE_ROOT} created")
 
 
-def archive_run(routine, states=None):
-    # routine: Routine
+class RunArchive(TypedDict, total=False):
+    filename: str
+    routine: Routine
+    data: dict[Hashable, Any]  # TODO: make this more specific
+    system_states: Any | None  # TODO: make this more specific
+    path: str
+
+
+def archive_run(
+    routine: Routine, states: Any | None = None
+) -> RunArchive:  # TODO: make states more specific
 
     data = routine.sorted_data
+    if not data:
+        raise ValueError("No data to archive")
     data_dict = data.to_dict("list")
-    if hasattr(routine, "creation_ts"):
+    if hasattr(routine, "creation_ts") and routine.creation_ts is not None:
         suffix = routine.creation_ts
     else:  # compatibility with old routines
         ts_float = data_dict["timestamp"][0]  # time of the first evaluated point
@@ -49,7 +62,7 @@ def archive_run(routine, states=None):
     # algo_name = routine.generator.name
     fname = f"{env_name}-{suffix}.yaml"
 
-    run = {
+    run: RunArchive = {
         "filename": fname,
         "routine": routine,
         "data": data_dict,
@@ -67,14 +80,14 @@ def archive_run(routine, states=None):
     return run
 
 
-def clear_tmp_runs():
+def clear_tmp_runs() -> None:
     path = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp")
     if os.path.exists(path):
         for f in os.listdir(path):
             os.remove(os.path.join(path, f))
 
 
-def save_tmp_run(routine):
+def save_tmp_run(routine: Routine) -> str:
     # routine: Routine
     path = os.path.join(BADGER_ARCHIVE_ROOT, ".tmp")
     suffix = time.strftime("%Y-%m-%d-%H%M%S")
@@ -86,8 +99,8 @@ def save_tmp_run(routine):
     return fname
 
 
-def list_run():
-    runs = {}
+def list_run() -> dict[str, dict[str, dict[str, list[str]]]]:
+    runs: dict[str, dict[str, dict[str, list[str]]]] = {}
     # Get years, latest first
     years = sorted(
         [
@@ -137,7 +150,7 @@ def list_run():
     return runs
 
 
-def get_runs():
+def get_runs() -> list[str]:
     runs = list_run()
     run_list = []
     for months in runs.values():
@@ -176,11 +189,11 @@ def load_run(run_fname: str) -> Routine:
     return routine
 
 
-def update_run(routine: Routine):
+def update_run(routine: Routine) -> None:
     pass
 
 
-def delete_run(run_fname):
+def delete_run(run_fname: str) -> None:
     tokens = run_fname.split("-")
     first_level = tokens[1]
     second_level = f"{tokens[1]}-{tokens[2]}"
@@ -199,7 +212,7 @@ def delete_run(run_fname):
     os.remove(os.path.join(prefix, run_fname))
 
 
-def get_base_run_filename(run_filename):
+def get_base_run_filename(run_filename: str) -> str:
     if run_filename.endswith(" (failed to load)"):
         base_name = run_filename[:-17]
     else:

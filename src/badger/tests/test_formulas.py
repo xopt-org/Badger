@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -13,29 +15,29 @@ from badger.formula import (
 class TestSafeVarName:
     """Test the safe_var_name function."""
 
-    def test_alphanumeric_unchanged(self):
+    def test_alphanumeric_unchanged(self) -> None:
         """Test that alphanumeric names with underscores remain unchanged."""
         assert safe_var_name("valid_name123") == "valid_name123"
         assert safe_var_name("ABC_def_456") == "ABC_def_456"
         assert safe_var_name("_private") == "_private"
 
-    def test_special_characters_replaced(self):
+    def test_special_characters_replaced(self) -> None:
         """Test that special characters are replaced with underscores."""
         assert safe_var_name("test-name") == "test_name"
         assert safe_var_name("test.name") == "test_name"
         assert safe_var_name("test name") == "test_name"
         assert safe_var_name("test@name#") == "test_name_"
 
-    def test_multiple_special_chars(self):
+    def test_multiple_special_chars(self) -> None:
         """Test handling of multiple special characters."""
         assert safe_var_name("test-@#$%name") == "test_____name"
         assert safe_var_name("!@#$%^&*()") == "__________"
 
-    def test_empty_string(self):
+    def test_empty_string(self) -> None:
         """Test handling of empty string."""
         assert safe_var_name("") == ""
 
-    def test_numbers_only(self):
+    def test_numbers_only(self) -> None:
         """Test handling of numeric strings."""
         assert safe_var_name("123") == "123"
         assert safe_var_name("456.789") == "456_789"
@@ -44,13 +46,13 @@ class TestSafeVarName:
 class TestExtractVariableKeys:
     """Test the extract_variable_keys function."""
 
-    def test_backticks(self):
+    def test_backticks(self) -> None:
         """Test extraction of backtick-quoted variables."""
         expr = "`var1` + `var2`"
         result = extract_variable_keys(expr)
         assert result == ["var1", "var2"]
 
-    def test_duplicate_variables(self):
+    def test_duplicate_variables(self) -> None:
         """Test that duplicate variables are handled correctly."""
         expr = "`var1` + `var1` + `var1`"
         result = extract_variable_keys(expr)
@@ -58,25 +60,27 @@ class TestExtractVariableKeys:
             "var1",
             "var1",
             "var1",
-        ]  # findall returns list with duplicates    def test_no_variables(self):
+        ]  # findall returns list with duplicates
+
+    def test_no_variables(self) -> None:
         """Test expression with no quoted variables."""
         expr = "x + y + 5"
         result = extract_variable_keys(expr)
         assert result == []
 
-    def test_empty_quotes(self):
+    def test_empty_quotes(self) -> None:
         """Test handling of empty quotes."""
         expr = "``"
         result = extract_variable_keys(expr)
         assert result == []  # Empty backticks don't match the regex
 
-    def test_special_characters_in_quotes(self):
+    def test_special_characters_in_quotes(self) -> None:
         """Test variables with special characters."""
         expr = "`var-1` + `var.2` + `var@3`"
         result = extract_variable_keys(expr)
         assert result == ["var-1", "var.2", "var@3"]
 
-    def test_nested_backticks_not_supported(self):
+    def test_nested_backticks_not_supported(self) -> None:
         """Test that nested backticks are not properly handled."""
         expr = "`var`1` + `var2`"
         result = extract_variable_keys(expr)
@@ -87,35 +91,35 @@ class TestExtractVariableKeys:
 class TestFindUsedNames:
     """Test the find_used_names function."""
 
-    def test_simple_variables(self):
+    def test_simple_variables(self) -> None:
         """Test finding simple variable names."""
         expr = "x + y"
         result = find_used_names(expr)
         assert result == {"x", "y"}
 
-    def test_function_calls(self):
+    def test_function_calls(self) -> None:
         """Test finding function names."""
         expr = "sin(x) + cos(y)"
         result = find_used_names(expr)
         assert result == {"sin", "cos", "x", "y"}
 
-    def test_complex_expression(self):
+    def test_complex_expression(self) -> None:
         """Test complex expression with various names."""
         expr = "sqrt(mean(x**2)) + percentile(data, 95)"
         result = find_used_names(expr)
         assert result == {"sqrt", "mean", "x", "percentile", "data"}
 
-    def test_invalid_syntax(self):
+    def test_invalid_syntax(self) -> None:
         """Test that SyntaxError is raised for invalid expressions."""
         with pytest.raises(SyntaxError, match="Invalid syntax in expression"):
             find_used_names("x +++")  # Use a clearly invalid syntax
 
-    def test_empty_expression(self):
+    def test_empty_expression(self) -> None:
         """Test empty expression."""
         with pytest.raises(SyntaxError):
             find_used_names("")
 
-    def test_literals_only(self):
+    def test_literals_only(self) -> None:
         """Test expression with only literals."""
         expr = "5 + 3.14"
         result = find_used_names(expr)
@@ -125,7 +129,7 @@ class TestFindUsedNames:
 class TestSuggestName:
     """Test the suggest_name function."""
 
-    def test_close_match_found(self):
+    def test_close_match_found(self) -> None:
         """Test finding close matches for unknown names."""
         unknown = ["sine", "cosine"]
         known = ["sin", "cos", "tan", "exp"]
@@ -133,14 +137,14 @@ class TestSuggestName:
         assert "sine" in result
         assert result["sine"] == "sin"
 
-    def test_no_close_match(self):
+    def test_no_close_match(self) -> None:
         """Test when no close match is found."""
         unknown = ["xyz"]
         known = ["sin", "cos", "tan"]
         result = suggest_name(unknown, known)
         assert result == {}
 
-    def test_exact_match_not_suggested(self):
+    def test_exact_match_not_suggested(self) -> None:
         """Test that exact matches are still suggested (difflib behavior)."""
         unknown = ["sin"]
         known = ["sin", "cos", "tan"]
@@ -148,7 +152,7 @@ class TestSuggestName:
         # difflib actually returns exact matches too
         assert result == {"sin": "sin"}
 
-    def test_multiple_suggestions(self):
+    def test_multiple_suggestions(self) -> None:
         """Test multiple suggestions."""
         unknown = ["sine", "cosine", "xyz"]
         known = ["sin", "cos", "tan"]
@@ -156,7 +160,7 @@ class TestSuggestName:
         assert len(result) <= 2  # xyz should not match
         assert "sine" in result
 
-    def test_empty_inputs(self):
+    def test_empty_inputs(self) -> None:
         """Test empty inputs."""
         assert suggest_name([], ["sin", "cos"]) == {}
         assert suggest_name(["sine"], []) == {}
@@ -166,21 +170,21 @@ class TestSuggestName:
 class TestInterpretExpression:
     """Test the interpret_expression function."""
 
-    def test_simple_arithmetic(self):
+    def test_simple_arithmetic(self) -> None:
         """Test simple arithmetic with variables."""
         expr = "`x` + `y`"
         variables = {"x": 5, "y": 3}
         result = interpret_expression(expr, variables)
         assert result == 8
 
-    def test_numpy_functions(self):
+    def test_numpy_functions(self) -> None:
         """Test using numpy functions."""
         expr = "sin(`x`) + cos(`y`)"
         variables = {"x": 0, "y": 0}
         result = interpret_expression(expr, variables)
         assert np.isclose(result, 1.0)  # sin(0) + cos(0) = 0 + 1 = 1
 
-    def test_percentile_function(self):
+    def test_percentile_function(self) -> None:
         """Test the percentile function transformation."""
         expr = "percentile90(`data`)"
         variables = {"data": np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])}
@@ -188,7 +192,7 @@ class TestInterpretExpression:
         expected = np.percentile(variables["data"], 90)
         assert np.isclose(result, expected)
 
-    def test_rms_function(self):
+    def test_rms_function(self) -> None:
         """Test the RMS function transformation."""
         expr = "rms(`data`)"
         variables = {"data": np.array([3, 4])}
@@ -196,21 +200,21 @@ class TestInterpretExpression:
         expected = np.sqrt(np.mean(variables["data"] ** 2))
         assert np.isclose(result, expected)
 
-    def test_backtick_variables(self):
+    def test_backtick_variables(self) -> None:
         """Test with backtick-quoted variables."""
         expr = "`x` + `y` + `z`"
         variables = {"x": 1, "y": 2, "z": 3}
         result = interpret_expression(expr, variables)
         assert result == 6
 
-    def test_special_character_variables(self):
+    def test_special_character_variables(self) -> None:
         """Test variables with special characters."""
         expr = "`var-1` + `var.2`"
         variables = {"var-1": 10, "var.2": 20}
         result = interpret_expression(expr, variables)
         assert result == 30
 
-    def test_missing_variables_error(self):
+    def test_missing_variables_error(self) -> None:
         """Test error when variables are missing."""
         expr = "`x` + `y`"
         variables = {"x": 5}  # missing 'y'
@@ -219,28 +223,28 @@ class TestInterpretExpression:
         ):
             interpret_expression(expr, variables)
 
-    def test_unknown_names_error(self):
+    def test_unknown_names_error(self) -> None:
         """Test error for unknown function/variable names."""
         expr = "unknown_func(`x`)"
         variables = {"x": 5}
         with pytest.raises(NameError, match="Unknown names in expression"):
             interpret_expression(expr, variables)
 
-    def test_unknown_names_with_suggestions(self):
+    def test_unknown_names_with_suggestions(self) -> None:
         """Test that suggestions are provided for unknown names."""
         expr = "sine(`x`)"  # should suggest 'sin'
         variables = {"x": 0}
         with pytest.raises(NameError, match="Did you mean"):
             interpret_expression(expr, variables)
 
-    def test_invalid_expression_syntax(self):
+    def test_invalid_expression_syntax(self) -> None:
         """Test error for invalid expression syntax."""
         expr = "`x` +"  # incomplete expression
         variables = {"x": 5}
         with pytest.raises(SyntaxError, match="Invalid syntax in expression"):
             interpret_expression(expr, variables)
 
-    def test_complex_expression(self):
+    def test_complex_expression(self) -> None:
         """Test a complex expression with multiple operations."""
         expr = "sqrt(mean(`data`**2)) + percentile95(`values`)"
         variables = {
@@ -256,14 +260,14 @@ class TestInterpretExpression:
 
         assert np.isclose(result, expected)
 
-    def test_array_operations(self):
+    def test_array_operations(self) -> None:
         """Test operations with numpy arrays."""
         expr = "sum(`arr`) / len(`arr`)"
         variables = {"arr": np.array([1, 2, 3, 4, 5])}
         result = interpret_expression(expr, variables)
         assert np.isclose(result, 3.0)  # mean of [1,2,3,4,5]
 
-    def test_nested_functions(self):
+    def test_nested_functions(self) -> None:
         """Test nested function calls."""
         expr = "sqrt(abs(sin(`x`)))"
         variables = {"x": -np.pi / 2}
@@ -271,7 +275,7 @@ class TestInterpretExpression:
         expected = np.sqrt(np.abs(np.sin(-np.pi / 2)))
         assert np.isclose(result, expected)
 
-    def test_multiple_percentile_calls(self):
+    def test_multiple_percentile_calls(self) -> None:
         """Test multiple percentile function calls."""
         expr = "percentile25(`data`) + percentile75(`data`)"
         variables = {"data": np.array([1, 2, 3, 4, 5])}
@@ -281,10 +285,10 @@ class TestInterpretExpression:
         )
         assert np.isclose(result, expected)
 
-    def test_empty_variable_name(self):
+    def test_empty_variable_name(self) -> None:
         """Test handling of empty variable names."""
         expr = "42"  # Simple constant expression instead of empty backticks
-        variables = {}
+        variables: dict[str, Any] = {}
         result = interpret_expression(expr, variables)
         assert result == 42
 
@@ -293,7 +297,7 @@ class TestInterpretExpression:
 class TestIntegration:
     """Integration tests combining multiple functions."""
 
-    def test_full_workflow(self):
+    def test_full_workflow(self) -> None:
         """Test the full workflow of expression interpretation."""
         # This tests how all functions work together
         expr = "`sensor_1` + `sensor-2` * sin(`angle`)"
@@ -307,7 +311,7 @@ class TestIntegration:
         expected = 10 + 5 * np.sin(np.pi / 6)  # 10 + 5 * 0.5 = 12.5
         assert np.isclose(result, expected)
 
-    def test_error_handling_workflow(self):
+    def test_error_handling_workflow(self) -> None:
         """Test error handling across the workflow."""
         expr = "`missing_var` + unknown_func(`x`)"
         variables = {"x": 5}

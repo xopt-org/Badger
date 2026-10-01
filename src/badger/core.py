@@ -11,18 +11,19 @@ the same logic but runs it in a child process for the GUI.
 
 import time
 from collections.abc import Callable
+from typing import Any
 
 from pandas import DataFrame, concat
 from xopt.vocs import select_best
 
 from badger.errors import BadgerRunTerminated
 from badger.logger import _get_default_logger
-from badger.logger.event import Events
+from badger.logger.event import Events, Solution
 from badger.routine import Routine
 from badger.utils import curr_ts_to_str, dump_state
 
 
-def check_run_status(active_callback):
+def check_run_status(active_callback: Callable[[], int]) -> None:
     while True:
         status = active_callback()
         if status == 2:
@@ -34,13 +35,14 @@ def check_run_status(active_callback):
             break
 
 
-def convert_to_solution(result: DataFrame, routine: Routine):
+def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
     vocs = routine.vocs
+
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         if best_idx.size > 0:
             best_idx = int(best_idx[0])  # convert numpy array to int
-            if best_idx != len(routine.data) - 1:
+            if routine.data is None or best_idx != len(routine.data) - 1:
                 is_optimal = False
             else:
                 is_optimal = True
@@ -56,7 +58,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     cons = list(result[vocs.constraint_names].to_numpy()[0])
     stas = list(result[vocs.observable_names].to_numpy()[0])
 
-    solution = (
+    solution = Solution(
         vars,
         objs,
         cons,
@@ -73,11 +75,11 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
 def run_routine(
     routine: Routine,
-    active_callback: Callable,
-    generate_callback: Callable,
-    evaluate_callback: Callable,
-    states_callback: Callable,
-    dump_file_callback: Callable | None = None,
+    active_callback: Callable[..., Any],
+    generate_callback: Callable[..., Any],
+    evaluate_callback: Callable[..., Any],
+    states_callback: Callable[..., Any],
+    dump_file_callback: Callable[..., Any] | None = None,
     verbose: int = 2,
 ) -> None:
     """
@@ -115,32 +117,32 @@ def run_routine(
 
     # Save system states if applicable
     states = environment.get_system_states()
-    if states_callback and (states is not None):
+    if states is not None:
         states_callback(states)
 
     # Optimization starts
-    solution_meta = (
+    solution_meta = Solution(
         None,
         None,
         None,
         None,
-        None,
+        False,  # TODO: was previously None, but type of is_optimal is bool, need to check if this causes any issue
         routine.vocs.variable_names,
         routine.vocs.objective_names,
         routine.vocs.constraint_names,
         routine.vocs.observable_names,
     )
+    solution_meta = Solution(*solution_meta)
     opt_logger.update(Events.OPTIMIZATION_START, solution_meta)
 
     # evaluate initial points:
     # Nikita: more care about the setting var logic,
     # wait or consider timeout/retry
-    for _, ele in initial_points.iterrows():
-        result = routine.evaluate_data(ele.to_dict())
+    for _, ele in initial_points.iterrows() if initial_points is not None else []:
+        result = routine.evaluate_data(DataFrame([ele.to_dict()]))
         solution = convert_to_solution(result, routine)
         opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-        if evaluate_callback:
-            evaluate_callback(result)
+        evaluate_callback(result)
 
     # Prepare for dumping file
     if dump_file_callback:
@@ -172,8 +174,7 @@ def run_routine(
             result = routine.evaluate_data(candidates)
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate_callback:
-                evaluate_callback(result)
+            evaluate_callback(result)
 
             # Dump Xopt state after each step
             if dump_file_callback:

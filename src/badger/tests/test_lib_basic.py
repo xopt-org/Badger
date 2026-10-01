@@ -5,7 +5,7 @@
 #     assert configs['name'] == 'upper_confidence_bound'
 
 
-def test_env_api():
+def test_env_api() -> None:
     from badger.factory import get_env, list_env
 
     assert len(list_env()) == 2
@@ -14,7 +14,7 @@ def test_env_api():
     assert configs["name"] == "test"
 
 
-def test_intf_api():
+def test_intf_api() -> None:
     from badger.factory import get_intf, list_intf
 
     assert len(list_intf()) == 1

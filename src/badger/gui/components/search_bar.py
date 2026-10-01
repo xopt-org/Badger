@@ -4,7 +4,7 @@ routine lists."""
 from PyQt5.QtWidgets import QLineEdit
 
 
-def search_bar():
+def search_bar() -> QLineEdit:
     # completer = QCompleter(word_list)
 
     line_edit = QLineEdit()

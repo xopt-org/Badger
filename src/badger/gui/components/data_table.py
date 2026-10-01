@@ -2,9 +2,16 @@
 optimization data (variables, objectives, constraints) with clipboard
 copy and alternating-row styling."""
 
+import logging
+from typing import Any
+
+from gest_api.vocs import VOCS
 from pandas import DataFrame
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
+
+logger = logging.getLogger(__name__)
 
 stylesheet = """
     QTableWidget
@@ -41,35 +48,40 @@ class TableWithCopy(QTableWidget):
       like google sheets, excel, or numbers
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
         super().keyPressEvent(event)
-        if event.key() == Qt.Key.Key_C and (
-            event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        if (
+            event is not None
+            and event.key() == Qt.Key.Key_C
+            and (event.modifiers() & Qt.KeyboardModifier.ControlModifier)
         ):
-            copied_cells = sorted(self.selectedIndexes())
+            copied_cells = sorted(
+                self.selectedIndexes(), key=lambda idx: (idx.row(), idx.column())
+            )
 
             copy_text = ""
             max_column = copied_cells[-1].column()
             for c in copied_cells:
-                copy_text += self.item(c.row(), c.column()).text()
+                item = self.item(c.row(), c.column())
+                if item is not None:
+                    copy_text += item.text()
                 if c.column() == max_column:
                     copy_text += "\n"
                 else:
                     copy_text += "\t"
 
-            QApplication.clipboard().setText(copy_text)
+            clipboard = QApplication.clipboard()
+            if clipboard is not None:
+                clipboard.setText(copy_text)
 
-    def set_uneditable(self):
+    def set_uneditable(self) -> None:
         self.setEditTriggers(QTableWidget.NoEditTriggers)
 
-    def set_editable(self):
+    def set_editable(self) -> None:
         self.setEditTriggers(QTableWidget.DoubleClicked)
 
 
-def format_value(v):
+def format_value(v: Any) -> str:
     try:
         f = f"{v:.6g}"
     except (ValueError, TypeError):
@@ -77,18 +89,31 @@ def format_value(v):
     return f
 
 
-def resize_columns_to_content_or_default(table):
+def resize_columns_to_content_or_default(table: QTableWidget) -> None:
     """Resize columns to the maximum of default width and content width."""
-    default_width = table.horizontalHeader().defaultSectionSize()
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot resize columns.")
+        return
+    default_width = hheader.defaultSectionSize()
     table.resizeColumnsToContents()
     for col in range(table.columnCount()):
         current_width = table.columnWidth(col)
         table.setColumnWidth(col, max(default_width, current_width))
 
 
-def update_table(table, data=None, vocs=None, info=False):
+def update_table(
+    table: TableWithCopy,
+    data: DataFrame | None = None,
+    vocs: VOCS | None = None,
+    info: bool = False,
+) -> TableWithCopy:
     table.setRowCount(0)
-    table.horizontalHeader().setVisible(False)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot hide it.")
+    else:
+        hheader.setVisible(False)
 
     if data is None:
         return table
@@ -117,25 +142,37 @@ def update_table(table, data=None, vocs=None, info=False):
     table.setVerticalHeaderLabels(
         list(map(str, _data.index))
     )  # row index starts from 0
-    table.horizontalHeader().setVisible(True)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot show it.")
+    else:
+        hheader.setVisible(True)
     resize_columns_to_content_or_default(table)
 
     return table
 
 
-def reset_table(table, header):
+def reset_table(table: TableWithCopy, header: list[str]) -> TableWithCopy:
     table.setRowCount(0)
     # Need to set col num or the old col num will be used for new data,
     # resulting in potential incomplete table
     table.setColumnCount(len(header))
-    table.horizontalHeader().setVisible(False)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot hide it.")
+    else:
+        hheader.setVisible(False)
     table.setHorizontalHeaderLabels(header)
-    table.horizontalHeader().setVisible(True)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot show it.")
+    else:
+        hheader.setVisible(True)
 
     return table
 
 
-def add_row(table, row):
+def add_row(table: TableWithCopy, row: list[float | str]) -> TableWithCopy:
     r = table.rowCount()
     table.insertRow(r)
     for i, v in enumerate(row):
@@ -145,7 +182,7 @@ def add_row(table, row):
     return table
 
 
-def data_table(data=None):
+def data_table(data: DataFrame | None = None) -> TableWithCopy:
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
     table.setStyleSheet(stylesheet_data)
@@ -153,7 +190,7 @@ def data_table(data=None):
     return update_table(table, data)
 
 
-def init_data_table(variable_names=None):
+def init_data_table(variable_names: list[str] | None = None) -> TableWithCopy:
     table = TableWithCopy()
     table.setAlternatingRowColors(True)
     table.setStyleSheet(stylesheet)
@@ -164,24 +201,38 @@ def init_data_table(variable_names=None):
         return table
 
     table.setColumnCount(len(variable_names))
-    table.horizontalHeader().setVisible(False)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot hide it.")
+    else:
+        hheader.setVisible(False)
     table.setHorizontalHeaderLabels(variable_names)
-    table.horizontalHeader().setVisible(True)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot show it.")
+    else:
+        hheader.setVisible(True)
     resize_columns_to_content_or_default(table)
 
     return table
 
 
-def get_horizontal_header_as_list(table):
+def get_horizontal_header_as_list(table: TableWithCopy) -> list[str]:
     header = table.horizontalHeader()
+    if header is None:
+        logger.warning("Horizontal header is None, cannot read labels.")
+        return []
+    model = header.model()
+    if model is None:
+        logger.warning("Header model is None, cannot read labels.")
+        return []
     header_labels = [
-        header.model().headerData(i, header.orientation())
-        for i in range(header.count())
+        model.headerData(i, header.orientation()) for i in range(header.count())
     ]
     return header_labels
 
 
-def get_table_content_as_dict(table):
+def get_table_content_as_dict(table: TableWithCopy) -> dict[str, list[str]]:
     table_content = {}
     header_labels = get_horizontal_header_as_list(table)
 
@@ -201,13 +252,21 @@ def get_table_content_as_dict(table):
     return table_content
 
 
-def update_init_data_table(table, variable_names):
+def update_init_data_table(table: TableWithCopy, variable_names: list[str]) -> None:
     current_init_data = get_table_content_as_dict(table)
 
     table.setColumnCount(len(variable_names))
-    table.horizontalHeader().setVisible(False)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot hide it.")
+    else:
+        hheader.setVisible(False)
     table.setHorizontalHeaderLabels(variable_names)
-    table.horizontalHeader().setVisible(True)
+    hheader = table.horizontalHeader()
+    if hheader is None:
+        logger.warning("Horizontal header is None, cannot show it.")
+    else:
+        hheader.setVisible(True)
 
     for col, name in enumerate(variable_names):
         if name in current_init_data:
@@ -218,7 +277,7 @@ def update_init_data_table(table, variable_names):
                 table.setItem(row, col, QTableWidgetItem(""))
 
 
-def set_init_data_table(table, data: DataFrame):
+def set_init_data_table(table: TableWithCopy, data: DataFrame) -> None:
     variable_names = get_horizontal_header_as_list(table)
     try:
         data_dict = data.to_dict("list")

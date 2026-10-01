@@ -87,6 +87,9 @@ class PlottingArea(QWidget):
             )
 
             layout = self.layout()
+            if layout is None:
+                logger.error("Layout not found")
+                return
 
             with BlockSignalsContext(layout):
                 # Clear the existing layout (remove previous plot if any)
@@ -94,14 +97,14 @@ class PlottingArea(QWidget):
 
                 with MatplotlibFigureContext(fig, ax) as (fig, ax):
                     # Create a new figure and canvas
-                    canvas = FigureCanvas(fig)
-                    toolbar = NavigationToolbar(canvas, self)
+                    canvas = FigureCanvas(fig)  # type: ignore[no-untyped-call]
+                    toolbar = NavigationToolbar(canvas, self)  # type: ignore[no-untyped-call]
 
                     variables = parameters["variables"]
 
                     handler = MatplotlibInteractionHandler(
                         canvas,
-                        parameters,  # pyright: ignore[reportArgumentType]
+                        parameters,
                         routine,
                         variables,
                         update_extension,

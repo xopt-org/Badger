@@ -37,7 +37,16 @@ dynamic = ["version"]
 version_file = "src/badger/_version.py"
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "pytest-qt", "pytest-mock", "pyqt5-stubs"]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-qt",
+    "pytest-mock",
+    "pandas-stubs",
+    "types-requests",
+    "types-PyYAML",
+    "mypy",
+]
 
 [project.urls]
 Homepage = "https://github.com/xopt-org/Badger"
@@ -57,7 +66,7 @@ include = ["badger"]
 namespaces = false
 
 [tool.pytest.ini_options]
-addopts = "--cov=badger"
+addopts = "--cov=badger/"
 log_cli_level = "INFO"
 log_level = "DEBUG"
 testpaths = ["src/badger/tests"]

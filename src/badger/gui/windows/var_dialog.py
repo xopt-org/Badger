@@ -3,6 +3,7 @@ for finding and adding environment variables by name, querying the environment
 plugin to verify the variable exists and retrieve its current value."""
 
 import logging
+from collections.abc import Callable
 
 from PyQt5.QtWidgets import (
     QDialog,
@@ -15,14 +16,21 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from badger.environment import instantiate_env
+from badger.environment import Environment, instantiate_env
+from badger.factory import BadgerPluginConfig
 from badger.gui.components.labeled_lineedit import labeled_lineedit
 
 logger = logging.getLogger(__name__)
 
 
 class BadgerVariableDialog(QDialog):
-    def __init__(self, parent, env_class, configs, callback):
+    def __init__(
+        self,
+        env_class: type[Environment],
+        configs: BadgerPluginConfig,
+        callback: Callable[[str, float, float], int],
+        parent: QDialog | None = None,
+    ) -> None:
         super().__init__(parent)
 
         self.env = instantiate_env(env_class, configs)
@@ -31,7 +39,7 @@ class BadgerVariableDialog(QDialog):
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Add variable")
         self.setMinimumWidth(360)
 
@@ -78,13 +86,13 @@ class BadgerVariableDialog(QDialog):
         vbox.addStretch()
         vbox.addWidget(button_set)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.edit_name.textChanged.connect(self.var_changed)
-        self.btn_cancel.clicked.connect(self.close)
+        self.btn_cancel.clicked.connect(self.closeEvent)
         self.btn_check.clicked.connect(self.check_var)
         self.btn_add.clicked.connect(self.add_var)
 
-    def var_changed(self, text):
+    def var_changed(self, text: str) -> None:
         self.btn_add.setDisabled(True)
 
         if text:
@@ -92,7 +100,7 @@ class BadgerVariableDialog(QDialog):
         else:
             self.btn_check.setDisabled(True)
 
-    def check_var(self):
+    def check_var(self) -> None:
         name = self.edit_name.text()
         try:
             value = self.env.get_variables([name])[name]
@@ -112,7 +120,7 @@ class BadgerVariableDialog(QDialog):
 
             self.btn_add.setDisabled(True)
 
-    def add_var(self):
+    def add_var(self) -> None:
         name = self.edit_name.text()
         min = float(self.edit_min.edit.text())
         max = float(self.edit_max.edit.text())

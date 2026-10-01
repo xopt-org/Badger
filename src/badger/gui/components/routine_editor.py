@@ -22,13 +22,13 @@ class BadgerRoutineEditor(QWidget):
     sig_canceled = pyqtSignal()
     sig_deleted = pyqtSignal()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
 
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         vbox = QVBoxLayout(self)
         vbox.setContentsMargins(0, 0, 0, 0)
 
@@ -79,33 +79,33 @@ class BadgerRoutineEditor(QWidget):
         hbox_action.addWidget(btn_save)
         vbox.addWidget(action_bar)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_cancel.clicked.connect(self.cancel_create_routine)
         self.btn_save.clicked.connect(self.save_routine)
 
-    def set_routine(self, routine: Routine, silent=False):
+    def set_routine(self, routine: Routine, silent: bool = False) -> None:
         try:
             self.routine_edit.setText(routine.yaml())
         except AttributeError:
             self.routine_edit.setText("")
         self.routine_page.refresh_ui(routine, silent=silent)
 
-    def edit_routine(self):
+    def edit_routine(self) -> None:
         self.stacks.setCurrentIndex(1)
 
-    def cancel_create_routine(self):
+    def cancel_create_routine(self) -> None:
         self.sig_canceled.emit()
 
-    def save_routine(self):
+    def save_routine(self) -> None:
         # here save() is not a property/attribute
         # it's a method that also calls _compose_routine()
         if self.routine_page.save() == 0:
             self.sig_saved.emit()
 
-    def clear(self):
+    def clear(self) -> None:
         self.routine_edit.clear()
 
-    def switch_mode(self, mode):
+    def switch_mode(self, mode: str) -> None:
         if mode == "regular":
             self.btn_cancel.hide()
         elif mode == "new routine":

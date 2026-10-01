@@ -1,6 +1,9 @@
 """Creates a single constraint row widget: observable selector, relation
 combo (>, <, =), threshold spinbox, criticality checkbox, and remove button."""
 
+from collections.abc import Callable
+
+from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QAbstractSpinBox,
@@ -19,11 +22,33 @@ from badger.gui.utils import (
 )
 
 
+class ConstraintItem(QWidget):
+    """A single constraint row that exposes its input widgets as attributes."""
+
+    cb_obs: NoHoverFocusComboBox
+    cb_rel: QComboBox
+    sb: QDoubleSpinBox
+    check_crit: QCheckBox
+    btn_del: QPushButton
+
+    def enterEvent(self, a0: QtCore.QEvent | None) -> None:
+        self.btn_del.show()
+
+    def leaveEvent(self, a0: QtCore.QEvent | None) -> None:
+        self.btn_del.hide()
+
+
 def constraint_item(
-    options, remove_item, name=None, relation=0, threshold=0, critical=False, decimals=4
-):
+    options: list[str],
+    remove_item: Callable[[], None],
+    name: str = "",
+    relation: int = 0,
+    threshold: float = 0,
+    critical: bool = False,
+    decimals: int = 4,
+) -> ConstraintItem:
     # relation: 0 for >, 1 for <, 2 for =
-    widget = QWidget()
+    widget = ConstraintItem()
     hbox = QHBoxLayout(widget)
     hbox.setContentsMargins(2, 2, 2, 2)
     # hbox.setSpacing(0)
@@ -45,7 +70,7 @@ def constraint_item(
 
     widget.sb = sb = QDoubleSpinBox()
     sb.setDecimals(decimals)
-    sb.setFocusPolicy(Qt.StrongFocus)
+    sb.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     sb.installEventFilter(MouseWheelWidgetAdjustmentGuard(sb))
     default_value = threshold
     lb = default_value - 1e3
@@ -68,14 +93,5 @@ def constraint_item(
     hbox.addWidget(btn_del)
 
     btn_del.clicked.connect(remove_item)
-
-    def show_button(event):
-        btn_del.show()
-
-    def hide_button(event):
-        btn_del.hide()
-
-    widget.enterEvent = show_button
-    widget.leaveEvent = hide_button
 
     return widget

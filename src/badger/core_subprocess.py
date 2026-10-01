@@ -18,6 +18,9 @@ import os
 import time
 import traceback
 from copy import deepcopy
+from dataclasses import dataclass
+from multiprocessing.connection import Connection
+from multiprocessing.synchronize import Event
 from queue import Empty
 from typing import Any
 
@@ -28,22 +31,28 @@ from xopt.vocs import select_best
 from badger.errors import (
     MEASUREMENT_ACTION_ABORT,
     MEASUREMENT_ACTION_RETRY,
-    MEASUREMENT_ACTION_TYPE,
-    MEASUREMENT_ERROR_TYPE,
     TERMINATION_ACTION_CONTINUE,
     TERMINATION_ACTION_END,
-    TERMINATION_ACTION_TYPE,
-    TERMINATION_REACHED_TYPE,
     BadgerEnvObsError,
     BadgerRunTerminated,
 )
 from badger.log import configure_process_logging
 from badger.logger import _get_default_logger
-from badger.logger.event import Events
+from badger.logger.event import Events, Solution
 from badger.routine import Routine
 from badger.settings import (
     apply_pytorch_multiprocess_tensor_sharing_setting,
     init_settings,
+)
+from badger.types import (
+    ArgumentQueueType,
+    DataQueueMessage,
+    DialogActionMessage,
+    MeasurementActionMessage,
+    MeasurementErrorMessage,
+    RoutineErrorMessage,
+    TerminationActionMessage,
+    TerminationReachedMessage,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,9 +61,9 @@ logger = logging.getLogger(__name__)
 def evaluate_measurement_with_retry(
     routine: Routine,
     point: Any,
-    queue: mp.Queue,
-    stop_process: mp.Event,
-    dialog_action_queue: mp.Queue,
+    data_and_error_queue: mp.Queue[DataQueueMessage],
+    stop_process: Event,
+    dialog_action_queue: mp.Queue[DialogActionMessage],
 ) -> DataFrame:
     while True:
         try:
@@ -63,12 +72,11 @@ def evaluate_measurement_with_retry(
             error_title = f"{type(e).__name__}: {e}"
             error_traceback = traceback.format_exc()
             logger.error(f"Measurement failed: {error_title}\n{error_traceback}")
-            queue.put(
-                {
-                    "type": MEASUREMENT_ERROR_TYPE,
-                    "title": error_title,
-                    "traceback": error_traceback,
-                }
+            data_and_error_queue.put(
+                MeasurementErrorMessage(
+                    title=error_title,
+                    traceback=error_traceback,
+                )
             )
 
             # Wait for response back from retry dialog
@@ -82,32 +90,35 @@ def evaluate_measurement_with_retry(
                 except Empty:
                     continue
 
-                if (
-                    isinstance(msg, dict)
-                    and msg.get("type") == MEASUREMENT_ACTION_TYPE
-                    and msg.get("action")
-                    in [MEASUREMENT_ACTION_RETRY, MEASUREMENT_ACTION_ABORT]
-                ):
-                    if msg["action"] == MEASUREMENT_ACTION_RETRY:
+                if isinstance(msg, MeasurementActionMessage) and msg.action in [
+                    MEASUREMENT_ACTION_RETRY,
+                    MEASUREMENT_ACTION_ABORT,
+                ]:
+                    if msg.action == MEASUREMENT_ACTION_RETRY:
                         break
                     raise BadgerRunTerminated(
                         f"Run terminated after measurement error: {error_title}"
                     )
 
 
+@dataclass
+class TerminationCondition:
+    type: str
+    condition: dict[str, Any]
+
+
 def pause_for_termination_dialog_action(
-    queue: mp.Queue,
-    stop_process: mp.Event,
-    pause_process: mp.Event,
-    dialog_action_queue: mp.Queue,
-    tc_condition: dict,
+    data_and_error_queue: mp.Queue[DataQueueMessage],
+    stop_process: Event,
+    pause_process: Event,
+    dialog_action_queue: mp.Queue[DialogActionMessage],
+    tc_condition: TerminationCondition,
 ) -> None:
     """Pause the run and wait for user action when run-until condition is reached."""
-    queue.put(
-        {
-            "type": TERMINATION_REACHED_TYPE,
-            "tc_condition": tc_condition,
-        }
+    data_and_error_queue.put(
+        TerminationReachedMessage(
+            tc_condition={"type": tc_condition.type, **tc_condition.condition},
+        )
     )
 
     while True:
@@ -121,13 +132,11 @@ def pause_for_termination_dialog_action(
         except Empty:
             continue
 
-        if (
-            isinstance(msg, dict)
-            and msg.get("type") == TERMINATION_ACTION_TYPE
-            and msg.get("action")
-            in [TERMINATION_ACTION_CONTINUE, TERMINATION_ACTION_END]
-        ):
-            if msg["action"] == TERMINATION_ACTION_CONTINUE:
+        if isinstance(msg, TerminationActionMessage) and msg.action in [
+            TERMINATION_ACTION_CONTINUE,
+            TERMINATION_ACTION_END,
+        ]:
+            if msg.action == TERMINATION_ACTION_CONTINUE:
                 pause_process.set()
                 return
 
@@ -136,7 +145,7 @@ def pause_for_termination_dialog_action(
             )
 
 
-def convert_to_solution(result: DataFrame, routine: Routine):
+def convert_to_solution(result: DataFrame, routine: Routine) -> Solution:
     """
     This method is passed the latest evaluated solution and converts that to a printable format for the terminal.
     This method is for the GUI version of Badger.
@@ -146,11 +155,13 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     result : DataFrame
     routine : Routine
     """
+    if routine.sorted_data is None or routine.sorted_data.empty:
+        raise ValueError("Routine has no sorted data")
     vocs = routine.vocs
     try:
         best_idx, _, _ = select_best(vocs, routine.sorted_data, n=1)
         logger.debug(f"Selected best index: {best_idx}")
-        if best_idx.size > 0:
+        if best_idx.size > 0 and routine.data is not None:
             if best_idx[0] != len(routine.data) - 1:
                 is_optimal = False
             else:
@@ -172,7 +183,7 @@ def convert_to_solution(result: DataFrame, routine: Routine):
     stas = list(result[vocs.observable_names].to_numpy()[0])
 
     # TODO: This structure needs improvement
-    solution = (
+    solution = Solution(
         vars,
         objs,
         cons,
@@ -188,28 +199,30 @@ def convert_to_solution(result: DataFrame, routine: Routine):
 
 
 def run_routine_subprocess(
-    args_queue: mp.Queue,
-    queue: mp.Queue,
-    evaluate_queue: mp.Pipe,
-    stop_process: mp.Event,
-    pause_process: mp.Event,
-    wait_event: mp.Event,
+    args_queue: mp.Queue[ArgumentQueueType],
+    data_and_error_queue: mp.Queue[DataQueueMessage],
+    evaluate_queue: tuple[Connection, Connection],
+    stop_process: Event,
+    pause_process: Event,
+    wait_event: Event,
+    dialog_action_queue: mp.Queue[DialogActionMessage],
     config_path: str | None = None,
-    log_queue: mp.Queue | None = None,
-    dialog_action_queue: mp.Queue | None = None,
+    log_queue: mp.Queue[logging.LogRecord] | None = None,
 ) -> None:
     """
     Run the provided routine object using Xopt. This method is run as a subproccess
 
     Parameters
     ----------
-    queue: mp.Queue
-    evaluate_queue: mp.Pipe
-    stop_process: mp.Event
-    pause_process: mp.Event
-    wait_event: mp.Event
-    config_path: str
-    log_queue: mp.Queue
+    args_queue: mp.Queue[ArgumentQueueType],
+    data_and_error_queue: mp.Queue[DataQueueMessage],
+    evaluate_queue: tuple[Connection, Connection],
+    stop_process: Event,
+    pause_process: Event,
+    wait_event: Event,
+    dialog_action_queue: mp.Queue[DialogActionMessage],
+    config_path: str | None = None,
+    log_queue: mp.Queue[logging.LogRecord] | None = None,
     """
     # Setup logging for this subprocess
     if log_queue is not None:
@@ -218,7 +231,7 @@ def run_routine_subprocess(
             logger_name=__name__,
             # Always make this level DEBUG so no logs are filtered out until get sent to main,
             # where logs from all sub-processes get filtered before written.
-            log_level=logging.DEBUG,
+            log_level="DEBUG",
             process_name=f"{os.path.basename(__name__)}-{mp.current_process().pid}",
         )
 
@@ -238,17 +251,17 @@ def run_routine_subprocess(
     logger.info("Waiting for wait_event to be set...")
     wait_event.wait()
 
-    args: dict[str, Any] = {}
     try:
         args = args_queue.get(timeout=1)
         logger.debug(f"Received args from queue: {args}")
-    except Exception as e:  # noqa: BLE001 - subprocess queue read boundary
+    except Exception as e:
         logger.error(f"Error in subprocess queue.get: {type(e).__name__}, {e!s}")
+        raise RuntimeError("Failed to get arguments from queue") from e
 
     # set required arguments
     try:
-        logger.info(f"Loading routine from file: {args['routine_filename']}")
-        routine = load_run(args["routine_filename"])
+        logger.info(f"Loading routine from file: {args.routine_filename}")
+        routine = load_run(args.routine_filename)
         logger.info("Resetting environment global state")
         routine.environment.reset_environment()
         if routine.vrange_hard_limit:
@@ -258,7 +271,7 @@ def run_routine_subprocess(
             routine.environment.variables.update(routine.vrange_hard_limit)
 
         # Reset data if run_data option is False
-        if not args["run_data"] and routine.data is not None:
+        if not args.run_data and routine.data is not None:
             logger.info("Resetting routine data")
             routine.data = routine.data.iloc[0:0]  # reset the data
 
@@ -266,7 +279,9 @@ def run_routine_subprocess(
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
         logger.error(f"Error initializing routine: {error_title}\n{error_traceback}")
-        queue.put((error_title, error_traceback))
+        data_and_error_queue.put(
+            RoutineErrorMessage(title=error_title, traceback=error_traceback)
+        )
         raise
 
     # TODO look into this bug with serializing of turbo. Fix might be needed in Xopt
@@ -283,18 +298,18 @@ def run_routine_subprocess(
         logger.warning("TypeError when converting turbo_controller dtype")
 
     # Assign the initial points and bounds
-    logger.info(f"Setting routine variable ranges: {args['variable_ranges']}")
-    routine.vocs.variables = args["variable_ranges"]
+    logger.info(f"Setting routine variable ranges: {args.variable_ranges}")
+    routine.vocs.variables = args.variable_ranges
     logger.info("Setting routine initial points")
-    routine.initial_points = args["initial_points"]
+    routine.initial_points = args.initial_points
 
     # set optional arguments
-    evaluate = args.pop("evaluate", None)
-    archive = args.pop("archive", False)
-    termination_condition = args.pop("termination_condition", None)
-    start_time = args.pop("start_time", None)
-    verbose = args.pop("verbose", 2)
-    testing = args.pop("testing", False)
+    evaluate = args.evaluate
+    archive = args.archive
+    termination_condition = args.termination_condition
+    start_time = args.start_time
+    verbose = 2  # default value as before
+    testing = args.testing
 
     # setup variables of routine properties for code readablilty
     initial_points = routine.initial_points
@@ -305,12 +320,12 @@ def run_routine_subprocess(
 
     # Optimization starts
     # This is used by the logger to print to the terminal.
-    solution_meta = (
+    solution_meta = Solution(
         None,
         None,
         None,
         None,
-        None,
+        False,  # TODO: Was set to None before, but that doesn't make sense given the context. Need to verify this is correct.
         routine.vocs.variable_names,
         routine.vocs.objective_names,
         routine.vocs.constraint_names,
@@ -323,24 +338,32 @@ def run_routine_subprocess(
     # timeout logic will be handled in the specific environment
     try:
         # initial sampling
-        if args["init_points"]:
+        if args.init_points:
             logger.info("Evaluating initial points...")
-            for _, ele in initial_points.iterrows():
-                logger.debug(f"Evaluating initial point: {ele.to_dict()}")
-                result = evaluate_measurement_with_retry(
-                    routine, ele.to_dict(), queue, stop_process, dialog_action_queue
-                )
-                solution = convert_to_solution(result, routine)
-                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-                if evaluate:
-                    time.sleep(0.1)  # give it some break tp catch up
-                    evaluate_queue[0].send((routine.data, routine.generator))
+            if initial_points is None or initial_points.empty:
+                logger.info("No initial points provided.")
+            else:
+                for _, ele in initial_points.iterrows():
+                    logger.debug(f"Evaluating initial point: {ele.to_dict()}")
+                    result = evaluate_measurement_with_retry(
+                        routine,
+                        ele.to_dict(),
+                        data_and_error_queue,
+                        stop_process,
+                        dialog_action_queue,
+                    )
+                    solution = convert_to_solution(result, routine)
+                    opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                    if evaluate:
+                        time.sleep(0.1)  # give it some break tp catch up
+                        evaluate_queue[0].send((routine.data, routine.generator))
 
         logger.info("Starting optimization loop...")
         while True:
             if stop_process.is_set():
                 logger.info("Stop process set. Terminating optimization.")
                 evaluate_queue[0].close()
+                pause_process.clear()
                 raise BadgerRunTerminated
             elif not pause_process.is_set():
                 logger.info("Pause process not set. Waiting...")
@@ -348,9 +371,9 @@ def run_routine_subprocess(
 
             if termination_condition and start_time:
                 tc_config = termination_condition
-                idx = tc_config["tc_idx"]
+                idx = tc_config.tc_idx
                 if idx == 0:
-                    max_eval = tc_config["max_eval"]
+                    max_eval = tc_config.max_eval
                     if routine.data is not None:
                         if "live" in routine.data.columns:
                             # Only count number of live data points
@@ -370,22 +393,26 @@ def run_routine_subprocess(
                             "Max evaluations reached. Pausing optimization and waiting for user action."
                         )
                         pause_process.clear()
-                        pause_for_termination_dialog_action(
-                            queue=queue,
-                            stop_process=stop_process,
-                            pause_process=pause_process,
-                            dialog_action_queue=dialog_action_queue,
-                            tc_condition={
-                                "type": "max_eval",
+                        tc_condition = TerminationCondition(
+                            type="max_eval",
+                            condition={
                                 "config": max_eval,
                                 "state": count,
                             },
+                        )
+
+                        pause_for_termination_dialog_action(
+                            data_and_error_queue=data_and_error_queue,
+                            stop_process=stop_process,
+                            pause_process=pause_process,
+                            dialog_action_queue=dialog_action_queue,
+                            tc_condition=tc_condition,
                         )
                         # reset termination condition
                         termination_condition = None
                         continue
                 elif idx == 1:
-                    max_time = tc_config["max_time"]
+                    max_time = tc_config.max_time
                     dt = time.time() - start_time
                     logger.debug(f"Checking max_time termination: {dt} >= {max_time}")
                     if dt >= max_time:
@@ -394,15 +421,17 @@ def run_routine_subprocess(
                         )
                         pause_process.clear()
                         pause_for_termination_dialog_action(
-                            queue=queue,
+                            data_and_error_queue=data_and_error_queue,
                             stop_process=stop_process,
                             pause_process=pause_process,
                             dialog_action_queue=dialog_action_queue,
-                            tc_condition={
-                                "type": "max_time",
-                                "config": max_time,
-                                "state": dt,
-                            },
+                            tc_condition=TerminationCondition(
+                                type="max_time",
+                                condition={
+                                    "config": max_time,
+                                    "state": dt,
+                                },
+                            ),
                         )
                         # reset termination condition
                         termination_condition = None
@@ -423,7 +452,11 @@ def run_routine_subprocess(
                 pause_process.wait()
 
             result = evaluate_measurement_with_retry(
-                routine, candidates, queue, stop_process, dialog_action_queue
+                routine,
+                candidates,
+                data_and_error_queue,
+                stop_process,
+                dialog_action_queue,
             )
             solution = convert_to_solution(result, routine)
             opt_logger.update(Events.OPTIMIZATION_STEP, solution)
@@ -446,7 +479,9 @@ def run_routine_subprocess(
         logger.error(f"XoptError during optimization: {e}")
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         error_title = "BadgerEnvObsError: There was an error getting observables from the environment. See the traceback for more details."
-        queue.put((error_title, traceback.format_exc()))
+        data_and_error_queue.put(
+            RoutineErrorMessage(title=error_title, traceback=traceback.format_exc())
+        )
         evaluate_queue[0].close()
         raise BadgerEnvObsError(e)
     except Exception as e:
@@ -456,6 +491,8 @@ def run_routine_subprocess(
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         error_title = f"{type(e).__name__}: {e}"
         error_traceback = traceback.format_exc()
-        queue.put((error_title, error_traceback))
+        data_and_error_queue.put(
+            RoutineErrorMessage(title=error_title, traceback=error_traceback)
+        )
         evaluate_queue[0].close()
         raise

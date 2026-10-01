@@ -7,6 +7,7 @@ import pytest
 
 from badger.environment import BaseEnvironment, Environment
 from badger.errors import BadgerEnvVarError, BadgerNoInterfaceError
+from badger.factory import BadgerPluginConfig
 from badger.interface import Interface
 
 # TEST_VOCS_BASE replacement for testing
@@ -19,12 +20,12 @@ TEST_VOCS_BASE = {
 class TestEnvironment:
     """Test suite for the Environment classes and decorators."""
 
-    def test_base_environment_abstract(self):
+    def test_base_environment_abstract(self) -> None:
         """Test that BaseEnvironment cannot be instantiated directly."""
         with pytest.raises(TypeError):
             BaseEnvironment()
 
-    def test_basic_env(self):
+    def test_basic_env(self) -> None:
         """Test basic environment functionality with custom implementation."""
 
         class TestEnv(BaseEnvironment):
@@ -39,10 +40,12 @@ class TestEnvironment:
             def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.5 for name in variable_names}
 
-            def set_variables(self, variable_inputs: dict[str, float]):
-                pass
+            def set_variables(self, variable_inputs: dict[str, float]) -> None:
+                return None
 
-            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
+            def get_observables(
+                self, observable_names: list[str]
+            ) -> dict[str, float | list[float]]:
                 return {ele: 1.0 for ele in observable_names}
 
         env = TestEnv()
@@ -56,7 +59,7 @@ class TestEnvironment:
         result = json.loads(env.model_dump_json())
         assert result["my_flag"] == 1
 
-    def test_environment_with_interface(self):
+    def test_environment_with_interface(self) -> None:
         """Test Environment class with interface."""
         # Create a mock interface
         mock_interface = Mock(spec=Interface)
@@ -88,7 +91,7 @@ class TestEnvironment:
         env.reset_environment()
         mock_interface.reset_interface.assert_called_once()
 
-    def test_environment_no_interface_error(self):
+    def test_environment_no_interface_error(self) -> None:
         """Test that Environment raises error when no interface is provided."""
 
         class TestEnv(Environment):
@@ -107,7 +110,7 @@ class TestEnvironment:
         with pytest.raises(BadgerNoInterfaceError):
             env.get_observables(["f"])
 
-    def test_bounds_validation(self):
+    def test_bounds_validation(self) -> None:
         """Test bounds validation decorator."""
 
         class TestEnv(BaseEnvironment):
@@ -135,7 +138,7 @@ class TestEnvironment:
         ):
             env.get_bounds(["x1"])
 
-    def test_setpoint_validation(self):
+    def test_setpoint_validation(self) -> None:
         """Test setpoint validation decorator."""
 
         class TestEnv(BaseEnvironment):
@@ -168,7 +171,7 @@ class TestEnvironment:
         ):
             env.set_variables({"x2": -1.0})  # Outside lower bound
 
-    def test_formula_processing(self):
+    def test_formula_processing(self) -> None:
         """Test formula processing decorator for observables."""
 
         class TestEnv(BaseEnvironment):
@@ -202,7 +205,7 @@ class TestEnvironment:
         # Should not include the formula variables in output
         assert "f" not in result
 
-    def test_convenience_methods(self):
+    def test_convenience_methods(self) -> None:
         """Test convenience methods for single variable/observable operations."""
 
         class TestEnv(BaseEnvironment):
@@ -231,7 +234,7 @@ class TestEnvironment:
         # Test get_observable
         assert env.get_observable("f") == 1.5
 
-    def test_variable_names_property(self):
+    def test_variable_names_property(self) -> None:
         """Test variable_names property for Environment class."""
         mock_interface = Mock(spec=Interface)
 
@@ -247,7 +250,7 @@ class TestEnvironment:
         env = TestEnv(interface=mock_interface)
         assert set(env.variable_names) == {"x1", "x2", "x3"}
 
-    def test_get_system_states(self):
+    def test_get_system_states(self) -> None:
         """Test get_system_states default implementation."""
 
         class TestEnv(BaseEnvironment):
@@ -267,7 +270,7 @@ class TestEnvironment:
         env = TestEnv()
         assert env.get_system_states() == {}
 
-    def test_search_not_implemented(self):
+    def test_search_not_implemented(self) -> None:
         """Test search method raises NotImplementedError by default."""
 
         class TestEnv(BaseEnvironment):
@@ -291,7 +294,7 @@ class TestEnvironment:
         ):
             env.search("test", lambda x: x)
 
-    def test_env_in_routine(self):
+    def test_env_in_routine(self) -> None:
         """Test environment integration with routine."""
         from badger.routine import Routine
 
@@ -326,7 +329,7 @@ class TestEnvironment:
         result = json.loads(routine.json())
         assert result["environment"]["my_flag"] == 1
 
-    def test_env_from_get_env(self):
+    def test_env_from_get_env(self) -> None:
         """Test environment from factory function."""
         from badger.factory import get_env
         from badger.routine import Routine
@@ -348,7 +351,7 @@ class TestEnvironment:
         result = json.loads(routine.json())
         assert result["environment"]["flag"] == 1
 
-    def test_complex_formula_processing(self):
+    def test_complex_formula_processing(self) -> None:
         """Test complex formula processing with numpy functions."""
 
         class TestEnv(BaseEnvironment):
@@ -392,7 +395,7 @@ class TestEnvironment:
             result["sqrt(mean(`data`**2)) + percentile95(`signal`)"], expected
         )
 
-    def test_instantiate_env_function(self):
+    def test_instantiate_env_function(self) -> None:
         """Test environment instantiation function."""
         from badger.environment import instantiate_env
         from badger.interface import Interface
@@ -411,7 +414,7 @@ class TestEnvironment:
 
         original_get_intf = getattr(badger.factory, "get_intf", None)
 
-        def mock_get_intf(name):
+        def mock_get_intf(name: str) -> tuple[Mock, BadgerPluginConfig]:
             mock_interface_class = Mock()
             mock_interface_class.return_value = Mock(spec=Interface)
             return mock_interface_class, {}

@@ -3,8 +3,11 @@ HistoryNavigator shows archived runs in a date tree (year/month/day);
 TemplateNavigator shows routine template files. Both support right-click
 context menus (open, copy path, etc.)."""
 
+import logging
 import os
+from typing import cast
 
+from PyQt5 import QtCore
 from PyQt5.QtCore import QDir, Qt, QTimer, QUrl
 from PyQt5.QtGui import QCursor, QDesktopServices, QFont
 from PyQt5.QtWidgets import (
@@ -24,6 +27,8 @@ from badger.archive import get_base_run_filename, get_runs
 from badger.settings import init_settings
 from badger.utils import run_names_to_dict
 
+logger = logging.getLogger(__name__)
+
 
 class FileContextMenuBase:
     """
@@ -34,7 +39,7 @@ class FileContextMenuBase:
       - Copy full file path to clipboard
     """
 
-    def show_context_menu(self, widget, fullpath):
+    def show_context_menu(self, widget: QWidget, fullpath: str) -> None:
         menu = QMenu(widget)
         menu.setStyleSheet("""
         QMenu {
@@ -43,8 +48,11 @@ class FileContextMenuBase:
         """)
 
         # Functions to execute the context-menu actions
-        def copy_fullpath_to_clipboard():
+        def copy_fullpath_to_clipboard() -> None:
             clip = QApplication.clipboard()
+            if clip is None:
+                logger.warning("Clipboard not available.")
+                return
             clip.setText(fullpath)
             # Display a little popup box a bit after user's click
             QTimer.singleShot(
@@ -56,15 +64,19 @@ class FileContextMenuBase:
                 ),
             )
 
-        def open_file():
+        def open_file() -> None:
             QDesktopServices.openUrl(QUrl.fromLocalFile(fullpath))
 
-        def open_file_location():
+        def open_file_location() -> None:
             QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(fullpath)))
 
         # Add actions to the context menu
-        menu.addAction("Open File").triggered.connect(open_file)
-        menu.addAction("Open File Directory").triggered.connect(open_file_location)
+        action = menu.addAction("Open File")
+        if action:
+            action.triggered.connect(open_file)
+        action = menu.addAction("Open File Directory")
+        if action:
+            action.triggered.connect(open_file_location)
 
         # Submenu for copying the full file path
         fullpath_item = QMenu("File Path", menu)
@@ -82,8 +94,8 @@ class HistoryNavigator(QWidget, FileContextMenuBase):
     Navigate through the history files.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
 
         # Layout for the widget
         layout = QVBoxLayout(self)
@@ -95,41 +107,51 @@ class HistoryNavigator(QWidget, FileContextMenuBase):
         # Set the font of the header to bold
         bold_font = QFont()
         bold_font.setBold(True)
-        header.setFont(bold_font)
+        if header:
+            header.setFont(bold_font)
 
         self.history_tree_widget.setMinimumHeight(256)
 
-        self.history_tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.history_tree_widget.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
         self.history_tree_widget.customContextMenuRequested.connect(
             self.show_context_menu_history
         )
 
         layout.addWidget(self.history_tree_widget)
 
-        self.runs = None  # all runs to be shown in the tree widget
+        self.runs: list[str] | None = None  # all runs to be shown in the tree widget
         self.setStyleSheet("""
             QTreeWidget {
                 background-color: #37414F;
             }
         """)
 
-    def _firstSelectableItem(self, parent=None):
+    def _firstSelectableItem(
+        self, parent: QTreeWidgetItem | None = None
+    ) -> QTreeWidgetItem | None:
         """
         Internal recursive function for finding the first selectable item.
         """
         if parent is None:
             parent = self.history_tree_widget.invisibleRootItem()
+            if parent is None:
+                logger.warning("No root item found in the history tree widget.")
+                return None
 
         for i in range(parent.childCount()):
             item = parent.child(i)
-            if item.flags() & Qt.ItemIsSelectable:
+            if not item:
+                continue
+            if item.flags() & Qt.ItemFlag.ItemIsSelectable:
                 return item
             result = self._firstSelectableItem(item)
             if result:
                 return result
         return None
 
-    def updateItems(self, runs=None):
+    def updateItems(self, runs: list[str] | None = None) -> None:
         self.history_tree_widget.clear()
         self.runs = runs  # store the runs for navigation
         if runs is None:
@@ -141,21 +163,36 @@ class HistoryNavigator(QWidget, FileContextMenuBase):
 
         for year, dict_year in runs_dict.items():
             item_year = QTreeWidgetItem([year])
-            item_year.setFlags(item_year.flags() & ~Qt.ItemIsSelectable)
+            item_year.setFlags(
+                cast(
+                    Qt.ItemFlags,
+                    item_year.flags() & ~Qt.ItemFlag.ItemIsSelectable,
+                )
+            )
 
             if flag_first_item:
                 first_items.append(item_year)
 
             for month, dict_month in dict_year.items():
                 item_month = QTreeWidgetItem([month])
-                item_month.setFlags(item_month.flags() & ~Qt.ItemIsSelectable)
+                item_month.setFlags(
+                    cast(
+                        Qt.ItemFlags,
+                        item_month.flags() & ~Qt.ItemFlag.ItemIsSelectable,
+                    )
+                )
 
                 if flag_first_item:
                     first_items.append(item_month)
 
                 for day, list_day in dict_month.items():
                     item_day = QTreeWidgetItem([day])
-                    item_day.setFlags(item_day.flags() & ~Qt.ItemIsSelectable)
+                    item_day.setFlags(
+                        cast(
+                            Qt.ItemFlags,
+                            item_day.flags() & ~Qt.ItemFlag.ItemIsSelectable,
+                        )
+                    )
 
                     if flag_first_item:
                         first_items.append(item_day)
@@ -172,47 +209,60 @@ class HistoryNavigator(QWidget, FileContextMenuBase):
         for item in first_items:
             item.setExpanded(True)
 
-    def selectNextItem(self):
+    def selectNextItem(self) -> None:
         run_curr = get_base_run_filename(self.currentText())
+        if self.runs is None:
+            logger.warning("No runs available for navigation.")
+            return
         idx = self.runs.index(run_curr)
         if idx < len(self.runs) - 1:
             self._selectItemByRun(self.runs[idx + 1])
 
-    def selectPreviousItem(self):
+    def selectPreviousItem(self) -> None:
         run_curr = get_base_run_filename(self.currentText())
+        if self.runs is None:
+            return
         idx = self.runs.index(run_curr)
         if idx > 0:
             self._selectItemByRun(self.runs[idx - 1])
 
-    def _selectItemByRun(self, run):
+    def _selectItemByRun(self, run: str) -> None:
         """
         Internal function to select a tree widget item by run name.
         """
         for i in range(self.history_tree_widget.topLevelItemCount()):
             year_item = self.history_tree_widget.topLevelItem(i)
+            if year_item is None:
+                continue
             for j in range(year_item.childCount()):
                 month_item = year_item.child(j)
+                if month_item is None:
+                    continue
                 for k in range(month_item.childCount()):
                     day_item = month_item.child(k)
+                    if day_item is None:
+                        continue
                     for _l in range(day_item.childCount()):
                         file_item = day_item.child(_l)
+                        if file_item is None:
+                            continue
                         if get_base_run_filename(file_item.text(0)) == run:
                             self.history_tree_widget.setCurrentItem(file_item)
                             return
 
-    def currentText(self):
+    def currentText(self) -> str:
         current_item = self.history_tree_widget.currentItem()
         if current_item:
             return current_item.text(0)
         return ""
 
-    def count(self):
+    def count(self) -> int:
         if self.runs is None:
             return 0
 
         return len(self.runs)
 
-    def show_context_menu_history(self, position):
+    def show_context_menu_history(self, position: QtCore.QPoint) -> None:
         """
         Executed when items in the tree are right-clicked on, and then
         calls the base-class function to actually display the context-menu.
@@ -236,7 +286,7 @@ class HistoryNavigator(QWidget, FileContextMenuBase):
 
         self.show_context_menu(self.history_tree_widget, fullpath)
 
-    def find_run_by_name(self, runs, filename):
+    def find_run_by_name(self, runs: list[str], filename: str) -> str | None:
         """
         Search in run_list (full paths) for a file matching filename.
         Returns the full path if found, else None.
@@ -252,7 +302,7 @@ class TemplateNavigator(QWidget, FileContextMenuBase):
     Navigate through the templates
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
         # get template directory
@@ -270,7 +320,9 @@ class TemplateNavigator(QWidget, FileContextMenuBase):
         self.template_tree_view = QTreeView(self)
         layout.addWidget(self.template_tree_view)
 
-        self.template_tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.template_tree_view.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
         self.template_tree_view.customContextMenuRequested.connect(
             self.show_context_menu_template
         )
@@ -303,7 +355,7 @@ class TemplateNavigator(QWidget, FileContextMenuBase):
         # Expand the root for quick glance
         self.template_tree_view.expand(self.file_sys_model.index(self.template_dir))
 
-    def show_context_menu_template(self, position):
+    def show_context_menu_template(self, position: QtCore.QPoint) -> None:
         """
         Executed when items in the tree are right-clicked on, and then
         calls the base-class function to actually display the context-menu.
@@ -312,7 +364,7 @@ class TemplateNavigator(QWidget, FileContextMenuBase):
         if not selected_index.isValid():
             return  # user didn't click on any menu item
 
-        fullpath = self.template_tree_view.model().filePath(selected_index)
+        fullpath = self.file_sys_model.filePath(selected_index)
         filename = os.path.basename(fullpath)
         if not filename.endswith(
             (".yaml", ".yml")

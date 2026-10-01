@@ -2,6 +2,7 @@
 removing plugins — see docs for the current workflow."""
 
 import logging
+from argparse import Namespace
 
 from typing_extensions import deprecated
 
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @deprecated("The `badger uninstall` command is currently disabled.")
-def plugin_remove(args):
+def plugin_remove(args: Namespace) -> None:
     print(
         "This command is currently disabled.\n"
         "Please refer to the Badger documentation for plugin management.\n\n"

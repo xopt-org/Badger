@@ -1,21 +1,29 @@
 import multiprocessing as mp
 import sys
+from dataclasses import fields
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 from PyQt5.QtWidgets import QApplication
+from pytestqt.qtbot import QtBot
+
+if TYPE_CHECKING:
+    from badger.gui.components.create_process import CreateProcess
 
 app = QApplication(sys.argv)
 
 
 @pytest.fixture
-def process_creator():
+def process_creator() -> "CreateProcess":
     from badger.gui.components.create_process import CreateProcess
 
     return CreateProcess()
 
 
-def test_create_subprocess_emits_signals(qtbot, process_creator):
+def test_create_subprocess_emits_signals(
+    qtbot: QtBot, process_creator: "CreateProcess"
+) -> None:
     with (
         patch("badger.gui.components.create_process.Process") as mock_process,
         patch("badger.gui.components.create_process.run_routine_subprocess"),
@@ -34,9 +42,9 @@ def test_create_subprocess_emits_signals(qtbot, process_creator):
         assert blocker_finished.signal_triggered
         mock_process.assert_called_once()
 
-        # Verify that the emitted object contains the expected keys
+        # Verify that the emitted object exposes the expected attributes
         emitted_args = blocker_subprocess_prepared.args[0]
-        assert set(emitted_args.keys()) == {
+        assert {f.name for f in fields(emitted_args)} == {
             "process",
             "args_queue",
             "stop_event",
@@ -47,10 +55,10 @@ def test_create_subprocess_emits_signals(qtbot, process_creator):
             "dialog_action_queue",
         }
 
-        assert isinstance(emitted_args["args_queue"], mp.queues.Queue)
-        assert isinstance(emitted_args["data_queue"], mp.queues.Queue)
-        assert isinstance(emitted_args["dialog_action_queue"], mp.queues.Queue)
-        assert isinstance(emitted_args["evaluate_queue"], tuple)
-        assert isinstance(emitted_args["wait_event"], mp.synchronize.Event)
-        assert isinstance(emitted_args["stop_event"], mp.synchronize.Event)
-        assert isinstance(emitted_args["pause_event"], mp.synchronize.Event)
+        assert isinstance(emitted_args.args_queue, mp.queues.Queue)
+        assert isinstance(emitted_args.data_queue, mp.queues.Queue)
+        assert isinstance(emitted_args.dialog_action_queue, mp.queues.Queue)
+        assert isinstance(emitted_args.evaluate_queue, tuple)
+        assert isinstance(emitted_args.wait_event, mp.synchronize.Event)
+        assert isinstance(emitted_args.stop_event, mp.synchronize.Event)
+        assert isinstance(emitted_args.pause_event, mp.synchronize.Event)

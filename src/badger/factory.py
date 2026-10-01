@@ -15,9 +15,10 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 import yaml
+from xopt.generator import Generator
 from xopt.generators import generators, get_generator_defaults
 
 from badger.errors import (
@@ -47,7 +48,7 @@ ALGO_EXCLUDED = [
 ]
 
 
-class BadgerPluginConfig(TypedDict):
+class BadgerPluginConfig(TypedDict, total=False):
     name: str
     description: str
     version: str
@@ -75,10 +76,21 @@ else:
 sys.path.append(BADGER_PLUGIN_ROOT)
 
 
-def scan_plugins(root: str):
-    factory: dict[str, Any] = {}
+class BadgerFactoryType(TypedDict):
+    generator: dict[str, dict[str, tuple[type[Generator], BadgerPluginConfig | None]]]
+    interface: dict[
+        str, dict[str, tuple[type["BadgerInterface"], BadgerPluginConfig | None]]
+    ]
+    environment: dict[
+        str, dict[str, tuple[type["BadgerEnvironment"], BadgerPluginConfig | None]]
+    ]
+
+
+def scan_plugins(root: str) -> BadgerFactoryType:
+    factory: BadgerFactoryType = {"environment": {}, "interface": {}, "generator": {}}
 
     # Do not scan local generators if option disabled
+    ptype_list: list[Literal["generator", "interface", "environment"]]
     if LOAD_LOCAL_ALGO:
         ptype_list = ["generator", "interface", "environment"]
     else:
@@ -86,7 +98,7 @@ def scan_plugins(root: str):
         factory["generator"] = {}
 
     for ptype in ptype_list:
-        factory[ptype] = {}
+        factory[ptype] = {}  # type: ignore
 
         proot = os.path.join(root, f"{ptype}s")
 
@@ -102,14 +114,14 @@ def scan_plugins(root: str):
         for pname in plugins:
             # TODO: Also load the configs here
             # So that list plugins can access the metadata of the plugins
-            factory[ptype][pname] = None
+            factory[ptype][pname] = None  # type: ignore
 
     return factory
 
 
 def load_plugin(
-    root: str, pname: str, ptype: str
-) -> tuple[Any | None, BadgerPluginConfig | None]:
+    root: str, pname: str, ptype: Literal["environment", "interface", "generator"]
+) -> "tuple[type[BadgerEnvironment | BadgerInterface | Generator] | None, BadgerPluginConfig | None]":
     assert ptype in [
         "generator",
         "interface",
@@ -212,6 +224,7 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         Formatted markdown string containing both the README content
         and the plugin class docstring if applicable in a code block.
     """
+
     # .../Badger/src/badger/factory.py
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
     BADGER_GUIDES_DIR = PROJECT_ROOT / "documentation" / "docs" / "guides"
@@ -222,6 +235,12 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         subdir = docs_dir / f"{ptype}s"
         if subdir.is_dir():
             docs_dir = subdir
+
+    assert ptype in [
+        "generator",
+        "interface",
+        "environment",
+    ], f"Invalid plugin type {ptype}"
 
     # Create header with links to other guides
     files = [x.stem for x in BADGER_GUIDES_DIR.iterdir() if str(x).endswith(".md")]
@@ -241,7 +260,7 @@ def load_badger_docs(name: str, ptype: str | None = None) -> str:
         if ptype == "generator":
             docstring = generators[name].__doc__
 
-        help_md = _format_docs_str(readme, docstring, ptype)
+        help_md = _format_docs_str(readme, docstring or "", ptype or "")
 
         return f"{header}<br /> {help_md}"
     except FileNotFoundError:
@@ -322,7 +341,7 @@ def _format_docs_str(readme: str, docstring: str, ptype: str) -> str:
     return help_md
 
 
-def _format_md_docs(text: str):
+def _format_md_docs(text: str) -> str:
     """
     Helper function to format markdown docs for display in QTextBrowser.
     Removes the first '---' section and replaces double newlines with <br /> for better rendering.
@@ -355,7 +374,7 @@ _MD_IMG = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 
 def _md_images_to_html(
     text: str,
-    base_prefix: str | None = None,
+    base_prefix: str | Path | None = None,
     width: int = 575,
 ) -> str:
     """
@@ -367,15 +386,17 @@ def _md_images_to_html(
         # Get absolute path to image folder relative to this module
         base_prefix = Path(__file__).parent.parent.parent / "documentation" / "static"
 
-    def repl(m: re.Match) -> str:
-        url = m.group(1).strip().strip("'\"").lstrip("./")
-        url = Path(base_prefix / url)
+    def repl(m: re.Match[str]) -> str:
+        url_str = m.group(1).strip().strip("'\"").lstrip("./")
+        url = Path(base_prefix / url_str)  # type: ignore[operator]
         return f'<img src="{url.as_posix()}" width={width}></img>'
 
     return _MD_IMG.sub(repl, text)
 
 
-def get_plug(root: str, name: str, ptype: str):
+def get_plug(
+    root: str, name: str, ptype: Literal["environment", "interface", "generator"]
+) -> "tuple[type[BadgerEnvironment | BadgerInterface | Generator] | None, BadgerPluginConfig | None]":
     try:
         plug = BADGER_FACTORY[ptype][name]
         if plug is None:  # lazy loading
@@ -393,21 +414,21 @@ def get_plug(root: str, name: str, ptype: str):
     return plug
 
 
-def scan_extensions(root):
-    extensions = {}
+def scan_extensions(root: str) -> dict[str, Any]:
+    extensions: dict[str, Any] = {}
 
     return extensions
 
 
-def get_env_docs(name: str):
+def get_env_docs(name: str) -> str:
     return load_plugin_docs(name, "environment")
 
 
-def get_intf(name: str):
+def get_intf(name: str) -> tuple[Any, Any]:
     return get_plug(BADGER_PLUGIN_ROOT, name, "interface")
 
 
-def get_env(name: str):
+def get_env(name: str) -> tuple[Any, Any]:
     return get_plug(BADGER_PLUGIN_ROOT, name, "environment")
 
 
@@ -415,7 +436,7 @@ def list_generators() -> list[str]:
     try:
         from xopt.generators import try_load_all_generators
 
-        try_load_all_generators()
+        try_load_all_generators()  # type: ignore[no-untyped-call]
     except ImportError:  # this API changed somehow
         pass  # there is nothing we can do...
     generator_names = list(generators.keys())
@@ -427,11 +448,11 @@ def list_generators() -> list[str]:
 get_generator = get_generator_defaults
 
 
-def list_intf():
+def list_intf() -> list[str]:
     return sorted(BADGER_FACTORY["interface"])
 
 
-def list_env():
+def list_env() -> list[str]:
     return sorted(BADGER_FACTORY["environment"])
 
 

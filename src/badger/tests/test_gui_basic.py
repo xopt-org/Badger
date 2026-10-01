@@ -3,198 +3,218 @@ import time
 from unittest.mock import patch
 
 import pytest
-from PyQt5.QtCore import QEventLoop, Qt, QTimer
+from PyQt5.QtCore import QEventLoop, QTimer
+from PyQt5.QtGui import QShowEvent
 from PyQt5.QtWidgets import QDialog
+from pytestqt.qtbot import QtBot
 
 
 @pytest.fixture(scope="session")
-def init_multiprocessing():
+def init_multiprocessing() -> None:
     multiprocessing.set_start_method("fork", force=True)
 
 
-def test_gui_main(qtbot, init_multiprocessing):
+@pytest.mark.usefixtures("init_multiprocessing")
+def test_gui_main(qtbot: QtBot) -> None:
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_path_issues
 
     fix_path_issues()
 
     window = BadgerMainWindow()
+    try:
+        while window.thread_list:
+            loop = QEventLoop()
+            QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+            loop.exec_()
+            time.sleep(1)
+            print("test", print(window.thread_list))
 
-    while window.thread_list:
+        qtbot.addWidget(window)
+
         loop = QEventLoop()
-        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        QTimer.singleShot(3000, loop.quit)  # 1000 ms pause
         loop.exec_()
-        time.sleep(1)
-        print("test", print(window.thread_list))
 
-    qtbot.addWidget(window)
-
-    loop = QEventLoop()
-    QTimer.singleShot(3000, loop.quit)  # 1000 ms pause
-    loop.exec_()
-
-    # TODO: Test if generator tab has been filled
-    # assert window.stacks.currentWidget().tabs.currentIndex() == 1
-
-    window.process_manager.close_proccesses()
+        # TODO: Test if generator tab has been filled
+        # assert window.stacks.currentWidget().tabs.currentIndex() == 1
+    finally:
+        window.process_manager.close_processes()
 
 
-def test_close_main(qtbot, init_multiprocessing):
+@pytest.mark.usefixtures("init_multiprocessing")
+def test_close_main(qtbot: QtBot) -> None:
     from badger.archive import save_tmp_run
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
+    from badger.types import TerminationConditionConfig
 
     fix_path_issues()
 
     window = BadgerMainWindow()
+    try:
+        qtbot.addWidget(window)
 
-    qtbot.addWidget(window)
+        loop = QEventLoop()
+        QTimer.singleShot(5000, loop.quit)  # 1000 ms pause
+        loop.exec_()
 
-    loop = QEventLoop()
-    QTimer.singleShot(5000, loop.quit)  # 1000 ms pause
-    loop.exec_()
+        routine = create_routine()
+        home_page = window.home_page
+        home_page.current_routine = routine
+        tmp_filename = save_tmp_run(routine)
+        home_page.run_monitor.testing = True
+        home_page.run_monitor.routine_filename = tmp_filename
+        home_page.run_monitor.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=3,
+        )
+        home_page.go_run(-1)
+        home_page.run_monitor.start(True)
 
-    routine = create_routine()
-    home_page = window.home_page
-    home_page.current_routine = routine
-    tmp_filename = save_tmp_run(routine)
-    home_page.run_monitor.testing = True
-    home_page.run_monitor.routine_filename = tmp_filename
-    home_page.run_monitor.termination_condition = {
-        "tc_idx": 0,
-        "max_eval": 3,
-    }
-    home_page.go_run(-1)
-    home_page.run_monitor.start(True)
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        loop.exec_()
 
-    loop = QEventLoop()
-    QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
-    loop.exec_()
+        window.close()  # this action should release the env
 
-    window.close()  # this action should release the env
-    # So we expect an AttributeError here
-    with pytest.raises(AttributeError):
-        _ = home_page.run_monitor.routine.environment
+        assert home_page.run_monitor.routine is not None
 
-    window.process_manager.close_proccesses()
+        # So we expect an AttributeError here
+        with pytest.raises(AttributeError):
+            _ = home_page.run_monitor.routine.environment
+    finally:
+        window.process_manager.close_processes()
 
 
-def test_traceback_during_run(qtbot, init_multiprocessing):
+@pytest.mark.usefixtures("init_multiprocessing")
+def test_traceback_during_run(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
     with patch("badger.core.run_routine") as run_routine_mock:
         run_routine_mock.side_effect = Exception("Test exception")
 
         from badger.gui.windows.main_window import BadgerMainWindow
         from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
         from badger.tests.utils import create_routine, fix_path_issues
+        from badger.types import TerminationConditionConfig
 
         fix_path_issues()
 
         window = BadgerMainWindow()
+        try:
+            loop = QEventLoop()
+            QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+            loop.exec_()
 
-        loop = QEventLoop()
-        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
-        loop.exec_()
+            qtbot.addWidget(window)
 
-        qtbot.addWidget(window)
+            routine = create_routine()
+            home_page = window.home_page
+            home_page.current_routine = routine
+            home_page.run_monitor.testing = True
+            home_page.run_monitor.termination_condition = TerminationConditionConfig(
+                tc_idx=0,
+                max_eval=3,
+            )
+            home_page.go_run(-1)
 
-        routine = create_routine()
-        home_page = window.home_page
-        home_page.current_routine = routine
-        home_page.run_monitor.testing = True
-        home_page.run_monitor.termination_condition = {
-            "tc_idx": 0,
-            "max_eval": 3,
-        }
-        home_page.go_run(-1)
+            # Patch showEvent to auto-accept the traceback dialog when it appears.
+            original_show_event = BadgerScrollableMessageBox.showEvent
 
-        # Function to replace the original showEvent
-        def patched_showEvent(original_showEvent):
-            def inner(ins, event):
-                original_showEvent(ins, event)  # Call the original showEvent
+            def patched_show_event(
+                ins: BadgerScrollableMessageBox, event: QShowEvent | None
+            ) -> None:
+                original_show_event(ins, event)  # Call the original showEvent
 
                 assert ins  # make sure the dialog is created
                 assert ins.detailedTextWidget.toPlainText()  # make sure it's not empty
 
                 QTimer.singleShot(100, ins.accept)  # Close the dialog after 100 ms
 
-            return inner
+            monkeypatch.setattr(
+                BadgerScrollableMessageBox, "showEvent", patched_show_event
+            )
 
-        BadgerScrollableMessageBox.showEvent = patched_showEvent(
-            BadgerScrollableMessageBox.showEvent
-        )
-
-        home_page.run_monitor.start(True)
-        # Wait until the run is done
-        while home_page.run_monitor.running:
-            qtbot.wait(100)
-
-        window.process_manager.close_proccesses()
+            home_page.run_monitor.start(True)
+            # Wait until the run is done
+            while home_page.run_monitor.running:
+                qtbot.wait(100)
+        finally:
+            window.process_manager.close_processes()
 
 
-def test_measurement_retry_dialog_in_app_flow(qtbot, init_multiprocessing):
+def test_measurement_retry_dialog_in_app_flow(qtbot: QtBot) -> None:
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import create_routine, fix_path_issues
+    from badger.types import (
+        MeasurementActionMessage,
+        MeasurementErrorMessage,
+        TerminationConditionConfig,
+    )
 
     fix_path_issues()
     window = BadgerMainWindow()
-    qtbot.addWidget(window)
+    process_with_args = None
+    try:
+        qtbot.addWidget(window)
 
-    loop = QEventLoop()
-    QTimer.singleShot(1000, loop.quit)
-    loop.exec_()
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)
+        loop.exec_()
 
-    routine = create_routine()
-    home_page = window.home_page
-    home_page.current_routine = routine
-    home_page.go_run(-1)
-    home_page.run_monitor.init_routine_runner()
-    runner = home_page.run_monitor.routine_runner
-
-    # Grab queue and process from the process manager
-    process_with_args = window.process_manager.remove_from_queue()
-    assert process_with_args is not None
-    runner.data_and_error_queue = process_with_args["data_queue"]
-    runner.dialog_action_queue = process_with_args["dialog_action_queue"]
-    runner.evaluate_queue = process_with_args["evaluate_queue"]
-    runner.routine_process = process_with_args["process"]
-
-    with patch(
-        "badger.gui.windows.measurement_retry_dialog.BadgerMeasurementRetryDialog.exec_",
-        return_value=QDialog.Accepted,
-    ) as exec_mock:
-        runner.data_and_error_queue.put(
-            {
-                "type": "measurement_error",
-                "title": "Injected measurement error",
-                "traceback": "traceback details",
-            }
+        routine = create_routine()
+        home_page = window.home_page
+        home_page.current_routine = routine
+        home_page.run_monitor.termination_condition = TerminationConditionConfig(
+            tc_idx=0,
+            max_eval=3,
         )
+        home_page.go_run(-1)
+        home_page.run_monitor.init_routine_runner()
+        runner = home_page.run_monitor.routine_runner
+        assert runner is not None
 
-        # Wait up to 1 second in 10 for queue to receive the error.
-        for _ in range(10):
-            if not runner.data_and_error_queue.empty():
-                break
-            qtbot.wait(100)
+        # Grab queue and process from the process manager
+        process_with_args = window.process_manager.remove_from_queue()
+        assert process_with_args is not None
+        runner.data_and_error_queue = process_with_args.data_queue
+        runner.dialog_action_queue = process_with_args.dialog_action_queue
+        runner.evaluate_queue = process_with_args.evaluate_queue
+        runner.routine_process = process_with_args.process
 
-        # Explicitly check if any errors were thrown
-        runner.check_queue()
+        with patch(
+            "badger.gui.windows.measurement_retry_dialog.BadgerMeasurementRetryDialog.exec_",
+            return_value=QDialog.Accepted,
+        ) as exec_mock:
+            runner.data_and_error_queue.put(
+                MeasurementErrorMessage(
+                    title="Injected measurement error",
+                    traceback="traceback details",
+                )
+            )
 
-        exec_mock.assert_called_once()
-        response = runner.dialog_action_queue.get(timeout=1)
-        assert response == {
-            "type": "measurement_action",
-            "action": "retry",
-        }
+            # Wait up to 1 second in 10 for queue to receive the error.
+            for _ in range(10):
+                if not runner.data_and_error_queue.empty():
+                    break
+                qtbot.wait(100)
 
-    window.process_manager.close_proccesses()
-    process_with_args["process"].terminate()
-    process_with_args["process"].join()
+            # Explicitly check if any errors were thrown
+            runner.check_queue()
+
+            exec_mock.assert_called_once()
+            response = runner.dialog_action_queue.get(timeout=1)
+            assert response == MeasurementActionMessage(action="retry")
+    finally:
+        window.process_manager.close_processes()
+        if process_with_args is not None:
+            process_with_args.process.terminate()
+            process_with_args.process.join()
 
 
 # TODO: Check the use_low_noise_prior parameter in the routine
 # once it's running -- currently use_low_noise_prior is not exposed in the GUI
 # so need to check the routine object held by the monitor/runner
-def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
+def test_default_low_noise_prior_in_bo(qtbot: QtBot) -> None:
     import yaml
     from xopt.generators import all_generator_names
 
@@ -204,61 +224,62 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
     fix_path_issues()
 
     window = BadgerMainWindow()
+    try:
+        loop = QEventLoop()
+        QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
+        loop.exec_()
 
-    loop = QEventLoop()
-    QTimer.singleShot(1000, loop.quit)  # 1000 ms pause
-    loop.exec_()
+        qtbot.addWidget(window)
 
-    qtbot.addWidget(window)
+        # Create and save a routine
 
-    # Create and save a routine
+        editor = window.home_page.routine_editor
+        cb_generator = editor.generator_box.cb
+        algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
+        for algo in algos:
+            if algo in all_generator_names["bo"]:
+                qtbot.keyClicks(editor.generator_box.cb, algo)
+                params = editor.generator_box.edit.get_parameters_yaml()
+                params_dict = yaml.safe_load(params)
 
-    editor = window.home_page.routine_editor
-    cb_generator = editor.generator_box.cb
-    algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
-    for algo in algos:
-        if algo in all_generator_names["bo"]:
-            qtbot.keyClicks(editor.generator_box.cb, algo)
-            params = editor.generator_box.edit.get_parameters_yaml()
-            params_dict = yaml.safe_load(params)
-
-            if "gp_constructor" in params_dict:
-                # use_low_noise_prior may not be exposed in the GUI for every
-                # generator; default to False so a hidden key doesn't error.
-                assert not params_dict["gp_constructor"].get(
-                    "use_low_noise_prior", False
-                )
-            else:  # that part of params is hidden so we need to dig deeper
-                pass
-
-    window.process_manager.close_proccesses()
+                if "gp_constructor" in params_dict:
+                    # use_low_noise_prior may not be exposed in the GUI for every
+                    # generator; default to False so a hidden key doesn't error.
+                    assert not params_dict["gp_constructor"].get(
+                        "use_low_noise_prior", False
+                    )
+                else:  # that part of params is hidden so we need to dig deeper
+                    pass
+    finally:
+        window.process_manager.close_processes()
 
 
-def test_default_turbo_in_bo(qtbot):
+# TODO: Fix default turbo in bo test
+def test_default_turbo_in_bo(qtbot: QtBot) -> None:
     return
 
-    import yaml
-    from xopt.generators import all_generator_names
+    # import yaml
+    # from xopt.generators import all_generator_names
 
-    from badger.gui.windows.main_window import BadgerMainWindow
-    from badger.tests.utils import fix_db_path_issue
+    # from badger.gui.windows.main_window import BadgerMainWindow
+    # from badger.tests.utils import fix_db_path_issue
 
-    fix_db_path_issue()
+    # fix_db_path_issue()
 
-    window = BadgerMainWindow()
-    qtbot.addWidget(window)
+    # window = BadgerMainWindow()
+    # qtbot.addWidget(window)
 
-    # Create and save a routine
-    qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
-    assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
+    # # Create and save a routine
+    # qtbot.mouseClick(window.home_page.btn_new, Qt.MouseButton.LeftButton)
+    # assert window.home_page.tabs.currentIndex() == 1  # jump to the editor
 
-    editor = window.home_page.routine_editor
-    cb_generator = editor.generator_box.cb
-    algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
-    for algo in algos:
-        if algo in all_generator_names["bo"]:
-            qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
-            params = editor.routine_page.generator_box.edit.get_parameters_yaml()
-            params_dict = yaml.safe_load(params)
+    # editor = window.home_page.routine_editor
+    # cb_generator = editor.generator_box.cb
+    # algos = [cb_generator.itemText(i) for i in range(cb_generator.count())]
+    # for algo in algos:
+    #     if algo in all_generator_names["bo"]:
+    #         qtbot.keyClicks(editor.routine_page.generator_box.cb, algo)
+    #         params = editor.routine_page.generator_box.edit.get_parameters_yaml()
+    #         params_dict = yaml.safe_load(params)
 
-            assert params_dict["turbo_controller"] == "optimize"
+    #         assert params_dict["turbo_controller"] == "optimize"

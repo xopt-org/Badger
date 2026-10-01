@@ -17,7 +17,7 @@ from badger.settings import (
 class TestBadgerConfig:
     config_file = "/mock/config.yaml"
 
-    def setup_method(self, method):
+    def setup_method(self) -> None:
         self.mock_badger_config = BadgerConfig(
             BADGER_PLUGIN_ROOT=Setting(
                 display_name="plugin root",
@@ -63,11 +63,13 @@ class TestBadgerConfig:
             ),
         )
 
-    def teardown_method(self, method):
+    def teardown_method(self) -> None:
         ConfigSingleton._instance = None
         self.mock_badger_config = None
 
-    def test_get_user_config_folder_windows(self, monkeypatch):
+    def test_get_user_config_folder_windows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(platform, "system", lambda: "Windows")
         monkeypatch.setenv("APPDATA", r"C:\Users\test\AppData\Roaming")
 
@@ -75,7 +77,7 @@ class TestBadgerConfig:
 
         assert config_folder == r"C:\Users\test\AppData\Roaming"
 
-    def test_get_user_config_folder_mac(self, monkeypatch):
+    def test_get_user_config_folder_mac(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(platform, "system", lambda: "Darwin")
         monkeypatch.setattr(
             os.path,
@@ -87,7 +89,9 @@ class TestBadgerConfig:
 
         assert config_folder == "/Users/test/Library/Application Support/Badger"
 
-    def test_get_user_config_folder_linux(self, monkeypatch):
+    def test_get_user_config_folder_linux(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(platform, "system", lambda: "Linux")
         monkeypatch.setattr(os.path, "expanduser", lambda x: "/home/test/.config")
 
@@ -95,13 +99,15 @@ class TestBadgerConfig:
 
         assert config_folder == "/home/test/.config"
 
-    def test_get_user_config_folder_unsupported_os(self, monkeypatch):
+    def test_get_user_config_folder_unsupported_os(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(platform, "system", lambda: "UnsupportedOS")
 
         with pytest.raises(OSError):
             get_user_config_folder()
 
-    def test_init_settings(self):
+    def test_init_settings(self) -> None:
         mock_config_singleton = MagicMock(spec=ConfigSingleton)
         with (
             patch(
@@ -124,7 +130,7 @@ class TestBadgerConfig:
             )
             assert config_singleton == mock_config_singleton
 
-    def test_config_singleton_initialization(self):
+    def test_config_singleton_initialization(self) -> None:
         # Patch the open function and ensure it reads the correct mock configuration
         with (
             patch("os.path.exists", return_value=True),
@@ -146,7 +152,7 @@ class TestBadgerConfig:
                 == "/mock/template/root"
             )
 
-    def test_config_singleton_create_new_config_if_not_exists(self):
+    def test_config_singleton_create_new_config_if_not_exists(self) -> None:
         with (
             patch("os.path.exists", return_value=False),
             patch("badger.settings.BadgerConfig", return_value=self.mock_badger_config),
@@ -154,7 +160,7 @@ class TestBadgerConfig:
             config_singleton = ConfigSingleton(self.config_file)
             assert isinstance(config_singleton.config, BadgerConfig)
 
-    def test_update_and_save_config(self):
+    def test_update_and_save_config(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -173,7 +179,7 @@ class TestBadgerConfig:
                 config_singleton.config.BADGER_PLUGIN_ROOT.value == "/new/plugin/root"
             )
 
-    def test_list_settings(self):
+    def test_list_settings(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -190,7 +196,7 @@ class TestBadgerConfig:
             assert "BADGER_PLUGIN_ROOT" in settings
             assert settings["BADGER_PLUGIN_ROOT"]["value"] == "/mock/plugin/root"
 
-    def test_read_value(self):
+    def test_read_value(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -206,7 +212,7 @@ class TestBadgerConfig:
             value = config_singleton.read_value("BADGER_PLUGIN_ROOT")
             assert value == "/mock/plugin/root"
 
-    def test_read_display_name(self):
+    def test_read_display_name(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -222,7 +228,7 @@ class TestBadgerConfig:
             display_name = config_singleton.read_display_name("BADGER_PLUGIN_ROOT")
             assert display_name == "plugin root"
 
-    def test_read_description(self):
+    def test_read_description(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -238,7 +244,7 @@ class TestBadgerConfig:
             description = config_singleton.read_description("BADGER_PLUGIN_ROOT")
             assert description == "Mock plugin root"
 
-    def test_read_is_path(self):
+    def test_read_is_path(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -254,7 +260,7 @@ class TestBadgerConfig:
             is_path = config_singleton.read_is_path("BADGER_PLUGIN_ROOT")
             assert is_path
 
-    def test_write_value(self):
+    def test_write_value(self) -> None:
         with (
             patch("os.path.exists", return_value=True),
             patch(
@@ -272,7 +278,7 @@ class TestBadgerConfig:
                 config_singleton.config.BADGER_PLUGIN_ROOT.value == "/new/plugin/root"
             )
 
-    def test_reset_settings(self):
+    def test_reset_settings(self) -> None:
         with (
             patch("os.path.exists", return_value=False),
             patch("badger.settings.BadgerConfig", return_value=self.mock_badger_config),

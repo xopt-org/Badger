@@ -14,15 +14,11 @@ state and generate initial sampling points.
 import json
 import logging
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-
-# Import xopt.generators at startup so they don't need to be imported
-# each time a Routine is created
-import xopt.generators.bayesian
-import xopt.generators.sequential  # noqa: F401
+from gest_api.vocs import VOCS
 from pandas import DataFrame
 from pydantic import (
     ConfigDict,
@@ -32,12 +28,12 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from xopt import VOCS, Evaluator, Xopt
+from xopt import Evaluator, Xopt
 from xopt.generators import get_generator
 from xopt.generators.sequential import SequentialGenerator
 from xopt.vocs import get_local_region
 
-from badger.environment import BaseEnvironment, instantiate_env
+from badger.environment import BaseEnvironment, Environment, instantiate_env
 from badger.factory import get_env
 from badger.utils import curr_ts
 
@@ -50,15 +46,17 @@ class Routine(Xopt):
     name: str
     description: str | None = Field(None)
     environment: SerializeAsAny[BaseEnvironment]
+    # Built from `environment` in validate_model, so callers never pass it.
+    evaluator: SerializeAsAny[Evaluator] | None = Field(None)
     initial_points: DataFrame | None = Field(None)
     critical_constraint_names: list[str] | None = Field([])
-    tags: list | None = Field(None)
+    tags: dict[str, Any] | None = Field(None)
     script: str | None = Field(None)
     # Store relative to current params
     relative_to_current: bool | None = Field(False)
-    vrange_limit_options: dict | None = Field(None)
-    vrange_hard_limit: dict | None = Field({})  # override hard limits
-    initial_point_actions: list | None = Field(None)
+    vrange_limit_options: dict[str, dict[str, Any]] | None = Field(None)
+    vrange_hard_limit: dict[str, list[float]] | None = Field({})  # override hard limits
+    initial_point_actions: list[dict[str, Any]] | None = Field(None)
     additional_variables: list[str] | None = Field([])
     formulas: dict[str, dict[str, Any]] | None = Field({})
     constraint_formulas: dict[str, dict[str, Any]] | None = Field({})
@@ -71,7 +69,7 @@ class Routine(Xopt):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_model(cls, data: Any):
+    def validate_model(cls, data: Any) -> Any:
         logger.info("Validating Routine model from input data.")
         if isinstance(data, dict):
             logger.debug(f"Routine data dict received: {list(data.keys())}")
@@ -113,20 +111,20 @@ class Routine(Xopt):
             if "data" in data and isinstance(data["data"], dict):
                 logger.debug("Validating and converting data to DataFrame.")
                 try:
-                    data["data"] = pd.DataFrame(data["data"])
+                    df = pd.DataFrame(data["data"])
                 except IndexError:
-                    data["data"] = pd.DataFrame(data["data"], index=[0])
-
-                data["data"].index = data["data"].index.astype(int)
-                data["data"].sort_index(inplace=True)
+                    df = pd.DataFrame(data["data"], index=[0])
+                    df.index = df.index.astype(int)
+                    df.sort_index(inplace=True)
+                data["data"] = df
 
                 # Add data one row at a time to avoid generator issues
                 if isinstance(data["generator"], SequentialGenerator):
                     logger.debug("Setting data for SequentialGenerator.")
-                    data["generator"].set_data(data["data"])
+                    data["generator"].set_data(df)
                 else:
                     logger.debug("Adding data to generator.")
-                    data["generator"].add_data(data["data"])
+                    data["generator"].add_data(df)
 
             # instantiate env
             if isinstance(data["environment"], dict):
@@ -142,11 +140,13 @@ class Routine(Xopt):
                 data["environment"] = instantiate_env(env_class, configs_env)
 
             # create evaluator
-            env = data["environment"]
+            env: Environment = data["environment"]
 
-            def evaluate_point(point: dict):
+            def evaluate_point(
+                point: dict[str, float],
+            ) -> dict[str, float | list[float]]:
                 logger.debug(f"Evaluating point: {point}")
-                point = pd.Series(point).explode().to_dict()
+                point = cast(dict[str, float], pd.Series(point).explode().to_dict())
                 env.set_variables(point)
                 obs = env.get_observables(data["generator"].vocs.output_names)
                 ts = curr_ts()
@@ -160,7 +160,7 @@ class Routine(Xopt):
         return data
 
     @field_validator("initial_points", mode="before")
-    def validate_data(cls, v, info: ValidationInfo):
+    def validate_data(cls, v: Any, info: ValidationInfo) -> Any:
         logger.debug("Validating initial_points field.")
         if isinstance(v, dict):
             try:
@@ -170,7 +170,7 @@ class Routine(Xopt):
         return v
 
     @property
-    def sorted_data(self):
+    def sorted_data(self) -> pd.DataFrame | None:
         logger.debug("Sorting routine data.")
         data_copy = deepcopy(self.data)
         if data_copy is not None:
@@ -178,7 +178,7 @@ class Routine(Xopt):
             data_copy.sort_index(inplace=True)
         return data_copy
 
-    def json(self, **kwargs) -> str:
+    def json(self, **kwargs: Any) -> str:
         logger.info("Serializing Routine to JSON.")
         """Handle custom serialization of environment"""
 
@@ -200,25 +200,30 @@ class Routine(Xopt):
         dict_result["environment"] = {"name": self.environment.name} | dict_result[
             "environment"
         ]
-        try:
-            dict_result["environment"]["interface"] = {
-                "name": self.environment.interface.name
-            } | dict_result["environment"]["interface"]
-        except KeyError:
-            pass
-        except AttributeError:
-            pass
+        # Only Environment (not BaseEnvironment) carries an interface.
+        if (
+            isinstance(self.environment, Environment)
+            and self.environment.interface is not None
+        ):
+            try:
+                dict_result["environment"]["interface"] = {
+                    "name": self.environment.interface.name
+                } | dict_result["environment"]["interface"]
+            except KeyError:
+                pass
 
         return json.dumps(dict_result)
 
 
-def calculate_variable_bounds(limit_options, vocs, env):
+def calculate_variable_bounds(
+    limit_options: dict[str, dict[str, Any]], vocs: VOCS, env: BaseEnvironment
+) -> dict[str, list[float]]:
     logger.info("Calculating variable bounds.")
     vnames = vocs.variable_names
     var_curr = env.get_variables(vnames)
     var_range = env.get_bounds(vnames)
 
-    variables_updated = {}
+    variables_updated: dict[str, list[float]] = {}
     for name in vnames:
         try:
             limit_option = limit_options[name]
@@ -250,10 +255,12 @@ def calculate_variable_bounds(limit_options, vocs, env):
     return variables_updated
 
 
-def calculate_initial_points(init_actions, vocs, env):
+def calculate_initial_points(
+    init_actions: list[dict[str, Any]], vocs: VOCS, env: BaseEnvironment
+) -> dict[str, list[float]]:
     logger.info("Calculating initial points.")
     vnames = vocs.variable_names
-    init_points = {k: [] for k in vnames}
+    init_points: dict[str, list[float]] = {k: [] for k in vnames}
 
     for action in init_actions:
         logger.debug(f"Processing initial point action: {action}")

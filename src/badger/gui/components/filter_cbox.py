@@ -14,12 +14,18 @@ from badger.gui.components.collapsible_box import CollapsibleBox
 
 
 class BadgerFilterBox(CollapsibleBox):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        title: str = "",
+        duration: int = 100,
+        tooltip: str = "",
+    ):
+        super().__init__(parent=parent, title=title, duration=duration, tooltip=tooltip)
 
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         vbox = QVBoxLayout()
 
         # Obj filter

@@ -6,15 +6,15 @@ class Interface(interface.Interface):
     flag: int = 0
 
     # Private variables
-    _states: dict
+    _states: dict[str, float]
 
-    def __init__(self, **data):
+    def __init__(self, **data: dict[str, float]) -> None:
         super().__init__(**data)
 
         self._states = {}
 
     @interface.log
-    def get_values(self, channel_names):
+    def get_values(self, channel_names: list[str]) -> dict[str, float]:
         channel_outputs = {}
 
         for channel in channel_names:
@@ -28,6 +28,6 @@ class Interface(interface.Interface):
         return channel_outputs
 
     @interface.log
-    def set_values(self, channel_inputs):
+    def set_values(self, channel_inputs: dict[str, float]) -> None:
         for channel, value in channel_inputs.items():
             self._states[channel] = value

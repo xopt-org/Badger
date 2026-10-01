@@ -11,7 +11,9 @@ import os
 import sqlite3
 import uuid
 import warnings
+from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Any, ParamSpec, TypeVar, cast
 
 import yaml
 
@@ -24,26 +26,35 @@ logger = logging.getLogger(__name__)
 
 # Check badger database root
 flag_use_db = True
+
 config_singleton = init_settings()
 try:
-    BADGER_DB_ROOT = config_singleton.read_value("BADGER_DB_ROOT")
+    badger_db_root = cast(str, config_singleton.read_value("BADGER_DB_ROOT"))
 except KeyError:
+    badger_db_root = ""
     flag_use_db = False
 
+BADGER_DB_ROOT = badger_db_root
+
 if flag_use_db:
-    if BADGER_DB_ROOT is None:
+    if BADGER_DB_ROOT == "":
         raise BadgerConfigError("Please set the BADGER_DB_ROOT env var!")
     elif not os.path.exists(BADGER_DB_ROOT):
         os.makedirs(BADGER_DB_ROOT)
         logger.info(f"Badger database root {BADGER_DB_ROOT} created")
 
+T = TypeVar("T")
+P = ParamSpec("P")
 
-def ensure_routines_db_exists(func):
+
+def ensure_routines_db_exists(
+    func: Callable[P, T],
+) -> Callable[P, T]:
     """
     Create the routines database (a SQL table) if it does not already exist.
     """
 
-    def func_safe(*args, **kwargs):
+    def func_safe(*args: P.args, **kwargs: P.kwargs) -> T:
         db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
         con = sqlite3.connect(db_routine)
@@ -61,12 +72,12 @@ def ensure_routines_db_exists(func):
     return func_safe
 
 
-def ensure_runs_db_exists(func):
+def ensure_runs_db_exists(func: Callable[P, T]) -> Callable[P, T]:
     """
     Create the runs database (a SQL table) if it does not already exist.
     """
 
-    def func_safe(*args, **kwargs):
+    def func_safe(*args: P.args, **kwargs: P.kwargs) -> T:
         db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
         con = sqlite3.connect(db_run)
@@ -84,7 +95,7 @@ def ensure_runs_db_exists(func):
     return func_safe
 
 
-def filter_routines(records, tags):
+def filter_routines(records: list[tuple], tags: dict) -> list[tuple]:
     records_filtered = []
     for record in records:
         try:
@@ -97,7 +108,7 @@ def filter_routines(records, tags):
     return records_filtered
 
 
-def extract_metadata(records):
+def extract_metadata(records: list[tuple]) -> tuple[list[str], list[str]]:
     env_list = []
     descr_list = []
     for record in records:
@@ -115,7 +126,7 @@ def extract_metadata(records):
 
 
 @ensure_routines_db_exists
-def save_routine(routine: Routine):
+def save_routine(routine: Routine) -> None:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
     con = sqlite3.connect(db_routine)
@@ -134,7 +145,7 @@ def save_routine(routine: Routine):
 
 # This function is not safe and might break database! Use with caution!
 @ensure_routines_db_exists
-def update_routine(routine: Routine):
+def update_routine(routine: Routine) -> None:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
     con = sqlite3.connect(db_routine)
@@ -155,7 +166,7 @@ def update_routine(routine: Routine):
 
 @ensure_routines_db_exists
 @ensure_runs_db_exists
-def remove_routine(id: str, remove_runs=True):
+def remove_routine(id: str, remove_runs: bool = True) -> None:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
 
     con = sqlite3.connect(db_routine)
@@ -180,7 +191,7 @@ def remove_routine(id: str, remove_runs=True):
 
 
 @ensure_routines_db_exists
-def load_routine(id: str):
+def load_routine(id: str) -> tuple[Routine, Any]:
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
     con = sqlite3.connect(db_routine)
     cur = con.cursor()
@@ -215,7 +226,7 @@ def load_routine(id: str):
 
 
 @ensure_routines_db_exists
-def list_routine(keyword="", tags: dict[str, str] | None = None):
+def list_routine(keyword: str = "", tags: dict[str, str] | None = None) -> list[tuple]:
     if tags is None:
         tags = {}
     db_routine = os.path.join(BADGER_DB_ROOT, "routines.db")
@@ -307,7 +318,7 @@ def list_routine(keyword="", tags: dict[str, str] | None = None):
 
 
 @ensure_runs_db_exists
-def save_run(run):
+def save_run(run: dict[str, Any]) -> int | None:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run, timeout=30.0)
@@ -323,6 +334,8 @@ def save_run(run):
     # Check if the record exist (same filename)
     cur.execute("select id from run where filename = ?", (run_filename,))
     existing_row = cur.fetchone()
+
+    rid: int | None = None
 
     if existing_row:
         cur.execute(
@@ -344,7 +357,7 @@ def save_run(run):
 
 
 @ensure_runs_db_exists
-def get_runs_by_routine(routine_id: str):
+def get_runs_by_routine(routine_id: str) -> list[str]:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -362,7 +375,7 @@ def get_runs_by_routine(routine_id: str):
 
 
 @ensure_runs_db_exists
-def get_runs():
+def get_runs() -> list[str]:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -379,7 +392,7 @@ def get_runs():
 
 
 @ensure_runs_db_exists
-def remove_run_by_filename(filename):
+def remove_run_by_filename(filename: str) -> None:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -392,7 +405,7 @@ def remove_run_by_filename(filename):
 
 
 @ensure_runs_db_exists
-def remove_run_by_id(rid):
+def remove_run_by_id(rid: int) -> None:
     db_run = os.path.join(BADGER_DB_ROOT, "runs.db")
 
     con = sqlite3.connect(db_run)
@@ -404,7 +417,7 @@ def remove_run_by_id(rid):
     con.close()
 
 
-def import_routines(filename):
+def import_routines(filename: str) -> None:
     con = sqlite3.connect(filename)
     cur = con.cursor()
 
@@ -436,7 +449,7 @@ def import_routines(filename):
         raise BadgerDBError(get_yaml_string(failed_list))
 
 
-def export_routines(filename, routine_id_list):
+def export_routines(filename: str, routine_id_list: list[str]) -> None:
     con = sqlite3.connect(filename)
     cur = con.cursor()
 

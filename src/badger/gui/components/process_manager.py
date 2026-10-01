@@ -1,7 +1,11 @@
 """Keeps a pool of pre-spawned subprocesses ready to run optimizations.
 When one is consumed by a run, signals that a new one should be created."""
 
+from __future__ import annotations
+
 from PyQt5.QtCore import QObject, pyqtSignal
+
+from badger.types import ProcessWithArgs
 
 
 class ProcessManager(QObject):
@@ -14,26 +18,26 @@ class ProcessManager(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.processes_queue = []
+        self.processes_queue: list[ProcessWithArgs] = []
 
-    def add_to_queue(self, process_with_args: dict) -> None:
+    def add_to_queue(self, process_with_args: ProcessWithArgs) -> None:
         """
-        Add to a dict contaitng a process and it's coresponding args to the processes_queue.
+        Add to a ProcessWithArgs object containing a process and its corresponding args to the processes_queue.
 
         Parameters
         ----------
-        process_with_args: dict
+        process_with_args: ProcessWithArgs
         """
         self.processes_queue.append(process_with_args)
 
-    def remove_from_queue(self) -> dict | None:
+    def remove_from_queue(self) -> ProcessWithArgs | None:
         """
-        Removes and returns a process and it's coresponding args to the processes_queue.
-        If no process are in the processes_queue then the method returns None.
+        Removes and returns a ProcessWithArgs object from the processes_queue.
+        If no ProcessWithArgs objects are in the processes_queue then the method returns None.
 
         Returns
         -------
-        process_with_args: dict | None
+        process_with_args: ProcessWithArgs | None
         """
         if self.processes_queue:
             process_with_args = self.processes_queue.pop(0)
@@ -42,17 +46,17 @@ class ProcessManager(QObject):
 
         return None
 
-    def close_proccesses(self) -> bool:
+    def close_processes(self) -> bool:
         """
-        Closes the processes stored in the processes_queue.
+        Closes the ProcessWithArgs objects stored in the processes_queue.
 
         Returns
         -------
         True: bool
         """
         for i in range(len(self.processes_queue)):
-            process = self.processes_queue.pop(0)
-            process["process"].terminate()
-            process["process"].join()
+            _p = self.processes_queue.pop(0)
+            _p.process.terminate()
+            _p.process.join()
 
         return True
