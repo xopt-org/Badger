@@ -94,9 +94,8 @@ class Interface(BaseModel, ABC):
     def reset_interface(self) -> None:
         """
         Called after the application forks (i.e. after spawning a new multiprocess.Process)
-        Subclasses should use this to reset any undesirable process wide state
+        Subclasses may override this to reset any undesirable process wide state.
         """
-        raise NotImplementedError()
 
     def get_value(self, channel_name: str, **kwargs: Any) -> Any:
         return self.get_values([channel_name], **kwargs)[channel_name]

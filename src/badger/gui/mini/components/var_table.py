@@ -68,7 +68,7 @@ class ValueCell(QWidget):
 
         self.label = QLabel(self._format(value))
         self.label.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            Qt.AlignmentFlag(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         )
         layout.addWidget(self.label)
 
@@ -83,7 +83,7 @@ class ValueCell(QWidget):
         is_selected: bool,
         alert_level: int,
         selected_color: str,
-    ):
+    ) -> None:
         """
         Update the value cell visual style.
 
@@ -126,7 +126,9 @@ class SavedValueCell(ValueCell):
     def __init__(self, value: float | None):
         super().__init__(value)
 
-    def update_style(self, is_selected: bool, alert_level: int):
+    def update_style(
+        self, is_selected: bool, alert_level: int, selected_color: str
+    ) -> None:
         super().update_style(
             is_selected, 0 if alert_level <= 1 else 2, self.SELECTED_COLOR
         )
@@ -142,7 +144,9 @@ class CurrentValueCell(ValueCell):
     def __init__(self, value: float | None):
         super().__init__(value)
 
-    def update_style(self, is_selected: bool, alert_level: int):
+    def update_style(
+        self, is_selected: bool, alert_level: int, selected_color: str
+    ) -> None:
         super().update_style(is_selected, alert_level, self.SELECTED_COLOR)
 
 

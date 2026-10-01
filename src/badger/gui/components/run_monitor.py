@@ -673,15 +673,15 @@ class BadgerOptMonitor(QWidget):
                 path = run["path"]
                 filename = run["filename"][:-4] + "pickle"
 
-            try:
-                env.interface.stop_recording(os.path.join(path, filename))
-            except AttributeError:  # recording was not enabled
-                logger.debug("Recording was not enabled")
+                try:
+                    env.interface.stop_recording(os.path.join(path, filename))
+                except AttributeError:  # recording was not enabled
+                    logger.debug("Recording was not enabled")
 
-            self.sig_run_name.emit(run["filename"])
-            self.sig_status.emit(
-                f"Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}"
-            )
+                self.sig_run_name.emit(run["filename"])
+                self.sig_status.emit(
+                    f"Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}"
+                )
             # if not self.testing:
             #     QMessageBox.information(
             #         self, 'Success!',

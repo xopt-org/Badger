@@ -478,12 +478,14 @@ class BadgerHomePage(QWidget):
         if open_dialog:
             # Notify user that data has been added to the routine
             dialog = QMessageBox(
-                text=str(
+                parent=self,
+            )
+            dialog.setText(
+                str(
                     "Data loaded into routine for the following VOCS:\n\n"
                     + f"{list(data_keys)}\n\n"
                     + "Click OK to continue!"
-                ),
-                parent=self,
+                )
             )
             dialog.setIcon(QMessageBox.Information)
             dialog.setWindowTitle("Data added to routine")

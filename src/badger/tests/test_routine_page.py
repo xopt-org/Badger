@@ -241,12 +241,20 @@ def test_add_random_points(qtbot: QtBot) -> None:
     qtbot.keyClicks(window.generator_box.cb, "random")
     qtbot.keyClicks(window.env_box.cb, "test")
 
-    window.env_box.var_table.cellWidget(0, 0).setChecked(True)
-    window.env_box.var_table.cellWidget(1, 0).setChecked(True)
-    window.env_box.var_table.cellWidget(2, 0).setChecked(True)
-    window.env_box.obj_table.cellWidget(0, 0).setChecked(True)
+    var_table_0_0 = window.env_box.var_table.cellWidget(0, 0)
+    if var_table_0_0 is not None:
+        var_table_0_0.setChecked(True)
+    var_table_1_0 = window.env_box.var_table.cellWidget(1, 0)
+    if var_table_1_0 is not None:
+        var_table_1_0.setChecked(True)
+    var_table_2_0 = window.env_box.var_table.cellWidget(2, 0)
+    if var_table_2_0 is not None:
+        var_table_2_0.setChecked(True)
+    obj_table_0_0 = window.env_box.obj_table.cellWidget(0, 0)
+    if obj_table_0_0 is not None:
+        obj_table_0_0.setChecked(True)
 
-    def handle_dialog():
+    def handle_dialog() -> None:
         while window.rc_dialog is None:
             QApplication.processEvents()
 
@@ -257,8 +265,9 @@ def test_add_random_points(qtbot: QtBot) -> None:
 
     QTimer.singleShot(0, handle_dialog)
 
-    qtbot.mouseClick(window.env_box.btn_add_rand, Qt.LeftButton)
+    qtbot.mouseClick(window.env_box.btn_add_rand, Qt.MouseButton.LeftButton)
     routine = window._compose_routine()
+    assert routine.initial_points is not None
 
     assert routine.initial_points.shape[0] == 5
     # curr is 0.5, frac is 0.05, range is [-1, 1]

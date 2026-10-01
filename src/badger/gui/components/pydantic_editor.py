@@ -13,7 +13,7 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from inspect import isclass
-from types import NoneType
+from types import NoneType, UnionType
 from typing import (
     Annotated,
     Any,
@@ -166,7 +166,8 @@ class BadgerResolvedType:
         if origin == Annotated:
             return BadgerResolvedType.resolve(args[0])
 
-        if origin == Union:
+        # `X | None` (PEP 604) resolves to types.UnionType, `Union[X, None]` to typing.Union.
+        if origin is Union or origin is UnionType:
             if NoneType in args:
                 origin = Optional
                 args = tuple(arg for arg in args if arg != NoneType)
@@ -183,7 +184,7 @@ class BadgerResolvedType:
                 elif len(args) > 1:
                     primary = BadgerResolvedType.find_primary(args)
                     return BadgerResolvedType(
-                        main=origin,
+                        main=cast("type[Any] | None", origin),
                         nullable=nullable,
                         subtype=primary,
                     )

@@ -59,7 +59,6 @@ def create_multiobjective_routine() -> Routine:
 
     return Routine(
         name="test",
-        vocs=vocs,
         generator=generator,
         environment={"name": "multiobjective_test"},
         initial_points=pd.DataFrame(test_routine["init_points"]),
@@ -99,7 +98,6 @@ def create_routine_turbo() -> Routine:
 
     return Routine(
         name="test-turbo",
-        vocs=vocs,
         generator=generator,
         environment={"name": "test"},
         initial_points=pd.DataFrame(test_routine["config"]["init_points"]),
@@ -128,7 +126,6 @@ def create_routine_critical() -> Routine:
 
     return Routine(
         name="test",
-        vocs=vocs,
         generator=generator,
         environment={"name": "test"},
         initial_points=pd.DataFrame(test_routine["init_points"]),
@@ -184,7 +181,7 @@ def get_vars_in_row(routine: Routine, idx: int = 0) -> np.ndarray:
     var_names = routine.vocs.variable_names
     if routine.data is None:
         raise ValueError("Routine data is None. Unable to get variables in row.")
-    output = routine.data.iloc[idx][var_names].to_numpy()
+    output: np.ndarray = routine.data.iloc[idx][var_names].to_numpy()
     # output = routine.data.iat[idx][var_names].to_numpy()
     return output
 

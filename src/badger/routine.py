@@ -46,6 +46,8 @@ class Routine(Xopt):
     name: str
     description: str | None = Field(None)
     environment: SerializeAsAny[BaseEnvironment]
+    # Built from `environment` in validate_model, so callers never pass it.
+    evaluator: SerializeAsAny[Evaluator] | None = Field(None)
     initial_points: DataFrame | None = Field(None)
     critical_constraint_names: list[str] | None = Field([])
     tags: dict[str, Any] | None = Field(None)
@@ -153,7 +155,7 @@ class Routine(Xopt):
                 logger.debug(f"Evaluation result: {obs}")
                 return obs
 
-            data["evaluator"] = Evaluator(function=evaluate_point)  # type: ignore[call-arg]
+            data["evaluator"] = Evaluator(function=evaluate_point)
 
         return data
 

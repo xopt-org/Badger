@@ -639,12 +639,12 @@ class BadgerEnvBox(QWidget):
             rule = objective[obj_name][0]
             objectives[obj_name] = rule
 
-        constraints: dict[str, tuple[str, float]] = {}
+        constraints: dict[str, list[str | float]] = {}
         critical_constraints: list[str] = []
         for constraint in self.con_table.export_data():
             con_name = next(iter(constraint))
             relation, threshold, critical = constraint[con_name]
-            constraints[con_name] = (CONS_RELATION_DICT[relation], threshold)
+            constraints[con_name] = [CONS_RELATION_DICT[relation], threshold]
             if critical:
                 critical_constraints.append(con_name)
 

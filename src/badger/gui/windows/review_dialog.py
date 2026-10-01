@@ -2,14 +2,20 @@
 preview of a fully-configured routine before it is saved or run, allowing the
 user to confirm the settings."""
 
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QTextBrowser, QVBoxLayout
+from PyQt5.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QTextBrowser,
+    QVBoxLayout,
+    QWidget,
+)
 
 from badger.routine import Routine
 from badger.utils import get_yaml_string
 
 
 class BadgerReviewDialog(QDialog):
-    def __init__(self, routine: Routine, parent: QDialog | None = None):
+    def __init__(self, parent: QWidget | None, routine: Routine) -> None:
         super().__init__(parent)
 
         self.routine = routine
