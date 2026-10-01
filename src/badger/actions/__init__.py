@@ -2,6 +2,7 @@
 GUI or prints config details; sub-command handlers are re-exported from
 their own modules (doctor, routine, env, generator, etc.)."""
 
+import argparse
 import os
 from importlib import metadata
 
@@ -10,27 +11,25 @@ from badger.settings import get_user_config_folder, init_settings
 from badger.utils import yprint
 
 
-def show_info(args):
+def show_info(args: argparse.Namespace) -> None:
     config_path = None
 
     if args.config_filepath:
         config_path = args.config_filepath
 
-    if args.gui or args.gui_acr:
-        if check_n_config_paths(args.config_filepath):
-            from badger.gui import launch_gui
+    if (args.gui or args.gui_acr) and check_n_config_paths(args.config_filepath):
+        from badger.gui import launch_gui
 
-            launch_gui(config_path)
+        launch_gui(config_path)
 
-            return
+        return
 
-    if args.mini:
-        if check_n_config_paths(args.config_filepath):
-            from badger.gui.mini import launch_gui
+    if args.mini and check_n_config_paths(args.config_filepath):
+        from badger.gui.mini import launch_gui
 
-            launch_gui(config_path, template_filename=args.template)
+        launch_gui(config_path, template_filename=args.template)
 
-            return
+        return
 
     if not check_n_config_paths():
         return

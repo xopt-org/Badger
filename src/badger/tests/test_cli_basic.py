@@ -12,7 +12,7 @@ def capture(command):
 
 def test_cli_main():
     command = ["badger"]
-    out, err, exitcode = capture(command)
+    out, _, exitcode = capture(command)
 
     assert exitcode == 0
 
@@ -36,7 +36,7 @@ def test_list_algo():
     from badger.factory import ALGO_EXCLUDED
 
     command = ["badger", "generator"]
-    out, err, exitcode = capture(command)
+    out, _, exitcode = capture(command)
 
     assert exitcode == 0
 

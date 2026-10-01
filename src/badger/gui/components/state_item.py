@@ -1,8 +1,8 @@
 """Creates a single observable-state row: a combo box for the observable
 name and a remove button."""
 
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from PyQt5.QtWidgets import QStyledItemDelegate
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QStyledItemDelegate, QWidget
+
 from badger.gui.utils import NoHoverFocusComboBox
 
 
@@ -17,7 +17,7 @@ def state_item(options, remove_item, name=None):
     cb_sta.addItems(options)
     try:
         idx = options.index(name)
-    except:
+    except ValueError:
         idx = 0
     cb_sta.setCurrentIndex(idx)
 

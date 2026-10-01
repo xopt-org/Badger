@@ -8,7 +8,7 @@ routines using a BayesianGenerator.
 """
 
 import logging
-from typing import Optional, cast
+from typing import cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -59,16 +59,18 @@ DEFAULT_PARAMETERS: ConfigurableOptions = {
 
 class BOPlotWidget(AnalysisWidget):
     generator: BayesianGenerator  # pyright: ignore[reportIncompatibleVariableOverride]
-    parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
+
     df_length: float = float("inf")
     initialized: bool = False
 
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         logger.debug("Initializing BOPlotWidget")
+
+        self.parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
         super().__init__(routine, parent)
 
         self.create_ui()
@@ -218,7 +220,7 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Setting best reference points")
         try:
             self.set_best_reference_points()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - UI action reports via dialog
             logger.error(f"Error getting best reference points: {e}")
             QMessageBox.critical(
                 self,
@@ -231,7 +233,7 @@ class BOPlotWidget(AnalysisWidget):
         logger.debug("Setting latest reference points")
         try:
             self.set_latest_reference_points()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - UI action reports via dialog
             logger.error(f"Error getting latest reference points: {e}")
             QMessageBox.critical(
                 self,
@@ -507,10 +509,10 @@ class BOPlotWidget(AnalysisWidget):
                 self.generator.train_model(self.routine.data)
             except HandledException as he:
                 logger.error(str(he))
-                raise he
+                raise
             except Exception as e:
                 logger.error(str(e))
-                raise e
+                raise
 
     def set_best_reference_points(
         self,

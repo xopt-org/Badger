@@ -2,13 +2,13 @@
 XML entry with run summary (gain, duration, algorithm) and attaches a
 screenshot of the GUI for the facility archive."""
 
-import os
-from datetime import datetime
 import logging
+import os
+from datetime import UTC, datetime
 
-from badger.settings import init_settings
 from badger.archive import BADGER_ARCHIVE_ROOT
 from badger.errors import BadgerConfigError, BadgerLogbookError
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,8 @@ elif not os.path.exists(BADGER_LOGBOOK_ROOT):
 
 
 def send_to_logbook(routine, widget=None):
-    from xml.etree import ElementTree
     from re import sub
+    from xml.etree import ElementTree
 
     log_text = ""
     routine_name = routine.name
@@ -50,13 +50,11 @@ def send_to_logbook(routine, widget=None):
     log_text += f"Environment name: {env_name}\n"
     log_text += f"Optimization algorithm: {generator_name}\n"
     log_text += f"Data location: {data_path}\n"
-    try:
-        log_text += f"Log location: {BADGER_LOGBOOK_ROOT}\n"
-    except:
-        pass
+
+    log_text += f"Log location: {BADGER_LOGBOOK_ROOT}\n"
 
     # Generate the xml data
-    curr_time = datetime.now()
+    curr_time = datetime.now(tz=UTC)
     if os.name == "nt":
         timestr = curr_time.strftime("%Y-%m-%dT%H%M%S")
     else:
@@ -92,13 +90,12 @@ def send_to_logbook(routine, widget=None):
 
     fileName = os.path.join(BADGER_LOGBOOK_ROOT, metainfo.text)
     fileName = fileName.rstrip(".xml")
-    xmlFile = open(fileName + ".xml", "w")
-    rawString = ElementTree.tostring(log_entry, "utf-8").decode("utf-8")
-    parsedString = sub(r"(?=<[^/].*>)", "\n", rawString)
-    xmlString = parsedString[1:]
-    xmlFile.write(xmlString)
-    xmlFile.write("\n")  # Close with newline so cron job parses correctly
-    xmlFile.close()
+    with open(fileName + ".xml", "w") as xmlFile:
+        rawString = ElementTree.tostring(log_entry, "utf-8").decode("utf-8")
+        parsedString = sub(r"(?=<[^/].*>)", "\n", rawString)
+        xmlString = parsedString[1:]
+        xmlFile.write(xmlString)
+        xmlFile.write("\n")  # Close with newline so cron job parses correctly
     screenshot(widget, f"{fileName}.png")
 
 

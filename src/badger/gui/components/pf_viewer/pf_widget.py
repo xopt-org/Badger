@@ -4,7 +4,6 @@ updating live as new solutions come in."""
 
 import logging
 import time
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -71,9 +70,9 @@ class ParetoFrontWidget(AnalysisWidget):
     parameters: ConfigurableOptions = DEFAULT_PARAMETERS  # type: ignore
 
     hypervolume_history: pd.DataFrame = pd.DataFrame()
-    pf_1: Optional[Tensor] = None
-    pf_2: Optional[Tensor] = None
-    pf_mask: Optional[Tensor] = None
+    pf_1: Tensor | None = None
+    pf_2: Tensor | None = None
+    pf_mask: Tensor | None = None
     plot_size: tuple[float, float] = (8, 6)
 
     # UI component references
@@ -87,7 +86,7 @@ class ParetoFrontWidget(AnalysisWidget):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(routine, parent)
 

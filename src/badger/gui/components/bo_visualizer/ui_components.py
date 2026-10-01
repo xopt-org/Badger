@@ -29,12 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 class UIComponents:
-    variables: list[str] = []
-
     def __init__(
         self,
         default_parameters: ConfigurableOptions,
     ):
+        self.variables: list[str] = []
         self.variable_checkboxes: dict[str, QCheckBox] = {}
         self.ref_inputs: list[QTableWidgetItem] = []
         self.reference_table = QTableWidget()

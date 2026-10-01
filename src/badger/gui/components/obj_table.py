@@ -2,10 +2,11 @@
 MAXIMIZE rule. Supports drag-and-drop reordering and text drops."""
 
 from typing import Any
+
 from PyQt5.QtWidgets import (
     QComboBox,
-    QStyledItemDelegate,
     QMessageBox,
+    QStyledItemDelegate,
     QWidget,
 )
 

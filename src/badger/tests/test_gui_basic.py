@@ -74,7 +74,7 @@ def test_close_main(qtbot, init_multiprocessing):
     window.close()  # this action should release the env
     # So we expect an AttributeError here
     with pytest.raises(AttributeError):
-        home_page.run_monitor.routine.environment
+        _ = home_page.run_monitor.routine.environment
 
     window.process_manager.close_proccesses()
 
@@ -237,10 +237,11 @@ def test_default_low_noise_prior_in_bo(qtbot, init_multiprocessing):
 def test_default_turbo_in_bo(qtbot):
     return
 
+    import yaml
+    from xopt.generators import all_generator_names
+
     from badger.gui.windows.main_window import BadgerMainWindow
     from badger.tests.utils import fix_db_path_issue
-    from xopt.generators import all_generator_names
-    import yaml
 
     fix_db_path_issue()
 

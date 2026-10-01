@@ -3,25 +3,26 @@ the user to configure a per-variable range restriction (as a ratio of the full
 or current range) independently of the global limit settings, providing
 fine-grained control over the optimization search space."""
 
-from copy import deepcopy
 import math
+from copy import deepcopy
 
-from PyQt5.QtWidgets import (
-    QDialog,
-    QWidget,
-    QHBoxLayout,
-    QPushButton,
-    QVBoxLayout,
-    QDoubleSpinBox,
-    QGroupBox,
-    QLabel,
-    QComboBox,
-    QStyledItemDelegate,
-    QStackedWidget,
-    QLineEdit,
-    QFrame,
-)
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QStackedWidget,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
+
 from badger.gui.components.bounds_preview import BoundsPreviewBar
 
 

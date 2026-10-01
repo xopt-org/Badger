@@ -3,7 +3,6 @@ optimization algorithms outside the standard Xopt generator registry.
 Third-party packages can subclass Extension to plug in custom algorithms."""
 
 from abc import ABC, abstractmethod
-from typing import List
 
 
 class Extension(ABC):
@@ -18,7 +17,7 @@ class Extension(ABC):
 
     # List all available generators
     @abstractmethod
-    def list_generator(self) -> List[str]:
+    def list_generator(self) -> list[str]:
         pass
 
     # Get config of an generator

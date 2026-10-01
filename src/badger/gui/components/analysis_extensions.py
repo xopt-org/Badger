@@ -2,7 +2,7 @@
 viewer). Each dialog receives live data updates from the run monitor."""
 
 import logging
-from typing import Optional, cast
+from typing import cast
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCloseEvent
@@ -26,7 +26,7 @@ class AnalysisExtension(QWidget):
     generator_type: type[Generator]
     widget: AnalysisWidget
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
         # A parented QWidget is a child widget by default. Setting the Window
         # flag keeps the palette as the owner (for lifetime/stacking) while
@@ -86,7 +86,7 @@ class ParetoFrontViewer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 
@@ -101,7 +101,7 @@ class BOVisualizer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 
@@ -118,7 +118,7 @@ class BaxVisualizer(AnalysisExtension):
     def __init__(
         self,
         routine: Routine,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent=parent)
 

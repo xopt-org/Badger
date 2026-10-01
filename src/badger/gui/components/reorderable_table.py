@@ -8,7 +8,7 @@ line style."""
 # https://creativecommons.org/publicdomain/zero/1.0/
 # https://creativecommons.org/publicdomain/zero/1.0/legalcode
 
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtGui, QtWidgets
 
 
 class MyModel(QtGui.QStandardItemModel):
@@ -55,7 +55,7 @@ class MyTableView(QtWidgets.QTableView):
         self.setModel(self.model)
 
         for idx, data in enumerate(["foo", "bar", "baz"]):
-            item_1 = QtGui.QStandardItem("Item {}".format(idx))
+            item_1 = QtGui.QStandardItem(f"Item {idx}")
             item_1.setEditable(False)
             item_1.setDropEnabled(False)
 

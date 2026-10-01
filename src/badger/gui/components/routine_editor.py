@@ -1,12 +1,19 @@
 """Container that wraps the routine page in a scrollable area with
 save/cancel/delete buttons. Coordinates creation, editing, and deletion."""
 
-from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QTextEdit, QStackedWidget, QScrollArea
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QFont
-from badger.gui.components.routine_page import BadgerRoutinePage
+from PyQt5.QtWidgets import (
+    QHBoxLayout,
+    QPushButton,
+    QScrollArea,
+    QStackedWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
+from badger.gui.components.routine_page import BadgerRoutinePage
 from badger.routine import Routine
 
 

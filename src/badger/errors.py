@@ -2,9 +2,11 @@
 with the traceback when raised inside the GUI. Subclasses cover config issues,
 database errors, plugin failures, and optimization stop signals."""
 
-from PyQt5.QtWidgets import QMessageBox
-import traceback
 import sys
+import traceback
+from typing import Any
+
+from PyQt5.QtWidgets import QMessageBox
 
 
 class BadgerError(Exception):
@@ -86,7 +88,9 @@ class BadgerInterfaceChannelError(Exception):
 
 
 class BadgerInvalidPluginError(Exception):
-    pass
+    def __init__(self, message: str = "", configs: Any = None):
+        super().__init__(message)
+        self.configs = configs
 
 
 class BadgerPluginNotFoundError(Exception):

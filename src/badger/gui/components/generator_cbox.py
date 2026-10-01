@@ -2,28 +2,41 @@
 and configure its parameters via the Pydantic tree editor."""
 
 from PyQt5.QtWidgets import (
-    QVBoxLayout,
+    QCheckBox,
+    QComboBox,
     QHBoxLayout,
-    QPushButton,
-    QWidget,
+    QLabel,
     QPlainTextEdit,
+    QPushButton,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtWidgets import QComboBox, QCheckBox, QStyledItemDelegate, QLabel
+from xopt.vocs import VOCS
+
 from badger.gui.components.collapsible_box import CollapsibleBox
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
-from badger.settings import init_settings
 from badger.gui.utils import (
     MouseWheelWidgetAdjustmentGuard,
     NoHoverFocusComboBox,
 )
+from badger.settings import init_settings
 from badger.utils import strtobool
-from xopt.vocs import VOCS
 
 LABEL_WIDTH = 96
 
 
 class BadgerAlgoBox(QWidget):
-    def __init__(self, parent=None, generators=[], scaling_functions=[]):
+    def __init__(
+        self,
+        parent=None,
+        generators: list | None = None,
+        scaling_functions: list | None = None,
+    ):
+        if generators is None:
+            generators = []
+        if scaling_functions is None:
+            scaling_functions = []
         super().__init__(parent)
 
         self.generators = generators

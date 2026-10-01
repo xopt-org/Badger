@@ -1,15 +1,14 @@
 """QThread worker that pre-spawns an optimization subprocess in the
 background so it's ready to go when the user hits "start"."""
 
+import logging
 from multiprocessing import Event, Pipe, Process, Queue
 
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import QObject, pyqtSignal
 
-from badger.settings import init_settings
 from badger.core_subprocess import run_routine_subprocess
-
-import logging
 from badger.log import get_logging_manager
+from badger.settings import init_settings
 
 logger = logging.getLogger(__name__)
 
