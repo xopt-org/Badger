@@ -76,9 +76,8 @@ class BadgerOptMonitor(QWidget):
     sig_env_reset = pyqtSignal()  # notify on reset complete
     sig_vars_set = pyqtSignal()  # notify var set complete
 
-    sig_paused = pyqtSignal(
-        bool
-    )  # Notify home_page that run has been paused to make sure GUI updates
+    # Notify home_page that run has been paused to make sure GUI updates
+    sig_paused = pyqtSignal(bool)  # paused (true)/ unpaused (false)
     sig_termination_reached = pyqtSignal(dict)  # run paused by a run-until condition
 
     def __init__(self, process_manager: "ProcessManager | None" = None):
@@ -560,7 +559,7 @@ class BadgerOptMonitor(QWidget):
         # Check critical condition
         self.check_critical()
 
-    def update_status_with_tc(self):
+    def update_status_with_tc(self) -> None:
         if self.paused:
             return
 

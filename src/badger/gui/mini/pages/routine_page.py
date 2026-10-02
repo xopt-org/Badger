@@ -302,7 +302,7 @@ class BadgerRoutinePage(QWidget):
         }
         self.env_box.var_table.set_saved_values(values_by_name)
 
-    def get_routine_snapshot(self):
+    def get_routine_snapshot(self) -> dict:
         routine_dict = self.generate_template_dict_from_gui()
         return routine_dict
 

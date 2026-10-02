@@ -204,6 +204,4 @@ class BadgerTerminationConditionDialog(QDialog):
         self.configs["tc_idx"] = i
 
     def closeEvent(self, event):
-        # self.save_config(self.configs)
-
         event.accept()

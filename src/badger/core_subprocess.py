@@ -173,7 +173,7 @@ def check_termination_condition(
 
 def extend_termination_from_current(
     updated_condition: dict, routine: Routine, start_time: float
-):
+) -> dict:
     """Extend a termination condition by updated_condition from the current routine state.
 
     Parameters
@@ -204,12 +204,12 @@ def extend_termination_from_current(
 
 
 def check_for_extension(
-    termination_condition,
-    queue,
-    termination_control_queue,
-    routine,
-    start_time,
-):
+    termination_condition: dict,
+    queue: mp.Queue,
+    termination_control_queue: mp.Queue,
+    routine: Routine,
+    start_time: float,
+) -> dict | None:
     """
     Checks termination_control_queue for an updated termination condition from the GUI.
     This is expected to be called after the subprocess resumes following a pause, so that

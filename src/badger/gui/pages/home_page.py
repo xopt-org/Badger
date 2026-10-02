@@ -588,7 +588,7 @@ class BadgerHomePage(QWidget):
             init_points_flag=init_points_flag,
         )
 
-    def termination_reached(self, tc_condition: dict):
+    def termination_reached(self, tc_condition: dict) -> None:
         """
         The run has been paused from the subprocess by reaching a termination condition.
         Opens a dialog to resume or stop.

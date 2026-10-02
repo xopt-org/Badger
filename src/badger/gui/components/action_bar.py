@@ -3,8 +3,8 @@ docs access, and the extensions palette launcher."""
 
 from importlib import resources
 
-from PyQt5.QtCore import QEvent, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon, QPainter, QPalette
+from PyQt5.QtCore import QEvent, QPoint, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon, QPainter, QPaintEvent, QPalette
 from PyQt5.QtWidgets import (
     QAction,
     QHBoxLayout,
@@ -25,7 +25,7 @@ class SplitTooltipToolButton(QToolButton):
     Use arg menu_tooltip="desired tooltip" to set the menu tooltip
     """
 
-    def __init__(self, menu_tooltip="", parent=None):
+    def __init__(self, menu_tooltip: str = "", parent=None):
         """
         Parameters
         ----------
@@ -34,36 +34,38 @@ class SplitTooltipToolButton(QToolButton):
         """
         super().__init__(parent)
         self.menu_tooltip = menu_tooltip
-        self.display_text = None  # show next termination condition
-        self._last_display_text = None  # used to show/hide text while running
+        self.display_text: str | None = None  # show next termination condition
+        self._last_display_text: str | None = (
+            None  # used to show/hide text while running
+        )
 
         font = QFont()
         font.setWeight(QFont.Normal)
         font.setPixelSize(10)
         self.setFont(font)
 
-    def setDisplayText(self, text):
+    def setDisplayText(self, text: str) -> None:
         self.display_text = text
         self.update()
 
-    def setDefaultAction(self, action):
+    def setDefaultAction(self, action: QAction) -> None:
         super().setDefaultAction(action)
         self.setIcon(action.icon())
         self.update()
 
-    def hide_text(self):
+    def hide_text(self) -> None:
         self._last_display_text = self.display_text
         self.setDisplayText("")
 
-    def show_text(self):
+    def show_text(self) -> None:
         self.setDisplayText(self._last_display_text)
 
-    def initStyleOption(self, option):
+    def initStyleOption(self, option) -> None:
         super().initStyleOption(option)
         if self.display_text is not None:
             option.text = self.display_text
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent) -> None:
         option = QStyleOptionToolButton()
         self.initStyleOption(option)
         painter = QPainter(self)
@@ -77,7 +79,7 @@ class SplitTooltipToolButton(QToolButton):
             text_rect, Qt.AlignLeft | Qt.AlignVCenter, self.display_text or ""
         )
 
-    def _over_menu_arrow(self, pos):
+    def _over_menu_arrow(self, pos: QPoint) -> bool:
         opt = QStyleOptionToolButton()
         self.initStyleOption(opt)
         rect = self.style().subControlRect(
@@ -85,7 +87,7 @@ class SplitTooltipToolButton(QToolButton):
         )
         return rect.contains(pos)
 
-    def event(self, event):
+    def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.ToolTip and self._over_menu_arrow(event.pos()):
             from PyQt5.QtWidgets import QToolTip
 
@@ -195,14 +197,14 @@ class BadgerActionBar(QWidget):
     sig_edit_checkpoint = pyqtSignal()
     sig_load_checkpoint = pyqtSignal()
 
-    def __init__(self, parent=None, minimode: bool = False):
+    def __init__(self, parent: QWidget | None = None, minimode: bool = False) -> None:
         super().__init__(parent)
         self.mini_mode = minimode
         self.docs_name = "gui-usage"
         self.init_ui()
         self.config_logic()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         def load_internal_icon(name: str) -> QIcon:
             icon_ref = resources.files(__package__) / f"../images/{name}"
             with resources.as_file(icon_ref) as icon_path:
@@ -357,7 +359,7 @@ class BadgerActionBar(QWidget):
             }
         """)
 
-    def config_logic(self):
+    def config_logic(self) -> None:
         self.btn_del.clicked.connect(self.delete_run)
         self.btn_log.clicked.connect(self.logbook)
         self.btn_help.clicked.connect(self.open_docs)
@@ -382,7 +384,7 @@ class BadgerActionBar(QWidget):
         )
         self.btn_open_extensions_palette.clicked.connect(self.open_extensions_palette)
 
-    def lock(self):
+    def lock(self) -> None:
         self.btn_del.setDisabled(True)
         self.btn_log.setDisabled(True)
         self.btn_reset.setDisabled(True)
@@ -391,7 +393,7 @@ class BadgerActionBar(QWidget):
         self.btn_opt.setDisabled(True)
         self.btn_set.setDisabled(True)
 
-    def unlock(self):
+    def unlock(self) -> None:
         self.btn_del.setDisabled(False)
         self.btn_log.setDisabled(False)
         self.btn_reset.setDisabled(False)
@@ -400,10 +402,10 @@ class BadgerActionBar(QWidget):
         self.btn_opt.setDisabled(False)
         self.btn_set.setDisabled(False)
 
-    def routine_invalid(self):
+    def routine_invalid(self) -> None:
         self.btn_stop.setDisabled(False)
 
-    def routine_finished(self):
+    def routine_finished(self) -> None:
         # Note the order of the following two lines cannot be changed!
         self.btn_stop.setPopupMode(QToolButton.MenuButtonPopup)
         self.btn_stop.setStyleSheet(stylesheet_run)
@@ -421,19 +423,19 @@ class BadgerActionBar(QWidget):
         self.btn_set.setDisabled(False)
         self.btn_del.setDisabled(False)
 
-    def toggle_reset(self, locked):
+    def toggle_reset(self, locked: bool) -> None:
         self.btn_reset.setDisabled(locked)
 
-    def toggle_run(self, locked):
+    def toggle_run(self, locked: bool) -> None:
         self.btn_stop.setDisabled(locked)
 
-    def toggle_other(self, locked):
+    def toggle_other(self, locked: bool) -> None:
         self.btn_del.setDisabled(locked)
         self.btn_log.setDisabled(locked)
         self.btn_opt.setDisabled(locked)
         self.btn_set.setDisabled(locked)
 
-    def run_start(self):
+    def run_start(self) -> None:
         self.btn_stop.setStyleSheet(stylesheet_stop)
         # self.btn_stop.setPopupMode(QToolButton.DelayedPopup)
         self.btn_stop.setDisabled(False)
@@ -449,7 +451,7 @@ class BadgerActionBar(QWidget):
         self.btn_set.setDisabled(True)
         self.update_stop_menu(False)
 
-    def set_run_action(self):
+    def set_run_action(self) -> None:
         if self.mini_mode:
             # run action "New Run" sets flag to restart in run_controller
             self.sig_flag_restart.emit()
@@ -474,7 +476,7 @@ class BadgerActionBar(QWidget):
 
         self.sig_smart_run_ctrl.emit()
 
-    def _on_run_action_triggered(self):
+    def _on_run_action_triggered(self) -> None:
         self.set_run_action()
 
     def _on_run_until_action_triggered(self):
@@ -483,29 +485,29 @@ class BadgerActionBar(QWidget):
     def _on_run_until_menu_action_triggered(self):
         self.set_run_until_action(from_menu=True)
 
-    def _on_smart_run_action_triggered(self):
+    def _on_smart_run_action_triggered(self) -> None:
         self.set_smart_run_action()
 
-    def delete_run(self):
+    def delete_run(self) -> None:
         self.sig_delete_run.emit()
 
-    def logbook(self):
+    def logbook(self) -> None:
         self.sig_logbook.emit()
 
-    def open_docs(self):
+    def open_docs(self) -> None:
         self.window_docs.update_docs(self.docs_name)
         self.window_docs.show()
 
-    def reset_env(self):
+    def reset_env(self) -> None:
         self.sig_reset_env.emit()
 
-    def jump_to_optimal(self):
+    def jump_to_optimal(self) -> None:
         self.sig_jump_to_optimal.emit()
 
-    def dial_in(self):
+    def dial_in(self) -> None:
         self.sig_dial_in.emit()
 
-    def handle_pause_action(self, status: bool):
+    def handle_pause_action(self, status: bool) -> None:
         """
         Enable/disable buttons for pause (true)/resume (false) optimization
         """
@@ -530,7 +532,7 @@ class BadgerActionBar(QWidget):
 
         self.update_stop_menu(status)
 
-    def update_stop_menu(self, status: bool):
+    def update_stop_menu(self, status: bool) -> None:
         """Update run menu options when routine is paused (true)/running (false)"""
         if status:
             self.run_menu.clear()
@@ -551,14 +553,14 @@ class BadgerActionBar(QWidget):
                 self.run_menu.addAction(self.smart_run_action)
             self.btn_stop.hide_text()
 
-    def open_extensions_palette(self):
+    def open_extensions_palette(self) -> None:
         self.sig_open_extensions_palette.emit()
 
-    def env_ready(self):
+    def env_ready(self) -> None:
         self.btn_log.setDisabled(False)
         self.btn_opt.setDisabled(False)
 
-    def update_run_tooltip(self, tc: dict | None = None):
+    def update_run_tooltip(self, tc: dict[str, int | float] | None = None) -> None:
         """Update btn_stop tooltip with next termination condition"""
         tc_text = ""
         if tc is None:

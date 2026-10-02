@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from xopt.vocs import VOCS
 
 from badger.archive import (
     delete_run,
@@ -469,7 +470,7 @@ class BadgerHomePage(QWidget):
 
             self.uncover_page()
 
-    def loaded_data_keys_compatible(self, vocs) -> bool:
+    def loaded_data_keys_compatible(self, vocs: VOCS) -> bool:
         """True if the displayed routine has data whose variable/objective keys match vocs."""
         routine = self.current_routine
 
@@ -483,7 +484,7 @@ class BadgerHomePage(QWidget):
             vocs.variable_names + vocs.objective_names
         )
 
-    def validate_loaded_data_keys(self, vocs, open_dialog: bool = True):
+    def validate_loaded_data_keys(self, vocs: VOCS, open_dialog: bool = True) -> None:
         """
         This function is called when adding historical data to a new routine.
         It makes sure that the keys of data to be loaded match the
@@ -531,7 +532,7 @@ class BadgerHomePage(QWidget):
                 self.run_action_bar.routine_finished()  # Reset action bar
                 raise BadgerRoutineError("Routine initialization cancelled by user.")
 
-    def smart_run_with_data(self):
+    def smart_run_with_data(self) -> None:
         # get current routine_page parameters
         routine_editor_snapshot = self.routine_editor.get_routine_snapshot()
         vocs = self.routine_editor.env_box.compose_vocs()[0]
@@ -544,19 +545,20 @@ class BadgerHomePage(QWidget):
             data_compatible=data_compatible,
         )
 
-    def handle_pause(self, pause: bool):
+    def handle_pause(self, pause: bool) -> None:
         if pause:
             # pause routine
             self.run_monitor.ctrl_routine(True)
         else:
             self.run_monitor.resume_with_extension()
 
-    def reflect_pause_state(self, paused: bool):
+    def reflect_pause_state(self, paused: bool) -> None:
         """Sync the GUI to the run pause state, whoever initiated it."""
         self.run_action_bar.handle_pause_action(paused)
         self.toggle_lock(not paused)
 
-    def edit_termination_condition(self):
+    def edit_termination_condition(self) -> None:
+        """Opens dialog to update termination condition"""
         dlg = BadgerTerminationConditionDialog(
             self,
             run_opt=None,
@@ -570,7 +572,7 @@ class BadgerHomePage(QWidget):
             self.tc_dialog = None
         self.run_action_bar.update_run_tooltip(self.run_monitor.termination_condition)
 
-    def termination_updated(self, tc: dict):
+    def termination_updated(self, tc: dict) -> None:
         self.run_action_bar.update_run_tooltip(tc)
 
     def prepare_run(self, data=None, init_points_flag=True):
@@ -633,7 +635,7 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(self, load_displayed_data: bool = False):
+    def start_run(self, load_displayed_data: bool = False) -> None:
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog

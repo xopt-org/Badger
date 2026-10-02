@@ -14,20 +14,20 @@ class SmartRunController(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.last_routine_dict = None
-        self._pending_start = False
-        self._load_data = False
-        self._new_routine_dict = None
+        self.last_routine_dict: dict[str, object] | None = None
+        self._pending_start: bool = False
+        self._load_data: bool = False
+        self._new_routine_dict: dict[str, object] | None = None
 
         self.restart_override_flag: bool = False
 
     def smart_run(
         self,
-        routine_params_dict: dict,
+        routine_params_dict: dict[str, object],
         is_running: bool,
         is_paused: bool,
         data_compatible: bool,
-    ):
+    ) -> None:
         """
         Determine whether to pause, resume, continue, or restart a run.
 
@@ -98,7 +98,7 @@ class SmartRunController(QObject):
         # start fresh run
         self.start_run(False)
 
-    def set_restart_override_flag(self):
+    def set_restart_override_flag(self) -> None:
         """
         This method sets a flag to skip logic and restart a new run without data on
         the next play button press. It is called when selecting a past run from the
@@ -108,14 +108,14 @@ class SmartRunController(QObject):
         """
         self.restart_override_flag = True
 
-    def notify_routine_finished(self):
+    def notify_routine_finished(self) -> None:
         """Start a pending run after the current routine finishes."""
         if self._pending_start is False:
             return
 
         self.start_run(self._load_data)
 
-    def start_run(self, load_displayed_data: bool):
+    def start_run(self, load_displayed_data: bool) -> None:
         """Emit the signal to start a run with or without displayed data.
 
         Parameters
