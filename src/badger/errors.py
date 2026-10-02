@@ -132,3 +132,7 @@ TERMINATION_REACHED_TYPE = "termination_reached"
 TERMINATION_ACTION_TYPE = "termination_action"
 TERMINATION_ACTION_CONTINUE = "continue"
 TERMINATION_ACTION_END = "end"
+
+# Sent by the subprocess right before pause_process.wait(),
+# so the GUI knows when pause has been reached
+PAUSE_ACK_TYPE = "pause_ack"

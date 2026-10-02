@@ -9,6 +9,7 @@ finishes, it archives the data and hands results off to analysis extensions
 
 import logging
 import os
+import time
 import traceback
 from importlib import resources
 from typing import TYPE_CHECKING
@@ -72,6 +73,12 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_run = pyqtSignal(bool)
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
+    sig_env_reset = pyqtSignal()  # notify on reset complete
+    sig_vars_set = pyqtSignal()  # notify var set complete
+
+    # Notify home_page that run has been paused to make sure GUI updates
+    sig_paused = pyqtSignal(bool)  # paused (true)/ unpaused (false)
+    sig_termination_reached = pyqtSignal(dict)  # run paused by a run-until condition
 
     def __init__(self, process_manager: "ProcessManager | None" = None):
         super().__init__()
@@ -94,7 +101,8 @@ class BadgerOptMonitor(QWidget):
 
         # Run optimization
         self.routine_runner = None
-        self.running = False
+        self.running = False  # is subprocess running
+        self.paused = False  # is optimization paused
 
         # Termination condition for the run
         self.termination_condition = None
@@ -442,6 +450,7 @@ class BadgerOptMonitor(QWidget):
     def init_routine_runner(self) -> None:
         self.reset_routine_runner()
 
+        # init routine runner
         self.routine_runner = routine_runner = BadgerRoutineSubprocess(
             self.process_manager,
             self.routine,
@@ -457,6 +466,13 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
         routine_runner.signals.sig_status.connect(self.sig_status.emit)
+        routine_runner.signals.sig_termination_reached.connect(
+            lambda: self.set_paused(True)
+        )
+        routine_runner.signals.sig_termination_reached.connect(
+            self.sig_termination_reached.emit
+        )
+        routine_runner.signals.sig_pause_ack.connect(lambda: self.set_paused(True))
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
@@ -469,7 +485,6 @@ class BadgerOptMonitor(QWidget):
 
     def start(
         self,
-        use_termination_condition: bool = False,
         run_data_flag: bool = False,
         init_points_flag: bool = True,
     ) -> None:
@@ -478,10 +493,11 @@ class BadgerOptMonitor(QWidget):
         if not run_data_flag:
             self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
+        # routine runner initialized
         self.init_routine_runner()
-        if use_termination_condition:
-            self.routine_runner.set_termination_condition(self.termination_condition)
+        self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
+        self.paused = False
         self.routine_runner.run(
             run_data_flag=run_data_flag, init_points_flag=init_points_flag
         )
@@ -490,6 +506,8 @@ class BadgerOptMonitor(QWidget):
 
     def save_termination_condition(self, tc) -> None:
         self.termination_condition = tc
+        if self.routine_runner:  # will be None on startup
+            self.routine_runner.set_termination_condition(tc)
 
     def enable_auto_range(self) -> None:
         # Enable autorange
@@ -536,9 +554,43 @@ class BadgerOptMonitor(QWidget):
         self.extensions_palette.update_palette()
 
         self.sig_progress.emit(self.routine.data.tail(1))
+        self.update_status_with_tc()
 
         # Check critical condition
         self.check_critical()
+
+    def update_status_with_tc(self) -> None:
+        if self.paused:
+            return
+
+        termination_condition = self.routine_runner.active_tc
+        if termination_condition:
+            idx = self.termination_condition["tc_idx"]
+            if idx == 0:
+                max_eval = termination_condition["max_eval"]
+                data = self.routine.data
+                if data is not None:
+                    if "live" in data.columns:
+                        # Display total count, including previous data (match run monitor)
+                        add_count = sum(1 for live_val in data["live"] if live_val == 0)
+                        count = len(data)
+                        max_eval += add_count
+                    else:
+                        count = len(data)
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{count}/{max_eval}]"
+                    )
+            elif idx == 1:
+                # display time remaining after last resume
+                max_time = self.termination_condition["max_time"]
+                elapsed = time.time() - self.routine_runner.last_resume_time
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{elapsed:.1f}/{max_time:.1f} s]"
+                    )
+        else:
+            self.sig_status.emit(f"Running routine {self.routine.name}...")
 
     def update_curves(self, results: pd.DataFrame | None = None) -> None:
         use_time_axis = self.plot_x_axis == 1
@@ -652,7 +704,7 @@ class BadgerOptMonitor(QWidget):
 
     def routine_finished(self) -> None:
         self.running = False
-        self.sig_routine_finished.emit()
+        self.paused = False
 
         self.sig_lock.emit(False)
 
@@ -690,7 +742,8 @@ class BadgerOptMonitor(QWidget):
             for action in self.post_run_actions:
                 action()
 
-        # self.reset_routine_runner()
+        # emit sig_routine_finished after archiving run data
+        self.sig_routine_finished.emit()
 
     def destroy_unused_env(self) -> None:
         if not self.running:
@@ -731,8 +784,37 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(
         #     self, 'Success!', f'')
 
-    def ctrl_routine(self, status) -> None:
+    def set_paused(self, paused: bool) -> None:
+        """
+        Record the pause state of the run, and reflect on the GUI. This can be called either from
+        a GUI action or if the subprocess pauses after reaching a stopping condition.
+        """
+        self.paused = paused
+        if paused:
+            self.sig_status.emit(f"Routine {self.routine.name} paused")
+        self.sig_paused.emit(paused)
+
+    def ctrl_routine(self, status: bool) -> None:
+        """Called from home_page to pause(True)/unpause(False) subprocess loop.
+
+        On pause, the GUI is not reflected as paused until the subprocess confirms
+        it has actually stopped (see sig_pause_ack), since it may still be mid-evaluation.
+        """
+        if not status:
+            self.set_paused(False)
+        else:
+            self.sig_status.emit("pausing routine...")
         self.sig_pause.emit(status)
+
+    def resume_with_extension(self) -> None:
+        """
+        Resume the active routine and extend the configured termination condition.
+        Updates the UI and calls routine_runner.resume_with_extension which
+        places the currently configured termination condition extension in
+        a queue to the subprocess to extend on resuming.
+        """
+        self.set_paused(False)
+        self.routine_runner.resume_with_extension()
 
     def ins_obj_dragged(self, ins_obj) -> None:
         self.inspector_variable.setValue(ins_obj.value())
@@ -820,6 +902,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
         )
+        self.sig_env_reset.emit()  # notify reset complete
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
@@ -987,6 +1070,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
         )
+        self.sig_vars_set.emit()
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
 

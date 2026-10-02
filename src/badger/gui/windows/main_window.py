@@ -118,6 +118,11 @@ class BadgerMainWindow(QMainWindow):
             self.process_manager.close_proccesses()
             monitor.destroy_unused_env()
             return
+        elif monitor.paused:
+            monitor.routine_runner.stop_routine()
+            self.process_manager.close_proccesses()
+            monitor.destroy_unused_env()
+            return
 
         reply = QMessageBox.question(
             self,
@@ -129,14 +134,9 @@ class BadgerMainWindow(QMainWindow):
         )
 
         if reply == QMessageBox.Yes:
-
-            def close_window():
-                monitor.destroy_unused_env()
-                self.close()
-
-            monitor.register_post_run_action(close_window)
-            monitor.testing = True  # suppress the archive pop-ups
             monitor.routine_runner.stop_routine()
-            event.ignore()
+            self.process_manager.close_proccesses()
+            monitor.destroy_unused_env()
+            return
         else:
             event.ignore()
