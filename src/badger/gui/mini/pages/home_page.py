@@ -274,7 +274,6 @@ class BadgerHomePage(QWidget):
         )
 
         self.run_action_bar.sig_start.connect(self.start_run)
-        self.run_action_bar.sig_start_until.connect(self.start_run_until)
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
         self.run_action_bar.sig_logbook.connect(self.run_monitor.logbook)

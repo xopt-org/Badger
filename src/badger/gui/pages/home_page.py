@@ -266,7 +266,6 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_termination_reached.connect(self.termination_reached)
 
         self.run_action_bar.sig_start.connect(self.start_run)
-        self.run_action_bar.sig_start_until.connect(self.start_run_until)
         self.run_action_bar.sig_run_with_data.connect(
             lambda: self.start_run(load_displayed_data=True)
         )
