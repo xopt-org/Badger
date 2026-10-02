@@ -795,7 +795,7 @@ class BadgerOptMonitor(QWidget):
             self.sig_status.emit(f"Routine {self.routine.name} paused")
         self.sig_paused.emit(paused)
 
-    def ctrl_routine(self, status) -> None:
+    def ctrl_routine(self, status: bool) -> None:
         """Called from home_page to pause(True)/unpause(False) subprocess loop.
 
         On pause, the GUI is not reflected as paused until the subprocess confirms
@@ -803,6 +803,8 @@ class BadgerOptMonitor(QWidget):
         """
         if not status:
             self.set_paused(False)
+        else:
+            self.sig_status.emit("pausing routine...")
         self.sig_pause.emit(status)
 
     def resume_with_extension(self) -> None:
