@@ -19,7 +19,7 @@ import time
 import traceback
 from copy import deepcopy
 from queue import Empty
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pandas import DataFrame
 from xopt.errors import FeasibilityError, XoptError
@@ -40,11 +40,16 @@ from badger.errors import (
 from badger.log import configure_process_logging
 from badger.logger import _get_default_logger
 from badger.logger.event import Events
-from badger.routine import Routine
 from badger.settings import (
     apply_pytorch_multiprocess_tensor_sharing_setting,
     init_settings,
 )
+
+# Imported lazily at runtime (inside run_routine_subprocess, after the config
+# path is set) so factory.py's import-time plugin-root check uses the correct
+# config. Only needed here for type annotations.
+if TYPE_CHECKING:
+    from badger.routine import Routine
 
 logger = logging.getLogger(__name__)
 

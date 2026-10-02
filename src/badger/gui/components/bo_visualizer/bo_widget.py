@@ -70,8 +70,9 @@ class BOPlotWidget(AnalysisWidget):
     ):
         logger.debug("Initializing BOPlotWidget")
 
-        self.parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
+        # Must come after super().__init__, which resets self.parameters to {}.
         super().__init__(routine, parent)
+        self.parameters: ConfigurableOptions = DEFAULT_PARAMETERS.copy()
 
         self.create_ui()
 

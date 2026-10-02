@@ -157,10 +157,21 @@ class ConfigSingleton:
     def __new__(cls, config_path: str | None = None, user_flag: bool = False):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.user_flag = user_flag
-            cls._instance._config = cls.load_or_create_config(config_path)
-            cls._instance.config_path = config_path
+            cls._configure_instance(config_path, user_flag)
+        elif user_flag and config_path != cls._instance.config_path:
+            # An explicit config path was requested that differs from the one
+            # already loaded. This happens in a spawned subprocess where an
+            # import-time init_settings() call locks in the default user config
+            # before run_routine_subprocess can pass the real --config_filepath.
+            # Reload from the requested path so the subprocess honors it.
+            cls._configure_instance(config_path, user_flag)
         return cls._instance
+
+    @classmethod
+    def _configure_instance(cls, config_path: str | None, user_flag: bool) -> None:
+        cls._instance.user_flag = user_flag
+        cls._instance.config_path = config_path
+        cls._instance._config = cls.load_or_create_config(config_path)
 
     @classmethod
     def load_or_create_config(cls, config_path: str) -> BadgerConfig:
@@ -220,6 +231,10 @@ class ConfigSingleton:
     @property
     def config(self) -> BadgerConfig:
         return self._config
+
+    def reload(self) -> None:
+        """Reload the configuration from disk, discarding in-memory changes."""
+        self._config = self.load_or_create_config(self.config_path)
 
     def update_and_save_config(self, updates: dict[str, Any]) -> None:
         """Saves changes to the config file.
@@ -420,8 +435,10 @@ class ConfigSingleton:
 
     def reset_settings(self) -> None:
         """Resets all the settings to their default values."""
-        default_config = BadgerConfig()
-        self.update_and_save_config(default_config.model_dump(by_alias=True))
+        self._config = BadgerConfig()
+        # Persist the default structure as-is; passing the full model dump to
+        # update_and_save_config would nest each Setting under its own "value".
+        self.update_and_save_config({})
         print(
             f"All settings have been reset to their default values in {self.config_path}"
         )
