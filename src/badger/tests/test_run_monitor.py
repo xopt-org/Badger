@@ -47,7 +47,11 @@ class TestRunMonitor:
         monitor.testing = True
         monitor.routine = routine
 
-        return monitor
+        yield monitor
+
+        runner = monitor.routine_runner
+        if runner is not None and runner.routine_process is not None:
+            runner.stop_routine()
 
     @pytest.fixture
     def home_page(self, process_manager):
@@ -247,10 +251,10 @@ class TestRunMonitor:
             "tc_idx": 0,
             "max_eval": 10,
         }
-        monitor.start(True)
+        monitor.start()
 
         # Wait until the run is done
-        while monitor.running:
+        while not monitor.paused:
             qtbot.wait(100)
 
         select_x_plot_y_axis_spy = QSignalSpy(monitor.cb_plot_y.currentIndexChanged)
@@ -293,10 +297,11 @@ class TestRunMonitor:
         spy = QSignalSpy(monitor.sig_pause)
 
         # Start a real run so pause and resume are tested against an active monitor.
-        monitor.start(True)
-        qtbot.wait(500)
+        paused_spy = QSignalSpy(monitor.sig_paused)
+        monitor.start()
 
         monitor.ctrl_routine(True)
+        qtbot.waitUntil(lambda: len(paused_spy) > 0, timeout=500)
         # The state, signal, and cleared event confirm that the active run paused.
         assert monitor.paused is True
         assert monitor.routine_runner.pause_event.is_set() is False
@@ -310,8 +315,7 @@ class TestRunMonitor:
         assert len(spy) == 2
         assert spy[1][0] is False
 
-        while monitor.running:
-            qtbot.wait(100)
+        monitor.routine_runner.stop_routine()
 
     def test_jump_to_optimum(self, qtbot, home_page):
         monitor = home_page.run_monitor
