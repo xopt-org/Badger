@@ -24,7 +24,7 @@ elif not os.path.exists(BADGER_LOGBOOK_ROOT):
 
 def send_to_logbook(routine, widget=None):
     import elog_client
-    
+
     log_text = ""
     routine_name = routine.name
     generator_name = routine.generator.name
