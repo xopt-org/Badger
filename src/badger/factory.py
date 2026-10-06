@@ -10,6 +10,7 @@ Also handles loading Markdown docs for the built-in documentation browser.
 """
 
 import importlib
+import importlib.util
 import logging
 import os
 import re
@@ -58,10 +59,10 @@ class BadgerPluginConfig(TypedDict):
     observations: list[str]
 
 
-# Register built-in plugins path so they can be imported during CLI runs
+# Built-in plugins are the fallback; must be defined before BADGER_PLUGIN_ROOT
+# resolution because it is used as the default value when the user root is
+# unset or missing.
 BUILT_IN_PLUGIN_ROOT = str(Path(__file__).parent / "built_in_plugins")
-if BUILT_IN_PLUGIN_ROOT not in sys.path:
-    sys.path.append(BUILT_IN_PLUGIN_ROOT)
 
 # Check badger plugin root
 config_singleton = init_settings()
@@ -77,7 +78,45 @@ else:
     if not os.path.exists(module_file):
         with open(module_file, "w") as f:
             pass
-sys.path.append(BADGER_PLUGIN_ROOT)
+
+# Register the user root first so that user plugins shadow built-in plugins
+# with the same package name. The built-in root is appended afterward as a
+# fallback; Python searches sys.path left-to-right so the user's
+# implementation wins whenever both directories contain the same namespace.
+if BADGER_PLUGIN_ROOT not in sys.path:
+    sys.path.append(BADGER_PLUGIN_ROOT)
+if BUILT_IN_PLUGIN_ROOT not in sys.path:
+    sys.path.append(BUILT_IN_PLUGIN_ROOT)
+
+
+def _import_plugin_module(ptype: str, pname: str, plugin_dir: str):
+    """Import a plugin package, loading built-in ones directly from their directory.
+
+    A user's `environments`/`interfaces` package shadows later sys.path entries,
+    so built-in-only plugins cannot be resolved by name.
+    """
+    builtin_dir = os.path.join(BUILT_IN_PLUGIN_ROOT, f"{ptype}s", pname)
+    if os.path.abspath(plugin_dir) != os.path.abspath(builtin_dir):
+        return importlib.import_module(f"{ptype}s.{pname}")
+
+    mod_name = f"badger_built_in.{ptype}s.{pname}"
+    if mod_name in sys.modules:
+        return sys.modules[mod_name]
+    spec = importlib.util.spec_from_file_location(
+        mod_name,
+        os.path.join(builtin_dir, "__init__.py"),
+        submodule_search_locations=[builtin_dir],
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load built-in plugin {ptype} {pname}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(mod_name, None)
+        raise
+    return module
 
 
 def scan_plugins(root: str):
@@ -151,7 +190,9 @@ def load_plugin(
 
     # Load module
     try:
-        module = importlib.import_module(f"{ptype}s.{pname}")
+        module = _import_plugin_module(
+            ptype, pname, os.path.dirname(plugin_config_path)
+        )
     except ImportError as e:
         raise BadgerInvalidPluginError(
             f"{ptype} {pname} is not available due to missing dependencies: {e}",

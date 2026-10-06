@@ -96,6 +96,12 @@ def evaluate_measurement_with_retry(
                     )
 
 
+def _wait_unless_stopped(pause_process: mp.Event, stop_process: mp.Event) -> None:
+    """Block while paused, but return promptly once a stop is requested."""
+    while not pause_process.is_set() and not stop_process.is_set():
+        pause_process.wait(timeout=0.1)
+
+
 def pause_for_termination_dialog_action(
     queue: mp.Queue,
     stop_process: mp.Event,
@@ -348,7 +354,8 @@ def run_routine_subprocess(
                 raise BadgerRunTerminated
             elif not pause_process.is_set():
                 logger.info("Pause process not set. Waiting...")
-                pause_process.wait()
+                _wait_unless_stopped(pause_process, stop_process)
+                continue
 
             if termination_condition and start_time:
                 tc_config = termination_condition
@@ -424,7 +431,10 @@ def run_routine_subprocess(
                 logger.info(
                     "Pause process not set during optimization loop. Waiting..."
                 )
-                pause_process.wait()
+                _wait_unless_stopped(pause_process, stop_process)
+                if stop_process.is_set():
+                    evaluate_queue[0].close()
+                    raise BadgerRunTerminated
 
             result = evaluate_measurement_with_retry(
                 routine, candidates, queue, stop_process, dialog_action_queue

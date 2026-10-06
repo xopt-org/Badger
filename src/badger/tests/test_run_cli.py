@@ -1,10 +1,11 @@
 """Tests for Badger CLI routine running (headless and GUI mode handlers)."""
 
-'''
 from textwrap import dedent
+from unittest.mock import MagicMock
 
 import pytest
 
+from badger.actions.run import run_routine_cli
 from badger.routine import Routine, calculate_initial_points
 from badger.utils import load_template_file
 
@@ -46,8 +47,8 @@ def test_calculate_initial_points(sample_template_file):
     config = load_template_file(sample_template_file)
     routine = Routine(**config)
 
-    # Test passing 'None' into initial_point_actions
-    init_points = calculate_initial_points(None, routine.vocs, routine.environment)
+    # Empty actions yield empty initial points
+    init_points = calculate_initial_points([], routine.vocs, routine.environment)
     assert isinstance(init_points, dict)
     assert "x0" in init_points
     assert len(init_points["x0"]) == 0
@@ -123,4 +124,3 @@ def test_run_routine_cli_template_string(mocker):
     called_routine = mock_headless.call_args[0][0]
     # Check that template_str was read correctly
     assert called_routine.name == "string_test_routine"
-'''
