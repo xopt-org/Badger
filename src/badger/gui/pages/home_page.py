@@ -696,6 +696,14 @@ class BadgerHomePage(QWidget):
         This method is called when a routine is provided via CLI.
         It loads the routine into the editor and optionally triggers a run.
 
+        For auto-run, the actual start is deferred until a prepared subprocess
+        is available in the pool. BadgerMainWindow spawns the first subprocess
+        asynchronously on a QThread whose result arrives via a queued signal;
+        calling start_run() before that signal is delivered would cause
+        remove_from_queue() to return None and the run to crash immediately.
+        Connecting to process_manager.sig_process_ready guarantees readiness
+        without relying on a fixed-duration timer.
+
         Args:
             routine: Routine object to load
             auto_run: If True, automatically start optimization
@@ -704,9 +712,9 @@ class BadgerHomePage(QWidget):
 
         # Populate initial points table based on actions (like "Load Template" does),
         # this ensures actions like "add_curr" and "add_rand" are executed
-        if (
-            hasattr(self.routine_editor, "init_table_actions")
-            and self.routine_editor.init_table_actions
+        self.routine_editor.init_table_actions = routine.initial_point_actions or []
+        if self.routine_editor.init_table_actions and (
+            routine.initial_points is None or routine.initial_points.empty
         ):
             self.routine_editor.clear_init_table(reset_actions=False)
             self.routine_editor.update_init_table(force=True)
@@ -719,4 +727,40 @@ class BadgerHomePage(QWidget):
             update_table(self.run_table, routine.sorted_data, routine.vocs)
 
         if auto_run:
+            self._start_run_when_ready()
+
+    def _start_run_when_ready(self) -> None:
+        """
+        Defer start_run() until a prepared subprocess is in the pool.
+
+        The subprocess is built on a QThread in BadgerMainWindow and deposited
+        into the pool via a queued signal connection. If start_run() were called
+        synchronously during page construction that signal would not have been
+        delivered yet, remove_from_queue() would return None, and indexing it
+        would raise TypeError.
+
+        We connect a one-shot slot to process_manager.sig_process_ready, which
+        is emitted by add_to_queue() every time a subprocess lands in the pool.
+        The slot disconnects itself on the first delivery so it fires exactly
+        once, then calls start_run().
+
+        If no process_manager is configured (e.g. unit-test contexts that pass
+        process_manager=None) we call start_run() directly and let it fail as
+        it would have before this change.
+        """
+        print("!!! AAAAAAAA !!!")
+        if self.process_manager is None:
             self.start_run()
+            return
+
+        def _on_ready():
+            print("!! READY !!!")
+            # Disconnect before calling start_run so that any re-queue signal
+            # fired inside start_run does not re-trigger this handler.
+            try:
+                self.process_manager.sig_process_ready.disconnect(_on_ready)
+            except TypeError:
+                pass  # already disconnected — harmless
+            self.start_run()
+
+        self.process_manager.sig_process_ready.connect(_on_ready)

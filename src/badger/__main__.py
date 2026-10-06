@@ -12,7 +12,6 @@ from badger.actions.generator import show_generator
 from badger.actions.install import plugin_install
 from badger.actions.intf import show_intf
 from badger.actions.routine import show_routine
-from badger.actions.run import run_routine_cli
 from badger.actions.uninstall import plugin_remove
 from badger.log import setup_logging
 
@@ -167,7 +166,10 @@ def main():
         help="verbose level of optimization progress",
     )
 
-    parser_run.set_defaults(func=run_routine_cli)
+    # func is set after argument parsing so that the import of run_routine_cli
+    # (which transitively loads archive, routine, and factory) is deferred until
+    # after setup_logging applies --config_filepath to the singleton.
+    parser_run.set_defaults(func=None)
 
     # Parser for the 'config' command
     parser_config = subparsers.add_parser("config", help="Badger configurations")
@@ -177,6 +179,15 @@ def main():
     args = parser.parse_args()
 
     setup_logging(args)
+
+    # Import the run handler here, after setup_logging has initialized the
+    # singleton with the caller-supplied --config_filepath, so that the
+    # transitive imports of badger.archive / badger.routine / badger.factory
+    # do not execute before the config is ready.
+    if args.func is None:
+        from badger.actions.run import run_routine_cli
+
+        args.func = run_routine_cli
 
     args.func(args)
 

@@ -19,12 +19,10 @@ import pandas as pd
 from pandas import DataFrame
 from typing_extensions import deprecated
 
-from badger.archive import save_tmp_run
 from badger.core import run_routine as run
 from badger.core_subprocess import run_routine_subprocess
 from badger.errors import BadgerLoadConfigError, BadgerRunTerminated
 from badger.log import get_logging_manager
-from badger.routine import Routine, calculate_initial_points
 from badger.settings import init_settings
 from badger.utils import curr_ts, load_template_file, load_template_string
 
@@ -32,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_n_archive(
-    routine: Routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
+    routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
 ):
     try:
         from badger.archive import archive_run
@@ -181,7 +179,47 @@ def run_routine_headless(routine, auto_run=False):
             print("\nCancelled.")
             return
 
-    # Set up subprocess communication
+    from badger.archive import save_tmp_run
+    from badger.routine import calculate_initial_points
+
+    # ------------------------------------------------------------------ #
+    # Prepare all work before spawning — so the child is never left       #
+    # blocked in wait_event.wait() due to a setup failure after start().  #
+    # ------------------------------------------------------------------ #
+
+    # Calculate initial points
+    if routine.initial_points is None or len(routine.initial_points) == 0:
+        init_points = calculate_initial_points(
+            routine.initial_point_actions or [],
+            routine.vocs,
+            routine.environment,
+        )
+        try:
+            init_points = pd.DataFrame(init_points)
+        except (IndexError, ValueError):
+            init_points = pd.DataFrame(init_points, index=[0])
+        routine.initial_points = init_points
+
+    start_time = time.time()
+    routine_filename = save_tmp_run(routine)
+
+    # Build the arg dict that will be fed to the subprocess via args_queue
+    arg_dict = {
+        "routine_id": routine.id if hasattr(routine, "id") else None,
+        "routine_filename": routine_filename,
+        "routine_name": routine.name,
+        "variable_ranges": routine.vocs.variables,
+        "initial_points": routine.initial_points,
+        "evaluate": True,
+        "archive": True,
+        "termination_condition": None,
+        "start_time": start_time,
+        "testing": False,
+        "run_data": False,
+        "init_points": True,
+    }
+
+    # Set up subprocess communication channels
     args_queue = Queue()
     data_queue = Queue()
     evaluate_queue = Pipe()
@@ -207,129 +245,110 @@ def run_routine_headless(routine, auto_run=False):
             dialog_action_queue,
         ),
     )
+
+    # Storage for signal handler state — initialised before the handler is
+    # installed so the handler closure always has a valid reference.
+    storage = {"paused": False, "should_exit": False}
+
+    def sigint_handler(*args):
+        """Signal handler for Ctrl+C - sets pause flag or raises to exit."""
+        if storage["paused"]:
+            # Second Ctrl+C while paused — interrupt input() and exit.
+            print()  # new line
+            storage["should_exit"] = True
+            raise KeyboardInterrupt
+        else:
+            # First Ctrl+C — request pause.
+            storage["paused"] = True
+
+    # Capture the current handler *before* installing ours so we can
+    # restore it unconditionally in the finally block below.
+    prev_sigint = signal.signal(signal.SIGINT, sigint_handler)
+
     process.start()
 
     # give subprocess time to start and reach wait_event.wait()
     time.sleep(3)
 
-    # calculate initial points and prepare data
-    if routine.initial_points is None or len(routine.initial_points) == 0:
-        init_points = calculate_initial_points(
-            routine.initial_point_actions,
-            routine.vocs,
-            routine.environment,
-        )
-        try:
-            init_points = pd.DataFrame(init_points)
-        except (IndexError, ValueError):
-            init_points = pd.DataFrame(init_points, index=[0])
-        routine.initial_points = init_points
-
-    start_time = time.time()
-
-    routine_filename = save_tmp_run(routine)
-
-    # prepare args to send to subprocess
-    arg_dict = {
-        "routine_id": routine.id if hasattr(routine, "id") else None,
-        "routine_filename": routine_filename,
-        "routine_name": routine.name,
-        "variable_ranges": routine.vocs.variables,
-        "initial_points": routine.initial_points,
-        "evaluate": True,
-        "archive": True,
-        "termination_condition": None,
-        "start_time": start_time,
-        "testing": False,
-        "run_data": False,
-        "init_points": True,
-    }
-
-    # put data in queue (subprocess is already running and waiting)
-    args_queue.put(arg_dict)
-
-    # Signal subprocess to begin execution
-    pause_event.set()  # Start unpaused
-    wait_event.set()  # Signal subprocess to begin
-
-    print("Optimization started. Press Ctrl+C to pause.\n")
     iteration = 0
 
-    # Storage for signal handler state
-    storage = {"paused": False, "should_exit": False}
+    # Accumulate subprocess error messages; checked after full shutdown so
+    # that errors queued just before the child exits are not missed.
+    errors: list[str] = []
 
-    def sigint_handler(*args):
-        """Signal handler for Ctrl+C - sets pause flag or raises to exit"""
-        if storage["paused"]:
-            # Second Ctrl+C while paused - raise to interrupt input() and exit
-            print()  # new line
-            storage["should_exit"] = True
-            raise KeyboardInterrupt  # Interrupt the input() call
-        else:
-            # First Ctrl+C - request pause
-            storage["paused"] = True
+    try:
+        # Feed work to the subprocess and release it
+        args_queue.put(arg_dict)
+        pause_event.set()  # Start unpaused
+        wait_event.set()  # Signal subprocess to begin
 
-    # Install signal handler
-    signal.signal(signal.SIGINT, sigint_handler)
+        print("Optimization started. Press Ctrl+C to pause.\n")
 
-    # Main monitoring loop (while checking for pause flag)
-    while process.is_alive() and not storage["should_exit"]:
-        time.sleep(0.1)
+        # Main monitoring loop
+        while process.is_alive() and not storage["should_exit"]:
+            time.sleep(0.1)
 
-        # Check if paused - handle pause prompt
-        if storage["paused"]:
-            pause_event.clear()  # Pause subprocess
-            print()  # new line
-            try:
-                res = input(
-                    "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
-                )
-                while res != "":
-                    # Invalid input, ask again
-                    sys.stdout.write("\033[F")  # Move cursor up to erase line
+            # Handle pause/resume
+            if storage["paused"]:
+                pause_event.clear()  # Pause subprocess
+                print()  # new line
+                try:
                     res = input(
-                        "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
+                        "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
                     )
-            except KeyboardInterrupt:
-                # Ctrl+C pressed during input - signal handler already set should_exit=True
-                pass
+                    while res != "":
+                        sys.stdout.write("\033[F")  # Move cursor up to erase line
+                        res = input(
+                            "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
+                        )
+                except KeyboardInterrupt:
+                    # Ctrl+C during input — sigint_handler already set should_exit.
+                    pass
 
-            # Check if exit was requested during pause
-            if storage["should_exit"]:
-                print("\nStopping optimization...")
+                if storage["should_exit"]:
+                    print("\nStopping optimization...")
+                    stop_event.set()
+                    break
+
+                print("Resuming optimization...\n")
+                storage["paused"] = False
+                pause_event.set()
+
+            # Drain results from the subprocess
+            if evaluate_queue[1].poll():
+                while evaluate_queue[1].poll():
+                    results = evaluate_queue[1].recv()
+                    df = results[0]
+                    iteration = max(iteration, len(df))
+
+            # Collect errors reported by the subprocess; set stop_event and
+            # break so teardown runs, but keep the message for later reporting.
+            if not data_queue.empty():
+                msg = data_queue.get()
+                if isinstance(msg, dict):
+                    errors.append(
+                        f"{msg.get('title', 'Unknown error')}\n{msg.get('traceback', '')}"
+                    )
+                else:
+                    error_title, error_traceback = msg
+                    errors.append(f"{error_title}\n{error_traceback}")
                 stop_event.set()
                 break
 
-            # Resume
-            print("Resuming optimization...\n")
-            storage["paused"] = False
-            pause_event.set()
+    finally:
+        # Always stop the child and restore the caller's signal handler,
+        # regardless of whether we exit normally, via an exception, or Ctrl+C.
+        stop_event.set()
+        signal.signal(signal.SIGINT, prev_sigint)
 
-        # Check for data from subprocess via evaluate_queue
-        if evaluate_queue[1].poll():
-            while evaluate_queue[1].poll():
-                results = evaluate_queue[1].recv()
-                df = results[0]
-                iteration = max(iteration, len(df))
+        process.join(timeout=5)
+        if process.is_alive():
+            process.terminate()
+            process.join()
 
-        # Check for errors in data queue
-        if not data_queue.empty():
-            try:
-                error_title, error_traceback = data_queue.get()
-                print("error: ", {error_title})
-                print(error_traceback)
-                break
-            except ValueError:
-                pass
-
-    # Restore default signal handler
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    # Wait for completion
-    process.join(timeout=5)
-    if process.is_alive():
-        process.terminate()
-        process.join()
+    # ------------------------------------------------------------------ #
+    # Post-shutdown error collection                                       #
+    # ------------------------------------------------------------------ #
 
     # Drain any remaining items from evaluate_queue
     while evaluate_queue[1].poll():
@@ -340,12 +359,46 @@ def run_routine_headless(routine, auto_run=False):
         except Exception:  # noqa: BLE001
             break
 
+    # Drain errors that arrived just before the child exited — these can be
+    # missed by the is_alive() guard in the monitoring loop above.
+    while not data_queue.empty():
+        try:
+            msg = data_queue.get_nowait()
+            if isinstance(msg, dict):
+                errors.append(
+                    f"{msg.get('title', 'Unknown error')}\n{msg.get('traceback', '')}"
+                )
+            else:
+                error_title, error_traceback = msg
+                errors.append(f"{error_title}\n{error_traceback}")
+        except Exception:  # noqa: BLE001 - queue may be closed/empty by now
+            break
+
+    # A non-zero exit code means the child crashed without sending an error
+    # message (e.g. unhandled exception, OOM kill, or external signal).
+    exitcode = process.exitcode
+    if exitcode not in (0, None) and not errors:
+        errors.append(
+            f"Subprocess exited with non-zero exit code {exitcode}. "
+            "Check logs for details."
+        )
+
     # Print final status
     elapsed = time.time() - start_time
     print(f"\n{'=' * 60}")
-    print(f"Optimization completed in {elapsed:.2f}s")
+    if errors:
+        print(
+            f"Optimization FAILED after {elapsed:.2f}s ({iteration} iteration(s) completed)"
+        )
+    else:
+        print(f"Optimization completed in {elapsed:.2f}s")
     print(f"Total iterations: {iteration}")
     print(f"{'=' * 60}\n")
+
+    # Propagate failures so run_routine_cli exits with a non-zero status.
+    if errors:
+        formatted = "\n\n".join(errors)
+        raise RuntimeError(f"Headless optimization failed:\n{formatted}")
 
 
 def run_routine_cli(args):
@@ -363,6 +416,14 @@ def run_routine_cli(args):
             config = load_template_file(args.template_file)
         else:
             config = load_template_string(args.template_string)
+
+        environment_config = config.get("environment")
+        if isinstance(environment_config, dict) and isinstance(
+            environment_config.get("params"), dict
+        ):
+            environment_config.update(environment_config.pop("params"))
+
+        from badger.routine import Routine
 
         routine = Routine(**config)
 

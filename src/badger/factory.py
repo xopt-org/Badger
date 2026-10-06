@@ -58,10 +58,10 @@ class BadgerPluginConfig(TypedDict):
     observations: list[str]
 
 
-# Register built-in plugins path so they can be imported during CLI runs
+# Built-in plugins are the fallback; must be defined before BADGER_PLUGIN_ROOT
+# resolution because it is used as the default value when the user root is
+# unset or missing.
 BUILT_IN_PLUGIN_ROOT = str(Path(__file__).parent / "built_in_plugins")
-if BUILT_IN_PLUGIN_ROOT not in sys.path:
-    sys.path.append(BUILT_IN_PLUGIN_ROOT)
 
 # Check badger plugin root
 config_singleton = init_settings()
@@ -77,7 +77,15 @@ else:
     if not os.path.exists(module_file):
         with open(module_file, "w") as f:
             pass
-sys.path.append(BADGER_PLUGIN_ROOT)
+
+# Register the user root first so that user plugins shadow built-in plugins
+# with the same package name. The built-in root is appended afterward as a
+# fallback; Python searches sys.path left-to-right so the user's
+# implementation wins whenever both directories contain the same namespace.
+if BADGER_PLUGIN_ROOT not in sys.path:
+    sys.path.append(BADGER_PLUGIN_ROOT)
+if BUILT_IN_PLUGIN_ROOT not in sys.path:
+    sys.path.append(BUILT_IN_PLUGIN_ROOT)
 
 
 def scan_plugins(root: str):

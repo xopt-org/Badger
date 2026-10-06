@@ -77,7 +77,9 @@ class Routine(Xopt):
             logger.debug(f"Routine data dict received: {list(data.keys())}")
             # Auto-populate creation timestamp if missing (e.g. from YAML templates) for archiving
             if "creation_ts" not in data or data["creation_ts"] is None:
-                data["creation_ts"] = ts_float_to_str(curr_ts().timestamp())
+                data["creation_ts"] = ts_float_to_str(
+                    curr_ts().timestamp(), "lcls-fname"
+                )
             # validate vocs
             vocs_data = None
             if "vocs" in data:
