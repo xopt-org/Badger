@@ -45,9 +45,6 @@ from badger.settings import (
     init_settings,
 )
 
-# Imported lazily at runtime (inside run_routine_subprocess, after the config
-# path is set) so factory.py's import-time plugin-root check uses the correct
-# config. Only needed here for type annotations.
 if TYPE_CHECKING:
     from badger.routine import Routine
 
