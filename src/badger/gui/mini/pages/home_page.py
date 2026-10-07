@@ -13,6 +13,7 @@ import traceback
 from importlib import resources
 
 import numpy as np
+from gest_api.vocs import VOCS
 from pandas import DataFrame
 from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 from PyQt5.QtGui import QIcon
@@ -23,7 +24,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.archive import (
     delete_run,

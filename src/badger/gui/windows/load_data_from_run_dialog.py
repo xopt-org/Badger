@@ -7,6 +7,7 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QDialog,
@@ -19,7 +20,6 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from pyqtgraph.Qt import QtCore, QtGui
-from xopt.vocs import VOCS
 
 from badger.archive import (
     get_base_run_filename,

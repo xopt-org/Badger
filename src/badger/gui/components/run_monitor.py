@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
@@ -32,7 +33,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from pyqtgraph.Qt import QtCore, QtGui
-from xopt.vocs import VOCS, normalize_inputs, select_best
+from xopt.vocs import normalize_inputs, select_best
 
 from badger.archive import BADGER_ARCHIVE_ROOT, archive_run
 from badger.gui.components.analysis_extensions import AnalysisExtension
