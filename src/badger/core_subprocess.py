@@ -245,6 +245,43 @@ def check_for_extension(
         logger.warning("Ignoring unexpected resume message: %r", msg)
 
 
+def check_for_pause_resume(
+    termination_condition: dict | None,
+    queue: mp.Queue,
+    termination_control_queue: mp.Queue,
+    routine: Routine,
+    start_time: float,
+    pause_process: mp.Event,
+    stop_process: mp.Event,
+) -> dict | None:
+    """
+    Wait for resume when paused, then check for a termination update. While paused,
+    checks stop_process and raises BadgerRunTerminated if set.
+
+    Returns
+    -------
+    dict: Updated termination_condition dictionary
+    """
+    logger.info("Pause process not set. Waiting...")
+    queue.put({"type": PAUSE_ACK_TYPE})
+    while not pause_process.wait(timeout=1.0):
+        # Can still be stopped while paused
+        if stop_process.is_set():
+            raise BadgerRunTerminated
+
+    if stop_process.is_set():
+        raise BadgerRunTerminated
+
+    termination_condition = check_for_extension(
+        termination_condition,
+        queue,
+        termination_control_queue,
+        routine,
+        start_time,
+    )
+    return termination_condition
+
+
 def convert_to_solution(result: DataFrame, routine: Routine):
     """
     This method is passed the latest evaluated solution and converts that to a printable format for the terminal.
@@ -442,6 +479,22 @@ def run_routine_subprocess(
         if args["init_points"]:
             logger.info("Evaluating initial points...")
             for _, ele in initial_points.iterrows():
+                # check for stop
+                if stop_process.is_set():
+                    logger.info("Stop process set. Terminating optimization.")
+                    evaluate_queue[0].close()
+                    raise BadgerRunTerminated
+                # check for pause
+                if not pause_process.is_set():
+                    termination_condition = check_for_pause_resume(
+                        termination_condition,
+                        queue,
+                        termination_control_queue,
+                        routine,
+                        start_time,
+                        pause_process,
+                        stop_process,
+                    )
                 logger.debug(f"Evaluating initial point: {ele.to_dict()}")
                 result = evaluate_measurement_with_retry(
                     routine, ele.to_dict(), queue, stop_process, dialog_action_queue
@@ -473,18 +526,14 @@ def run_routine_subprocess(
                 termination_condition = None
 
             if not pause_process.is_set():
-                logger.info("Pause process not set. Waiting...")
-                queue.put({"type": PAUSE_ACK_TYPE})  # send pause acknowledgement to gui
-                pause_process.wait()
-
-                # On resume, check for a new termination condition
-                # and clear or extend
-                termination_condition = check_for_extension(
+                termination_condition = check_for_pause_resume(
                     termination_condition,
                     queue,
                     termination_control_queue,
                     routine,
                     start_time,
+                    pause_process,
+                    stop_process,
                 )
                 continue
 
@@ -497,11 +546,15 @@ def run_routine_subprocess(
                 evaluate_queue[0].close()
                 raise BadgerRunTerminated
             elif not pause_process.is_set():
-                logger.info(
-                    "Pause process not set during optimization loop. Waiting..."
+                termination_condition = check_for_pause_resume(
+                    termination_condition,
+                    queue,
+                    termination_control_queue,
+                    routine,
+                    start_time,
+                    pause_process,
+                    stop_process,
                 )
-                queue.put({"type": PAUSE_ACK_TYPE})  # acknowledge pause
-                pause_process.wait()
 
             result = evaluate_measurement_with_retry(
                 routine, candidates, queue, stop_process, dialog_action_queue
