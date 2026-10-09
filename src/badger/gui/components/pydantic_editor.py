@@ -29,6 +29,7 @@ from typing import (
 import yaml
 from bax_algorithms.emittance import PathwiseMinimizeEmittance
 from bax_algorithms.solenoid_alignment import PathwiseSolenoidAlignment
+from gest_api.vocs import VOCS
 from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined, PydanticUndefinedType
@@ -57,7 +58,6 @@ from xopt.generators.bayesian.bax_generator import BaxGenerator
 from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
-from xopt.vocs import VOCS
 
 logger = logging.getLogger(__name__)
 

@@ -250,7 +250,7 @@ class BadgerRoutinePage(QWidget):
         logger.info("Configuring logic for BadgerRoutinePage.")
         # self.btn_descr_update.clicked.connect(self.update_description)
         self.env_box.load_template_button.clicked.connect(self.load_template_yaml)
-        self.env_box.template_cb.currentTextChanged.connect(
+        self.env_box.template_cb.activated.connect(
             lambda: (
                 self.load_template_yaml(
                     template_path=self.env_box.template_cb.currentText() + ".yaml"
@@ -301,6 +301,10 @@ class BadgerRoutinePage(QWidget):
             name: float(value) for name, value in zip(variable_names, init_vars)
         }
         self.env_box.var_table.set_saved_values(values_by_name)
+
+    def get_routine_snapshot(self) -> dict:
+        routine_dict = self.generate_template_dict_from_gui()
+        return routine_dict
 
     def load_template_yaml(
         self, checked_state=None, template_path: str | None = None
@@ -1252,7 +1256,8 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.6g}")
+                    # Rounding the value here can leave it outside the variable bounds
+                    item = QTableWidgetItem(f"{var_curr[name]}")
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 

@@ -1296,7 +1296,8 @@ class BadgerRoutinePage(QWidget):
             ):
                 # Fill the row with content_list
                 for col, name in enumerate(vname_selected):
-                    item = QTableWidgetItem(f"{var_curr[name]:.6g}")
+                    # Rounding the value here can leave it outside the variable bounds
+                    item = QTableWidgetItem(f"{var_curr[name]}")
                     table.setItem(row, col, item)
                 break  # Stop after filling the first non-empty row
 

@@ -1,6 +1,7 @@
 """Panel where users pick an optimization algorithm from the Xopt registry
 and configure its parameters via the Pydantic tree editor."""
 
+from gest_api.vocs import VOCS
 from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,7 +13,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.gui.components.collapsible_box import CollapsibleBox
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor

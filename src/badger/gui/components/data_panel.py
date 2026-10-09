@@ -2,6 +2,7 @@
 users load data from archived runs or clear the buffer before starting."""
 
 import pandas as pd
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -13,7 +14,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.gui.components.data_table import (
     TableWithCopy,
