@@ -154,6 +154,47 @@ class TestBadgerConfig:
             config_singleton = ConfigSingleton(self.config_file)
             assert isinstance(config_singleton.config, BadgerConfig)
 
+    def test_config_singleton_reconfigures_with_explicit_path(self):
+        # Regression: once the singleton is built with the default user config,
+        # a later explicit --config_filepath (user_flag=True) pointing at a
+        # different file must reconfigure the existing instance in place so a
+        # spawned subprocess honors the requested config.
+        second_path = "/mock/other-config.yaml"
+        second_config = BadgerConfig(
+            BADGER_PLUGIN_ROOT=Setting(
+                display_name="plugin root",
+                description="Other plugin root",
+                value="/other/plugin/root",
+                is_path=True,
+            ),
+        )
+        file_contents = {
+            self.config_file: yaml.dump(
+                self.mock_badger_config.model_dump(by_alias=True)
+            ),
+            second_path: yaml.dump(second_config.model_dump(by_alias=True)),
+        }
+
+        def open_side_effect(path, *args, **kwargs):
+            return mock_open(read_data=file_contents[path]).return_value
+
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("builtins.open", side_effect=open_side_effect),
+        ):
+            first_singleton = ConfigSingleton(self.config_file)
+            assert first_singleton.config_path == self.config_file
+            assert (
+                first_singleton.config.BADGER_PLUGIN_ROOT.value == "/mock/plugin/root"
+            )
+
+            second_singleton = ConfigSingleton(second_path, user_flag=True)
+            assert second_singleton is first_singleton
+            assert second_singleton.config_path == second_path
+            assert (
+                second_singleton.config.BADGER_PLUGIN_ROOT.value == "/other/plugin/root"
+            )
+
     def test_update_and_save_config(self):
         with (
             patch("os.path.exists", return_value=True),
