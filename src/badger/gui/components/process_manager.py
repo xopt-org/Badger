@@ -11,6 +11,9 @@ class ProcessManager(QObject):
     """
 
     processQueueUpdated = pyqtSignal(object)
+    sig_process_ready = (
+        pyqtSignal()
+    )  # emitted each time a subprocess is added to the pool
 
     def __init__(self) -> None:
         super().__init__()
@@ -25,6 +28,7 @@ class ProcessManager(QObject):
         process_with_args: dict
         """
         self.processes_queue.append(process_with_args)
+        self.sig_process_ready.emit()
 
     def remove_from_queue(self) -> dict | None:
         """
