@@ -66,6 +66,7 @@ from badger.gui.components.data_table import (
     get_table_content_as_dict,
     set_init_data_table,
     update_init_data_table,
+    resize_columns_to_content_or_default,
 )
 from badger.gui.components.navigators import HistoryNavigator
 from badger.gui.mini.components.env_cbox import BadgerEnvBox
@@ -1258,6 +1259,7 @@ class BadgerRoutinePage(QWidget):
 
         if record and self.env_box.relative_to_curr.isChecked():
             self.init_table_actions.append({"type": "add_curr"})
+        resize_columns_to_content_or_default(table)
 
     def save_add_rand_config(self, add_rand_config):
         self.add_rand_config = add_rand_config
@@ -1326,6 +1328,7 @@ class BadgerRoutinePage(QWidget):
                     "config": add_rand_config,
                 }
             )
+        resize_columns_to_content_or_default(table)
 
     def show_add_rand_dialog(self):
         dlg = BadgerAddRandomDialog(
@@ -1348,6 +1351,7 @@ class BadgerRoutinePage(QWidget):
                 item = table.item(row, col)
                 if item:
                     item.setText("")  # Set the cell content to an empty string
+        resize_columns_to_content_or_default(table)
 
         if reset_actions and self.env_box.relative_to_curr.isChecked():
             self.init_table_actions = []  # reset the recorded actions
