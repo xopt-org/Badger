@@ -37,6 +37,7 @@ class CreateProcess(QObject):
         self.evaluate_queue = Pipe()
         self.wait_event = Event()
         self.dialog_action_queue = Queue()
+        self.termination_control_queue = Queue()
         config_path = init_settings()._instance.config_path
 
         # Get the logging queue from the centralized manager
@@ -56,6 +57,7 @@ class CreateProcess(QObject):
                 config_path,
                 log_queue,
                 self.dialog_action_queue,
+                self.termination_control_queue,
             ),
         )
         new_process.start()
@@ -69,6 +71,7 @@ class CreateProcess(QObject):
                 "evaluate_queue": self.evaluate_queue,
                 "wait_event": self.wait_event,
                 "dialog_action_queue": self.dialog_action_queue,
+                "termination_control_queue": self.termination_control_queue,
             }
         )
         self.finished.emit()

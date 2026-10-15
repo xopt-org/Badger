@@ -695,7 +695,8 @@ class VariableTable(QTableWidget):
                 self.saved_values[name] = float(value)
 
         if self.variables:
-            self.update_variables(variables=self.variables, filtered=2)
+            # update table, filtered=3 stops signals from recalculating initial points
+            self.update_variables(variables=self.variables, filtered=3)
 
     def _set_cell_value_style(self, row: int, is_selected: bool):
         """Update Saved/Current/Scan Range style for a row based on selection."""

@@ -45,6 +45,7 @@ def test_create_subprocess_emits_signals(qtbot, process_creator):
             "evaluate_queue",
             "wait_event",
             "dialog_action_queue",
+            "termination_control_queue",
         }
 
         assert isinstance(emitted_args["args_queue"], mp.queues.Queue)

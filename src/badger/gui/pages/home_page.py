@@ -22,6 +22,7 @@ from pandas import DataFrame
 from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtWidgets import (
+    QDialog,
     QLabel,
     QMessageBox,
     QShortcut,
@@ -55,6 +56,7 @@ from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
+from badger.gui.windows.termination_reached_dialog import BadgerTerminationReachedDialog
 from badger.gui.windows.terminition_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
@@ -261,14 +263,11 @@ class BadgerHomePage(QWidget):
         self.run_monitor.sig_toggle_run.connect(self.run_action_bar.toggle_run)
         self.run_monitor.sig_toggle_other.connect(self.run_action_bar.toggle_other)
         self.run_monitor.sig_env_ready.connect(self.run_action_bar.env_ready)
+        self.run_monitor.sig_termination_reached.connect(self.termination_reached)
 
         self.run_action_bar.sig_start.connect(self.start_run)
-        self.run_action_bar.sig_start_until.connect(self.start_run_until)
         self.run_action_bar.sig_run_with_data.connect(
-            lambda: self.start_run(
-                use_termination_condition=bool(self.run_monitor.termination_condition),
-                load_displayed_data=True,
-            )
+            lambda: self.start_run(load_displayed_data=True)
         )
         self.run_action_bar.sig_stop.connect(self.run_monitor.stop)
         self.run_action_bar.sig_delete_run.connect(self.run_monitor.delete_run)
@@ -287,10 +286,10 @@ class BadgerHomePage(QWidget):
             self.run_monitor.jump_to_optimal
         )
         self.run_action_bar.sig_dial_in.connect(self.run_monitor.set_vars)
-        self.run_action_bar.sig_ctrl.connect(self.run_monitor.ctrl_routine)
         self.run_action_bar.sig_open_extensions_palette.connect(
             self.run_monitor.open_extensions_palette
         )
+        self.run_action_bar.sig_update_tc.connect(self.start_run_until)
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 
@@ -512,14 +511,6 @@ class BadgerHomePage(QWidget):
 
         # Add data to routine before saving tmp file
         if data is not None:
-            # Make sure selected generator is compatible with prior data
-            if routine.generator.name in ["neldermead"]:
-                self.run_action_bar.routine_finished()  # Reset action bar
-                raise BadgerRoutineError(
-                    "Neldermead algorithm is not compatible with data loading. "
-                    + "\nPlease uncheck 'Load displayed data into routine' "
-                    + "or select a different algorithm."
-                )
             # Check that routine variables and objectives match loaded data
             self.validate_loaded_data_keys(routine.vocs)
             self.data_panel.set_routine(routine)
@@ -551,11 +542,7 @@ class BadgerHomePage(QWidget):
         # Tell monitor to start the run
         self.run_monitor.init_plots(routine)
 
-    def start_run(
-        self,
-        use_termination_condition: bool = False,
-        load_displayed_data: bool = False,
-    ) -> None:
+    def start_run(self, load_displayed_data: bool = False) -> None:
         """
         Prepares and starts optimization run with provided options.
         - Termination Condition is provided when called via BadgerTerminationConditionDialog
@@ -566,9 +553,17 @@ class BadgerHomePage(QWidget):
 
         """
         logger.info("Starting run.")
+
+        if self.run_monitor.running:
+            self.run_monitor.stop()
+
         # Set data options based on checkbox states from data_panel
         run_data_flag = load_displayed_data or self.data_panel.use_data
         init_points_flag = self.data_panel.init_points
+
+        if self.routine_editor.env_box.relative_to_curr.isChecked():
+            # update initial points before initializing routine
+            self.routine_editor.update_init_table()
 
         if run_data_flag:
             data_to_load = self.data_panel.get_data()  # Get data from data_panel
@@ -588,10 +583,22 @@ class BadgerHomePage(QWidget):
             self.prepare_run()
 
         self.run_monitor.start(
-            use_termination_condition=use_termination_condition,
             run_data_flag=run_data_flag,
             init_points_flag=init_points_flag,
         )
+
+    def termination_reached(self, tc_condition: dict) -> None:
+        """
+        The run has been paused from the subprocess by reaching a termination condition.
+        Opens a dialog to resume or stop.
+        """
+        dlg = BadgerTerminationReachedDialog(tc_condition=tc_condition, parent=self)
+        if dlg.exec_() == QDialog.Accepted:
+            # unpause and continue
+            self.run_monitor.ctrl_routine(False)
+        else:
+            # end run
+            self.run_monitor.stop()
 
     def start_run_until(self) -> None:
         logger.info("Starting run until condition met.")
@@ -606,7 +613,6 @@ class BadgerHomePage(QWidget):
             dlg.exec()
         finally:
             self.tc_dialog = None
-        # self.run_monitor.start_until()
 
     def new_run(self) -> None:
         logger.info("Creating new run.")
