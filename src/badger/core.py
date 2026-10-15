@@ -160,31 +160,33 @@ def run_routine(
                 time.sleep(0)
                 continue
 
-            # generate points to observe
-            candidates = routine.generator.generate(1)[0]
-            candidates = DataFrame(candidates, index=[0])
-            # generate_callback(generator, candidates)
-            generate_callback(candidates)
+            # generate points to observe. Note: with n_interpolate_points set,
+            # this returns multiple waypoints instead of a single candidate.
+            candidate_list = routine.generator.generate(1)
+            for candidate in candidate_list:
+                candidates = DataFrame(candidate, index=[0])
+                # generate_callback(generator, candidates)
+                generate_callback(candidates)
 
-            check_run_status(active_callback)
-            # if still active evaluate the points and add to generator
-            # check active_callback evaluate point
-            result = routine.evaluate_data(candidates)
-            solution = convert_to_solution(result, routine)
-            opt_logger.update(Events.OPTIMIZATION_STEP, solution)
-            if evaluate_callback:
-                evaluate_callback(result)
+                check_run_status(active_callback)
+                # if still active evaluate the points and add to generator
+                # check active_callback evaluate point
+                result = routine.evaluate_data(candidates)
+                solution = convert_to_solution(result, routine)
+                opt_logger.update(Events.OPTIMIZATION_STEP, solution)
+                if evaluate_callback:
+                    evaluate_callback(result)
 
-            # Dump Xopt state after each step
-            if dump_file_callback:
-                if combined_results is not None:
-                    combined_results = concat(
-                        [combined_results, result], axis=0
-                    ).reset_index(drop=True)
-                else:
-                    combined_results = result
+                # Dump Xopt state after each step
+                if dump_file_callback:
+                    if combined_results is not None:
+                        combined_results = concat(
+                            [combined_results, result], axis=0
+                        ).reset_index(drop=True)
+                    else:
+                        combined_results = result
 
-                dump_state(dump_file, routine.generator, combined_results)
+                    dump_state(dump_file, routine.generator, combined_results)
     except Exception:
         opt_logger.update(Events.OPTIMIZATION_END, solution_meta)
         raise
