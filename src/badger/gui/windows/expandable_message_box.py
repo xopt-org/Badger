@@ -1,17 +1,19 @@
 """Error dialog with an expandable "Details" section. Shows a short error
 message by default; click to reveal the full traceback."""
 
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QFontDatabase, QTextOption
 from PyQt5.QtWidgets import (
     QDialog,
-    QMessageBox,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QTextEdit,
+    QVBoxLayout,
 )
-from PyQt5.QtGui import QTextOption, QFont, QFontDatabase
-from PyQt5.QtCore import Qt
+
+from badger.gui.utils import unset_busy_cursor
 
 
 class ExpandableMessageBox(QDialog):
@@ -20,6 +22,8 @@ class ExpandableMessageBox(QDialog):
     ):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint)
+
+        unset_busy_cursor()
 
         # Main layout
         mainLayout = QVBoxLayout(self)

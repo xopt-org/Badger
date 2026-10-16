@@ -1,16 +1,7 @@
-"""TypedDict definitions for the Pareto front viewer — plot options,
-objective/variable selection, and internal UI widget references."""
+"""TypedDict definitions for the Pareto front viewer — plot options and
+objective/variable selection."""
 
 from typing import TypedDict
-
-from PyQt5.QtWidgets import (
-    QRadioButton,
-    QComboBox,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QTabWidget,
-)
 
 
 class PlotOptions(TypedDict):
@@ -26,43 +17,3 @@ class ConfigurableOptions(TypedDict):
     objective_1: int
     objective_2: int
     plot_tab: int
-
-
-class PFOptionsUIWidgets(TypedDict):
-    show_only_pareto_front: QRadioButton
-
-
-class PFVariablesUIWidgets(TypedDict):
-    variable_1: QComboBox
-    variable_2: QComboBox
-
-
-class PFPlotUIWidgets(TypedDict):
-    pareto: QTabWidget
-    hypervolume: QVBoxLayout
-
-
-class PFUIWidgets(TypedDict):
-    variables: PFVariablesUIWidgets
-    options: PFOptionsUIWidgets
-    update: QRadioButton
-    plot: PFPlotUIWidgets
-
-
-class PFVariablesLayouts(TypedDict):
-    variable_1: QVBoxLayout
-    variable_2: QVBoxLayout
-
-
-class PFUILayouts(TypedDict):
-    main: QHBoxLayout
-    settings: QVBoxLayout
-    plot: QGridLayout
-    options: QVBoxLayout
-    variables: QVBoxLayout
-    update: QVBoxLayout
-
-
-class PFUI(TypedDict):
-    components: PFUIWidgets
-    layouts: PFUILayouts

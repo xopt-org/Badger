@@ -22,7 +22,7 @@ import logging
 from importlib import resources
 from typing import Any
 
-from gest_api.vocs import ContinuousVariable
+from gest_api.vocs import VOCS, ContinuousVariable
 from pydantic_core import ValidationError
 from PyQt5.QtCore import QPropertyAnimation, QRegExp, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -37,7 +37,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS
 
 from badger.errors import BadgerRoutineError
 from badger.gui.components.collapsible_box import CollapsibleBox
@@ -153,11 +152,15 @@ class BadgerEnvBox(QWidget):
         self,
         env_dict: dict[str, Any],
         parent: QWidget | None = None,
-        envs: list[str] = [],
+        envs: list[str] | None = None,
     ):
+        if envs is None:
+            envs = []
+
         super().__init__(parent)
 
         self.envs = envs
+
         self.env_dict = env_dict
 
         self.init_ui()

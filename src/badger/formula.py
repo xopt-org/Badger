@@ -7,10 +7,11 @@ substitutes measured values, and evaluates the expression in a sandboxed
 namespace (numpy only). Includes typo detection for misspelled variable names.
 """
 
-import numpy as np
-import re
 import ast
 import difflib
+import re
+
+import numpy as np
 
 
 def safe_var_name(var_name):
@@ -97,4 +98,4 @@ def interpret_expression(expr, variables):
     try:
         return eval(expr, {"__builtins__": {}}, safe_namespace)
     except Exception as e:
-        raise ValueError(f"Expression evaluation failed: {e}")
+        raise ValueError(f"Expression evaluation failed: {e}") from e

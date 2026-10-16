@@ -115,6 +115,8 @@ While the optimization is running, the values of the variables, objectives, and 
 #### Specify variable range
 Each optimzation variable must have defined bounds that specify the valid search space. These ranges serve dual purposes: they constrain the optimization algorithm to explore only physically meaningful parameter values, and they enforce safety limits to prevent damage to the equipment. Variable ranges are defined in the Environment + VOCS section.
 
+Use **Set Variable Range** above the table to apply a range option to all variables, or click a row's gear button to adjust one variable. The individual range dialog offers three relative options and `exact_bounds`; relative bounds are calculated from the selected option and the variable's current value.
+
 ![Variable Range](/img/gui/variablerange.png)
 
 #### Incorporate algorithm parameters

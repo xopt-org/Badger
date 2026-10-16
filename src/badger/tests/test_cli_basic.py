@@ -12,13 +12,13 @@ def capture(command):
 
 def test_cli_main():
     command = ["badger"]
-    out, err, exitcode = capture(command)
+    out, _, exitcode = capture(command)
 
     assert exitcode == 0
 
     # Check output lines
     outlines = out.splitlines()
-    assert len(outlines) == 11
+    assert len(outlines) == 12
 
     # Check name
     assert outlines[0] == "name: Badger the optimizer"
@@ -36,7 +36,7 @@ def test_list_algo():
     from badger.factory import ALGO_EXCLUDED
 
     command = ["badger", "generator"]
-    out, err, exitcode = capture(command)
+    out, _, exitcode = capture(command)
 
     assert exitcode == 0
 

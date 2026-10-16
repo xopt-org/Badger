@@ -95,12 +95,17 @@ When "Show checked only" is unchecked, the table scrolls to display the first se
 ### Variable Range Dialog
 
 <!-- Screenshot: individual variable range dialog with bounds preview bar -->
-![Mini Mode Variable Dialog](/img/guides/minimode-variable2.png)
+![Mini Mode Variable Dialog](/img/guides/minimode-variable-dialog.png)
 
 Clicking the gear icon on a variable row opens a dialog with:
 
 - The current value of the variable
+- The current low and high bounds for the variable
 - Options for range selection method
+    - ratio wrt current value: Bounds are calculated as a fraction of the current value on either side of the current value
+    - ratio wrt full range: Bounds are calculated as a fraction of the full range on either side of the current value
+    - delta around current value: Bounds are calculated as a delta on either side of the current value
+    - exact bounds: the input numerical bounds are used.
 - A **bounds preview bar** showing what the resulting bounds will be
 - Hard limits displayed (but not editable)
 

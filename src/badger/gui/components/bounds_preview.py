@@ -1,7 +1,7 @@
 """Widget for visualizing hard bounds, preview scan bounds, and current value."""
 
-from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QColor, QPainter, QPen, QBrush, QPaintEvent
+from PyQt5.QtCore import QRectF, Qt
+from PyQt5.QtGui import QBrush, QColor, QPainter, QPaintEvent, QPen
 from PyQt5.QtWidgets import QWidget
 
 
@@ -79,22 +79,18 @@ class BoundsPreviewBar(QWidget):
         painter.drawRoundedRect(preview_rect, 1, 1)
 
         # current line
-        curr_x = int(round(self._to_x(self.curr, left, track_w)))
+        curr_x = round(self._to_x(self.curr, left, track_w))
         painter.setPen(QPen(QColor(240, 240, 240), 1))
-        painter.drawLine(
-            curr_x, int(round(track_top)), curr_x, int(round(track_top + track_h))
-        )
+        painter.drawLine(curr_x, round(track_top), curr_x, round(track_top + track_h))
 
         # text labels
         font = painter.font()
         font.setPointSizeF(10.0)
         painter.setFont(font)
         painter.setPen(QPen(QColor(190, 190, 190), 1))
-        label_y = int(round(track_top + track_h + 12))
-        painter.drawText(int(round(left)), label_y, f"{self.hard_lower:.2f}")
+        label_y = round(track_top + track_h + 12)
+        painter.drawText(round(left), label_y, f"{self.hard_lower:.2f}")
         painter.drawText(
-            int(round(max(left, right - 28))), label_y, f"{self.hard_upper:.2f}"
+            round(max(left, right - 28)), label_y, f"{self.hard_upper:.2f}"
         )
-        painter.drawText(
-            int(round(max(left, curr_x - 16))), label_y, f"{self.curr:.3f}"
-        )
+        painter.drawText(round(max(left, curr_x - 16)), label_y, f"{self.curr:.3f}")

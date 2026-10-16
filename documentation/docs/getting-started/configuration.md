@@ -26,6 +26,10 @@ The location where old runs are archived. Runs stored here will appear in the Hi
 
 The location where logs will be saved.
 
+#### Temp Directory
+
+The location where temporary files related to Badger runs can be stored.
+
 #### Logging Level
 
 The level at which logs are captured - Debug, Info, Warning, Error and Critical.

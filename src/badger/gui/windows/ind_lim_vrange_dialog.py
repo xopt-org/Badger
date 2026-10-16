@@ -3,25 +3,26 @@ the user to configure a per-variable range restriction (as a ratio of the full
 or current range) independently of the global limit settings, providing
 fine-grained control over the optimization search space."""
 
-from copy import deepcopy
 import math
+from copy import deepcopy
 
-from PyQt5.QtWidgets import (
-    QDialog,
-    QWidget,
-    QHBoxLayout,
-    QPushButton,
-    QVBoxLayout,
-    QDoubleSpinBox,
-    QGroupBox,
-    QLabel,
-    QComboBox,
-    QStyledItemDelegate,
-    QStackedWidget,
-    QLineEdit,
-    QFrame,
-)
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QStackedWidget,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
+
 from badger.gui.components.bounds_preview import BoundsPreviewBar
 
 
@@ -48,6 +49,7 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
         info_group = QFrame()
         vbox_info = QVBoxLayout(info_group)
         vbox_info.setContentsMargins(2, 2, 2, 2)
+        vbox_info.setSpacing(2)
 
         # Current value row
         hbox_current = QHBoxLayout()
@@ -68,6 +70,22 @@ class BadgerIndividualLimitVariableRangeDialog(QDialog):
 
         # Add the rows to the info group
         vbox_info.addLayout(hbox_current)
+
+        if "current_bounds" in self.configs:
+            # Display current bounds
+            hbox_bounds = QHBoxLayout()
+            hbox_bounds.setContentsMargins(0, 0, 0, 0)
+            lbl_bounds = QLabel("Current bounds:")
+            lbl_bounds.setFixedWidth(128)
+            current_bounds = self.configs["current_bounds"]
+            bounds_text = f"[{current_bounds[0]:.5f}, {current_bounds[1]:.5f}]"
+            lbl_current_bounds = QLabel(bounds_text)
+            lbl_current_bounds.setStyleSheet("color: #788D9C;")
+            hbox_bounds.addWidget(lbl_bounds)
+            hbox_bounds.addStretch()
+            hbox_bounds.addWidget(lbl_current_bounds)
+            hbox_bounds.addSpacing(8)
+            vbox_info.addLayout(hbox_bounds)
 
         # Add the info group to the main layout
         vbox.addWidget(info_group)
@@ -103,6 +121,7 @@ will be clipped by the variable range."""
                 "ratio wrt current value",
                 "ratio wrt full range",
                 "delta around current value",
+                "exact bounds",
             ]
         )
         cb.setCurrentIndex(self.configs.get("limit_option_idx", 0))
@@ -155,15 +174,61 @@ will be clipped by the variable range."""
         hbox_delta.addWidget(lbl)
         hbox_delta.addWidget(sb_delta, 1)
 
+        # Absolute bounds config (used in non-relative mode)
+        bounds_config = QWidget()
+        vbox_bounds = QVBoxLayout(bounds_config)
+        vbox_bounds.setContentsMargins(0, 0, 0, 0)
+
+        # Get hard limits (full variable range)
+        hard_lower = float(self.configs.get("lower_bound", -1e10))
+        hard_upper = float(self.configs.get("upper_bound", 1e10))
+
+        # Get exact bounds from configs, or use current or hard bounds if not specified.
+        exact_bounds = list(
+            self.configs.get(
+                "exact_bounds",
+                self.configs.get("current_bounds", [hard_lower, hard_upper]),
+            )
+        )
+        self.configs["exact_bounds"] = exact_bounds
+
+        hbox_bounds_lower = QHBoxLayout()
+        hbox_bounds_lower.setContentsMargins(0, 0, 0, 0)
+        lbl_lower = QLabel("Lower")
+        self.sb_bounds_lower = sb_bounds_lower = QDoubleSpinBox()
+        sb_bounds_lower.setMinimum(hard_lower)
+        sb_bounds_lower.setMaximum(hard_upper)
+        sb_bounds_lower.setDecimals(6)
+        sb_bounds_lower.setSingleStep((hard_upper - hard_lower) / 50)
+        sb_bounds_lower.setValue(exact_bounds[0])
+        hbox_bounds_lower.addWidget(lbl_lower)
+        hbox_bounds_lower.addWidget(sb_bounds_lower, 1)
+
+        hbox_bounds_upper = QHBoxLayout()
+        hbox_bounds_upper.setContentsMargins(0, 0, 0, 0)
+        lbl_upper = QLabel("Upper")
+        self.sb_bounds_upper = sb_bounds_upper = QDoubleSpinBox()
+        sb_bounds_upper.setMinimum(hard_lower)
+        sb_bounds_upper.setMaximum(hard_upper)
+        sb_bounds_upper.setDecimals(6)
+        sb_bounds_upper.setSingleStep((hard_upper - hard_lower) / 50)
+        sb_bounds_upper.setValue(exact_bounds[1])
+        hbox_bounds_upper.addWidget(lbl_upper)
+        hbox_bounds_upper.addWidget(sb_bounds_upper, 1)
+
+        vbox_bounds.addLayout(hbox_bounds_lower)
+        vbox_bounds.addLayout(hbox_bounds_upper)
+
         stacks.addWidget(ratio_curr_config)
         stacks.addWidget(ratio_full_config)
         stacks.addWidget(delta_config)
+        stacks.addWidget(bounds_config)
 
         stacks.setCurrentIndex(self.configs.get("limit_option_idx", 0))
         vbox_config.addWidget(stacks)
 
         # Bounds preview group
-        group_preview = QGroupBox("Bounds preview")
+        self.group_preview = group_preview = QGroupBox("Bounds Preview (Current)")
         vbox_preview = QVBoxLayout(group_preview)
         vbox_preview.setContentsMargins(8, 8, 8, 8)
         vbox_preview.setSpacing(5)
@@ -214,35 +279,53 @@ will be clipped by the variable range."""
         self.sb_ratio_curr.valueChanged.connect(self.ratio_curr_changed)
         self.sb_ratio_full.valueChanged.connect(self.ratio_full_changed)
         self.sb_delta.valueChanged.connect(self.delta_changed)
-        self.update_bounds_preview()
+        self.sb_bounds_lower.valueChanged.connect(self.bounds_lower_changed)
+        self.sb_bounds_upper.valueChanged.connect(self.bounds_upper_changed)
+        self.bounds_changed = False
+        # Show the actual current bounds on open, before any recomputation.
+        self.update_bounds_preview(use_current_bounds=True)
 
     def _clip(self, value: float, lower: float, upper: float) -> float:
         """Clip value if outside of lower/upper bounds"""
         return max(lower, min(upper, value))
 
-    def update_bounds_preview(self) -> None:
+    def update_bounds_preview(self, use_current_bounds: bool = False) -> None:
         """
-        Calculate bounds preview and display on labels and preview bar
+        Calculate bounds preview and display on labels and preview bar.
+
+        If ``use_current_bounds`` is True, the preview shows the actual
+        currently configured bounds instead of recomputing them from the
+        selected option/parameters, so the dialog opens showing what is
+        really applied rather than a value derived from possibly stale
+        ratio/delta settings.
         """
         curr = float(self.configs.get("current_value", 0.0))
         hard_lower = self.configs.get("lower_bound", 0)
         hard_upper = self.configs.get("upper_bound", 0)
 
-        option_idx = self.cb.currentIndex()
-        if option_idx == 1:
-            ratio = self.sb_ratio_full.value()
-            delta = 0.5 * ratio * (hard_upper - hard_lower)
-            bounds = [curr - delta, curr + delta]
-        elif option_idx == 2:
-            delta = self.sb_delta.value()
-            bounds = [curr - delta, curr + delta]
+        if use_current_bounds and "current_bounds" in self.configs:
+            bounds = list(self.configs["current_bounds"])
         else:
-            ratio = self.sb_ratio_curr.value()
-            sign = math.copysign(1.0, curr) if curr != 0 else 0.0
-            bounds = [
-                curr * (1 - 0.5 * sign * ratio),
-                curr * (1 + 0.5 * sign * ratio),
-            ]
+            option_idx = self.cb.currentIndex()
+            if option_idx == 0:
+                ratio = self.sb_ratio_curr.value()
+                sign = math.copysign(1.0, curr) if curr != 0 else 0.0
+                bounds = [
+                    curr * (1 - 0.5 * sign * ratio),
+                    curr * (1 + 0.5 * sign * ratio),
+                ]
+            elif option_idx == 1:
+                ratio = self.sb_ratio_full.value()
+                delta = 0.5 * ratio * (hard_upper - hard_lower)
+                bounds = [curr - delta, curr + delta]
+            elif option_idx == 2:
+                delta = self.sb_delta.value()
+                bounds = [curr - delta, curr + delta]
+            else:
+                bounds = [
+                    float(self.sb_bounds_lower.value()),
+                    float(self.sb_bounds_upper.value()),
+                ]
 
         bounds = [
             self._clip(bounds[0], hard_lower, hard_upper),
@@ -250,6 +333,9 @@ will be clipped by the variable range."""
         ]
         bounds.sort()
 
+        self.group_preview.setTitle(
+            "Bounds Preview" if self.bounds_changed else "Bounds Preview (Current)"
+        )
         self.lbl_preview_lower.setText(f"{bounds[0]:.6f}")
         self.lbl_preview_upper.setText(f"{bounds[1]:.6f}")
         self.bounds_preview_bar.set_values(
@@ -262,10 +348,6 @@ will be clipped by the variable range."""
 
     def update_config(self):
         try:
-            # lower = float(self.lbl_hard_lower.text())
-            # upper = float(self.lbl_hard_upper.text())
-            # self.configs["lower_bound"] = lower
-            # self.configs["upper_bound"] = upper
             # Fill in default values if not exist
             if "limit_option_idx" not in self.configs:
                 self.configs["limit_option_idx"] = self.cb.currentIndex()
@@ -275,27 +357,48 @@ will be clipped by the variable range."""
                 self.configs["ratio_full"] = self.sb_ratio_full.value()
             if "delta" not in self.configs:
                 self.configs["delta"] = self.sb_delta.value()
+            lower = float(self.sb_bounds_lower.value())
+            upper = float(self.sb_bounds_upper.value())
+            # Keep exact bounds ordered to avoid invalid [lower, upper] ranges.
+            self.configs["exact_bounds"] = [min(lower, upper), max(lower, upper)]
         except ValueError:
             pass  # Optionally handle invalid input
 
     def ratio_curr_changed(self, ratio_curr):
+        self.bounds_changed = True
         self.configs["ratio_curr"] = ratio_curr
         self.update_bounds_preview()
 
     def ratio_full_changed(self, ratio_full):
+        self.bounds_changed = True
         self.configs["ratio_full"] = ratio_full
         self.update_bounds_preview()
 
     def delta_changed(self, delta):
+        self.bounds_changed = True
         self.configs["delta"] = delta
         self.update_bounds_preview()
 
+    def bounds_lower_changed(self, lower):
+        self.bounds_changed = True
+        self.configs["exact_bounds"][0] = lower
+        self.update_bounds_preview()
+
+    def bounds_upper_changed(self, upper):
+        self.bounds_changed = True
+        self.configs["exact_bounds"][1] = upper
+        self.update_bounds_preview()
+
     def set(self):
+        if not self.bounds_changed:
+            self.close()
+            return
         self.update_config()
         self.apply_config(self.name, self.configs)
         self.close()
 
     def limit_option_changed(self, i):
+        self.bounds_changed = True
         self.stacks.setCurrentIndex(i)
 
         # Update configs

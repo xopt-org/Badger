@@ -4,10 +4,21 @@ the current operating point before starting an optimization run."""
 
 from copy import deepcopy
 
-from PyQt5.QtWidgets import QDialog, QWidget, QHBoxLayout, QStackedWidget
-from PyQt5.QtWidgets import QVBoxLayout, QSpinBox, QPushButton
-from PyQt5.QtWidgets import QGroupBox, QLabel, QComboBox, QStyledItemDelegate
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QStackedWidget,
+    QStyledItemDelegate,
+    QVBoxLayout,
+    QWidget,
+)
+
 from badger.gui.components.robust_spinbox import RobustSpinBox
 
 

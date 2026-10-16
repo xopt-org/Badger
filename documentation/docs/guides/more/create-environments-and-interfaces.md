@@ -41,8 +41,7 @@ from badger import interface
 
 
 class Interface(interface.Interface):
-
-    name = 'myintf'
+    name = "myintf"
 
     def get_values(self, channel_names: list):
         pass
@@ -98,8 +97,7 @@ from badger.interface import Interface
 
 
 class Environment(environment.Environment):
-
-    name = 'myenv'
+    name = "myenv"
     variables = {}
     observables = []
 
@@ -136,32 +134,34 @@ Try to avoid doing time-consuming thing in `__init__` method. Badger would creat
 Okay, now we can start to implement the methods. Assume that our sample environment has 3 variables: `x`, `y`, and `z`, with range of [0, 1]. It also has 2 observations: `norm`, and `mean`. Then the `variables` and `observables` class variables should look like:
 
 ```python
-    variables = {
-        'x': [0, 1],
-        'y': [0, 1],
-        'z': [0, 1],
-    }
-    observables = ['norm', 'mean']
+variables = {
+    "x": [0, 1],
+    "y": [0, 1],
+    "z": [0, 1],
+}
+observables = ["norm", "mean"]
 ```
 
 Our custom env is so simple that we don't really need an interface here. Let's implement the getter and setter for the variables:
 
 ```python
-    # Internal variables start with a single underscore
-    _variables = {
-        'x': 0,
-        'y': 0,
-        'z': 0,
-    }
+# Internal variables start with a single underscore
+_variables = {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+}
 
-    def get_variables(self, variable_names: list[str]) -> dict:
-        variable_outputs = {v: self._variables[v] for v in variable_names}
 
-        return variable_outputs
+def get_variables(self, variable_names: list[str]) -> dict:
+    variable_outputs = {v: self._variables[v] for v in variable_names}
 
-    def set_variables(self, variable_inputs: dict[str, float]):
-        for var, x in variable_inputs.items():
-            self._variables[var] = x
+    return variable_outputs
+
+
+def set_variables(self, variable_inputs: dict[str, float]):
+    for var, x in variable_inputs.items():
+        self._variables[var] = x
 ```
 
 Here we use a dictionary called `_variables` to hold the values for the variables.
@@ -169,19 +169,19 @@ Here we use a dictionary called `_variables` to hold the values for the variable
 Now let's add observable related logic:
 
 ```python
-    def get_observables(self, observable_names: list[str]) -> dict:
-        x = self._variables['x']
-        y = self._variables['y']
-        z = self._variables['z']
+def get_observables(self, observable_names: list[str]) -> dict:
+    x = self._variables["x"]
+    y = self._variables["y"]
+    z = self._variables["z"]
 
-        observable_outputs = {}
-        for obs in observable_names:
-            if obs == 'norm':
-                observable_outputs[obs] = (x ** 2 + y ** 2 + z ** 2) ** 0.5
-            elif obs == 'mean':
-                observable_outputs[obs] = (x + y + z) / 3
+    observable_outputs = {}
+    for obs in observable_names:
+        if obs == "norm":
+            observable_outputs[obs] = (x**2 + y**2 + z**2) ** 0.5
+        elif obs == "mean":
+            observable_outputs[obs] = (x + y + z) / 3
 
-        return observable_outputs
+    return observable_outputs
 ```
 
 At this point, the content of `__init__.py` should be:
@@ -192,21 +192,20 @@ from badger import environment
 
 
 class Environment(environment.Environment):
-
-    name = 'myenv'
+    name = "myenv"
 
     variables = {
-        'x': [0, 1],
-        'y': [0, 1],
-        'z': [0, 1],
+        "x": [0, 1],
+        "y": [0, 1],
+        "z": [0, 1],
     }
-    observables = ['norm', 'mean']
+    observables = ["norm", "mean"]
 
     # Internal variables start with a single underscore
     _variables = {
-        'x': 0,
-        'y': 0,
-        'z': 0,
+        "x": 0,
+        "y": 0,
+        "z": 0,
     }
 
     def get_variables(self, variable_names: list[str]) -> dict:
@@ -219,15 +218,15 @@ class Environment(environment.Environment):
             self._variables[var] = x
 
     def get_observables(self, observable_names: list[str]) -> dict:
-        x = self._variables['x']
-        y = self._variables['y']
-        z = self._variables['z']
+        x = self._variables["x"]
+        y = self._variables["y"]
+        z = self._variables["z"]
 
         observable_outputs = {}
         for obs in observable_names:
-            if obs == 'norm':
-                observable_outputs[obs] = (x ** 2 + y ** 2 + z ** 2) ** 0.5
-            elif obs == 'mean':
+            if obs == "norm":
+                observable_outputs[obs] = (x**2 + y**2 + z**2) ** 0.5
+            elif obs == "mean":
                 observable_outputs[obs] = (x + y + z) / 3
 
         return observable_outputs

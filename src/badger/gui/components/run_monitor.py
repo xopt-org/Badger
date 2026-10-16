@@ -7,18 +7,18 @@ finishes, it archives the data and hands results off to analysis extensions
 (BO visualizer, Pareto front viewer) if the user has them open.
 """
 
+import logging
 import os
+import time
 import traceback
 from importlib import resources
-from typing import List
+from typing import TYPE_CHECKING
 
-from badger.gui.components.analysis_extensions import AnalysisExtension
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from gest_api.vocs import VOCS
 from PyQt5.QtCore import pyqtSignal
-from pyqtgraph.Qt import QtGui, QtCore
-
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -32,21 +32,23 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from xopt.vocs import VOCS, normalize_inputs, select_best
+from pyqtgraph.Qt import QtCore, QtGui
+from xopt.vocs import normalize_inputs, select_best
 
-from badger.archive import archive_run, BADGER_ARCHIVE_ROOT
+from badger.archive import BADGER_ARCHIVE_ROOT, archive_run
+from badger.gui.components.analysis_extensions import AnalysisExtension
+from badger.gui.components.extensions_palette import ExtensionsPalette
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
+from badger.gui.components.routine_runner import BadgerRoutineSubprocess
+from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
 from badger.logbook import BADGER_LOGBOOK_ROOT, send_to_logbook
 from badger.routine import Routine
 from badger.tests.utils import get_current_vars
-from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 
-from badger.gui.components.extensions_palette import ExtensionsPalette
-from badger.gui.components.routine_runner import BadgerRoutineSubprocess
-
-import logging
+if TYPE_CHECKING:
+    from badger.gui.components.process_manager import ProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +74,14 @@ class BadgerOptMonitor(QWidget):
     sig_toggle_run = pyqtSignal(bool)
     sig_toggle_other = pyqtSignal(bool)
     sig_env_ready = pyqtSignal()
+    sig_env_reset = pyqtSignal()  # notify on reset complete
+    sig_vars_set = pyqtSignal()  # notify var set complete
 
-    def __init__(self, process_manager=None):
+    # Notify home_page that run has been paused to make sure GUI updates
+    sig_paused = pyqtSignal(bool)  # paused (true)/ unpaused (false)
+    sig_termination_reached = pyqtSignal(dict)  # run paused by a run-until condition
+
+    def __init__(self, process_manager: "ProcessManager | None" = None):
         super().__init__()
         # self.setAttribute(Qt.WA_DeleteOnClose, True)
 
@@ -94,7 +102,8 @@ class BadgerOptMonitor(QWidget):
 
         # Run optimization
         self.routine_runner = None
-        self.running = False
+        self.running = False  # is subprocess running
+        self.paused = False  # is optimization paused
 
         # Termination condition for the run
         self.termination_condition = None
@@ -119,7 +128,7 @@ class BadgerOptMonitor(QWidget):
     def states(self, new_states: dict) -> None:
         self._states = new_states
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         # Load all icons
         icon_ref = resources.files(__package__) / "../images/play.png"
         with resources.as_file(icon_ref) as icon_path:
@@ -197,7 +206,7 @@ class BadgerOptMonitor(QWidget):
         vbox.addWidget(monitor)
 
     # noinspection PyUnresolvedReferences
-    def config_logic(self):
+    def config_logic(self) -> None:
         """
         Configure the logic and connections for various interactive elements in the
         application.
@@ -239,7 +248,9 @@ class BadgerOptMonitor(QWidget):
         self.cb_plot_y.currentIndexChanged.connect(self.select_x_plot_y_axis)
         self.check_relative.stateChanged.connect(self.toggle_x_plot_y_axis_relative)
 
-    def init_plots(self, routine: Routine = None, run_filename: str = None):
+    def init_plots(
+        self, routine: Routine = None, run_filename: str | None = None
+    ) -> None:
         """
         Initialize and configure the plots and related components in the application.
 
@@ -289,16 +300,16 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_con)
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No constraints plot to remove")
 
             # if statics exist delete that plot
             try:
                 self.monitor.removeItem(self.plot_obs)
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No observables plot to remove")
 
             # if no routine is loaded set button to disabled
             self.sig_lock_action.emit()
@@ -328,8 +339,8 @@ class BadgerOptMonitor(QWidget):
         # Configure constraint plots
         if constraint_names:
             try:
-                self.plot_con
-            except:
+                _ = self.plot_con
+            except AttributeError:
                 self.plot_con = plot_con = add_axes(
                     self.monitor,
                     "constraints",
@@ -349,14 +360,14 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_con)
                 self.plot_con.removeItem(self.inspector_constraint)
                 del self.plot_con
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No constraints plot to remove")
 
         # Configure state plots
         if sta_names:
             try:
-                self.plot_obs
-            except:
+                _ = self.plot_obs
+            except AttributeError:
                 self.plot_obs = plot_obs = add_axes(
                     self.monitor,
                     "observables",
@@ -375,8 +386,8 @@ class BadgerOptMonitor(QWidget):
                 self.monitor.removeItem(self.plot_obs)
                 self.plot_obs.removeItem(self.inspector_state)
                 del self.plot_obs
-            except:
-                pass
+            except AttributeError:
+                logger.debug("No observables plot to remove")
 
         # Reset inspectors
         self.inspector_objective.setValue(0)
@@ -404,7 +415,7 @@ class BadgerOptMonitor(QWidget):
 
         self.sig_toggle_other.emit(False)
 
-    def _configure_plot(self, plot_object, inspector, names):
+    def _configure_plot(self, plot_object, inspector, names: list[str]) -> dict:
         plot_object.clear()
         plot_object.addItem(inspector)
         curves = {}
@@ -437,9 +448,10 @@ class BadgerOptMonitor(QWidget):
 
         return curves
 
-    def init_routine_runner(self):
+    def init_routine_runner(self) -> None:
         self.reset_routine_runner()
 
+        # init routine runner
         self.routine_runner = routine_runner = BadgerRoutineSubprocess(
             self.process_manager,
             self.routine,
@@ -454,11 +466,19 @@ class BadgerOptMonitor(QWidget):
         routine_runner.signals.error.connect(self.on_error)
         routine_runner.signals.info.connect(self.on_info)
         routine_runner.signals.states.connect(self.states)
+        routine_runner.signals.sig_status.connect(self.sig_status.emit)
+        routine_runner.signals.sig_termination_reached.connect(
+            lambda: self.set_paused(True)
+        )
+        routine_runner.signals.sig_termination_reached.connect(
+            self.sig_termination_reached.emit
+        )
+        routine_runner.signals.sig_pause_ack.connect(lambda: self.set_paused(True))
 
         self.sig_pause.connect(routine_runner.ctrl_routine)
         self.sig_stop.connect(routine_runner.stop_routine)
 
-    def reset_routine_runner(self):
+    def reset_routine_runner(self) -> None:
         if self.routine_runner:
             self.sig_pause.disconnect()
             self.sig_stop.disconnect()
@@ -466,29 +486,31 @@ class BadgerOptMonitor(QWidget):
 
     def start(
         self,
-        use_termination_condition: bool = False,
         run_data_flag: bool = False,
         init_points_flag: bool = True,
-    ):
+    ) -> None:
         self.sig_new_run.emit()
         self.sig_status.emit(f"Running routine {self.routine.name}...")
         if not run_data_flag:
             self.routine.data = None  # reset data if any
         self.init_plots(self.routine)
+        # routine runner initialized
         self.init_routine_runner()
-        if use_termination_condition:
-            self.routine_runner.set_termination_condition(self.termination_condition)
+        self.routine_runner.set_termination_condition(self.termination_condition)
         self.running = True  # if a routine runner is working
+        self.paused = False
         self.routine_runner.run(
             run_data_flag=run_data_flag, init_points_flag=init_points_flag
         )
         self.sig_run_started.emit()
         self.sig_lock.emit(True)
 
-    def save_termination_condition(self, tc):
+    def save_termination_condition(self, tc) -> None:
         self.termination_condition = tc
+        if self.routine_runner:  # will be None on startup
+            self.routine_runner.set_termination_condition(tc)
 
-    def enable_auto_range(self):
+    def enable_auto_range(self) -> None:
         # Enable autorange
         self.plot_obj.enableAutoRange()
         self.plot_var.enableAutoRange()
@@ -498,14 +520,19 @@ class BadgerOptMonitor(QWidget):
         if self.vocs.observable_names:
             self.plot_obs.enableAutoRange()
 
-    def open_extensions_palette(self):
+    def open_extensions_palette(self) -> None:
         self.extensions_palette.show()
 
-    def extension_window_closed(self, child_window: AnalysisExtension):
-        self.active_extensions.remove(child_window)
+    def extension_window_closed(self, child_window: AnalysisExtension) -> None:
+        try:
+            self.active_extensions.remove(child_window)
+        except ValueError:
+            logger.warning(
+                f"Attempted to remove child window that was not in active extensions list. Child window: {child_window}"
+            )
         self.extensions_palette.update_palette()
 
-    def extract_timestamp(self, data=None):
+    def extract_timestamp(self, data: pd.DataFrame | None = None) -> np.ndarray:
         if data is None:
             data = self.routine.sorted_data
 
@@ -528,11 +555,45 @@ class BadgerOptMonitor(QWidget):
         self.extensions_palette.update_palette()
 
         self.sig_progress.emit(self.routine.data.tail(1))
+        self.update_status_with_tc()
 
         # Check critical condition
         self.check_critical()
 
-    def update_curves(self, results=None):
+    def update_status_with_tc(self) -> None:
+        if self.paused:
+            return
+
+        termination_condition = self.routine_runner.active_tc
+        if termination_condition:
+            idx = self.termination_condition["tc_idx"]
+            if idx == 0:
+                max_eval = termination_condition["max_eval"]
+                data = self.routine.data
+                if data is not None:
+                    if "live" in data.columns:
+                        # Display total count, including previous data (match run monitor)
+                        add_count = sum(1 for live_val in data["live"] if live_val == 0)
+                        count = len(data)
+                        max_eval += add_count
+                    else:
+                        count = len(data)
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{count}/{max_eval}]"
+                    )
+            elif idx == 1:
+                # display time remaining after last resume
+                max_time = self.termination_condition["max_time"]
+                elapsed = time.time() - self.routine_runner.last_resume_time
+                if not self.paused:
+                    self.sig_status.emit(
+                        f"Running routine {self.routine.name}...   [{elapsed:.1f}/{max_time:.1f} s]"
+                    )
+        else:
+            self.sig_status.emit(f"Running routine {self.routine.name}...")
+
+    def update_curves(self, results: pd.DataFrame | None = None) -> None:
         use_time_axis = self.plot_x_axis == 1
         norm_inputs = self.x_plot_y_axis == 1
 
@@ -644,7 +705,7 @@ class BadgerOptMonitor(QWidget):
 
     def routine_finished(self) -> None:
         self.running = False
-        self.sig_routine_finished.emit()
+        self.paused = False
 
         self.sig_lock.emit(False)
 
@@ -661,7 +722,7 @@ class BadgerOptMonitor(QWidget):
             try:
                 env.interface.stop_recording(os.path.join(path, filename))
             except AttributeError:  # recording was not enabled
-                pass
+                logger.debug("Recording was not enabled")
 
             self.sig_run_name.emit(run["filename"])
             self.sig_status.emit(
@@ -672,9 +733,9 @@ class BadgerOptMonitor(QWidget):
             #         self, 'Success!',
             #         f'Archive success: Run data archived to {BADGER_ARCHIVE_ROOT}')
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - archive external call
             self.sig_run_name.emit(None)
-            self.sig_status.emit(f"Archive failed: {str(e)}")
+            self.sig_status.emit(f"Archive failed: {e!s}")
             # if not self.testing:
             #     QMessageBox.critical(self, 'Archive failed!',
             #                          f'Archive failed: {str(e)}')
@@ -682,21 +743,22 @@ class BadgerOptMonitor(QWidget):
             for action in self.post_run_actions:
                 action()
 
-        # self.reset_routine_runner()
+        # emit sig_routine_finished after archiving run data
+        self.sig_routine_finished.emit()
 
     def destroy_unused_env(self) -> None:
         if not self.running:
             try:
                 del self.routine_runner.routine.environment
             except AttributeError:  # env already destroyed
-                pass
+                logger.debug("Environment already destroyed")
 
             try:
                 del self.routine.environment
             except AttributeError:  # env already destroyed
-                pass
+                logger.debug("Environment already destroyed")
 
-    def on_error(self, error):
+    def on_error(self, error: Exception) -> None:
         details = error._details if hasattr(error, "_details") else None
 
         dialog = BadgerScrollableMessageBox(
@@ -707,14 +769,14 @@ class BadgerOptMonitor(QWidget):
         dialog.exec_()
 
     # Do not show info -- too distracting
-    def on_info(self, msg):
+    def on_info(self, msg) -> None:
         pass
 
-    def logbook(self):
+    def logbook(self) -> None:
         try:
             send_to_logbook(self.routine, self.monitor)
-        except Exception as e:
-            self.sig_status.emit(f"Log failed: {str(e)}")
+        except Exception as e:  # noqa: BLE001 - logbook external call
+            self.sig_status.emit(f"Log failed: {e!s}")
             # QMessageBox.critical(self, 'Log failed!', str(e))
 
             return
@@ -723,46 +785,75 @@ class BadgerOptMonitor(QWidget):
         # QMessageBox.information(
         #     self, 'Success!', f'')
 
-    def ctrl_routine(self, status):
+    def set_paused(self, paused: bool) -> None:
+        """
+        Record the pause state of the run, and reflect on the GUI. This can be called either from
+        a GUI action or if the subprocess pauses after reaching a stopping condition.
+        """
+        self.paused = paused
+        if paused:
+            self.sig_status.emit(f"Routine {self.routine.name} paused")
+        self.sig_paused.emit(paused)
+
+    def ctrl_routine(self, status: bool) -> None:
+        """Called from home_page to pause(True)/unpause(False) subprocess loop.
+
+        On pause, the GUI is not reflected as paused until the subprocess confirms
+        it has actually stopped (see sig_pause_ack), since it may still be mid-evaluation.
+        """
+        if not status:
+            self.set_paused(False)
+        else:
+            self.sig_status.emit("pausing routine...")
         self.sig_pause.emit(status)
 
-    def ins_obj_dragged(self, ins_obj):
+    def resume_with_extension(self) -> None:
+        """
+        Resume the active routine and extend the configured termination condition.
+        Updates the UI and calls routine_runner.resume_with_extension which
+        places the currently configured termination condition extension in
+        a queue to the subprocess to extend on resuming.
+        """
+        self.set_paused(False)
+        self.routine_runner.resume_with_extension()
+
+    def ins_obj_dragged(self, ins_obj) -> None:
         self.inspector_variable.setValue(ins_obj.value())
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(ins_obj.value())
         if self.vocs.observable_names:
             self.inspector_state.setValue(ins_obj.value())
 
-    def ins_con_dragged(self, ins_con):
+    def ins_con_dragged(self, ins_con) -> None:
         self.inspector_variable.setValue(ins_con.value())
         self.inspector_objective.setValue(ins_con.value())
         if self.vocs.observable_names:
             self.inspector_state.setValue(ins_con.value())
 
-    def ins_sta_dragged(self, ins_sta):
+    def ins_sta_dragged(self, ins_sta) -> None:
         self.inspector_variable.setValue(ins_sta.value())
         self.inspector_objective.setValue(ins_sta.value())
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(ins_sta.value())
 
-    def ins_var_dragged(self, ins_var):
+    def ins_var_dragged(self, ins_var) -> None:
         self.inspector_objective.setValue(ins_var.value())
         if self.vocs.constraint_names:
             self.inspector_constraint.setValue(ins_var.value())
         if self.vocs.observable_names:
             self.inspector_state.setValue(ins_var.value())
 
-    def ins_drag_done(self, ins):
+    def ins_drag_done(self, ins) -> None:
         self.sync_ins(ins.value())
 
-    def sync_ins(self, pos):
+    def sync_ins(self, pos) -> None:
         if self.plot_x_axis:  # x-axis is time
             value, idx = self.closest_ts(pos)
         else:
             try:
                 ts = self.extract_timestamp()
                 value = idx = np.clip(np.round(pos), 0, len(ts) - 1)
-            except:  # no data
+            except (IndexError, ValueError):  # no data
                 value = idx = np.round(pos)
         self.inspector_objective.setValue(value)
         if self.vocs and self.vocs.constraint_names:
@@ -773,7 +864,7 @@ class BadgerOptMonitor(QWidget):
 
         self.sig_inspect.emit(int(idx))
 
-    def closest_ts(self, t):
+    def closest_ts(self, t: float) -> tuple[float, int]:
         # Get the closest timestamp in data regarding t
         ts = self.extract_timestamp()
         ts -= ts[0]
@@ -781,7 +872,7 @@ class BadgerOptMonitor(QWidget):
 
         return ts[idx], idx
 
-    def reset_env(self):
+    def reset_env(self) -> None:
         reply = QMessageBox.question(
             self,
             "Reset Environment",
@@ -812,10 +903,11 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
         )
+        self.sig_env_reset.emit()  # notify reset complete
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
 
-    def get_checkpoint(self):
+    def get_checkpoint(self) -> dict[str, float] | None:
         if not self.routine or not self.routine.environment or not self.routine.vocs:
             return None
 
@@ -823,7 +915,7 @@ class BadgerOptMonitor(QWidget):
             [*self.routine.environment.variables, *self.routine.vocs.variables.keys()]
         )
 
-    def save_checkpoint(self):
+    def save_checkpoint(self) -> None:
         checkpoint = self.get_checkpoint()
         if checkpoint is None:
             QMessageBox.critical(
@@ -836,7 +928,7 @@ class BadgerOptMonitor(QWidget):
             f"Checkpoint saved with the following data: {self.checkpoint_data}"
         )
 
-    def edit_checkpoint(self):
+    def edit_checkpoint(self) -> None:
         if self.checkpoint_data is None:
             QMessageBox.information(
                 self, "Edit Checkpoint", "No checkpoint data has been saved yet."
@@ -886,7 +978,7 @@ class BadgerOptMonitor(QWidget):
 
         popup.exec()
 
-    def load_checkpoint(self):
+    def load_checkpoint(self) -> None:
         if self.checkpoint_data is None:
             QMessageBox.information(
                 self, "Load Checkpoint", "No checkpoint data has been saved yet."
@@ -905,7 +997,7 @@ class BadgerOptMonitor(QWidget):
                 f"Checkpoint loaded with the following data: {self.checkpoint_data}"
             )
 
-    def jump_to_optimal(self):
+    def jump_to_optimal(self) -> None:
         try:
             best_idx, _, _ = select_best(
                 self.routine.vocs, self.routine.sorted_data, n=1
@@ -922,7 +1014,7 @@ class BadgerOptMonitor(QWidget):
                 "Jump to optimum is not supported for multi-objective optimization yet",
             )
 
-    def jump_to_solution(self, idx):
+    def jump_to_solution(self, idx: int) -> None:
         if self.plot_x_axis:  # x-axis is time
             ts = self.extract_timestamp()
             value = ts[idx] - ts[0]
@@ -936,7 +1028,7 @@ class BadgerOptMonitor(QWidget):
             self.inspector_state.setValue(value)
         self.inspector_variable.setValue(value)
 
-    def set_vars(self):
+    def set_vars(self) -> None:
         df = self.routine.sorted_data
         if self.plot_x_axis:  # x-axis is time
             pos, idx = self.closest_ts(self.inspector_objective.value())
@@ -979,10 +1071,11 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
         )
+        self.sig_vars_set.emit()
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
 
-    def select_x_axis(self, i):
+    def select_x_axis(self, i: int) -> None:
         self.plot_x_axis = i
 
         # Switch the x-axis labels
@@ -1017,11 +1110,11 @@ class BadgerOptMonitor(QWidget):
         self.update_curves()
         self.enable_auto_range()
 
-    def select_x_plot_y_axis(self, i):
+    def select_x_plot_y_axis(self, i: int) -> None:
         self.x_plot_y_axis = i
         self.update_curves()
 
-    def toggle_x_plot_y_axis_relative(self):
+    def toggle_x_plot_y_axis_relative(self) -> None:
         self.x_plot_relative = self.check_relative.isChecked()
 
         # Change axes labels depending on if relative is checked
@@ -1034,7 +1127,7 @@ class BadgerOptMonitor(QWidget):
 
         self.update_curves()
 
-    def on_mouse_click(self, event):
+    def on_mouse_click(self, event) -> None:
         # https://stackoverflow.com/a/64081483
         coor_obj = self.plot_obj.vb.mapSceneToView(event._scenePos)
         if self.vocs and self.vocs.constraint_names:
@@ -1054,18 +1147,18 @@ class BadgerOptMonitor(QWidget):
         if flag:
             self.sync_ins(coor_obj.x())
 
-    def delete_run(self):
+    def delete_run(self) -> None:
         self.sig_del.emit()
 
-    def stop(self):
+    def stop(self) -> None:
         self.sig_stop.emit()
         self.sig_stop_run.emit()
 
-    def register_post_run_action(self, action):
+    def register_post_run_action(self, action) -> None:
         self.post_run_actions.append(action)
 
 
-def add_axes(monitor, ylabel, title, cursor_line, **kwargs):
+def add_axes(monitor, ylabel, title, cursor_line, **kwargs) -> pg.PlotItem:
     plot_obj = monitor.addPlot(title=title, **kwargs)
     plot_obj.setLabel("left", ylabel)
     plot_obj.setLabel("bottom", "iterations")
@@ -1078,7 +1171,7 @@ def add_axes(monitor, ylabel, title, cursor_line, **kwargs):
     return plot_obj
 
 
-def create_cursor_line():
+def create_cursor_line() -> pg.InfiniteLine:
     return pg.InfiniteLine(
         movable=True,
         angle=90,
@@ -1092,7 +1185,7 @@ def create_cursor_line():
     )
 
 
-def set_data(names: List[str], curves: dict, data: pd.DataFrame, ts=None):
+def set_data(names: list[str], curves: dict, data: pd.DataFrame, ts=None) -> None:
     # Split data into live and not live
     live_mask = data["live"].astype(bool)
     live_data = data.loc[live_mask]

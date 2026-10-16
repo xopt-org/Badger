@@ -1,7 +1,8 @@
 import logging
 import time
 from multiprocessing import Process
-from badger.log import get_logging_manager, configure_process_logging
+
+from badger.log import configure_process_logging, get_logging_manager
 
 """
 Note: this test does not have "test" in the filename so pytest does not discover it when running tests in a group.

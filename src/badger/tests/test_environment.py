@@ -1,8 +1,9 @@
 import json
-import pytest
-import numpy as np
-from typing import Dict, List
+from typing import ClassVar
 from unittest.mock import Mock
+
+import numpy as np
+import pytest
 
 from badger.environment import BaseEnvironment, Environment
 from badger.errors import BadgerEnvVarError, BadgerNoInterfaceError
@@ -28,18 +29,20 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {f"x{i}": [-1, 1] for i in range(20)}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {
+                f"x{i}": [-1, 1] for i in range(20)
+            }
+            observables: ClassVar[list[str]] = ["f"]
 
             my_flag: int = 0
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.5 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {ele: 1.0 for ele in observable_names}
 
         env = TestEnv()
@@ -63,8 +66,8 @@ class TestEnvironment:
 
         class TestEnv(Environment):
             name = "test"
-            variables = {"x1": [-1, 1], "x2": [-2, 2]}
-            observables = ["f", "g"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1], "x2": [-2, 2]}
+            observables: ClassVar[list[str]] = ["f", "g"]
 
         env = TestEnv(interface=mock_interface)
 
@@ -90,8 +93,8 @@ class TestEnvironment:
 
         class TestEnv(Environment):
             name = "test"
-            variables = {"x1": [-1, 1]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1]}
+            observables: ClassVar[list[str]] = ["f"]
 
         env = TestEnv()
 
@@ -109,19 +112,19 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1], "x2": [0, 10]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1], "x2": [0, 10]}
+            observables: ClassVar[list[str]] = ["f"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {name: 1.0 for name in observable_names}
 
-            def get_bounds(self, variable_names: List[str]) -> dict[str, float]:
+            def get_bounds(self, variable_names: list[str]) -> dict[str, float]:
                 # Test invalid bounds - should be caught by decorator
                 return {"x1": [1, -1]}  # upper < lower
 
@@ -137,16 +140,16 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1], "x2": [0, 10]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1], "x2": [0, 10]}
+            observables: ClassVar[list[str]] = ["f"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {name: 1.0 for name in observable_names}
 
         env = TestEnv()
@@ -170,16 +173,16 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1], "x2": [-1, 1]}
-            observables = ["f", "g", "h"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1], "x2": [-1, 1]}
+            observables: ClassVar[list[str]] = ["f", "g", "h"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 # Return base observables
                 return {
                     name: {"f": 2.0, "g": 3.0, "h": 1.0}[name]
@@ -204,16 +207,16 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1]}
+            observables: ClassVar[list[str]] = ["f"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.5 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 self._last_set = variable_inputs
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {name: 1.5 for name in observable_names}
 
         env = TestEnv()
@@ -234,8 +237,12 @@ class TestEnvironment:
 
         class TestEnv(Environment):
             name = "test"
-            variables = {"x1": [-1, 1], "x2": [0, 10], "x3": [-5, 5]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {
+                "x1": [-1, 1],
+                "x2": [0, 10],
+                "x3": [-5, 5],
+            }
+            observables: ClassVar[list[str]] = ["f"]
 
         env = TestEnv(interface=mock_interface)
         assert set(env.variable_names) == {"x1", "x2", "x3"}
@@ -245,16 +252,16 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1]}
+            observables: ClassVar[list[str]] = ["f"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {name: 1.0 for name in observable_names}
 
         env = TestEnv()
@@ -265,16 +272,16 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1]}
+            observables: ClassVar[list[str]] = ["f"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {name: 1.0 for name in observable_names}
 
         env = TestEnv()
@@ -290,18 +297,20 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {f"x{i}": [-1, 1] for i in range(20)}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {
+                f"x{i}": [-1, 1] for i in range(20)
+            }
+            observables: ClassVar[list[str]] = ["f"]
 
             my_flag: int = 0
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 return {ele: 1.0 for ele in observable_names}
 
         env = TestEnv()
@@ -344,16 +353,16 @@ class TestEnvironment:
 
         class TestEnv(BaseEnvironment):
             name = "test"
-            variables = {"x1": [-1, 1], "x2": [-1, 1]}
-            observables = ["data", "noise", "signal"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1], "x2": [-1, 1]}
+            observables: ClassVar[list[str]] = ["data", "noise", "signal"]
 
-            def get_variables(self, variable_names: List[str]) -> Dict[str, float]:
+            def get_variables(self, variable_names: list[str]) -> dict[str, float]:
                 return {name: 0.0 for name in variable_names}
 
-            def set_variables(self, variable_inputs: Dict[str, float]):
+            def set_variables(self, variable_inputs: dict[str, float]):
                 pass
 
-            def get_observables(self, observable_names: List[str]) -> Dict[str, float]:
+            def get_observables(self, observable_names: list[str]) -> dict[str, float]:
                 # Return mock data for different observables
                 data_map = {
                     "data": np.array([1, 2, 3, 4, 5]),
@@ -390,8 +399,8 @@ class TestEnvironment:
 
         class TestEnv(Environment):
             name = "test"
-            variables = {"x1": [-1, 1]}
-            observables = ["f"]
+            variables: ClassVar[dict[str, list[float]]] = {"x1": [-1, 1]}
+            observables: ClassVar[list[str]] = ["f"]
             test_param: float = 1.0
 
         # Test with interface config

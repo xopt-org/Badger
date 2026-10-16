@@ -2,9 +2,10 @@
 
 import logging
 from importlib import metadata
-from typing import Dict
+
 from PyQt5.QtCore import QThread
 from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QMessageBox, QStackedWidget
+
 from badger.gui.components.create_process import CreateProcess
 from badger.gui.components.process_manager import ProcessManager
 from badger.gui.mini.pages.home_page import BadgerHomePage
@@ -55,7 +56,7 @@ class BadgerMiniWindow(QMainWindow):
         if thread in self.thread_list:
             self.thread_list.remove(thread)
 
-    def storeSubprocess(self, process_with_args: Dict) -> None:
+    def storeSubprocess(self, process_with_args: dict) -> None:
         logger.info(f"Storing prepared subprocess: {process_with_args}")
         """
         Store the prepared subprocess for later use.
@@ -106,6 +107,11 @@ class BadgerMiniWindow(QMainWindow):
             self.process_manager.close_proccesses()
             monitor.destroy_unused_env()
             return
+        elif monitor.paused:
+            monitor.routine_runner.stop_routine()
+            self.process_manager.close_proccesses()
+            monitor.destroy_unused_env()
+            return
 
         reply = QMessageBox.question(
             self,
@@ -117,14 +123,9 @@ class BadgerMiniWindow(QMainWindow):
         )
 
         if reply == QMessageBox.Yes:
-
-            def close_window():
-                monitor.destroy_unused_env()
-                self.close()
-
-            monitor.register_post_run_action(close_window)
-            monitor.testing = True  # suppress the archive pop-ups
             monitor.routine_runner.stop_routine()
-            event.ignore()
+            self.process_manager.close_proccesses()
+            monitor.destroy_unused_env()
+            return
         else:
             event.ignore()

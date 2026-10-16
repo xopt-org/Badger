@@ -9,15 +9,16 @@ We make use of the logging.handlers classes from the python standard library, ma
 For example usage (in a simple context), see src/badger/tests/test_multiprocess_logging.py
 """
 
-import os
-import datetime
-import logging
-import atexit
+from __future__ import annotations
 
+import atexit
+import logging
+import os
+from datetime import UTC, datetime
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
-from badger.settings import get_user_config_folder
-from badger.settings import init_settings
+
+from badger.settings import get_user_config_folder, init_settings
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ class LoggingManager:
         Get name of the logfile for today, which is in form of:
         "log_<month>_<day>.log"
         """
-        today = datetime.date.today()
+        today = datetime.now(tz=UTC).date()
         log_filename = f"log_{today.year:04d}_{today.month:02d}_{today.day:02d}.log"
         return log_filename
 
@@ -195,11 +196,11 @@ class LoggingManager:
 
 
 def configure_process_logging(
-    log_queue: Queue = None,
+    log_queue: Queue | None = None,
     logger_name: str = "badger",
     log_level: str = "DEBUG",
-    process_name: str = None,
-):
+    process_name: str | None = None,
+) -> None:
     """
     Configure logging in a process to send logs to the shared queue.
     This should be ran in all subprocesses b4 logging, and also in the main process where
