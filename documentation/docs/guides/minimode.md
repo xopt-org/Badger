@@ -126,6 +126,50 @@ Mini Mode defaults to automatic behavior — there is no manual/automatic Mode t
 
 Variable ranges are automatically set around the current value based on template parameters.
 
+Mini Mode uses a **smart run controller** that combines play, pause, resume, and restart into a single button. There is no separate pause button — the primary action button changes behavior based on the current routine state and whether you have edited any parameters since the run started. 
+
+<!-- Screenshot: minimode-run-idle.png — run button with dropdown expanded -->
+  ![Mini Mode run controls](/img/guides/minimode-run-idle.png)
+
+  ### Play Button Behavior
+
+  The play button adapts to context:
+  | State | Button action | What happens |
+|-------|---------------|--------------|
+| Stopped | **Start** | Launches the routine with the current configuration |
+| Running | **Pause** | Suspends the optimization loop; subprocess state is preserved |
+| Paused, no changes | **Resume** | Continues from where the routine paused |
+| Paused, compatible edits (e.g., range changes) | **Reload & resume** | Stops the subprocess, reloads data, and restarts with the new settings |
+| Paused, structural edits (variables/objectives changed) | **Restart** | Fully restarts the routine with the new VOCS |
+
+  The controller decides which branch to take by comparing the current GUI
+  state against the snapshot of the routine that is actively displayed, so
+  you can tweak ranges or algorithm parameters mid-session without manually
+  restarting.
+
+  ### Termination Conditions
+  
+  <!-- Screenshot: minimode-run-running.png — play button with duration indicator -->
+  ![Mini Mode run button during a run](/img/guides/minimode-run-running.png)
+
+  The current termination condition is shown directly on the play button as a duration or iteration indicator. Each time you press play, the termination condition is extended, so pressing play repeatedly gives you a consistent "N more iterations per press" behavior rather than resuming indefinitely.
+
+  ### Run Menu
+  
+  The dropdown next to the play button exposes two actions:
+
+  - **New Run** — forces a fresh routine regardless of current state. Use this when you want to discard the current session and start over.
+  - **Edit Condition** — opens a dialog to configure the termination condition (iteration count, time limit, etc.) without starting a new run. Changes take effect the next time you press play.
+
+  <!-- Screenshot: minimode-edit-condition.png — Edit Condition dialog -->
+  ![Edit termination condition dialog](/img/guides/minimode-edit-condition.png)
+  
+  ### Pause/Resume Details
+
+  - Pausing waits for the subprocess to acknowledge before updating the status bar — the "Routine *name* paused" message appears only once the subprocess has actually suspended, so the UI never falsely reports a pause that has not yet taken effect.
+  - The last sampled point is displayed correctly when a run pauses (previously the UI could lag by one step).
+  - Closing the Mini Mode window while a routine is running or paused terminates the subprocess cleanly rather than leaving it orphaned.
+
 ## History Tab
 
 <!-- Screenshot: history tab showing past runs -->
