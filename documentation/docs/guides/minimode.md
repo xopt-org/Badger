@@ -126,7 +126,7 @@ Mini Mode defaults to automatic behavior — there is no manual/automatic Mode t
 
 Variable ranges are automatically set around the current value based on template parameters.
 
-Mini Mode uses a **smart run controller** that combines play, pause, resume, and restart into a single button. There is no separate pause button — the primary action button changes behavior based on the current routine state and whether you have edited any parameters since the run started. 
+Mini Mode uses a **smart run controller** that combines play, pause, resume, and restart into a single button. There is no separate pause button — the primary action button changes behavior based on the current routine state and whether you have edited any parameters since the run started.
 
 <!-- Screenshot: minimode-run-idle.png — run button with dropdown expanded -->
   ![Mini Mode run controls](/img/guides/minimode-run-idle.png)
@@ -148,14 +148,14 @@ Mini Mode uses a **smart run controller** that combines play, pause, resume, and
   restarting.
 
   ### Termination Conditions
-  
+
   <!-- Screenshot: minimode-run-running.png — play button with duration indicator -->
   ![Mini Mode run button during a run](/img/guides/minimode-run-running.png)
 
   The current termination condition is shown directly on the play button as a duration or iteration indicator. Each time you press play, the termination condition is extended, so pressing play repeatedly gives you a consistent "N more iterations per press" behavior rather than resuming indefinitely.
 
   ### Run Menu
-  
+
   The dropdown next to the play button exposes two actions:
 
   - **New Run** — forces a fresh routine regardless of current state. Use this when you want to discard the current session and start over.
@@ -163,7 +163,7 @@ Mini Mode uses a **smart run controller** that combines play, pause, resume, and
 
   <!-- Screenshot: minimode-edit-condition.png — Edit Condition dialog -->
   ![Edit termination condition dialog](/img/guides/minimode-edit-condition.png)
-  
+
   ### Pause/Resume Details
 
   Pressing the play button while a routine is running pauses it. The subprocess stays alive and holds its state, so resuming continues from exactly where the routine left off rather than reinitializing. The status bar updates to "Routine *name* paused" once the subprocess has confirmed the pause, so the indicator always reflects the actual state of the run.
