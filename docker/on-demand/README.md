@@ -74,8 +74,7 @@ kubectl get pods -n badger-gui -w
 
 ```bash
 # Rebuild and push the updated image
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t pluflou/badger-novnc:latest .
-docker push pluflou/badger-novnc:latest
+docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t pluflou/badger-novnc:latest . && docker push pluflou/badger-novnc:latest
 
 # Rolling restart of all session pods
 kubectl rollout restart statefulset badger-gui -n badger-gui

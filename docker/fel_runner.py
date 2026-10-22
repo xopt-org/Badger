@@ -1,12 +1,11 @@
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from lcls_fel_model import load_model
 from lume.model import LUMEModel
 from lume.variables import Variable
+from lume_pva.runner import PutMode, Runner
 from lume_torch.base import LUMETorchModel
-from lume_pva.runner import Runner
-
-from lcls_fel_model import load_model
 
 
 class FELSurrogate(LUMEModel):
@@ -38,7 +37,11 @@ class FELSurrogate(LUMEModel):
 
 def main():
     model = FELSurrogate()
-    runner = Runner(model)
+    # Ack puts only after the model has re-evaluated, so Badger's read of the
+    # output right after caput(wait=True) sees the new value, not the stale one.
+    # lume-pva defaults to PutMode.Immediate.
+    config = Runner.generate_config(model, put_mode=PutMode.Complete)
+    runner = Runner(model, config=config)
     runner.run()
 
 

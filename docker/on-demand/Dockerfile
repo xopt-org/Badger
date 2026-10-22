@@ -52,7 +52,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 # Install Badger and dependencies
 COPY . /app
 WORKDIR /app
-ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_BADGER_OPT=0.0.0
 RUN pip install --no-cache-dir -e ".[dev]"
 
 # Install latest xopt from main branch
