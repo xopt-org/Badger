@@ -168,7 +168,7 @@ Mini Mode uses a **smart run controller** that combines play, pause, resume, and
 
   Pressing the play button while a routine is running pauses it. The subprocess stays alive and holds its state, so resuming continues from exactly where the routine left off rather than reinitializing. The status bar updates to "Routine *name* paused" once the subprocess has confirmed the pause, so the indicator always reflects the actual state of the run.
 
-  While paused, the last sampled point remains visible in the plots and tables, and you can inspect or edit variable ranges, algorithm parameters, or the termination condition before resuming. The smart run controller (see table above) decides whether the next press of play resumes in place, reloads with your edits, or restarts the routine.
+  While paused, the last sampled point remains visible in the plots and tables, and you can inspect or edit variable ranges, algorithm parameters, or the termination condition before resuming. The smart run controller (see table above) decides whether the next press of play resumes in place, reloads with your edits, or restarts the routine. It may take a few seconds for the routine to pause after pressing the button, since it waits for an in-progress measurement to finish
 
 ## History Tab
 
