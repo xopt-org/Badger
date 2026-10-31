@@ -53,7 +53,7 @@ class BadgerTerminationConditionDialog(QDialog):
         self.save_config = save_config
         self.configs = copy(configs)
         if configs is None:
-            self.configs = {"tc_idx": 0, "max_eval": 42, "max_time": 600, "ftol": 0}
+            self.configs = {"tc_idx": 0, "max_eval": 50, "max_time": 600, "ftol": 0}
 
         self.init_ui()
         self.config_logic()

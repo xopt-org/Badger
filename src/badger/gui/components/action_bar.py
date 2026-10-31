@@ -44,7 +44,12 @@ class SplitTooltipToolButton(QToolButton):
         font.setPixelSize(10)
         self.setFont(font)
 
-    def setDisplayText(self, text: str) -> None:
+    def setNewDisplayText(self, text: str) -> None:
+        self.display_text = text
+        self._last_display_text = text
+        self.update()
+
+    def _setDisplayText(self, text: str) -> None:
         self.display_text = text
         self.update()
 
@@ -55,10 +60,10 @@ class SplitTooltipToolButton(QToolButton):
 
     def hide_text(self) -> None:
         self._last_display_text = self.display_text
-        self.setDisplayText("")
+        self._setDisplayText("")
 
     def show_text(self) -> None:
-        self.setDisplayText(self._last_display_text)
+        self._setDisplayText(self._last_display_text)
 
     def initStyleOption(self, option) -> None:
         super().initStyleOption(option)
@@ -563,4 +568,4 @@ class BadgerActionBar(QWidget):
         self.update_run_button_text(str(tc_text))
 
     def update_run_button_text(self, text: str) -> None:
-        self.btn_stop.setDisplayText(text)
+        self.btn_stop.setNewDisplayText(text)
