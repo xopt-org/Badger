@@ -50,7 +50,7 @@ from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.windows.terminition_condition_dialog import (
+from badger.gui.windows.termination_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
 from badger.settings import init_settings

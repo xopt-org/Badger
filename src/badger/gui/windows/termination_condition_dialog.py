@@ -170,7 +170,7 @@ class BadgerTerminationConditionDialog(QDialog):
         vbox.addWidget(button_set)
 
     def config_logic(self):
-        self.cb.currentIndexChanged.connect(self.terminition_condition_changed)
+        self.cb.currentIndexChanged.connect(self.termination_condition_changed)
         self.btn_cancel.clicked.connect(self.close)
         self.btn_run.clicked.connect(self.run)
         self.sb_max_eval.valueChanged.connect(self.max_eval_changed)
@@ -197,7 +197,7 @@ class BadgerTerminationConditionDialog(QDialog):
             self.run_opt()
         self.close()
 
-    def terminition_condition_changed(self, i):
+    def termination_condition_changed(self, i):
         self.stacks.setCurrentIndex(i)
 
         # Update configs
