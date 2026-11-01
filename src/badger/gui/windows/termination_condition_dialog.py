@@ -5,6 +5,7 @@ number of evaluations or after a maximum elapsed time."""
 from collections.abc import Callable
 from copy import copy
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
@@ -202,6 +203,13 @@ class BadgerTerminationConditionDialog(QDialog):
 
         # Update configs
         self.configs["tc_idx"] = i
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            self.btn_run.click()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def closeEvent(self, event):
         event.accept()
