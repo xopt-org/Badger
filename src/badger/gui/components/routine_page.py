@@ -472,6 +472,7 @@ class BadgerRoutinePage(QWidget):
         if env_name in self.envs:
             i = self.envs.index(env_name)
             self.env_box.cb.setCurrentIndex(i)
+            env_params = self.configs["params"] | env_params
             self.env_box.edit.set_params_from_dict(env_params)
         else:
             raise BadgerEnvNotFoundError(
