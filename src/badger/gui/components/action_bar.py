@@ -3,8 +3,8 @@ docs access, and the extensions palette launcher."""
 
 from importlib import resources
 
-from PyQt5.QtCore import QEvent, QPoint, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon, QPainter, QPaintEvent, QPalette
+from PyQt5.QtCore import QEvent, QPoint, QSize, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QAction,
     QHBoxLayout,
@@ -34,55 +34,19 @@ class SplitTooltipToolButton(QToolButton):
         """
         super().__init__(parent)
         self.menu_tooltip = menu_tooltip
-        self.display_text: str | None = None  # show next termination condition
-        self._last_display_text: str | None = (
-            None  # used to show/hide text while running
-        )
 
         font = QFont()
         font.setWeight(QFont.Normal)
         font.setPixelSize(10)
         self.setFont(font)
 
-    def setNewDisplayText(self, text: str) -> None:
-        self.display_text = text
-        self._last_display_text = text
-        self.update()
-
-    def _setDisplayText(self, text: str) -> None:
-        self.display_text = text
-        self.update()
-
     def setDefaultAction(self, action: QAction) -> None:
         super().setDefaultAction(action)
         self.setIcon(action.icon())
         self.update()
 
-    def hide_text(self) -> None:
-        self._last_display_text = self.display_text
-        self._setDisplayText("")
-
-    def show_text(self) -> None:
-        self._setDisplayText(self._last_display_text)
-
     def initStyleOption(self, option) -> None:
         super().initStyleOption(option)
-        if self.display_text is not None:
-            option.text = self.display_text
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        option = QStyleOptionToolButton()
-        self.initStyleOption(option)
-        painter = QPainter(self)
-        option.text = ""
-        option.toolButtonStyle = Qt.ToolButtonIconOnly
-        self.style().drawComplexControl(QStyle.CC_ToolButton, option, painter, self)
-        painter.setFont(self.font())
-        painter.setPen(option.palette.color(QPalette.ButtonText))
-        text_rect = self.rect().adjusted(self.width() // 2 - 4, 14, -8, 0)
-        painter.drawText(
-            text_rect, Qt.AlignLeft | Qt.AlignVCenter, self.display_text or ""
-        )
 
     def _over_menu_arrow(self, pos: QPoint) -> bool:
         opt = QStyleOptionToolButton()
@@ -412,7 +376,6 @@ class BadgerActionBar(QWidget):
         self.smart_run_action.setIcon(self.icon_play)
         self.run_until_menu_action.setText("Run until")
         self.smart_run_action.setText("Run")
-        self.btn_stop.show_text()
         self.btn_stop.setDisabled(False)
         self.update_stop_menu(True)
 
@@ -534,13 +497,11 @@ class BadgerActionBar(QWidget):
             self.smart_run_action.setText("Run")
             self.run_menu.addAction(self.run_action)
             self.run_menu.addAction(self.run_until_menu_action)
-            self.btn_stop.show_text()
         else:
             self.run_menu.clear()
             self.run_menu.addAction(self.stop_run_action)
             if self.mini_mode:
                 self.run_menu.addAction(self.smart_run_action)
-            self.btn_stop.hide_text()
 
     def open_extensions_palette(self) -> None:
         self.sig_open_extensions_palette.emit()
@@ -564,8 +525,3 @@ class BadgerActionBar(QWidget):
                 tc_text = f"{int(tc.get('max_time', 0))} s"
                 tip = f"Run until: timeout = {tc_text}"
             self.run_until_menu_action.setToolTip(tip)
-
-        self.update_run_button_text(str(tc_text))
-
-    def update_run_button_text(self, text: str) -> None:
-        self.btn_stop.setNewDisplayText(text)
