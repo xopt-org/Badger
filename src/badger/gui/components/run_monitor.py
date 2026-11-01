@@ -40,6 +40,7 @@ from badger.gui.components.analysis_extensions import AnalysisExtension
 from badger.gui.components.extensions_palette import ExtensionsPalette
 from badger.gui.components.pydantic_editor import BadgerPydanticEditor
 from badger.gui.components.routine_runner import BadgerRoutineSubprocess
+from badger.gui.utils import set_busy_cursor, unset_busy_cursor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
 
 # from ...utils import AURORA_PALETTE, FROST_PALETTE
@@ -883,6 +884,7 @@ class BadgerOptMonitor(QWidget):
         if reply != QMessageBox.Yes:
             return
 
+        set_busy_cursor()
         curr_vars = get_current_vars(self.routine)
 
         self.routine.environment.set_variables(
@@ -903,6 +905,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
         )
+        unset_busy_cursor()
         self.sig_env_reset.emit()  # notify reset complete
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
@@ -1054,6 +1057,7 @@ class BadgerOptMonitor(QWidget):
         if reply != QMessageBox.Yes:
             return
 
+        set_busy_cursor()
         curr_vars = get_current_vars(self.routine)
         # Patch the hard limit to the environment
         # TODO: this could lead to unexpected behavior
@@ -1071,6 +1075,7 @@ class BadgerOptMonitor(QWidget):
         self.sig_status.emit(
             f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
         )
+        unset_busy_cursor()
         self.sig_vars_set.emit()
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
