@@ -794,6 +794,8 @@ class BadgerOptMonitor(QWidget):
         self.paused = paused
         if paused:
             self.sig_status.emit(f"Routine {self.routine.name} paused")
+        else:
+            self.enable_auto_range()
         self.sig_paused.emit(paused)
 
     def ctrl_routine(self, status: bool) -> None:
