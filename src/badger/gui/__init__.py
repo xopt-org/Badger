@@ -46,7 +46,7 @@ def on_exit(*args):
 
     TIMER["time"] = None
     print("Goodbye")
-    QApplication.quit()
+    QApplication.closeAllWindows()
 
 
 def on_timeout():
