@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: badger-gui
+  labels:
+    app.kubernetes.io/name: badger-gui
+    app.kubernetes.io/part-of: badger

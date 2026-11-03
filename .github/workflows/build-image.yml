@@ -1,0 +1,128 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker/on-demand/**'
+      - 'src/**'
+      - 'pyproject.toml'
+    paths-ignore:
+      # Prevent the kustomization tag-bump commit from re-triggering this workflow.
+      # (GITHUB_TOKEN pushes already don't re-trigger, but this makes intent explicit.)
+      - 'docker/on-demand/k8s/kustomization.yaml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  BADGER_IMAGE: ghcr.io/${{ github.repository }}/badger-novnc
+  GATEWAY_IMAGE: ghcr.io/${{ github.repository }}/badger-gateway
+
+jobs:
+  build-badger:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push badger-novnc
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/on-demand/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.BADGER_IMAGE }}:latest
+            ${{ env.BADGER_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-gateway:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push badger-gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/on-demand/gateway
+          file: docker/on-demand/gateway/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.GATEWAY_IMAGE }}:latest
+            ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-manifests:
+    # Runs after both images are pushed; commits the new SHA tag into
+    # kustomization.yaml so ArgoCD detects a git change and rolls the pods.
+    #
+    # Requires: Settings → Actions → General → Workflow permissions = "Read and write"
+    # OR grant contents:write in the org/repo Actions settings.
+    # If main is a protected branch requiring PR reviews, you must either add an
+    # exception for github-actions[bot] or use a PAT stored as a repository secret.
+    needs: [build-badger, build-gateway]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          # Use the default GITHUB_TOKEN; push is allowed because the job has
+          # contents:write and GitHub never re-triggers workflows on GITHUB_TOKEN pushes.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install kustomize
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin
+
+      - name: Bump image tags in kustomization.yaml
+        working-directory: docker/on-demand/k8s
+        run: |
+          kustomize edit set image \
+            ghcr.io/xopt-org/badger/badger-novnc:${{ github.sha }} \
+            ghcr.io/xopt-org/badger/badger-gateway:${{ github.sha }}
+
+      - name: Commit and push tag bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docker/on-demand/k8s/kustomization.yaml
+          # Exit cleanly if nothing changed (e.g. workflow_dispatch on same SHA)
+          git diff --cached --quiet && echo "kustomization.yaml unchanged, skipping commit" && exit 0
+          git pull --rebase origin main
+          git commit -m "chore: bump on-demand image tags to ${GITHUB_SHA::8}"
+          git push origin HEAD:main
