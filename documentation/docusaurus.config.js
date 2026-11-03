@@ -45,6 +45,18 @@
       ],
     ],
 
+    // Search index is generated at build time; no external search service needed.
+    themes: [
+      [
+        require.resolve('@easyops-cn/docusaurus-search-local'),
+        {
+          hashed: true,
+          indexBlog: true,
+          highlightSearchTermsOnTargetPage: true,
+        },
+      ],
+    ],
+
     stylesheets: [
       {
         href: 'https://cdn.jsdelivr.net/npm/katex@0.13.24/dist/katex.min.css',
@@ -136,19 +148,6 @@
           theme: lightCodeTheme,
           darkTheme: darkCodeTheme,
           additionalLanguages: ['python'],
-        },
-        algolia: {
-          // The application ID provided by Algolia
-          appId: 'WPJQG5P0EZ',
-          // Public API key: it is safe to commit it
-          apiKey: 'b63157c581646ac999c9ce4c3569e3e3',
-          indexName: 'badger_xopt-org',
-          // Optional: see doc section below
-          contextualSearch: true,
-          // Optional: Algolia search parameters
-          searchParameters: {},
-          // Optional: path for search page that enabled by default (`false` to disable it)
-          searchPagePath: 'search',
         },
       }),
   }
