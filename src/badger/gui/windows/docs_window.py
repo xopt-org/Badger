@@ -4,10 +4,14 @@ clickable navigation links."""
 
 from typing import TYPE_CHECKING
 
+from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QMainWindow,
+    QPushButton,
+    QShortcut,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -43,6 +47,8 @@ class BadgerDocsWindow(QMainWindow):
         self.docs_name = name
         self.docs = ""
         self.plugin_type = plugin_type
+        self.doctype = ""
+        self.history = []  # (name, doctype, scroll position) of pages left via links
 
         self.init_ui()
         self.config_logic()
@@ -59,6 +65,12 @@ class BadgerDocsWindow(QMainWindow):
         toolbar = QWidget()
         hbox_tool = QHBoxLayout(toolbar)
         hbox_tool.setContentsMargins(0, 0, 0, 0)
+        # In the toolbar, so it stays on screen however far the page scrolls
+        self.btn_back = QPushButton("\u25c0 Back")
+        shortcut = QKeySequence(QKeySequence.Back).toString(QKeySequence.NativeText)
+        self.btn_back.setToolTip(f"Back to the previous page ({shortcut})")
+        self.btn_back.setEnabled(False)
+        hbox_tool.addWidget(self.btn_back)
         self.cb_md = cb_md = QCheckBox("Render as Markdown")
         cb_md.setChecked(True)
         hbox_tool.addStretch()
@@ -73,6 +85,8 @@ class BadgerDocsWindow(QMainWindow):
     def config_logic(self):
         self.cb_md.stateChanged.connect(self.refresh_docs_view)
         self.markdown_viewer.anchorClicked.connect(self.handle_link_click)
+        self.btn_back.clicked.connect(self.go_back)
+        QShortcut(QKeySequence.Back, self, activated=self.go_back)
 
     def load_docs(self, subdir: str | None = None):
         """
@@ -106,9 +120,24 @@ class BadgerDocsWindow(QMainWindow):
         subdir : str, optional
             The subdirectory in which the file is located
         """
+        self.history.clear()  # opened afresh
+        self.show_page(name, doctype)
+
+    def show_page(self, name: str, doctype: str = ""):
         self.docs_name = name
+        self.doctype = doctype
         self.setWindowTitle(f"Docs for {doctype.title()} {name}")
         self.load_docs(doctype)
+        self.btn_back.setEnabled(bool(self.history))
+
+    def go_back(self):
+        if not self.history:
+            return
+        name, doctype, scroll = self.history.pop()
+        self.show_page(name, doctype)
+        # after layout: until then the scroll range is 0
+        bar = self.markdown_viewer.verticalScrollBar()
+        QTimer.singleShot(0, lambda: bar.setValue(scroll))
 
     def handle_link_click(self, url: "QUrl") -> None:
         """
@@ -124,9 +153,10 @@ class BadgerDocsWindow(QMainWindow):
         href = url.toString()
 
         # Indicate links not yet supported in GUI docs viewer
+        scroll = self.markdown_viewer.verticalScrollBar().value()
+        self.history.append((self.docs_name, self.doctype, scroll))
         if href.startswith(("https://", "mailto:")):
-            self.docs_name = "external links not yet implemented in GUI docs viewer"
-            self.load_docs()
+            self.show_page("external links not yet implemented in GUI docs viewer")
             return
 
         url_end = href.split("/")[-1].split("#")
@@ -143,7 +173,7 @@ class BadgerDocsWindow(QMainWindow):
         else:
             ptype = ""
 
-        self.update_docs(name=self.docs_name, doctype=ptype)
+        self.show_page(self.docs_name, ptype)
 
     def refresh_docs_view(self):
         if self.cb_md.isChecked():
