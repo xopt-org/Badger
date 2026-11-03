@@ -53,10 +53,10 @@ docker compose up --build
 
 ```bash
 # 1. Build and push both images (must be linux/amd64)
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t pluflou/badger-novnc:latest .
-docker build --platform linux/amd64 -f docker/on-demand/gateway/Dockerfile docker/on-demand/gateway/ -t pluflou/badger-gateway:latest
-docker push pluflou/badger-novnc:latest
-docker push pluflou/badger-gateway:latest
+docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t ghcr.io/xopt-org/badger/badger-novnc:latest .
+docker build --platform linux/amd64 -f docker/on-demand/gateway/Dockerfile docker/on-demand/gateway/ -t ghcr.io/xopt-org/badger/badger-gateway:latest
+docker push ghcr.io/xopt-org/badger/badger-novnc:latest
+docker push ghcr.io/xopt-org/badger/badger-gateway:latest
 
 # 2. Deploy everything (order matters)
 kubectl apply -f docker/on-demand/k8s/namespace.yaml
@@ -74,7 +74,7 @@ kubectl get pods -n badger-gui -w
 
 ```bash
 # Rebuild and push the updated image
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t pluflou/badger-novnc:latest . && docker push pluflou/badger-novnc:latest
+docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t ghcr.io/xopt-org/badger/badger-novnc:latest . && docker push ghcr.io/xopt-org/badger/badger-novnc:latest
 
 # Rolling restart of all session pods
 kubectl rollout restart statefulset badger-gui -n badger-gui
@@ -83,8 +83,8 @@ kubectl rollout restart statefulset badger-gui -n badger-gui
 ### Updating the Gateway (lobby page or nginx config)
 
 ```bash
-docker build --platform linux/amd64 -f docker/on-demand/gateway/Dockerfile docker/on-demand/gateway/ -t pluflou/badger-gateway:latest
-docker push pluflou/badger-gateway:latest
+docker build --platform linux/amd64 -f docker/on-demand/gateway/Dockerfile docker/on-demand/gateway/ -t ghcr.io/xopt-org/badger/badger-gateway:latest
+docker push ghcr.io/xopt-org/badger/badger-gateway:latest
 kubectl rollout restart deployment badger-gateway -n badger-gui
 ```
 
@@ -184,7 +184,7 @@ python -c "import epics; print(epics.caget('GDET:FEE1:241:ENRC'))"
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `ErrImagePull` on gateway pod | Image not pushed or wrong platform | `docker build --platform linux/amd64 ...` then `docker push` |
-| `ErrImagePull` on badger pods | Image not pushed | `docker push pluflou/badger-novnc:latest` |
+| `ErrImagePull` on badger pods | Image not pushed | `docker push ghcr.io/xopt-org/badger/badger-novnc:latest` |
 | Lobby shows all sessions "Offline" | Pods not ready yet or DNS not resolving | `kubectl get pods -n badger-gui` — wait for Running state |
 | Lobby shows "In Use" but session is free | Status server stale after reconnect | Will self-correct within 5s (poll interval) |
 | 502 error on session click | Target pod not ready | Wait ~30s for pod startup, check with `kubectl logs badger-gui-N -n badger-gui` |
