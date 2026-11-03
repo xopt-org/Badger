@@ -1,0 +1,66 @@
+additional_variables: []
+badger_version: 1.5.4
+constraint_formulas: {}
+critical_constraint_names: []
+description: sphere 2d test template
+environment:
+  name: sphere_2d
+  params: {}
+formulas: {}
+generator:
+  adaptive: true
+  name: neldermead
+  vocs:
+    constants: '{}'
+    constraints: '{}'
+    objectives: '{''f'': {''dtype'': None, ''type'': ''MinimizeObjective''}}'
+    observables: '{}'
+    variables: '{''x0'': {''dtype'': None, ''default_value'': None, ''domain'': [0.475,
+      0.525], ''type'': ''ContinuousVariable''}, ''x1'': {''dtype'': None, ''default_value'':
+      None, ''domain'': [0.475, 0.525], ''type'': ''ContinuousVariable''}}'
+initial_point_actions:
+- type: add_curr
+- config:
+    fraction: 0.1
+    method: 0
+    n_points: 3
+  type: add_rand
+name: sphere_2d
+observable_formulas: {}
+relative_to_current: true
+vocs:
+  constants: {}
+  constraints: {}
+  objectives:
+    f:
+      dtype: null
+      type: MinimizeObjective
+  observables: {}
+  variables:
+    x0:
+      default_value: null
+      domain:
+      - 0.475
+      - 0.525
+      dtype: null
+      type: ContinuousVariable
+    x1:
+      default_value: null
+      domain:
+      - 0.475
+      - 0.525
+      dtype: null
+      type: ContinuousVariable
+vrange_hard_limit: {}
+vrange_limit_options:
+  x0:
+    delta: 0.1
+    limit_option_idx: 0
+    ratio_curr: 0.1
+    ratio_full: 0.1
+  x1:
+    delta: 0.1
+    limit_option_idx: 0
+    ratio_curr: 0.1
+    ratio_full: 0.1
+xopt_version: 3.0.1
