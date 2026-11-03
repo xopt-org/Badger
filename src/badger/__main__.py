@@ -3,6 +3,7 @@ sub-commands like `badger routine`, `badger env`, `badger config`, etc."""
 
 import argparse
 import logging
+import multiprocessing as mp
 
 from badger.actions import show_info
 from badger.actions.config import config_settings
@@ -148,6 +149,8 @@ def main():
     parser_config.set_defaults(func=config_settings)
 
     args = parser.parse_args()
+
+    mp.set_start_method("spawn")
 
     setup_logging(args)
 
