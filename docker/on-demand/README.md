@@ -15,7 +15,7 @@ Browser → Ingress (/badger) → Gateway (nginx)
 Each pod runs: `Xvfb → fluxbox → x11vnc → websockify/noVNC → lume-pva FEL model server (EPICS PVs) → Badger GUI + status server`
 
 The FEL surrogate model is **not** run inside Badger. Each pod starts a lume-pva server
-(`fel_runner.py`) that serves the model's inputs and objective as local EPICS PVs; Badger's
+(`sim-servers/lcls_fel/runner.py`) that serves the model's inputs and objective as local EPICS PVs; Badger's
 `lcls_fel_surrogate` environment (an `epics` interface wrapper) reads/writes those PVs, simulating
 the machine interface. `start.sh` launches the model server first and waits for the objective PV
 (`GDET:FEE1:241:ENRC`) to connect before starting the Badger GUI.
@@ -49,43 +49,40 @@ docker compose up --build
 
 ## Kubernetes Deployment
 
-### Initial Setup
+Deployment is GitOps-driven via ArgoCD. The `badger-gui` Application is registered in the
+app-of-apps repo [slaclab/ad-argocd-apps](https://github.com/slaclab/ad-argocd-apps)
+(`apps/badger-gui.yaml`, project `apps/appproject-badger-gui.yaml`) and watches
+`docker/on-demand/k8s/` on `main` with automated sync, prune, and self-heal.
 
-```bash
-# 1. Build and push both images (must be linux/amd64)
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t ghcr.io/xopt-org/badger/badger-novnc:latest .
-docker build --platform linux/amd64 -f docker/on-demand/gateway/Dockerfile docker/on-demand/gateway/ -t ghcr.io/xopt-org/badger/badger-gateway:latest
-docker push ghcr.io/xopt-org/badger/badger-novnc:latest
-docker push ghcr.io/xopt-org/badger/badger-gateway:latest
+### How a change gets deployed
 
-# 2. Deploy everything (order matters)
-kubectl apply -f docker/on-demand/k8s/namespace.yaml
-kubectl apply -f docker/on-demand/k8s/statefulset.yaml
-kubectl apply -f docker/on-demand/k8s/service.yaml
-kubectl apply -f docker/on-demand/k8s/gateway.yaml
-kubectl apply -f docker/on-demand/k8s/daily-restart-cronjob.yaml
-
-# 3. Watch pods come up
-kubectl get pods -n badger-gui -w
-# Expected: badger-gui-0 through badger-gui-19 + badger-gateway-xxxxx
+```
+push to main → .github/workflows/build-image.yml
+  → builds ghcr.io/xopt-org/badger/badger-{novnc,gateway}, tagged :latest and :<sha>
+  → update-manifests job writes :<sha> into k8s/kustomization.yaml and pushes to main
+  → ArgoCD sees the git change and rolls the StatefulSet and gateway
 ```
 
-### Updating After Code Changes
+No manual `kubectl apply` or `rollout restart` is needed. Because self-heal is on, any
+manual change made with `kubectl` (scale, edit, image set) is reverted. Change the manifests
+in git instead.
+
+To redeploy without a code change (e.g. to pick up a new Badger-Plugins commit), run the
+workflow manually from the Actions tab (`workflow_dispatch`).
+
+### One-time setup
+
+- GHCR packages `badger-novnc` and `badger-gateway` are **public** so the cluster pulls
+  without an `imagePullSecret`.
+- Repo secret `DEPLOY_PAT`: a fine-grained PAT with `Contents: write` on `xopt-org/Badger`,
+  owned by an account allowed to bypass branch protection on `main`. CI uses it to push the
+  tag-bump commit.
+
+### Manual build (local testing only)
 
 ```bash
-# Rebuild and push the updated image
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t ghcr.io/xopt-org/badger/badger-novnc:latest . && docker push ghcr.io/xopt-org/badger/badger-novnc:latest
-
-# Rolling restart of all session pods
-kubectl rollout restart statefulset badger-gui -n badger-gui
-```
-
-### Updating the Gateway (lobby page or nginx config)
-
-```bash
-docker build --platform linux/amd64 -f docker/on-demand/gateway/Dockerfile docker/on-demand/gateway/ -t ghcr.io/xopt-org/badger/badger-gateway:latest
-docker push ghcr.io/xopt-org/badger/badger-gateway:latest
-kubectl rollout restart deployment badger-gateway -n badger-gui
+docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t badger-novnc .
+docker build --platform linux/amd64 docker/on-demand/gateway -t badger-gateway
 ```
 
 ## Multi-User Model
@@ -116,25 +113,23 @@ ServiceAccount with a Role scoped to patching the StatefulSet.
 
 ### Scaling
 
-```bash
-# Add more sessions
-kubectl scale statefulset badger-gui -n badger-gui --replicas=30
-```
-
-**Important:** Also update `TOTAL_SESSIONS` in `gateway/lobby.html` to match, then rebuild and push the gateway image.
+Edit `replicas` in `k8s/statefulset.yaml` **and** `TOTAL_SESSIONS` in `gateway/lobby.html`
+in the same commit. Merging to `main` rebuilds the gateway and ArgoCD applies the new
+replica count. `kubectl scale` will be reverted by self-heal.
 
 ## Plugins & Templates
 
 Environment/interface plugins and routine templates are **not** stored in this repo.
 They come from the external [Badger-Plugins](https://github.com/pluflou/Badger-Plugins)
 repo (the fork, for now), which the Dockerfile clones into `/opt/Badger-Plugins` at
-build time. `setup_badger.py` then points Badger at it:
+build time. Override the source with build args `BADGER_PLUGINS_REPO` and
+`BADGER_PLUGINS_REF` (branch or tag). `setup_badger.py` then points Badger at it:
 
 - `BADGER_PLUGIN_ROOT` → `/opt/Badger-Plugins` (its `environments/` and `interfaces/` dirs)
 - `BADGER_TEMPLATE_ROOT` → `/opt/Badger-Plugins/environments/lcls_fel_surrogate/templates`
 
 The `lcls_fel_surrogate` environment is an `epics` interface wrapper — it does **not** run the
-model in-process. It reads/writes the PVs served by `fel_runner.py` (which wraps the
+model in-process. It reads/writes the PVs served by `sim-servers/lcls_fel/runner.py` (which wraps the
 `lcls-fel-model` package via lume-pva; the Dockerfile installs both the model and the lume-pva
 serving stack). To add or change plugins/templates, edit the Badger-Plugins repo and rebuild the
 image — no change to this repo is needed.
@@ -154,7 +149,7 @@ PyTorch autodetects the wrong thread count inside containers. `OMP_NUM_THREADS`,
 
 ## EPICS / FEL Model Serving
 
-The FEL surrogate is served as **local EPICS PVs** by `fel_runner.py` (lume-pva), one server per
+The FEL surrogate is served as **local EPICS PVs** by `sim-servers/lcls_fel/runner.py` (lume-pva), one server per
 pod. Badger connects to it over Channel Access on localhost — no external IOC is involved.
 
 PV traffic is confined to pod-localhost so the 20 sessions don't collide on shared PV names
@@ -183,8 +178,9 @@ python -c "import epics; print(epics.caget('GDET:FEE1:241:ENRC'))"
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `ErrImagePull` on gateway pod | Image not pushed or wrong platform | `docker build --platform linux/amd64 ...` then `docker push` |
-| `ErrImagePull` on badger pods | Image not pushed | `docker push ghcr.io/xopt-org/badger/badger-novnc:latest` |
+| `ErrImagePull` / `ImagePullBackOff` | SHA tag not built, or GHCR package private | Check the `Build and Push Docker Images` run for that commit; confirm both packages are public |
+| ArgoCD app `OutOfSync` after a manual `kubectl` change | Self-heal reverts it | Make the change in git instead |
+| New commit on main but pods didn't roll | `update-manifests` job failed (often `DEPLOY_PAT` expired or lacks bypass) | Check the job log; rotate the secret |
 | Lobby shows all sessions "Offline" | Pods not ready yet or DNS not resolving | `kubectl get pods -n badger-gui` — wait for Running state |
 | Lobby shows "In Use" but session is free | Status server stale after reconnect | Will self-correct within 5s (poll interval) |
 | 502 error on session click | Target pod not ready | Wait ~30s for pod startup, check with `kubectl logs badger-gui-N -n badger-gui` |
@@ -213,9 +209,6 @@ Do **not** add `configuration-snippet` with `proxy_set_header Upgrade/Connection
 
 ## File Structure
 
-The lume-pva model server lives one level up at `docker/fel_runner.py` and is COPYed into the
-image by the Dockerfile.
-
 ```
 docker/on-demand/
 ├── Dockerfile              # Badger + lume-pva + Xvfb + VNC + noVNC image
@@ -223,15 +216,26 @@ docker/on-demand/
 ├── setup_badger.py         # Pre-configures Badger for headless use
 ├── status_server.py        # HTTP endpoint reporting VNC client count
 ├── docker-compose.yml      # Local multi-session testing
+├── sim-servers/            # Simulated machines served as local EPICS PVs (one dir each)
+│   └── lcls_fel/
+│       └── runner.py       # LCLS FEL surrogate via lume-pva
 ├── gateway/
 │   ├── Dockerfile          # nginx gateway image
 │   ├── nginx.conf          # K8s nginx config (uses pod DNS)
 │   ├── nginx.local.conf    # Local docker-compose nginx config
 │   └── lobby.html          # Session picker UI
-└── k8s/
+└── k8s/                    # Watched by ArgoCD
+    ├── kustomization.yaml  # Resource list + image tags (bumped by CI)
     ├── namespace.yaml      # badger-gui namespace
     ├── statefulset.yaml    # 20 Badger session pods
     ├── service.yaml        # Headless service + ingress
     ├── gateway.yaml        # Gateway deployment + service
     └── daily-restart-cronjob.yaml  # Nightly statefulset restart (clears runs)
 ```
+
+### Adding another simulated machine
+
+1. Add `sim-servers/<name>/runner.py` serving the model's PVs.
+2. Install its model package in the `Dockerfile`.
+3. Launch it in `start.sh` (and wait for one of its PVs, as done for the FEL).
+4. Add the matching environment and templates in Badger-Plugins.

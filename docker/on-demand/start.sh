@@ -54,7 +54,7 @@ fi
 # Start the FEL surrogate model server (lume-pva) so it serves the model as EPICS
 # PVs. Badger's lcls_fel_surrogate env (epics interface) reads/writes these PVs.
 echo "Starting FEL surrogate model server (lume-pva)..."
-python /fel_runner.py &
+python /sim-servers/lcls_fel/runner.py &
 FEL_PID=$!
 
 # Wait for the objective PV to connect before launching Badger

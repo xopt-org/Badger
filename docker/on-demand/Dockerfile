@@ -58,12 +58,12 @@ RUN pip install --no-cache-dir -e ".[dev]"
 # Install latest xopt from main branch
 RUN pip install --no-cache-dir git+https://github.com/xopt-org/Xopt.git@main
 
-# Install the LCLS FEL surrogate model (wrapped by fel_runner.py; provides the
-# trained model weights as package data)
+# Install the LCLS FEL surrogate model (wrapped by sim-servers/lcls_fel/runner.py;
+# provides the trained model weights as package data)
 RUN pip install --no-cache-dir git+https://github.com/slaclab/LCLS_FEL_Surrogate.git@main
 
 # Install the lume-pva serving stack (not on PyPI; install from git in dependency
-# order). fel_runner.py uses these to serve the FEL model as EPICS PVs (CA + PVA)
+# order). The sim servers use these to serve models as EPICS PVs (CA + PVA)
 # so Badger talks to it through the epics interface instead of running it in-process.
 RUN pip install --no-cache-dir \
     git+https://github.com/slaclab/lume-base \
@@ -71,15 +71,16 @@ RUN pip install --no-cache-dir \
     git+https://github.com/slac-epics/pvua \
     git+https://github.com/lume-science/lume-pva.git
 
-# FEL surrogate model server (serves the model as EPICS PVs; launched by start.sh
-# before Badger)
-COPY docker/fel_runner.py /fel_runner.py
+# Simulated-machine model servers (serve models as EPICS PVs; launched by start.sh
+# before Badger). One subdirectory per simulated machine.
+COPY docker/on-demand/sim-servers /sim-servers
 
 # Environment/interface plugins + routine templates come from the external
-# Badger-Plugins repo (the fork, for now). setup_badger.py points the plugin and
-# template roots here.
+# Badger-Plugins repo. setup_badger.py points the plugin and template roots here.
+ARG BADGER_PLUGINS_REPO=https://github.com/pluflou/Badger-Plugins.git
+ARG BADGER_PLUGINS_REF=main
 ENV BADGER_PLUGINS_DIR=/opt/Badger-Plugins
-RUN git clone --depth 1 https://github.com/pluflou/Badger-Plugins.git "$BADGER_PLUGINS_DIR"
+RUN git clone --depth 1 --branch "$BADGER_PLUGINS_REF" "$BADGER_PLUGINS_REPO" "$BADGER_PLUGINS_DIR"
 
 # Pre-configure Badger so it doesn't prompt on first launch
 RUN mkdir -p /root/.config && python docker/on-demand/setup_badger.py

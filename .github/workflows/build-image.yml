@@ -7,16 +7,19 @@ on:
       - 'docker/on-demand/**'
       - 'src/**'
       - 'pyproject.toml'
-    paths-ignore:
-      # Prevent the kustomization tag-bump commit from re-triggering this workflow.
-      # (GITHUB_TOKEN pushes already don't re-trigger, but this makes intent explicit.)
-      - 'docker/on-demand/k8s/kustomization.yaml'
+      - '.github/workflows/build-image.yml'
+      # The tag-bump commit is pushed with a PAT, which re-triggers workflows; skip it.
+      - '!docker/on-demand/k8s/kustomization.yaml'
   workflow_dispatch:
+
+concurrency:
+  group: build-image-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
-  BADGER_IMAGE: ghcr.io/${{ github.repository }}/badger-novnc
-  GATEWAY_IMAGE: ghcr.io/${{ github.repository }}/badger-gateway
+  BADGER_IMAGE: ghcr.io/xopt-org/badger/badger-novnc
+  GATEWAY_IMAGE: ghcr.io/xopt-org/badger/badger-gateway
 
 jobs:
   build-badger:
@@ -84,25 +87,19 @@ jobs:
           cache-to: type=gha,mode=max
 
   update-manifests:
-    # Runs after both images are pushed; commits the new SHA tag into
-    # kustomization.yaml so ArgoCD detects a git change and rolls the pods.
-    #
-    # Requires: Settings → Actions → General → Workflow permissions = "Read and write"
-    # OR grant contents:write in the org/repo Actions settings.
-    # If main is a protected branch requiring PR reviews, you must either add an
-    # exception for github-actions[bot] or use a PAT stored as a repository secret.
+    # Commits the new SHA tag into kustomization.yaml so ArgoCD sees a git change
+    # and rolls the pods. Pushes with DEPLOY_PAT (fine-grained PAT, Contents: write
+    # on xopt-org/Badger) so it can bypass branch protection on main.
     needs: [build-badger, build-gateway]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
-          # Use the default GITHUB_TOKEN; push is allowed because the job has
-          # contents:write and GitHub never re-triggers workflows on GITHUB_TOKEN pushes.
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+          token: ${{ secrets.DEPLOY_PAT }}
 
       - name: Install kustomize
         run: |
@@ -113,16 +110,18 @@ jobs:
         working-directory: docker/on-demand/k8s
         run: |
           kustomize edit set image \
-            ghcr.io/xopt-org/badger/badger-novnc:${{ github.sha }} \
-            ghcr.io/xopt-org/badger/badger-gateway:${{ github.sha }}
+            ${{ env.BADGER_IMAGE }}:${{ github.sha }} \
+            ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
 
       - name: Commit and push tag bump
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "badger-deploy-bot"
+          git config user.email "badger-deploy-bot@users.noreply.github.com"
           git add docker/on-demand/k8s/kustomization.yaml
-          # Exit cleanly if nothing changed (e.g. workflow_dispatch on same SHA)
-          git diff --cached --quiet && echo "kustomization.yaml unchanged, skipping commit" && exit 0
+          if git diff --cached --quiet; then
+            echo "kustomization.yaml unchanged, skipping commit"
+            exit 0
+          fi
+          git commit -m "chore(on-demand): deploy ${GITHUB_SHA::8} [skip ci]"
           git pull --rebase origin main
-          git commit -m "chore: bump on-demand image tags to ${GITHUB_SHA::8}"
           git push origin HEAD:main
