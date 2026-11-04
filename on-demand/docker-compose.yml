@@ -2,8 +2,8 @@ services:
   # Simulates a single badger session pod
   badger-gui-0:
     build:
-      context: ../..
-      dockerfile: docker/on-demand/Dockerfile
+      context: ..
+      dockerfile: on-demand/Dockerfile
       platforms:
         - linux/amd64
     environment:
@@ -15,8 +15,8 @@ services:
 
   badger-gui-1:
     build:
-      context: ../..
-      dockerfile: docker/on-demand/Dockerfile
+      context: ..
+      dockerfile: on-demand/Dockerfile
       platforms:
         - linux/amd64
     environment:

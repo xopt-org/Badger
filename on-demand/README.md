@@ -32,7 +32,7 @@ Single instance (no gateway, direct access):
 
 ```bash
 # From the repository root:
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t badger-novnc .
+docker build --platform linux/amd64 -f on-demand/Dockerfile -t badger-novnc .
 docker run --rm -p 6080:6080 badger-novnc
 
 # Open: http://localhost:6080/vnc.html?resize=scale&autoconnect=true
@@ -41,7 +41,7 @@ docker run --rm -p 6080:6080 badger-novnc
 Multi-session local test (with gateway + lobby):
 
 ```bash
-cd docker/on-demand
+cd on-demand
 docker compose up --build
 
 # Lobby at: http://localhost:6080/badger/
@@ -52,7 +52,7 @@ docker compose up --build
 Deployment is GitOps-driven via ArgoCD. The `badger-gui` Application is registered in the
 app-of-apps repo [slaclab/ad-argocd-apps](https://github.com/slaclab/ad-argocd-apps)
 (`apps/badger-gui.yaml`, project `apps/appproject-badger-gui.yaml`) and watches
-`docker/on-demand/k8s/` on `main` with automated sync, prune, and self-heal.
+`on-demand/k8s/` on `main` with automated sync, prune, and self-heal.
 
 ### How a change gets deployed
 
@@ -81,8 +81,8 @@ workflow manually from the Actions tab (`workflow_dispatch`).
 ### Manual build (local testing only)
 
 ```bash
-docker build --platform linux/amd64 -f docker/on-demand/Dockerfile -t badger-novnc .
-docker build --platform linux/amd64 docker/on-demand/gateway -t badger-gateway
+docker build --platform linux/amd64 -f on-demand/Dockerfile -t badger-novnc .
+docker build --platform linux/amd64 on-demand/gateway -t badger-gateway
 ```
 
 ## Multi-User Model
@@ -210,7 +210,7 @@ Do **not** add `configuration-snippet` with `proxy_set_header Upgrade/Connection
 ## File Structure
 
 ```
-docker/on-demand/
+on-demand/
 ├── Dockerfile              # Badger + lume-pva + Xvfb + VNC + noVNC image
 ├── start.sh                # Container entrypoint (model server → Badger + services)
 ├── setup_badger.py         # Pre-configures Badger for headless use

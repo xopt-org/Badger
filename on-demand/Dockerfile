@@ -73,7 +73,7 @@ RUN pip install --no-cache-dir \
 
 # Simulated-machine model servers (serve models as EPICS PVs; launched by start.sh
 # before Badger). One subdirectory per simulated machine.
-COPY docker/on-demand/sim-servers /sim-servers
+COPY on-demand/sim-servers /sim-servers
 
 # Environment/interface plugins + routine templates come from the external
 # Badger-Plugins repo. setup_badger.py points the plugin and template roots here.
@@ -83,13 +83,13 @@ ENV BADGER_PLUGINS_DIR=/opt/Badger-Plugins
 RUN git clone --depth 1 --branch "$BADGER_PLUGINS_REF" "$BADGER_PLUGINS_REPO" "$BADGER_PLUGINS_DIR"
 
 # Pre-configure Badger so it doesn't prompt on first launch
-RUN mkdir -p /root/.config && python docker/on-demand/setup_badger.py
+RUN mkdir -p /root/.config && python on-demand/setup_badger.py
 
 # Status server for lobby health checks
-COPY docker/on-demand/status_server.py /status_server.py
+COPY on-demand/status_server.py /status_server.py
 
 # Startup script
-COPY docker/on-demand/start.sh /start.sh
+COPY on-demand/start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE ${NOVNC_PORT}

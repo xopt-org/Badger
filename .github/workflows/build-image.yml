@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docker/on-demand/**'
+      - 'on-demand/**'
       - 'src/**'
       - 'pyproject.toml'
       - '.github/workflows/build-image.yml'
       # The tag-bump commit is pushed with a PAT, which re-triggers workflows; skip it.
-      - '!docker/on-demand/k8s/kustomization.yaml'
+      - '!on-demand/k8s/kustomization.yaml'
   workflow_dispatch:
 
 concurrency:
@@ -45,7 +45,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/on-demand/Dockerfile
+          file: on-demand/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
@@ -76,8 +76,8 @@ jobs:
       - name: Build and push badger-gateway
         uses: docker/build-push-action@v6
         with:
-          context: docker/on-demand/gateway
-          file: docker/on-demand/gateway/Dockerfile
+          context: on-demand/gateway
+          file: on-demand/gateway/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
@@ -107,7 +107,7 @@ jobs:
             | tar xz -C /usr/local/bin
 
       - name: Bump image tags in kustomization.yaml
-        working-directory: docker/on-demand/k8s
+        working-directory: on-demand/k8s
         run: |
           kustomize edit set image \
             ${{ env.BADGER_IMAGE }}:${{ github.sha }} \
@@ -117,7 +117,7 @@ jobs:
         run: |
           git config user.name "badger-deploy-bot"
           git config user.email "badger-deploy-bot@users.noreply.github.com"
-          git add docker/on-demand/k8s/kustomization.yaml
+          git add on-demand/k8s/kustomization.yaml
           if git diff --cached --quiet; then
             echo "kustomization.yaml unchanged, skipping commit"
             exit 0

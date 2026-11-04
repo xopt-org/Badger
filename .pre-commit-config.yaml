@@ -15,7 +15,7 @@ repos:
       - id: check-xml
       - id: check-yaml
         # Multi-document YAML is standard for Kubernetes manifests; exclude k8s/ dir.
-        exclude: "^(python/src/badger/_version.py|docker/on-demand/k8s/.*)$"
+        exclude: "^(python/src/badger/_version.py|on-demand/k8s/.*)$"
 
   - repo: local
     hooks:
