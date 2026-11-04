@@ -2,7 +2,7 @@
 
 import json
 import subprocess
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class StatusHandler(BaseHTTPRequestHandler):
@@ -28,11 +28,12 @@ class StatusHandler(BaseHTTPRequestHandler):
                 capture_output=True,
                 text=True,
                 timeout=2,
+                check=False,
             )
             lines = result.stdout.strip().split("\n")
             # First line is header, remaining are connections
             return max(0, len(lines) - 1)
-        except Exception:
+        except (OSError, subprocess.SubprocessError):
             return 0
 
     def log_message(self, format, *args):
