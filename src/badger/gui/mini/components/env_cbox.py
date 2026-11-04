@@ -694,14 +694,13 @@ class BadgerEnvBox(QWidget):
     def filter_sta(self):
         self.sta_table.update_keyword(self.edit_sta.text())
 
-    def update_template_cb(self, template_name):
+    def update_template_cb(self, template_name: str) -> None:
         """
         Change the displayed template name without emitting signals to
         reload
         """
         template_cb = self.template_cb
-        if ".yaml" in template_name:
-            template_name = template_name.replace(".yaml", "")
+        template_name = template_name.removesuffix(".yaml")
         if template_cb is not None:
             index = template_cb.findText(template_name)
             template_cb.blockSignals(True)

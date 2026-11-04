@@ -701,7 +701,10 @@ class BadgerRoutinePage(QWidget):
             with open(template_path, "w") as stream:
                 yaml.dump(template_dict, stream)
                 template_name = os.path.splitext(os.path.basename(template_path))[0]
-                self.env_box.update_template_cb(template_name)
+                expected_path = os.path.join(self.template_dir, template_name + ".yaml")
+                if os.path.realpath(template_path) == os.path.realpath(expected_path):
+                    # add to dropdown if saved to expected template_dir
+                    self.env_box.update_template_cb(template_name)
                 self.sig_save_template.emit(
                     f"Current routine options saved to template: {os.path.basename(template_path)}"
                 )
