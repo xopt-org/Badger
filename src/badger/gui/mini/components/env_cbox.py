@@ -202,11 +202,18 @@ class TemplateSelectorRow(QFrame):
         self.load_template_button.setFixedSize(96, 24)
         self.load_template_button.setFixedHeight(24)
 
+        self.save_template_button = QPushButton("Save Template")
+        self.save_template_button.setObjectName("TemplateSelectorButton")
+        self.save_template_button.setToolTip("Save current parameters as new template")
+        self.save_template_button.setFixedSize(96, 24)
+
         layout.addWidget(self.label)
         layout.addSpacing(6)
         layout.addWidget(self.template_cb)
         layout.addSpacing(14)
         layout.addWidget(self.load_template_button)
+        layout.addSpacing(6)
+        layout.addWidget(self.save_template_button)
         layout.addStretch()
 
         self.template_cb.currentIndexChanged.connect(self.sync_selection_state)
@@ -275,6 +282,7 @@ class BadgerEnvBox(QWidget):
         self.template_row = TemplateSelectorRow(LABEL_WIDTH, self)
         self.template_cb = self.template_row.template_cb
         self.load_template_button = self.template_row.load_template_button
+        self.save_template_button = self.template_row.save_template_button
 
         config_singleton = init_settings()
         BADGER_PLUGIN_ROOT = config_singleton.read_value("BADGER_PLUGIN_ROOT")
@@ -686,14 +694,13 @@ class BadgerEnvBox(QWidget):
     def filter_sta(self):
         self.sta_table.update_keyword(self.edit_sta.text())
 
-    def update_template_cb(self, template_name):
+    def update_template_cb(self, template_name: str) -> None:
         """
         Change the displayed template name without emitting signals to
         reload
         """
         template_cb = self.template_cb
-        if ".yaml" in template_name:
-            template_name = template_name.replace(".yaml", "")
+        template_name = template_name.removesuffix(".yaml")
         if template_cb is not None:
             index = template_cb.findText(template_name)
             template_cb.blockSignals(True)

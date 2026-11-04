@@ -263,7 +263,7 @@ class BadgerRoutinePage(QWidget):
         # self.history_browser.history_tree_widget.itemSelectionChanged.connect(
         #    lambda: self.env_box.template_cb.setCurrentIndex(-1)
         # )
-        # self.save_template_button.clicked.connect(self.save_template_yaml)
+        self.env_box.save_template_button.clicked.connect(self.save_template_yaml)
         self.env_box.algo_cb.currentIndexChanged.connect(self.select_generator)
         self.env_box.algo_cb.currentIndexChanged.connect(
             lambda: self.env_box.edit_algo_params.setMinimumHeight(
@@ -700,6 +700,11 @@ class BadgerRoutinePage(QWidget):
         try:
             with open(template_path, "w") as stream:
                 yaml.dump(template_dict, stream)
+                template_name = os.path.splitext(os.path.basename(template_path))[0]
+                expected_path = os.path.join(self.template_dir, template_name + ".yaml")
+                if os.path.realpath(template_path) == os.path.realpath(expected_path):
+                    # add to dropdown if saved to expected template_dir
+                    self.env_box.update_template_cb(template_name)
                 self.sig_save_template.emit(
                     f"Current routine options saved to template: {os.path.basename(template_path)}"
                 )
