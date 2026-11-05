@@ -74,9 +74,10 @@ workflow manually from the Actions tab (`workflow_dispatch`).
 
 - GHCR packages `badger-novnc` and `badger-gateway` are **public** so the cluster pulls
   without an `imagePullSecret`.
-- Repo secret `DEPLOY_PAT`: a fine-grained PAT with `Contents: write` on `xopt-org/Badger`,
-  owned by an account allowed to bypass branch protection on `main`. CI uses it to push the
-  tag-bump commit.
+- A GitHub App (e.g. `badger-deploy-bot`) installed on `xopt-org/Badger` with
+  `Contents: Read and write`, and allowed to bypass branch protection on `main`. CI uses it
+  to push the tag-bump commit. Its Client ID is the repo variable `DEPLOY_APP_CLIENT_ID` and
+  its private key is the repo secret `DEPLOY_APP_PRIVATE_KEY`.
 
 ### Manual build (local testing only)
 
@@ -180,7 +181,7 @@ python -c "import epics; print(epics.caget('GDET:FEE1:241:ENRC'))"
 |---------|-------|-----|
 | `ErrImagePull` / `ImagePullBackOff` | SHA tag not built, or GHCR package private | Check the `Build and Push Docker Images` run for that commit; confirm both packages are public |
 | ArgoCD app `OutOfSync` after a manual `kubectl` change | Self-heal reverts it | Make the change in git instead |
-| New commit on main but pods didn't roll | `update-manifests` job failed (often `DEPLOY_PAT` expired or lacks bypass) | Check the job log; rotate the secret |
+| New commit on main but pods didn't roll | `update-manifests` job failed (app not installed on the repo, key revoked, or app missing from the `main` bypass list) | Check the job log; fix the app setup or generate a new private key |
 | Lobby shows all sessions "Offline" | Pods not ready yet or DNS not resolving | `kubectl get pods -n badger-gui` — wait for Running state |
 | Lobby shows "In Use" but session is free | Status server stale after reconnect | Will self-correct within 5s (poll interval) |
 | 502 error on session click | Target pod not ready | Wait ~30s for pod startup, check with `kubectl logs badger-gui-N -n badger-gui` |
