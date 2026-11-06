@@ -1,0 +1,140 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'on-demand/**'
+      - 'src/**'
+      - 'pyproject.toml'
+      - '.github/workflows/build-image.yml'
+      # The tag-bump commit is pushed with an App token, which re-triggers workflows; skip it.
+      - '!on-demand/k8s/kustomization.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  BADGER_IMAGE: ghcr.io/xopt-org/badger/badger-novnc
+  GATEWAY_IMAGE: ghcr.io/xopt-org/badger/badger-gateway
+
+jobs:
+  build-badger:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push badger-novnc
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: on-demand/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.BADGER_IMAGE }}:latest
+            ${{ env.BADGER_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-gateway:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push badger-gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: on-demand/gateway
+          file: on-demand/gateway/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.GATEWAY_IMAGE }}:latest
+            ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-manifests:
+    # Commits the new SHA tag into kustomization.yaml so ArgoCD sees a git change
+    # and rolls the pods. Pushes as a GitHub App (Contents: write on xopt-org/Badger)
+    # that is allowed to bypass branch protection on main.
+    needs: [build-badger, build-gateway]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Get GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.DEPLOY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+
+      - name: Get GitHub App bot user ID
+        id: bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: echo "id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}%5Bbot%5D" --jq .id)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Install kustomize
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin
+
+      - name: Bump image tags in kustomization.yaml
+        working-directory: on-demand/k8s
+        run: |
+          kustomize edit set image \
+            ${{ env.BADGER_IMAGE }}:${{ github.sha }} \
+            ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
+
+      - name: Commit and push tag bump
+        run: |
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.bot-user.outputs.id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git add on-demand/k8s/kustomization.yaml
+          if git diff --cached --quiet; then
+            echo "kustomization.yaml unchanged, skipping commit"
+            exit 0
+          fi
+          git commit -m "chore(on-demand): deploy ${GITHUB_SHA::8} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
