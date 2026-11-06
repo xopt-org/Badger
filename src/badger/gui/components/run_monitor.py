@@ -887,27 +887,30 @@ class BadgerOptMonitor(QWidget):
             return
 
         set_busy_cursor()
-        curr_vars = get_current_vars(self.routine)
+        try:
+            curr_vars = get_current_vars(self.routine)
 
-        self.routine.environment.set_variables(
-            dict(zip(self.vocs.variable_names, self.init_vars))
-        )
+            self.routine.environment.set_variables(
+                dict(zip(self.vocs.variable_names, self.init_vars))
+            )
 
-        self.jump_to_solution(0)
-        self.sig_inspect.emit(0)
-        # Center around the zero position
-        if self.plot_x_axis:  # x-axis is time
-            pos, _ = self.closest_ts(self.inspector_objective.value())
-        else:
-            pos = int(self.inspector_objective.value())
-        x_range = self.plot_var.getViewBox().viewRange()[0]
-        delta = (x_range[1] - x_range[0]) / 2
-        self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
+            self.jump_to_solution(0)
+            self.sig_inspect.emit(0)
+            # Center around the zero position
+            if self.plot_x_axis:  # x-axis is time
+                pos, _ = self.closest_ts(self.inspector_objective.value())
+            else:
+                pos = int(self.inspector_objective.value())
+            x_range = self.plot_var.getViewBox().viewRange()[0]
+            delta = (x_range[1] - x_range[0]) / 2
+            self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
 
-        self.sig_status.emit(
-            f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
-        )
-        unset_busy_cursor()
+            self.sig_status.emit(
+                f"Reset environment: Env vars {curr_vars} -> {self.init_vars}"
+            )
+        finally:
+            # cleanup busy cursor if exception was caught without opening error dialog
+            unset_busy_cursor()
         self.sig_env_reset.emit()  # notify reset complete
         # QMessageBox.information(self, 'Reset Environment',
         #                         f'Env vars {curr_vars} -> {self.init_vars}')
@@ -1060,24 +1063,29 @@ class BadgerOptMonitor(QWidget):
             return
 
         set_busy_cursor()
-        curr_vars = get_current_vars(self.routine)
-        # Patch the hard limit to the environment
-        # TODO: this could lead to unexpected behavior
-        # since we patched the class variable directly
-        # there ought to be a better way to do this
-        if self.routine.vrange_hard_limit:
-            self.routine.environment.variables.update(self.routine.vrange_hard_limit)
-        self.routine.environment.set_variables(dict(zip(variable_names, solution)))
-        # center around the inspector
-        x_range = self.plot_var.getViewBox().viewRange()[0]
-        delta = (x_range[1] - x_range[0]) / 2
-        self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
+        try:
+            curr_vars = get_current_vars(self.routine)
+            # Patch the hard limit to the environment
+            # TODO: this could lead to unexpected behavior
+            # since we patched the class variable directly
+            # there ought to be a better way to do this
+            if self.routine.vrange_hard_limit:
+                self.routine.environment.variables.update(
+                    self.routine.vrange_hard_limit
+                )
+            self.routine.environment.set_variables(dict(zip(variable_names, solution)))
+            # center around the inspector
+            x_range = self.plot_var.getViewBox().viewRange()[0]
+            delta = (x_range[1] - x_range[0]) / 2
+            self.plot_var.setXRange(pos - delta, pos + delta, padding=0)
 
-        updated_vars = get_current_vars(self.routine)
-        self.sig_status.emit(
-            f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
-        )
-        unset_busy_cursor()
+            updated_vars = get_current_vars(self.routine)
+            self.sig_status.emit(
+                f"Dial in solution: {[f'{variable_names[i]}: {round(curr_vars[i], 4)} -> {round(updated_vars[i], 4)}' for i in range(len(variable_names))]}"
+            )
+        finally:
+            # cleanup busy cursor if exception was caught without opening error dialog
+            unset_busy_cursor()
         self.sig_vars_set.emit()
         # QMessageBox.information(
         #     self, 'Set Environment', f'Env vars have been set to {solution}')
