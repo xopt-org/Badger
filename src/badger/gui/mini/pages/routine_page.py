@@ -414,6 +414,7 @@ class BadgerRoutinePage(QWidget):
             # if this changes the selected env, the ui update will trigger routine_page.select_env
             # to load the new environment
             self.env_box.set_selected_env_name(env_name)
+            env_params = self.configs["params"] | env_params
             self.env_box.edit_env_params.set_params_from_dict(env_params)
 
         else:
