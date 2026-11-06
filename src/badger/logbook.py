@@ -23,8 +23,7 @@ elif not os.path.exists(BADGER_LOGBOOK_ROOT):
 
 
 def send_to_logbook(routine, widget=None):
-    from re import sub
-    from xml.etree import ElementTree
+    import elog_client
 
     log_text = ""
     routine_name = routine.name
@@ -50,53 +49,26 @@ def send_to_logbook(routine, widget=None):
     log_text += f"Environment name: {env_name}\n"
     log_text += f"Optimization algorithm: {generator_name}\n"
     log_text += f"Data location: {data_path}\n"
-
     log_text += f"Log location: {BADGER_LOGBOOK_ROOT}\n"
 
-    # Generate the xml data
     curr_time = datetime.now(tz=UTC)
     if os.name == "nt":
-        timestr = curr_time.strftime("%Y-%m-%dT%H%M%S")
+        timestr = curr_time.strftime("%Y-%m-%dT%H%M%S-00")
     else:
-        timestr = curr_time.strftime("%Y-%m-%dT%H:%M:%S")
-    log_entry = ElementTree.Element(None)
-    severity = ElementTree.SubElement(log_entry, "severity")
-    location = ElementTree.SubElement(log_entry, "location")
-    keywords = ElementTree.SubElement(log_entry, "keywords")
-    time = ElementTree.SubElement(log_entry, "time")
-    isodate = ElementTree.SubElement(log_entry, "isodate")
-    log_user = ElementTree.SubElement(log_entry, "author")
-    category = ElementTree.SubElement(log_entry, "category")
-    title = ElementTree.SubElement(log_entry, "title")
-    metainfo = ElementTree.SubElement(log_entry, "metainfo")
-    imageFile = ElementTree.SubElement(log_entry, "link")
-    imageFile.text = timestr + "-00.ps"
-    thumbnail = ElementTree.SubElement(log_entry, "file")
-    thumbnail.text = timestr + "-00.png"
-    text = ElementTree.SubElement(log_entry, "text")
-    log_entry.attrib["type"] = "LOGENTRY"
-    category.text = "USERLOG"
-    location.text = "not set"
-    severity.text = "NONE"
-    keywords.text = "none"
-    time.text = curr_time.strftime("%H:%M:%S")
-    isodate.text = curr_time.strftime("%Y-%m-%d")
-    metainfo.text = timestr + "-00.xml"
-    log_user.text = " "
-    title.text = "Badger"
-    text.text = log_text
-    if text.text == "":
-        text.text = " "  # If field is truly empty, ElementTree leaves off tag entirely which causes logbook parser to fail
+        timestr = curr_time.strftime("%Y-%m-%dT%H:%M:%S-00")
+    file_name = os.path.join(BADGER_LOGBOOK_ROOT, f"{timestr}.png")
+    desired_log = (
+        "physics_lcls2elog"
+        if "lcls2" in BADGER_LOGBOOK_ROOT
+        else "physics_facetelog"
+        if "facet" in BADGER_LOGBOOK_ROOT
+        else "physics_lclselog"
+    )
 
-    fileName = os.path.join(BADGER_LOGBOOK_ROOT, metainfo.text)
-    fileName = fileName.rstrip(".xml")
-    with open(fileName + ".xml", "w") as xmlFile:
-        rawString = ElementTree.tostring(log_entry, "utf-8").decode("utf-8")
-        parsedString = sub(r"(?=<[^/].*>)", "\n", rawString)
-        xmlString = parsedString[1:]
-        xmlFile.write(xmlString)
-        xmlFile.write("\n")  # Close with newline so cron job parses correctly
-    screenshot(widget, f"{fileName}.png")
+    screenshot(widget, file_name)
+    elog_client.post(
+        title="Badger", body=log_text, file_paths=[file_name], logbooks=[desired_log]
+    )
 
 
 def screenshot(widget, filename):
@@ -113,8 +85,4 @@ def screenshot(widget, filename):
     img = Image.open(filename)
     if img.mode in ("RGBA", "LA"):
         # https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html?highlight=eps#eps
-        # logger.warning(f'Current figure mode "{img.mode}" cannot be directly saved to .ps and will be converted to "RGB" mode')
         img = img.convert("RGB")
-    # img = img.scaled(400, 600)
-    name = os.path.splitext(filename)[0]
-    img.save(f"{name}.ps")
