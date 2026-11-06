@@ -5,6 +5,7 @@ number of evaluations or after a maximum elapsed time."""
 from collections.abc import Callable
 from copy import copy
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QComboBox,
     QDialog,
@@ -53,7 +54,7 @@ class BadgerTerminationConditionDialog(QDialog):
         self.save_config = save_config
         self.configs = copy(configs)
         if configs is None:
-            self.configs = {"tc_idx": 0, "max_eval": 42, "max_time": 600, "ftol": 0}
+            self.configs = {"tc_idx": 0, "max_eval": 50, "max_time": 600, "ftol": 0}
 
         self.init_ui()
         self.config_logic()
@@ -170,7 +171,7 @@ class BadgerTerminationConditionDialog(QDialog):
         vbox.addWidget(button_set)
 
     def config_logic(self):
-        self.cb.currentIndexChanged.connect(self.terminition_condition_changed)
+        self.cb.currentIndexChanged.connect(self.termination_condition_changed)
         self.btn_cancel.clicked.connect(self.close)
         self.btn_run.clicked.connect(self.run)
         self.sb_max_eval.valueChanged.connect(self.max_eval_changed)
@@ -197,11 +198,18 @@ class BadgerTerminationConditionDialog(QDialog):
             self.run_opt()
         self.close()
 
-    def terminition_condition_changed(self, i):
+    def termination_condition_changed(self, i):
         self.stacks.setCurrentIndex(i)
 
         # Update configs
         self.configs["tc_idx"] = i
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            self.btn_run.click()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def closeEvent(self, event):
         event.accept()

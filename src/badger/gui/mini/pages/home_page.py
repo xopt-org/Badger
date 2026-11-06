@@ -50,7 +50,7 @@ from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.windows.terminition_condition_dialog import (
+from badger.gui.windows.termination_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
 from badger.settings import init_settings
@@ -312,6 +312,9 @@ class BadgerHomePage(QWidget):
             self.run_monitor.open_extensions_palette
         )
         self.run_action_bar.sig_update_tc.connect(self.edit_termination_condition)
+        self.status_bar.sig_edit_termination_condition.connect(
+            self.edit_termination_condition
+        )
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 
@@ -334,6 +337,7 @@ class BadgerHomePage(QWidget):
         initial_tc = {"tc_idx": 0, "max_eval": 50, "max_time": 300, "ftol": 0}
         self.run_monitor.save_termination_condition(initial_tc)
         self.run_action_bar.update_run_tooltip(initial_tc)
+        self.status_bar.set_termination_condition(initial_tc)
 
     def update_saved_values_from_monitor(self):
         """
@@ -569,6 +573,9 @@ class BadgerHomePage(QWidget):
             dlg.exec()
         finally:
             self.tc_dialog = None
+            self.status_bar.set_termination_condition(
+                self.run_monitor.termination_condition
+            )
         self.run_action_bar.update_run_tooltip(self.run_monitor.termination_condition)
 
     def termination_updated(self, tc: dict) -> None:
