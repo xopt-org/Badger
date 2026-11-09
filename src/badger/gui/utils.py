@@ -102,24 +102,19 @@ def build_bax_results_file(folder_id: str, create_dir: bool = False) -> str:
 
 
 def filter_generator_config(name: str, config: dict[str, Any]) -> dict[str, Any]:
+    """Select GUI parameters, including shared Bayesian generator settings."""
     filtered_config: dict[str, Any] = {}
     if name == "neldermead":
         filtered_config["adaptive"] = config["adaptive"]
     elif name == "expected_improvement":
         filtered_config["turbo_controller"] = config["turbo_controller"]
-        filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
-        filtered_config["max_travel_distances"] = config["max_travel_distances"]
     elif name == "upper_confidence_bound":
         filtered_config["turbo_controller"] = config["turbo_controller"]
-        filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
-        filtered_config["max_travel_distances"] = config["max_travel_distances"]
         filtered_config["beta"] = config["beta"]
     elif name == "rcds":
         filtered_config["noise"] = config["noise"]
         filtered_config["step"] = config["step"]
     elif name == "mobo":
-        filtered_config["numerical_optimizer"] = config["numerical_optimizer"]
-        filtered_config["max_travel_distances"] = config["max_travel_distances"]
         filtered_config["reference_point"] = config["reference_point"]
     elif name == "bax":
         filtered_config = config
@@ -129,6 +124,14 @@ def filter_generator_config(name: str, config: dict[str, Any]) -> dict[str, Any]
 
     else:
         filtered_config = config
+
+    if name in {"expected_improvement", "upper_confidence_bound", "mobo", "bax"}:
+        filtered_config = {
+            **filtered_config,
+            "numerical_optimizer": config["numerical_optimizer"],
+            "max_travel_distances": config["max_travel_distances"],
+            "n_interpolate_points": config.get("n_interpolate_points"),
+        }
 
     # Filter out all supports_* keys from the config dictionary
     filtered_config = {
