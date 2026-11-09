@@ -25,11 +25,11 @@ class TestFactory:
 
                 gen_class(vocs=test_vocs, **gen_config)
             elif name in [
-                "multi_fidelity", 
-                "extremum_seeking", 
-                "neldermead", 
-                "rcds", 
-                "scipy"
+                "multi_fidelity",
+                "extremum_seeking",
+                "neldermead",
+                "rcds",
+                "scipy",
             ]:
                 test_vocs = deepcopy(TEST_VOCS_BASE)
                 test_vocs.constraints = {}
