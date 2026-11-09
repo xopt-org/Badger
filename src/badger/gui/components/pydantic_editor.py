@@ -59,6 +59,8 @@ from xopt.generators.bayesian.bayesian_generator import BayesianGenerator
 from xopt.generators.bayesian.turbo import TurboController
 from xopt.numerical_optimizer import NumericalOptimizer
 
+from badger.gui.utils import MouseWheelWidgetAdjustmentGuard
+
 logger = logging.getLogger(__name__)
 
 
@@ -308,6 +310,7 @@ class BadgerResolvedType:
                 widget.listChanged.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is float:
             widget = QDoubleSpinBox()
+            widget.installEventFilter(MouseWheelWidgetAdjustmentGuard(widget))
             widget.setRange(float("-inf"), float("inf"))
             widget.setDecimals(6)
             if default is not None and not isinstance(default, PydanticUndefinedType):
@@ -328,6 +331,7 @@ class BadgerResolvedType:
                 widget.editingFinished.connect(lambda: handle_changed(editor_info))
         elif resolved_type.main is int:
             widget = QSpinBox()
+            widget.installEventFilter(MouseWheelWidgetAdjustmentGuard(widget))
             widget.setRange(-(2**31), 2**31 - 1)  # int32 min/max
             if default is not None and not isinstance(default, PydanticUndefinedType):
                 widget.setValue(convert_to_type(default, int))
