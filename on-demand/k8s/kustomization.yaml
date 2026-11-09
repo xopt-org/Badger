@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- namespace.yaml
+- statefulset.yaml
+- gateway.yaml
+- service.yaml
+- daily-restart-cronjob.yaml
+
+# CI updates these tags on every push to main via `kustomize edit set image`.
+# ArgoCD detects the git change and rolls the pods to the new SHA-tagged image.
+images:
+- name: ghcr.io/xopt-org/badger/badger-gateway
+  newTag: 0a80259a04a79f46200d8ea0dc1089850358f14c
+- name: ghcr.io/xopt-org/badger/badger-novnc
+  newTag: 0a80259a04a79f46200d8ea0dc1089850358f14c

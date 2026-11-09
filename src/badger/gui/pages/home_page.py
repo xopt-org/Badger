@@ -56,10 +56,10 @@ from badger.gui.utils import build_bax_results_file
 
 # from PyQt5.QtGui import QBrush, QColor
 from badger.gui.windows.message_dialog import BadgerScrollableMessageBox
-from badger.gui.windows.termination_reached_dialog import BadgerTerminationReachedDialog
-from badger.gui.windows.terminition_condition_dialog import (
+from badger.gui.windows.termination_condition_dialog import (
     BadgerTerminationConditionDialog,
 )
+from badger.gui.windows.termination_reached_dialog import BadgerTerminationReachedDialog
 from badger.settings import init_settings
 from badger.utils import get_header
 
@@ -290,6 +290,9 @@ class BadgerHomePage(QWidget):
             self.run_monitor.open_extensions_palette
         )
         self.run_action_bar.sig_update_tc.connect(self.start_run_until)
+        self.status_bar.sig_edit_termination_condition.connect(
+            self.edit_termination_condition
+        )
 
         self.sig_routine_invalid.connect(self.run_action_bar.routine_invalid)
 
@@ -613,6 +616,25 @@ class BadgerHomePage(QWidget):
             dlg.exec()
         finally:
             self.tc_dialog = None
+            self.status_bar.set_termination_condition(
+                self.run_monitor.termination_condition
+            )
+
+    def edit_termination_condition(self) -> None:
+        dlg = BadgerTerminationConditionDialog(
+            self,
+            run_opt=None,
+            save_config=self.run_monitor.save_termination_condition,
+            configs=self.run_monitor.termination_condition,
+        )
+        self.tc_dialog = dlg
+        try:
+            dlg.exec()
+        finally:
+            self.tc_dialog = None
+            self.status_bar.set_termination_condition(
+                self.run_monitor.termination_condition
+            )
 
     def new_run(self) -> None:
         logger.info("Creating new run.")

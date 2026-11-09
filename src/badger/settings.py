@@ -462,6 +462,10 @@ def init_settings(config_arg: str | None = None) -> ConfigSingleton:
 
     if config_arg is None:
         config_path = get_user_config_folder()
+        try:
+            os.makedirs(config_path, exist_ok=True)
+        except OSError:
+            pass
         file_name = "config.yaml"
         file_path = os.path.join(config_path, file_name)
     else:
@@ -470,7 +474,35 @@ def init_settings(config_arg: str | None = None) -> ConfigSingleton:
 
     config_singleton = ConfigSingleton(file_path, user_flag)
     get_or_create_temp_directory(config_singleton)
+    if config_arg is None:
+        _seed_built_in_assets(config_singleton)
     return config_singleton
+
+
+def _seed_built_in_assets(config_singleton: ConfigSingleton) -> None:
+    app_data_dir = get_user_config_folder()
+    default_plugins_dir = os.path.join(app_data_dir, "plugins")
+    default_templates_dir = os.path.join(app_data_dir, "templates")
+
+    plugins_dir = config_singleton.read_value("BADGER_PLUGIN_ROOT")
+    if not plugins_dir:
+        plugins_dir = default_plugins_dir
+        config_singleton.write_value("BADGER_PLUGIN_ROOT", plugins_dir)
+    if plugins_dir == default_plugins_dir:
+        os.makedirs(plugins_dir, exist_ok=True)
+        built_in_plugins = resources.files(__package__) / "built_in_plugins"
+        if built_in_plugins.is_dir():
+            shutil.copytree(built_in_plugins, plugins_dir, dirs_exist_ok=True)
+
+    templates_dir = config_singleton.read_value("BADGER_TEMPLATE_ROOT")
+    if not templates_dir:
+        templates_dir = default_templates_dir
+        config_singleton.write_value("BADGER_TEMPLATE_ROOT", templates_dir)
+    if templates_dir == default_templates_dir:
+        os.makedirs(templates_dir, exist_ok=True)
+        built_in_templates = resources.files(__package__) / "built_in_templates"
+        if built_in_templates.is_dir():
+            shutil.copytree(built_in_templates, templates_dir, dirs_exist_ok=True)
 
 
 def get_or_create_temp_directory(config_singleton: ConfigSingleton) -> str:
@@ -586,6 +618,8 @@ def mock_settings():
     templates_dir = str(app_data_dir / "templates")
     os.makedirs(templates_dir, exist_ok=True)
     config_singleton.write_value("BADGER_TEMPLATE_ROOT", templates_dir)
+    built_in_templates_dir = resources.files(__package__) / "built_in_templates"
+    shutil.copytree(built_in_templates_dir, templates_dir, dirs_exist_ok=True)
 
     temp_dir = str(app_data_dir / "temp")
     os.makedirs(temp_dir, exist_ok=True)
