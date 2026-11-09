@@ -17,6 +17,7 @@ import multiprocessing as mp
 import os
 import time
 import traceback
+from collections import deque
 from copy import deepcopy
 from queue import Empty
 from typing import TYPE_CHECKING, Any
@@ -508,6 +509,7 @@ def run_routine_subprocess(
                     evaluate_queue[0].send((routine.data, routine.generator))
 
         logger.info("Starting optimization loop...")
+        pending_candidates = deque()
         while True:
             if stop_process.is_set():
                 logger.info("Stop process set. Terminating optimization.")
@@ -539,7 +541,9 @@ def run_routine_subprocess(
                 )
                 continue
 
-            candidates = routine.generator.generate(1)[0]
+            if not pending_candidates:
+                pending_candidates.extend(routine.generator.generate(1))
+            candidates = pending_candidates.popleft()
             logger.debug(f"Generated candidates: {candidates}")
             candidates = DataFrame(candidates, index=[0])
 

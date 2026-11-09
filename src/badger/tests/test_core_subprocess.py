@@ -1,8 +1,125 @@
 import multiprocessing
 import time
+from pathlib import Path
+from queue import Queue
+from threading import Event
 
+import numpy as np
 import pandas as pd
 import pytest
+import torch
+import yaml
+
+
+@pytest.mark.parametrize(
+    "n_interpolate_points, stop_after, pause_after",
+    [(None, 1, None), (5, 5, None), (5, 2, None), (5, 5, 2)],
+)
+def test_subprocess_evaluates_interpolated_points(
+    mocker, tmp_path, n_interpolate_points, stop_after, pause_after
+):
+    from xopt.generators.bayesian import UpperConfidenceBoundGenerator
+
+    from badger import archive, core_subprocess
+    from badger.routine import Routine
+    from badger.tests.utils import create_routine
+
+    seed = create_routine()
+    routine = Routine(
+        name="interpolation-test",
+        creation_ts="2026-01-01-000000",
+        generator=UpperConfidenceBoundGenerator(
+            vocs=seed.vocs, n_interpolate_points=n_interpolate_points
+        ),
+        environment=seed.environment,
+        initial_points=seed.initial_points,
+    )
+    routine.evaluate_data(routine.initial_points)
+    mocker.patch.object(UpperConfidenceBoundGenerator, "train_model")
+    propose = mocker.patch.object(
+        UpperConfidenceBoundGenerator,
+        "propose_candidates",
+        return_value=torch.full((1, 4), -0.5, dtype=torch.double),
+    )
+    mocker.patch.object(archive, "load_run", return_value=routine)
+    mocker.patch.object(archive, "BADGER_ARCHIVE_ROOT", str(tmp_path))
+    archive_spy = mocker.spy(archive, "archive_run")
+
+    stop_event, pause_event, wait_event = Event(), Event(), Event()
+    pause_event.set()
+    wait_event.set()
+    updates = []
+
+    def receive_update(update):
+        data, generator = update
+        updates.append(data.copy())
+        assert generator.n_interpolate_points == n_interpolate_points
+        if len(data) == stop_after + 1:
+            stop_event.set()
+
+    sender = mocker.Mock()
+    sender.send.side_effect = receive_update
+
+    def resume(*args):
+        assert not pause_event.is_set()
+        assert len(routine.data) == pause_after + 1
+        pause_event.set()
+
+    pause_spy = mocker.patch.object(
+        core_subprocess, "check_for_pause_resume", side_effect=resume
+    )
+    args_queue = Queue()
+    args_queue.put(
+        {
+            "routine_filename": "interpolation-test.yaml",
+            "run_data": True,
+            "variable_ranges": routine.vocs.variables,
+            "initial_points": routine.initial_points,
+            "init_points": False,
+            "evaluate": True,
+            "archive": True,
+            "verbose": 0,
+            "start_time": time.time(),
+            "termination_condition": (
+                {"tc_idx": 0, "max_eval": pause_after + 1} if pause_after else None
+            ),
+        }
+    )
+    errors = Queue()
+    core_subprocess.run_routine_subprocess(
+        args_queue,
+        errors,
+        (sender, None),
+        stop_event,
+        pause_event,
+        wait_event,
+    )
+
+    assert propose.call_count == 1
+    expected = (
+        np.linspace(0.5, -0.5, n_interpolate_points + 1)[1 : stop_after + 1]
+        if n_interpolate_points
+        else [-0.5]
+    )
+    np.testing.assert_allclose(routine.data["x0"].iloc[1:], expected, atol=1e-12)
+    assert len(updates) == stop_after
+    for index, data in enumerate(updates, start=1):
+        assert len(data) == index + 1
+        np.testing.assert_allclose(data["x0"].iloc[1:], expected[:index], atol=1e-12)
+        assert data["f"].notna().all()
+    assert archive_spy.call_count == stop_after
+    saved_run = archive_spy.spy_return
+    saved = yaml.safe_load(
+        (Path(saved_run["path"]) / saved_run["filename"]).read_text()
+    )
+    np.testing.assert_allclose(
+        pd.DataFrame(saved["data"])["x0"].iloc[1:], expected, atol=1e-12
+    )
+    assert pause_spy.call_count == (1 if pause_after else 0)
+    assert all(
+        errors.get_nowait()["type"] == core_subprocess.TERMINATION_REACHED_TYPE
+        for _ in range(errors.qsize())
+    )
 
 
 class TestCore:
