@@ -154,5 +154,5 @@ There is also a [GUI component guide](./GUI_GUIDE.md) for your convenience. It s
 
 Please check out current Badger issues [here](https://github.com/xopt-org/Badger/issues) before [opening a new one](https://github.com/xopt-org/Badger/issues/new/). Alternatively, you are welcome to [shoot us an email](mailto:zhezhang@slac.stanford.edu), or join our [Slack channel](https://slac.slack.com/archives/C02AQS1EGB0) if you are a [SLACer](https://www6.slac.stanford.edu/about/our-people).
 
-[^1]: Draws limited inspiration from [Ocelot the optimizer](https://github.com/ocelot-collab/optimizer). 
+[^1]: Draws limited inspiration from [Ocelot the optimizer](https://github.com/ocelot-collab/optimizer).
 [^2]: In version v1.3.0 we only support part of the CLI capabilities but would add them back with future updates.

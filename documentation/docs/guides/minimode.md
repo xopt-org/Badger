@@ -60,6 +60,13 @@ The main tab combines environment selection and VOCS configuration. Key differen
 - **Algorithm parameters** can be edited by expanding the "Parameters" button
 - **Constraints and Observables** tables can be expanded from the bottom of the page (collapsed by default)
 
+For Bayesian generators, `n_interpolate_points` controls how many points are
+measured along the path from the previous point to the newly proposed candidate.
+For example, `5` measures five points, including the candidate but excluding the
+previous point. Each measurement appears in the live data and archived run and
+counts toward the evaluation limit. Pause and stop are checked between points;
+resuming continues the remaining points before generating another candidate.
+
 ### Variable Table
 
 <!-- Screenshot: variable table showing Saved, Current, and Range columns -->

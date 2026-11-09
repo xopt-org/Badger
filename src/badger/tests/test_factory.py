@@ -24,7 +24,13 @@ class TestFactory:
                 json.dumps(gen_config)
 
                 gen_class(vocs=test_vocs, **gen_config)
-            elif name in ["multi_fidelity", "extremum_seeking", "neldermead", "rcds"]:
+            elif name in [
+                "multi_fidelity",
+                "extremum_seeking",
+                "neldermead",
+                "rcds",
+                "scipy",
+            ]:
                 test_vocs = deepcopy(TEST_VOCS_BASE)
                 test_vocs.constraints = {}
                 json.dumps(gen_config)
