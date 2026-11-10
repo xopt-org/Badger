@@ -91,9 +91,6 @@ class BadgerStatusBar(QWidget):
             QPushButton#TerminationCondition:hover {
                 border-color: #C6A85A;
             }
-            QPushButton#TerminationCondition:focus {
-                border: 2px solid #E5C66C;
-            }
         """)
         self.set_termination_condition(None)
 
