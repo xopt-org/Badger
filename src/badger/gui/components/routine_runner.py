@@ -343,7 +343,11 @@ class BadgerRoutineSubprocess:
         """
         Emits the intital variables in the env_ready signal.
         """
-        init_vars = get_current_vars(self.routine)
+        data = self.routine.sorted_data
+        if data is not None and not data.empty:
+            init_vars = data[self.routine.vocs.variable_names].iloc[0].tolist()
+        else:
+            init_vars = get_current_vars(self.routine)
         self.signals.env_ready.emit(init_vars)
 
     def stop_routine(self) -> None:

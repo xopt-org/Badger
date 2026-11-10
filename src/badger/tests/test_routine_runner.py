@@ -1,6 +1,7 @@
 import multiprocessing
 from unittest.mock import Mock
 
+import pandas as pd
 import pytest
 from PyQt5.QtCore import QEventLoop, Qt, QTimer
 from PyQt5.QtTest import QSignalSpy
@@ -64,6 +65,22 @@ class TestRoutineRunner:
         sig_env_ready_spy = QSignalSpy(instance.signals.env_ready)
         instance.save_init_vars()
         assert len(sig_env_ready_spy) == 1
+
+    def test_save_init_vars_with_data(self, instance):
+        instance.routine.data = pd.DataFrame(
+            {
+                "x3": [40, 400],
+                "x1": [20, 200],
+                "x0": [10, 100],
+                "x2": [30, 300],
+            }
+        )
+        sig_env_ready_spy = QSignalSpy(instance.signals.env_ready)
+
+        instance.save_init_vars()
+
+        assert len(sig_env_ready_spy) == 1
+        assert sig_env_ready_spy[0][0] == [10, 20, 30, 40]
 
     def test_after_evaluate(self, instance):
         sig_progress_spy = QSignalSpy(instance.signals.progress)
