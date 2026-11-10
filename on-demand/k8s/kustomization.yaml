@@ -12,6 +12,6 @@ resources:
 # ArgoCD detects the git change and rolls the pods to the new SHA-tagged image.
 images:
 - name: ghcr.io/xopt-org/badger/badger-gateway
-  newTag: 373dc59caf04ba77283f3030c35fedc0bc7dfe86
+  newTag: 54ab492f2d6e7c08069fd1d3ed6b8961035771d9
 - name: ghcr.io/xopt-org/badger/badger-novnc
-  newTag: 373dc59caf04ba77283f3030c35fedc0bc7dfe86
+  newTag: 54ab492f2d6e7c08069fd1d3ed6b8961035771d9
