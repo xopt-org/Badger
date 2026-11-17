@@ -13,24 +13,27 @@ import os
 import signal
 import sys
 import time
+from multiprocessing import Event, Pipe, Process, Queue
 
+import pandas as pd
 from pandas import DataFrame
 from typing_extensions import deprecated
 
-from badger.core import run_routine as run
-from badger.errors import BadgerRunTerminated
-from badger.routine import Routine
+from badger.core_subprocess import run_routine_subprocess
+from badger.errors import PAUSE_ACK_TYPE, BadgerLoadConfigError, BadgerRunTerminated
+from badger.log import get_logging_manager
 from badger.settings import init_settings
-from badger.utils import curr_ts
+from badger.utils import curr_ts, load_template_file, load_template_string
 
 logger = logging.getLogger(__name__)
 
 
 def run_n_archive(
-    routine: Routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
+    routine, yes=False, save=False, verbose=2, sleep=0, flush_prompt=False
 ):
     try:
         from badger.archive import archive_run
+        from badger.core import run_routine as run
     except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit
         logger.error(e)
         return
@@ -132,3 +135,391 @@ def run_routine(args):
         "Please use 'badger -g' to launch the Badger GUI "
         "and run an optimization."
     )
+
+
+def run_routine_gui(routine, auto_run=False, watch_routine=None, watch_stop=None):
+    """
+    Launch ACR GUI with pre-loaded routine.
+
+    Args:
+        routine: Routine object to load
+        auto_run: If True, automatically start optimization after loading
+        watch_routine: Optional path to a yaml file the gui should watch for changes.
+            On file modification, the gui stops any active
+            run, reloads, and re-starts (auto_run=True only).
+        watch_stop: Optional path to a sentinel file the gui should watch for existence.
+            When it appears, the gui will gracefully stop the
+            active run (while still keeping the window alive) and deletes the file.
+    """
+    from badger.gui import launch_gui
+
+    launch_gui(
+        routine=routine,
+        auto_run=auto_run,
+        watch_routine=watch_routine,
+        watch_stop=watch_stop,
+    )
+
+
+def _headless_worker(*args):
+    """Worker entry point for headless runs.
+
+    Ctrl+C is delivered to the whole foreground process group, so the worker
+    ignores SIGINT and lets the parent drive pause/stop through events.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    run_routine_subprocess(*args)
+
+
+def _record_subprocess_message(msg, errors: list[str]) -> None:
+    """Append an error message from the worker to errors; ignore pause acks."""
+    if isinstance(msg, dict):
+        if msg.get("type") == PAUSE_ACK_TYPE:
+            return
+        errors.append(
+            f"{msg.get('title', 'Unknown error')}\n{msg.get('traceback', '')}"
+        )
+    else:
+        error_title, error_traceback = msg
+        errors.append(f"{error_title}\n{error_traceback}")
+
+
+def run_routine_headless(routine, auto_run=False):
+    """
+    Run routine in headless mode using subprocess.
+
+    Args:
+        routine: Routine object to run
+        auto_run: If True, skip confirmation prompt
+    """
+    print(f"\n{'=' * 60}")
+    print(f"Routine: {routine.name}")
+    print(f"Environment: {routine.environment.name}")
+    print(f"Generator: {routine.generator.name}")
+    print(f"Variables: {list(routine.vocs.variables.keys())}")
+    print(f"Objectives: {list(routine.vocs.objectives.keys())}")
+    if routine.vocs.constraints:
+        print(f"Constraints: {list(routine.vocs.constraints.keys())}")
+    print(f"{'=' * 60}\n")
+
+    if routine.critical_constraint_names:
+        print(
+            "Error: routines with critical constraints "
+            f"({routine.critical_constraint_names}) are not supported in headless "
+            "mode, since they cannot be enforced there. Use the GUI instead."
+        )
+        return
+
+    # Ask for confirmation if not auto_run
+    if not auto_run:
+        try:
+            response = input("Start optimization? [y/N]: ")
+            if response.lower() != "y":
+                print("Cancelled.")
+                return
+        except (EOFError, KeyboardInterrupt):
+            print("\nCancelled.")
+            return
+
+    from badger.archive import archive_run, save_tmp_run
+    from badger.routine import calculate_initial_points
+
+    # ------------------------------------------------------------------ #
+    # Prepare all work before spawning — so the child is never left       #
+    # blocked in wait_event.wait() due to a setup failure after start().  #
+    # ------------------------------------------------------------------ #
+
+    # Calculate initial points
+    if routine.initial_points is None or len(routine.initial_points) == 0:
+        init_points = calculate_initial_points(
+            routine.initial_point_actions or [],
+            routine.vocs,
+            routine.environment,
+        )
+        try:
+            init_points = pd.DataFrame(init_points)
+        except (IndexError, ValueError):
+            init_points = pd.DataFrame(init_points, index=[0])
+        routine.initial_points = init_points
+
+    start_time = time.time()
+    routine_filename = save_tmp_run(routine)
+
+    # Build the arg dict that will be fed to the subprocess via args_queue
+    arg_dict = {
+        "routine_id": routine.id if hasattr(routine, "id") else None,
+        "routine_filename": routine_filename,
+        "routine_name": routine.name,
+        "variable_ranges": routine.vocs.variables,
+        "initial_points": routine.initial_points,
+        "evaluate": True,
+        "archive": True,
+        "termination_condition": None,
+        "start_time": start_time,
+        "testing": False,
+        "run_data": False,
+        "init_points": True,
+    }
+
+    # Set up subprocess communication channels
+    args_queue = Queue()
+    data_queue = Queue()
+    evaluate_queue = Pipe()
+    stop_event = Event()
+    pause_event = Event()
+    wait_event = Event()
+    config_path = init_settings()._instance.config_path
+    logging_manager = get_logging_manager()
+    log_queue = logging_manager.get_queue()
+    dialog_action_queue = Queue()
+    termination_control_queue = Queue()
+
+    process = Process(
+        target=_headless_worker,
+        args=(
+            args_queue,
+            data_queue,
+            evaluate_queue,
+            stop_event,
+            pause_event,
+            wait_event,
+            config_path,
+            log_queue,
+            dialog_action_queue,
+            termination_control_queue,
+        ),
+    )
+
+    # Storage for signal handler state — initialised before the handler is
+    # installed so the handler closure always has a valid reference.
+    storage = {"paused": False, "should_exit": False}
+
+    def sigint_handler(*args):
+        """Signal handler for Ctrl+C - sets pause flag or raises to exit."""
+        if storage["paused"]:
+            # Second Ctrl+C while paused — interrupt input() and exit.
+            print()  # new line
+            storage["should_exit"] = True
+            raise KeyboardInterrupt
+        else:
+            # First Ctrl+C — request pause.
+            storage["paused"] = True
+
+    # Capture the current handler *before* installing ours so we can
+    # restore it unconditionally in the finally block below.
+    prev_sigint = signal.signal(signal.SIGINT, sigint_handler)
+
+    iteration = 0
+
+    # Accumulate subprocess error messages; checked after full shutdown so
+    # that errors queued just before the child exits are not missed.
+    errors: list[str] = []
+
+    # Latest complete (data, generator) update from the worker, kept so the
+    # results can be archived even if the run is stopped early.
+    latest = {"data": None}
+    pause_acked = {"value": False}
+
+    def drain_results():
+        """Read all pending results; tolerate a worker that died mid-send."""
+        nonlocal iteration
+        try:
+            while evaluate_queue[1].poll():
+                results = evaluate_queue[1].recv()
+                df = results[0]
+                latest["data"] = df
+                iteration = max(iteration, len(df))
+        except (EOFError, OSError):
+            pass
+
+    def drain_messages(block_ok=True):
+        """Collect worker errors; note pause acknowledgements."""
+        while not data_queue.empty():
+            try:
+                msg = data_queue.get_nowait()
+            except Exception:  # noqa: BLE001 - queue may be closed/empty by now
+                break
+            if isinstance(msg, dict) and msg.get("type") == PAUSE_ACK_TYPE:
+                pause_acked["value"] = True
+            else:
+                _record_subprocess_message(msg, errors)
+
+    try:
+        process.start()
+        # The worker owns its end of the pipe now; closing ours lets recv()
+        # see EOF instead of hanging if the worker dies mid-send.
+        evaluate_queue[0].close()
+
+        # give subprocess time to start and reach wait_event.wait()
+        time.sleep(3)
+
+        # Feed work to the subprocess and release it
+        args_queue.put(arg_dict)
+        pause_event.set()  # Start unpaused
+        wait_event.set()  # Signal subprocess to begin
+
+        print("Optimization started. Press Ctrl+C to pause.\n")
+
+        # Main monitoring loop
+        while process.is_alive() and not storage["should_exit"]:
+            time.sleep(0.1)
+
+            # Handle pause/resume
+            if storage["paused"]:
+                pause_acked["value"] = False
+                pause_event.clear()  # Request pause
+                print("\nPausing after the current measurement...")
+                try:
+                    # The worker only pauses between measurements; keep
+                    # draining until it confirms it has actually paused.
+                    while (
+                        not pause_acked["value"] and not errors and process.is_alive()
+                    ):
+                        time.sleep(0.1)
+                        drain_results()
+                        drain_messages()
+                except KeyboardInterrupt:
+                    # Second Ctrl+C — sigint_handler already set should_exit.
+                    pass
+
+                if errors or not process.is_alive():
+                    stop_event.set()
+                    break
+
+                if not storage["should_exit"]:
+                    try:
+                        res = input(
+                            "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
+                        )
+                        while res != "":
+                            sys.stdout.write("\033[F")  # Move cursor up to erase line
+                            res = input(
+                                "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
+                            )
+                    except KeyboardInterrupt:
+                        # Ctrl+C during input — sigint_handler already set should_exit.
+                        pass
+
+                if storage["should_exit"]:
+                    print("\nStopping optimization...")
+                    stop_event.set()
+                    break
+
+                print("Resuming optimization...\n")
+                storage["paused"] = False
+                pause_event.set()
+
+            drain_results()
+
+            # Collect errors reported by the subprocess; set stop_event and
+            # break so teardown runs, but keep the message for later reporting.
+            drain_messages()
+            if errors:
+                stop_event.set()
+                break
+
+    finally:
+        # Always stop the child and restore the caller's signal handler,
+        # regardless of whether we exit normally, via an exception, or Ctrl+C.
+        stop_event.set()
+        signal.signal(signal.SIGINT, prev_sigint)
+
+        if process.pid is not None:  # the child may have failed to start
+            process.join(timeout=5)
+            if process.is_alive():
+                process.terminate()
+                process.join()
+
+    # ------------------------------------------------------------------ #
+    # Post-shutdown error collection                                       #
+    # ------------------------------------------------------------------ #
+
+    drain_results()
+
+    # Drain errors that arrived just before the child exited — these can be
+    # missed by the is_alive() guard in the monitoring loop above.
+    drain_messages()
+
+    # Keep whatever was measured, even if stopped during initial sampling
+    # (the worker only archives in its candidate loop).
+    if latest["data"] is not None and len(latest["data"]):
+        try:
+            routine.data = latest["data"]
+            archive_run(routine)
+        except Exception:
+            logger.exception("Failed to archive final results")
+
+    # A non-zero exit code means the child crashed without sending an error
+    # message (e.g. unhandled exception, OOM kill, or external signal).
+    # A user-requested stop may legitimately end in terminate().
+    exitcode = process.exitcode
+    if exitcode not in (0, None) and not errors and not storage["should_exit"]:
+        errors.append(
+            f"Subprocess exited with non-zero exit code {exitcode}. "
+            "Check logs for details."
+        )
+
+    # Print final status
+    elapsed = time.time() - start_time
+    print(f"\n{'=' * 60}")
+    if errors:
+        print(
+            f"Optimization FAILED after {elapsed:.2f}s ({iteration} iteration(s) completed)"
+        )
+    elif storage["should_exit"]:
+        print(f"Optimization stopped by user after {elapsed:.2f}s")
+    else:
+        print(f"Optimization completed in {elapsed:.2f}s")
+    print(f"Total iterations: {iteration}")
+    print(f"{'=' * 60}\n")
+
+    # Propagate failures so run_routine_cli exits with a non-zero status.
+    if errors:
+        formatted = "\n\n".join(errors)
+        raise RuntimeError(f"Headless optimization failed:\n{formatted}")
+
+
+def run_routine_cli(args):
+    """
+    Main CLI handler for running routines from templates.
+
+    Args:
+        args: Parsed command-line arguments
+    """
+    try:
+        if args.template_file == "" and args.template_string == "":
+            raise BadgerLoadConfigError("Template input cannot be empty")
+
+        if args.template_file is not None:
+            config = load_template_file(args.template_file)
+        else:
+            config = load_template_string(args.template_string)
+
+        environment_config = config.get("environment")
+        if isinstance(environment_config, dict) and isinstance(
+            environment_config.get("params"), dict
+        ):
+            environment_config.update(environment_config.pop("params"))
+
+        from badger.routine import Routine
+
+        routine = Routine(**config)
+
+        if args.headless:
+            run_routine_headless(routine, auto_run=args.auto_run)
+        else:
+            # gui mode (default mode)
+            run_routine_gui(
+                routine,
+                auto_run=args.auto_run,
+                watch_routine=args.watch_routine,
+                watch_stop=args.watch_stop,
+            )
+
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error running routine: {e}")
+        print(f"Error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
