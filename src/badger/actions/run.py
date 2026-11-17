@@ -19,7 +19,6 @@ import pandas as pd
 from pandas import DataFrame
 from typing_extensions import deprecated
 
-from badger.core import run_routine as run
 from badger.core_subprocess import run_routine_subprocess
 from badger.errors import PAUSE_ACK_TYPE, BadgerLoadConfigError, BadgerRunTerminated
 from badger.log import get_logging_manager
@@ -34,6 +33,7 @@ def run_n_archive(
 ):
     try:
         from badger.archive import archive_run
+        from badger.core import run_routine as run
     except Exception as e:  # noqa: BLE001 - import triggers config/plugin loading; report and exit
         logger.error(e)
         return
@@ -221,7 +221,7 @@ def run_routine_headless(routine, auto_run=False):
             print("\nCancelled.")
             return
 
-    from badger.archive import save_tmp_run
+    from badger.archive import archive_run, save_tmp_run
     from badger.routine import calculate_initial_points
 
     # ------------------------------------------------------------------ #
@@ -315,8 +315,40 @@ def run_routine_headless(routine, auto_run=False):
     # that errors queued just before the child exits are not missed.
     errors: list[str] = []
 
+    # Latest complete (data, generator) update from the worker, kept so the
+    # results can be archived even if the run is stopped early.
+    latest = {"data": None}
+    pause_acked = {"value": False}
+
+    def drain_results():
+        """Read all pending results; tolerate a worker that died mid-send."""
+        nonlocal iteration
+        try:
+            while evaluate_queue[1].poll():
+                results = evaluate_queue[1].recv()
+                df = results[0]
+                latest["data"] = df
+                iteration = max(iteration, len(df))
+        except (EOFError, OSError):
+            pass
+
+    def drain_messages(block_ok=True):
+        """Collect worker errors; note pause acknowledgements."""
+        while not data_queue.empty():
+            try:
+                msg = data_queue.get_nowait()
+            except Exception:  # noqa: BLE001 - queue may be closed/empty by now
+                break
+            if isinstance(msg, dict) and msg.get("type") == PAUSE_ACK_TYPE:
+                pause_acked["value"] = True
+            else:
+                _record_subprocess_message(msg, errors)
+
     try:
         process.start()
+        # The worker owns its end of the pipe now; closing ours lets recv()
+        # see EOF instead of hanging if the worker dies mid-send.
+        evaluate_queue[0].close()
 
         # give subprocess time to start and reach wait_event.wait()
         time.sleep(3)
@@ -334,20 +366,39 @@ def run_routine_headless(routine, auto_run=False):
 
             # Handle pause/resume
             if storage["paused"]:
-                pause_event.clear()  # Pause subprocess
-                print()  # new line
+                pause_acked["value"] = False
+                pause_event.clear()  # Request pause
+                print("\nPausing after the current measurement...")
                 try:
-                    res = input(
-                        "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
-                    )
-                    while res != "":
-                        sys.stdout.write("\033[F")  # Move cursor up to erase line
-                        res = input(
-                            "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
-                        )
+                    # The worker only pauses between measurements; keep
+                    # draining until it confirms it has actually paused.
+                    while (
+                        not pause_acked["value"] and not errors and process.is_alive()
+                    ):
+                        time.sleep(0.1)
+                        drain_results()
+                        drain_messages()
                 except KeyboardInterrupt:
-                    # Ctrl+C during input — sigint_handler already set should_exit.
+                    # Second Ctrl+C — sigint_handler already set should_exit.
                     pass
+
+                if errors or not process.is_alive():
+                    stop_event.set()
+                    break
+
+                if not storage["should_exit"]:
+                    try:
+                        res = input(
+                            "Optimization paused. Press Enter to resume or Ctrl+C to terminate: "
+                        )
+                        while res != "":
+                            sys.stdout.write("\033[F")  # Move cursor up to erase line
+                            res = input(
+                                "Invalid choice. Press Enter to resume or Ctrl+C to terminate: "
+                            )
+                    except KeyboardInterrupt:
+                        # Ctrl+C during input — sigint_handler already set should_exit.
+                        pass
 
                 if storage["should_exit"]:
                     print("\nStopping optimization...")
@@ -358,20 +409,14 @@ def run_routine_headless(routine, auto_run=False):
                 storage["paused"] = False
                 pause_event.set()
 
-            # Drain results from the subprocess
-            if evaluate_queue[1].poll():
-                while evaluate_queue[1].poll():
-                    results = evaluate_queue[1].recv()
-                    df = results[0]
-                    iteration = max(iteration, len(df))
+            drain_results()
 
             # Collect errors reported by the subprocess; set stop_event and
             # break so teardown runs, but keep the message for later reporting.
-            if not data_queue.empty():
-                _record_subprocess_message(data_queue.get(), errors)
-                if errors:
-                    stop_event.set()
-                    break
+            drain_messages()
+            if errors:
+                stop_event.set()
+                break
 
     finally:
         # Always stop the child and restore the caller's signal handler,
@@ -389,27 +434,26 @@ def run_routine_headless(routine, auto_run=False):
     # Post-shutdown error collection                                       #
     # ------------------------------------------------------------------ #
 
-    # Drain any remaining items from evaluate_queue
-    while evaluate_queue[1].poll():
-        try:
-            results = evaluate_queue[1].recv()
-            df = results[0]
-            iteration = max(iteration, len(df))
-        except Exception:  # noqa: BLE001
-            break
+    drain_results()
 
     # Drain errors that arrived just before the child exited — these can be
     # missed by the is_alive() guard in the monitoring loop above.
-    while not data_queue.empty():
+    drain_messages()
+
+    # Keep whatever was measured, even if stopped during initial sampling
+    # (the worker only archives in its candidate loop).
+    if latest["data"] is not None and len(latest["data"]):
         try:
-            _record_subprocess_message(data_queue.get_nowait(), errors)
-        except Exception:  # noqa: BLE001 - queue may be closed/empty by now
-            break
+            routine.data = latest["data"]
+            archive_run(routine)
+        except Exception:
+            logger.exception("Failed to archive final results")
 
     # A non-zero exit code means the child crashed without sending an error
     # message (e.g. unhandled exception, OOM kill, or external signal).
+    # A user-requested stop may legitimately end in terminate().
     exitcode = process.exitcode
-    if exitcode not in (0, None) and not errors:
+    if exitcode not in (0, None) and not errors and not storage["should_exit"]:
         errors.append(
             f"Subprocess exited with non-zero exit code {exitcode}. "
             "Check logs for details."

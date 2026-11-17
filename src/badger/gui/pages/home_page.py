@@ -277,6 +277,9 @@ class BadgerHomePage(QWidget):
         if os.path.isdir(parent):
             self._watch_stop_fs_watcher.addPath(parent)
         logger.info("watch-stop: sentinel = %s", path)
+        # A sentinel that already exists won't trigger a change signal.
+        if os.path.isfile(path):
+            self._on_stop_signal(path)
 
     def _on_stop_dir_changed(self, _changed_dir):
         path = self._watch_stop_path
