@@ -875,10 +875,20 @@ class BadgerHomePage(QWidget):
             self.start_run()
             return
 
+        # Coalesce repeated requests (e.g. several reloads while the pool is
+        # empty) so a single worker is never claimed by more than one start.
+        if getattr(self, "_auto_start_pending", False):
+            return
+        self._auto_start_pending = True
+
+        def _start():
+            self._auto_start_pending = False
+            self.start_run()
+
         # The pool may already be populated (e.g. the signal was delivered
         # while loading the routine, before we could connect to it).
         if self.process_manager.processes_queue:
-            QTimer.singleShot(0, self.start_run)
+            QTimer.singleShot(0, _start)
             return
 
         def _on_ready():
@@ -887,6 +897,6 @@ class BadgerHomePage(QWidget):
                 self.process_manager.sig_process_ready.disconnect(_on_ready)
             except TypeError:
                 pass  # already disconnected
-            self.start_run()
+            _start()
 
         self.process_manager.sig_process_ready.connect(_on_ready)

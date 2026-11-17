@@ -21,7 +21,7 @@ from typing_extensions import deprecated
 
 from badger.core import run_routine as run
 from badger.core_subprocess import run_routine_subprocess
-from badger.errors import BadgerLoadConfigError, BadgerRunTerminated
+from badger.errors import PAUSE_ACK_TYPE, BadgerLoadConfigError, BadgerRunTerminated
 from badger.log import get_logging_manager
 from badger.settings import init_settings
 from badger.utils import curr_ts, load_template_file, load_template_string
@@ -153,6 +153,29 @@ def run_routine_gui(routine, auto_run=False, watch_routine=None):
     launch_gui(routine=routine, auto_run=auto_run, watch_routine=watch_routine)
 
 
+def _headless_worker(*args):
+    """Worker entry point for headless runs.
+
+    Ctrl+C is delivered to the whole foreground process group, so the worker
+    ignores SIGINT and lets the parent drive pause/stop through events.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    run_routine_subprocess(*args)
+
+
+def _record_subprocess_message(msg, errors: list[str]) -> None:
+    """Append an error message from the worker to errors; ignore pause acks."""
+    if isinstance(msg, dict):
+        if msg.get("type") == PAUSE_ACK_TYPE:
+            return
+        errors.append(
+            f"{msg.get('title', 'Unknown error')}\n{msg.get('traceback', '')}"
+        )
+    else:
+        error_title, error_traceback = msg
+        errors.append(f"{error_title}\n{error_traceback}")
+
+
 def run_routine_headless(routine, auto_run=False):
     """
     Run routine in headless mode using subprocess.
@@ -170,6 +193,14 @@ def run_routine_headless(routine, auto_run=False):
     if routine.vocs.constraints:
         print(f"Constraints: {list(routine.vocs.constraints.keys())}")
     print(f"{'=' * 60}\n")
+
+    if routine.critical_constraint_names:
+        print(
+            "Error: routines with critical constraints "
+            f"({routine.critical_constraint_names}) are not supported in headless "
+            "mode, since they cannot be enforced there. Use the GUI instead."
+        )
+        return
 
     # Ask for confirmation if not auto_run
     if not auto_run:
@@ -233,9 +264,10 @@ def run_routine_headless(routine, auto_run=False):
     logging_manager = get_logging_manager()
     log_queue = logging_manager.get_queue()
     dialog_action_queue = Queue()
+    termination_control_queue = Queue()
 
     process = Process(
-        target=run_routine_subprocess,
+        target=_headless_worker,
         args=(
             args_queue,
             data_queue,
@@ -246,6 +278,7 @@ def run_routine_headless(routine, auto_run=False):
             config_path,
             log_queue,
             dialog_action_queue,
+            termination_control_queue,
         ),
     )
 
@@ -327,16 +360,10 @@ def run_routine_headless(routine, auto_run=False):
             # Collect errors reported by the subprocess; set stop_event and
             # break so teardown runs, but keep the message for later reporting.
             if not data_queue.empty():
-                msg = data_queue.get()
-                if isinstance(msg, dict):
-                    errors.append(
-                        f"{msg.get('title', 'Unknown error')}\n{msg.get('traceback', '')}"
-                    )
-                else:
-                    error_title, error_traceback = msg
-                    errors.append(f"{error_title}\n{error_traceback}")
-                stop_event.set()
-                break
+                _record_subprocess_message(data_queue.get(), errors)
+                if errors:
+                    stop_event.set()
+                    break
 
     finally:
         # Always stop the child and restore the caller's signal handler,
@@ -367,14 +394,7 @@ def run_routine_headless(routine, auto_run=False):
     # missed by the is_alive() guard in the monitoring loop above.
     while not data_queue.empty():
         try:
-            msg = data_queue.get_nowait()
-            if isinstance(msg, dict):
-                errors.append(
-                    f"{msg.get('title', 'Unknown error')}\n{msg.get('traceback', '')}"
-                )
-            else:
-                error_title, error_traceback = msg
-                errors.append(f"{error_title}\n{error_traceback}")
+            _record_subprocess_message(data_queue.get_nowait(), errors)
         except Exception:  # noqa: BLE001 - queue may be closed/empty by now
             break
 

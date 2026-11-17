@@ -132,3 +132,18 @@ def test_run_routine_cli_template_string(mocker):
     called_routine = mock_headless.call_args[0][0]
     # Check that template_str was read correctly
     assert called_routine.name == "string_test_routine"
+
+
+def test_headless_rejects_critical_constraints(sample_template_file, mocker, capsys):
+    from badger.actions.run import run_routine_headless
+    from badger.routine import Routine
+    from badger.utils import load_template_file
+
+    routine = Routine(**load_template_file(sample_template_file))
+    routine.critical_constraint_names = ["c"]
+    start = mocker.patch("badger.actions.run.Process")
+
+    run_routine_headless(routine, auto_run=True)
+
+    start.assert_not_called()
+    assert "critical constraints" in capsys.readouterr().out
